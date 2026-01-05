@@ -1,0 +1,57 @@
+# Cline Ignore - Build- und System-Müll für MontageZeit
+
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+external/
+*.log
+local.properties
+
+# Android Build
+*.apk
+*.ap_
+*.aab
+
+# Android NDK
+obj/
+
+# Android Temporary Files
+*.dex
+*.class
+bin/
+gen/
+out/
+*.class
+
+# Kotlin
+*.kotlin_module
+
+# Debug
+*.hprof
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Android Test Results
+.android/
+
+# Generated Files
+app/build/
+generated/
+
+# APK Signing
+*.jks
+*.keystore

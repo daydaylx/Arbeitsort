@@ -1,0 +1,80 @@
+package de.montagezeit.app.data.preferences
+
+import androidx.datastore.preferences.core.BooleanPreferencesKey
+import androidx.datastore.preferences.core.IntPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+/**
+ * Data class für Reminder-Settings
+ */
+data class ReminderSettings(
+    // Arbeitszeit Defaults
+    val workStart: LocalTime = LocalTime.of(8, 0),
+    val workEnd: LocalTime = LocalTime.of(19, 0),
+    val breakMinutes: Int = 60,
+    val locationRadiusKm: Int = 30,
+    
+    // Morning Window
+    val morningReminderEnabled: Boolean = true,
+    val morningWindowStart: LocalTime = LocalTime.of(6, 0),
+    val morningWindowEnd: LocalTime = LocalTime.of(13, 0),
+    val morningCheckIntervalMinutes: Int = 120, // 2 Stunden
+    
+    // Evening Window
+    val eveningReminderEnabled: Boolean = true,
+    val eveningWindowStart: LocalTime = LocalTime.of(16, 0),
+    val eveningWindowEnd: LocalTime = LocalTime.of(22, 30),
+    val eveningCheckIntervalMinutes: Int = 180, // 3 Stunden
+    
+    // Fallback
+    val fallbackEnabled: Boolean = true,
+    val fallbackTime: LocalTime = LocalTime.of(22, 30)
+)
+
+/**
+ * Keys für DataStore Preferences
+ */
+object ReminderSettingsKeys {
+    // Arbeitszeit Defaults
+    val WORK_START = stringPreferencesKey("work_start")
+    val WORK_END = stringPreferencesKey("work_end")
+    val BREAK_MINUTES = IntPreferencesKey("break_minutes")
+    val LOCATION_RADIUS_KM = IntPreferencesKey("location_radius_km")
+    
+    // Morning Window
+    val MORNING_REMINDER_ENABLED = BooleanPreferencesKey("morning_reminder_enabled")
+    val MORNING_WINDOW_START = stringPreferencesKey("morning_window_start")
+    val MORNING_WINDOW_END = stringPreferencesKey("morning_window_end")
+    val MORNING_CHECK_INTERVAL = IntPreferencesKey("morning_check_interval")
+    
+    // Evening Window
+    val EVENING_REMINDER_ENABLED = BooleanPreferencesKey("evening_reminder_enabled")
+    val EVENING_WINDOW_START = stringPreferencesKey("evening_window_start")
+    val EVENING_WINDOW_END = stringPreferencesKey("evening_window_end")
+    val EVENING_CHECK_INTERVAL = IntPreferencesKey("evening_check_interval")
+    
+    // Fallback
+    val FALLBACK_ENABLED = BooleanPreferencesKey("fallback_enabled")
+    val FALLBACK_TIME = stringPreferencesKey("fallback_time")
+}
+
+/**
+ * Hilfsfunktionen für LocalTime Konvertierung
+ */
+private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+
+fun LocalTime.toPrefString(): String = this.format(TIME_FORMATTER)
+
+fun String?.toLocalTime(): LocalTime {
+    return if (this.isNullOrBlank()) {
+        LocalTime.MIDNIGHT
+    } else {
+        try {
+            LocalTime.parse(this, TIME_FORMATTER)
+        } catch (e: Exception) {
+            LocalTime.MIDNIGHT
+        }
+    }
+}
