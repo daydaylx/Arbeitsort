@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-01-06T00:19:33" hostname="lx" time="0.977">
+  <properties/>
+  <testcase name="invoke - Idempotent Upsert - Zweiter Morgen Check-in aktualisiert existierenden Eintrag" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.826"/>
+  <testcase name="invoke - Low Accuracy - Setzt LOW_ACCURACY und needsReview" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.02"/>
+  <testcase name="invoke - Außerhalb Leipzig - Setzt outsideLeipzig true" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.02"/>
+  <testcase name="invoke - Existing mit needsReview true - Behält needsReview true" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.022"/>
+  <testcase name="invoke - Unavailable - Setzt UNAVAILABLE und needsReview" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.025"/>
+  <testcase name="invoke - Innerhalb Leipzig - Setzt korrekte Werte" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.022"/>
+  <testcase name="invoke - forceWithoutLocation - Verwendet Unavailable ohne LocationProvider Call" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.02"/>
+  <testcase name="invoke - Grenzzone - Setzt confirmRequired und needsReview" classname="de.montagezeit.app.domain.usecase.RecordMorningCheckInTest" time="0.02"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

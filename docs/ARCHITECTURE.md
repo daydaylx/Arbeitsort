@@ -8,7 +8,7 @@
 MontageZeit ist eine **single-module Android App** (Kotlin + Jetpack Compose) mit **offline-first** Fokus. Die Architektur ist clean-architectural angelehnt, aber pragmatisch gehalten - kein akademischer Overkill.
 
 **Kernziele:**
-- Einfachheit: Single-Module, manuelles DI
+- Einfachheit: Single-Module, Hilt DI
 - Offline: Room + DataStore lokal
 - Robustheit: Fehlertolerante Location & Reminder
 - Testbarkeit: UseCases separiert von UI
@@ -322,32 +322,69 @@ data class AppSettings(
 
 ---
 
-## 8. Dependency Injection (Manuell)
+## 8. Dependency Injection (Hilt)
 
-**Prinzip:** Kein Hilt/Koin für MVP - einfache Singleton-Factory im DI-Package.
+**Prinzip:** Hilt für typsichere und einfache Dependency Injection auf Basis von Dagger.
 
 ### Struktur
 ```kotlin
-// di/AppContainer.kt
-object AppContainer {
-    val database: AppDatabase by lazy { AppDatabase.getInstance(context) }
-    val settingsRepository: SettingsRepository by lazy { SettingsRepository(context) }
-    val locationProvider: LocationProvider by lazy { LocationProviderImpl(context) }
+// Application-Klasse mit @HiltAndroidApp
+@HiltAndroidApp
+class MontageZeitApp : Application()
+
+// ApplicationModule - Provider für Singleton-Abhängigkeiten
+@Module
+@InstallIn(SingletonComponent::class)
+object ApplicationModule {
+    @Provides
+    @Singleton
+    fun provideLocationProvider(
+        @ApplicationContext context: Context
+    ): LocationProvider = LocationProviderImpl(context)
     
-    // UseCases
-    val recordMorningCheckIn: RecordMorningCheckIn by lazy {
-        RecordMorningCheckIn(database, locationProvider, settingsRepository)
+    // ... weitere Provider
+}
+
+// DatabaseModule - Datenbank-Setup
+@Module
+@InstallIn(SingletonComponent::class)
+object DatabaseModule {
+    @Provides
+    @Singleton
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            "montagezeit.db"
+        ).build()
     }
     
-    // ... weitere UseCases
+    @Provides
+    fun provideWorkEntryDao(database: AppDatabase): WorkEntryDao = database.workEntryDao()
 }
+
+// Injection in UseCases
+class RecordMorningCheckIn(
+    private val workEntryDao: WorkEntryDao,
+    private val locationProvider: LocationProvider,
+    private val locationCalculator: LocationCalculator,
+    private val reminderSettingsManager: ReminderSettingsManager
+)
+
+// Injection in ViewModels
+@HiltViewModel
+class TodayViewModel @Inject constructor(
+    private val recordMorningCheckIn: RecordMorningCheckIn,
+    private val recordEveningCheckIn: RecordEveningCheckIn
+) : ViewModel()
 ```
 
 ### Benefits
-- Minimal Setup
-- Easy to Debug
-- Keine Annotation-Overhead
-- Für Single-User App ausreichend
+- **Typsicherheit:** Compile-time Validation verhindert Laufzeitfehler
+- **Weniger Boilerplate:** Automatische Code-Generierung durch Annotation Processor
+- **Scoped Dependencies:** Unterstützung für @Singleton, @ViewModelScoped etc.
+- **Integration:** Nahtlose Integration mit Android Komponenten
+- **Testbarkeit:** Einfaches Mocking von Abhängigkeiten in Tests
 
 ---
 
@@ -421,10 +458,10 @@ object AppContainer {
 - **Core Module:** `:core-data`, `:core-domain`
 - **Begründung:** Nur wenn Team > 2 Entwickler
 
-### Hilt Integration (optional)
-- Ersetzt manuelles DI
-- Mehr Boilerplate, aber Type-safer
-- Nur wenn Projekt wächst
+### Hilt Integration (✅ implementiert)
+- Bereits integriert seit MVP
+- Typsichere Dependency Injection
+- Compile-time Validation
 
 ### Background Location (experimentell)
 - Nicht im MVP
@@ -506,14 +543,13 @@ object AppContainer {
 - ❌ Import/Restore
 - ❌ Reverse Geocoding
 - ❌ Multi-User
-- ❌ Hilt DI
 
 ---
 
 ## Zusammenfassung
 
 MontageZeit ist eine **fokussierte, offline-first App** mit:
-- **Einfacher Architektur** (Single-Module, manuelles DI)
+- **Einfacher Architektur** (Single-Module, Hilt DI)
 - **Robuster Location-Logik** (Timeout, Accuracy, Radius, Grenzzone)
 - **Fenster-basierten Remindern** (nicht exakt, praktisch)
 - **Klarer Datenhaltung** (Room + DataStore, lokal)

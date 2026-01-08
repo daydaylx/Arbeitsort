@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import de.montagezeit.app.logging.RingBufferLogger
+import de.montagezeit.app.logging.i
+import de.montagezeit.app.logging.e
 import de.montagezeit.app.work.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

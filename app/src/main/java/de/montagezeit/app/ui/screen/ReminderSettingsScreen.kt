@@ -38,7 +38,7 @@ fun ReminderSettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState(initial = ReminderSettings())
     val context = LocalContext.current
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -60,24 +60,24 @@ fun ReminderSettingsScreen(
         ) {
             // Samsung Hardening Info
             SamsungHardeningCard(modifier = Modifier.fillMaxWidth())
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Morning Settings
             SettingsSection(title = "Morgendliche Erinnerungen") {
                 SwitchSetting(
                     title = "Aktiviert",
-                    checked = settings.morningReminderEnabled,
+                    checked = settings?.morningReminderEnabled ?: true,
                     onCheckedChange = { enabled ->
                         viewModel.updateSettings(morningReminderEnabled = enabled)
                     }
                 )
-                
-                if (settings.morningReminderEnabled) {
+
+                if (settings?.morningReminderEnabled == true) {
                     TimeRangeSetting(
                         title = "Zeitfenster",
-                        startTime = settings.morningWindowStart,
-                        endTime = settings.morningWindowEnd,
+                        startTime = settings?.morningWindowStart ?: LocalTime.of(6, 0),
+                        endTime = settings?.morningWindowEnd ?: LocalTime.of(13, 0),
                         onStartTimeChange = { time ->
                             viewModel.updateSettings(morningWindowStart = time)
                         },
@@ -85,10 +85,10 @@ fun ReminderSettingsScreen(
                             viewModel.updateSettings(morningWindowEnd = time)
                         }
                     )
-                    
+
                     IntSetting(
                         title = "Intervall (Minuten)",
-                        value = settings.morningCheckIntervalMinutes,
+                        value = settings?.morningCheckIntervalMinutes ?: 120,
                         onValueChange = { value ->
                             viewModel.updateSettings(morningCheckIntervalMinutes = value)
                         },
@@ -97,24 +97,24 @@ fun ReminderSettingsScreen(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Evening Settings
             SettingsSection(title = "Abendliche Erinnerungen") {
                 SwitchSetting(
                     title = "Aktiviert",
-                    checked = settings.eveningReminderEnabled,
+                    checked = settings?.eveningReminderEnabled ?: true,
                     onCheckedChange = { enabled ->
                         viewModel.updateSettings(eveningReminderEnabled = enabled)
                     }
                 )
-                
-                if (settings.eveningReminderEnabled) {
+
+                if (settings?.eveningReminderEnabled == true) {
                     TimeRangeSetting(
                         title = "Zeitfenster",
-                        startTime = settings.eveningWindowStart,
-                        endTime = settings.eveningWindowEnd,
+                        startTime = settings?.eveningWindowStart ?: LocalTime.of(16, 0),
+                        endTime = settings?.eveningWindowEnd ?: LocalTime.of(22, 30),
                         onStartTimeChange = { time ->
                             viewModel.updateSettings(eveningWindowStart = time)
                         },
@@ -122,10 +122,10 @@ fun ReminderSettingsScreen(
                             viewModel.updateSettings(eveningWindowEnd = time)
                         }
                     )
-                    
+
                     IntSetting(
                         title = "Intervall (Minuten)",
-                        value = settings.eveningCheckIntervalMinutes,
+                        value = settings?.eveningCheckIntervalMinutes ?: 180,
                         onValueChange = { value ->
                             viewModel.updateSettings(eveningCheckIntervalMinutes = value)
                         },
@@ -134,38 +134,38 @@ fun ReminderSettingsScreen(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Fallback Settings
             SettingsSection(title = "Fallback-Erinnerung") {
                 SwitchSetting(
                     title = "Aktiviert",
-                    checked = settings.fallbackEnabled,
+                    checked = settings?.fallbackEnabled ?: true,
                     onCheckedChange = { enabled ->
                         viewModel.updateSettings(fallbackEnabled = enabled)
                     }
                 )
-                
-                if (settings.fallbackEnabled) {
+
+                if (settings?.fallbackEnabled == true) {
                     TimeSetting(
                         title = "Zeit",
-                        time = settings.fallbackTime,
+                        time = settings?.fallbackTime ?: LocalTime.of(22, 30),
                         onTimeChange = { time ->
                             viewModel.updateSettings(fallbackTime = time)
                         }
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Work Defaults
             SettingsSection(title = "Arbeitszeit-Defaults") {
                 TimeRangeSetting(
                     title = "Arbeitszeit",
-                    startTime = settings.workStart,
-                    endTime = settings.workEnd,
+                    startTime = settings?.workStart ?: LocalTime.of(8, 0),
+                    endTime = settings?.workEnd ?: LocalTime.of(19, 0),
                     onStartTimeChange = { time ->
                         viewModel.updateSettings(workStart = time)
                     },
@@ -173,20 +173,20 @@ fun ReminderSettingsScreen(
                         viewModel.updateSettings(workEnd = time)
                     }
                 )
-                
+
                 IntSetting(
                     title = "Pause (Minuten)",
-                    value = settings.breakMinutes,
+                    value = settings?.breakMinutes ?: 60,
                     onValueChange = { value ->
                         viewModel.updateSettings(breakMinutes = value)
                     },
                     min = 0,
                     max = 180
                 )
-                
+
                 IntSetting(
                     title = "Radius (km)",
-                    value = settings.locationRadiusKm,
+                    value = settings?.locationRadiusKm ?: 30,
                     onValueChange = { value ->
                         viewModel.updateSettings(locationRadiusKm = value)
                     },

@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -80,20 +81,20 @@ fun SettingsContent(
         // Reminder Settings Section
         SettingsSection(title = "Erinnerungen") {
             ReminderSettingsSection(
-                morningWindowStart = settings.morningReminderStart,
-                morningWindowEnd = settings.morningReminderEnd,
-                eveningWindowStart = settings.eveningReminderStart,
-                eveningWindowEnd = settings.eveningReminderEnd,
+                morningWindowStart = settings.morningWindowStart,
+                morningWindowEnd = settings.morningWindowEnd,
+                eveningWindowStart = settings.eveningWindowStart,
+                eveningWindowEnd = settings.eveningWindowEnd,
                 onUpdateMorningWindow = onUpdateMorningWindow,
                 onUpdateEveningWindow = onUpdateEveningWindow
             )
         }
-        
+
         // Location Settings Section
         SettingsSection(title = "Standort") {
             LocationSettingsSection(
-                radiusMeters = settings.radiusMeters,
-                locationMode = settings.locationMode,
+                radiusMeters = (settings.locationRadiusKm * 1000),
+                locationMode = "check_in_only",
                 onUpdateRadius = onUpdateRadius,
                 onUpdateLocationMode = onUpdateLocationMode
             )
@@ -128,7 +129,7 @@ fun SettingsSection(
                 text = title,
                 style = MaterialTheme.typography.titleLarge
             )
-            HorizontalDivider()
+            Divider()
             content()
         }
     }
@@ -328,9 +329,9 @@ fun LocationSettingsSection(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
-        
-        HorizontalDivider()
-        
+
+        Divider()
+
         // Location Mode
         Text(
             text = "Standortmodus",

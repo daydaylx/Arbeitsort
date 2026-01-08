@@ -1,7 +1,7 @@
 package de.montagezeit.app.data.preferences
 
-import androidx.datastore.preferences.core.BooleanPreferencesKey
-import androidx.datastore.preferences.core.IntPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -40,23 +40,23 @@ object ReminderSettingsKeys {
     // Arbeitszeit Defaults
     val WORK_START = stringPreferencesKey("work_start")
     val WORK_END = stringPreferencesKey("work_end")
-    val BREAK_MINUTES = IntPreferencesKey("break_minutes")
-    val LOCATION_RADIUS_KM = IntPreferencesKey("location_radius_km")
-    
+    val BREAK_MINUTES = intPreferencesKey("break_minutes")
+    val LOCATION_RADIUS_KM = intPreferencesKey("location_radius_km")
+
     // Morning Window
-    val MORNING_REMINDER_ENABLED = BooleanPreferencesKey("morning_reminder_enabled")
+    val MORNING_REMINDER_ENABLED = booleanPreferencesKey("morning_reminder_enabled")
     val MORNING_WINDOW_START = stringPreferencesKey("morning_window_start")
     val MORNING_WINDOW_END = stringPreferencesKey("morning_window_end")
-    val MORNING_CHECK_INTERVAL = IntPreferencesKey("morning_check_interval")
-    
+    val MORNING_CHECK_INTERVAL = intPreferencesKey("morning_check_interval")
+
     // Evening Window
-    val EVENING_REMINDER_ENABLED = BooleanPreferencesKey("evening_reminder_enabled")
+    val EVENING_REMINDER_ENABLED = booleanPreferencesKey("evening_reminder_enabled")
     val EVENING_WINDOW_START = stringPreferencesKey("evening_window_start")
     val EVENING_WINDOW_END = stringPreferencesKey("evening_window_end")
-    val EVENING_CHECK_INTERVAL = IntPreferencesKey("evening_check_interval")
-    
+    val EVENING_CHECK_INTERVAL = intPreferencesKey("evening_check_interval")
+
     // Fallback
-    val FALLBACK_ENABLED = BooleanPreferencesKey("fallback_enabled")
+    val FALLBACK_ENABLED = booleanPreferencesKey("fallback_enabled")
     val FALLBACK_TIME = stringPreferencesKey("fallback_time")
 }
 

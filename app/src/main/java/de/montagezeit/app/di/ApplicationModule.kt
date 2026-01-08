@@ -44,12 +44,14 @@ object ApplicationModule {
     fun provideRecordMorningCheckIn(
         workEntryDao: WorkEntryDao,
         locationProvider: LocationProvider,
-        locationCalculator: LocationCalculator
+        locationCalculator: LocationCalculator,
+        reminderSettingsManager: ReminderSettingsManager
     ): RecordMorningCheckIn {
         return RecordMorningCheckIn(
             workEntryDao = workEntryDao,
             locationProvider = locationProvider,
-            locationCalculator = locationCalculator
+            locationCalculator = locationCalculator,
+            reminderSettingsManager = reminderSettingsManager
         )
     }
     
@@ -57,12 +59,14 @@ object ApplicationModule {
     fun provideRecordEveningCheckIn(
         workEntryDao: WorkEntryDao,
         locationProvider: LocationProvider,
-        locationCalculator: LocationCalculator
+        locationCalculator: LocationCalculator,
+        reminderSettingsManager: ReminderSettingsManager
     ): RecordEveningCheckIn {
         return RecordEveningCheckIn(
             workEntryDao = workEntryDao,
             locationProvider = locationProvider,
-            locationCalculator = locationCalculator
+            locationCalculator = locationCalculator,
+            reminderSettingsManager = reminderSettingsManager
         )
     }
     

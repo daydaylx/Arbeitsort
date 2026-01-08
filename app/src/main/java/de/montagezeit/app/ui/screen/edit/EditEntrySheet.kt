@@ -37,7 +37,7 @@ fun EditEntrySheet(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            when (uiState) {
+            when (val state = uiState) {
                 is EditUiState.Loading -> {
                     CircularProgressIndicator(
                         modifier = Modifier
@@ -55,13 +55,13 @@ fun EditEntrySheet(
                 
                 is EditUiState.Error -> {
                     Text(
-                        text = (uiState as EditUiState.Error).message,
+                        text = state.message,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
                 
                 is EditUiState.Success -> {
-                    val entry = (uiState as EditUiState.Success).entry
+                    val entry = state.entry
                     EditFormContent(
                         entry = entry,
                         formData = formData,
@@ -75,13 +75,13 @@ fun EditEntrySheet(
                         onResetReview = { viewModel.resetNeedsReview() },
                         onSave = { viewModel.save() }
                     )
-                }
-                
-                is EditUiState.NeedConfirm -> {
-                    BorderzoneConfirmDialog(
-                        onConfirm = { viewModel.confirmAndSave() },
-                        onDismiss = { onDismiss() }
-                    )
+                    
+                    if (state.showConfirmDialog) {
+                        BorderzoneConfirmDialog(
+                            onConfirm = { viewModel.confirmAndSave() },
+                            onDismiss = { viewModel.dismissConfirmDialog() }
+                        )
+                    }
                 }
                 
                 is EditUiState.Saved -> {
@@ -129,16 +129,16 @@ fun EditFormContent(
         style = MaterialTheme.typography.headlineSmall
     )
     
-    HorizontalDivider()
-    
+    Divider()
+
     // Day Type
     DayTypeSelector(
         selectedType = formData.dayType,
         onTypeChange = onDayTypeChange
     )
-    
-    HorizontalDivider()
-    
+
+    Divider()
+
     // Work Times
     WorkTimesSection(
         workStart = formData.workStart,
@@ -148,9 +148,9 @@ fun EditFormContent(
         onEndChange = onWorkEndChange,
         onBreakChange = onBreakMinutesChange
     )
-    
-    HorizontalDivider()
-    
+
+    Divider()
+
     // Location Labels
     LocationLabelsSection(
         entry = entry,
@@ -159,18 +159,18 @@ fun EditFormContent(
         onMorningLabelChange = onMorningLabelChange,
         onEveningLabelChange = onEveningLabelChange
     )
-    
-    HorizontalDivider()
-    
+
+    Divider()
+
     // Note
     NoteSection(
         note = formData.note,
         onNoteChange = onNoteChange
     )
-    
+
     // Reset Needs Review
     if (formData.needsReview || entry.needsReview) {
-        HorizontalDivider()
+        Divider()
         OutlinedButton(
             onClick = onResetReview,
             modifier = Modifier.fillMaxWidth()
@@ -202,6 +202,7 @@ fun EditFormContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayTypeSelector(
     selectedType: de.montagezeit.app.data.local.entity.DayType,

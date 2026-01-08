@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="de.montagezeit.app.domain.location.LocationCalculatorTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-01-06T00:19:28" hostname="lx" time="0.017">
+  <properties/>
+  <testcase name="checkLeipzigLocation - Grenzzone 29km" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.004"/>
+  <testcase name="checkLeipzigLocation - Grenzzone 31km" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="isAccuracyAcceptable - Gute Genauigkeit" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="calculateDistance - Bekannte Distanz" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.009"/>
+  <testcase name="calculateDistanceToLeipzig - Leipzig Zentrum" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="DEFAULT_RADIUS_KM sollte 30 sein" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="checkLeipzigLocation - Außerhalb 32km" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="isAccuracyAcceptable - Schlechte Genauigkeit" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <testcase name="checkLeipzigLocation - Innerhalb 30km" classname="de.montagezeit.app.domain.location.LocationCalculatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

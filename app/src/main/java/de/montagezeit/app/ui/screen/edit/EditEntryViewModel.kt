@@ -108,14 +108,14 @@ class EditEntryViewModel @Inject constructor(
             
             if (currentState !is EditUiState.Success) return@launch
             
-            val originalEntry = (currentState as EditUiState.Success).entry
+            val originalEntry = currentState.entry
             
             // Prüfen ob Borderzone-Confirm erforderlich
             val isBorderzone = (originalEntry.morningLocationLabel == null || 
                              originalEntry.eveningLocationLabel == null)
             
             if (isBorderzone && !confirmBorderzone) {
-                _uiState.value = EditUiState.NeedConfirm
+                _uiState.value = currentState.copy(showConfirmDialog = true)
                 return@launch
             }
             
@@ -142,6 +142,13 @@ class EditEntryViewModel @Inject constructor(
     
     fun confirmAndSave() {
         save(confirmBorderzone = true)
+    }
+
+    fun dismissConfirmDialog() {
+        val currentState = _uiState.value
+        if (currentState is EditUiState.Success) {
+            _uiState.value = currentState.copy(showConfirmDialog = false)
+        }
     }
 }
 
@@ -173,9 +180,8 @@ data class EditFormData(
 
 sealed class EditUiState {
     object Loading : EditUiState()
-    data class Success(val entry: WorkEntry) : EditUiState()
+    data class Success(val entry: WorkEntry, val showConfirmDialog: Boolean = false) : EditUiState()
     object NotFound : EditUiState()
-    object NeedConfirm : EditUiState()
     object Saved : EditUiState()
     data class Error(val message: String) : EditUiState()
 }

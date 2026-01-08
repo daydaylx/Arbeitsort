@@ -5,25 +5,30 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.location.LocationProvider
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.location.LocationCalculator
 import de.montagezeit.app.domain.location.LocationCheckResult
 import de.montagezeit.app.domain.model.LocationResult
 import io.mockk.*
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 
 class RecordMorningCheckInTest {
     
     private lateinit var workEntryDao: WorkEntryDao
     private lateinit var locationProvider: LocationProvider
     private lateinit var locationCalculator: LocationCalculator
+    private lateinit var reminderSettingsManager: ReminderSettingsManager
     private lateinit var recordMorningCheckIn: RecordMorningCheckIn
     
     @Before
@@ -31,10 +36,16 @@ class RecordMorningCheckInTest {
         workEntryDao = mockk()
         locationProvider = mockk()
         locationCalculator = mockk()
+        reminderSettingsManager = mockk()
+        
+        // Default settings mock
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        
         recordMorningCheckIn = RecordMorningCheckIn(
             workEntryDao,
             locationProvider,
-            locationCalculator
+            locationCalculator,
+            reminderSettingsManager
         )
     }
     
@@ -69,8 +80,8 @@ class RecordMorningCheckInTest {
         // Assert
         assertEquals(date, result.date)
         assertEquals(DayType.WORK, result.dayType)
-        assertEquals(51.400, result.morningLat)
-        assertEquals(12.450, result.morningLon)
+        assertEquals(51.400, result.morningLat!!, 0.0)
+        assertEquals(12.450, result.morningLon!!, 0.0)
         assertEquals(100.0f, result.morningAccuracyMeters)
         assertEquals("Leipzig", result.morningLocationLabel)
         assertTrue(result.outsideLeipzigMorning == false)
@@ -105,7 +116,7 @@ class RecordMorningCheckInTest {
         
         // Assert
         assertTrue(result.outsideLeipzigMorning == true)
-        assertNull(result.morningLocationLabel, "Label sollte null sein für außerhalb")
+        assertNull("Label sollte null sein für außerhalb", result.morningLocationLabel)
         assertEquals(LocationStatus.OK, result.morningLocationStatus)
         
         coVerify { workEntryDao.upsert(result) }
@@ -135,8 +146,8 @@ class RecordMorningCheckInTest {
         val result = recordMorningCheckIn.invoke(date)
         
         // Assert
-        assertNull(result.outsideLeipzigMorning, "Grenzzone sollte null sein")
-        assertTrue(result.needsReview, "Grenzzone sollte needsReview=true setzen")
+        assertNull("Grenzzone sollte null sein", result.outsideLeipzigMorning)
+        assertTrue("Grenzzone sollte needsReview=true setzen", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
     }
@@ -157,8 +168,8 @@ class RecordMorningCheckInTest {
         // Assert
         assertEquals(LocationStatus.LOW_ACCURACY, result.morningLocationStatus)
         assertEquals(5000.0f, result.morningAccuracyMeters)
-        assertNull(result.outsideLeipzigMorning, "Low accuracy sollte outside=null setzen")
-        assertTrue(result.needsReview, "Low accuracy sollte needsReview=true setzen")
+        assertNull("Low accuracy sollte outside=null setzen", result.outsideLeipzigMorning)
+        assertTrue("Low accuracy sollte needsReview=true setzen", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
     }
@@ -179,7 +190,7 @@ class RecordMorningCheckInTest {
         // Assert
         assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
         assertNull(result.outsideLeipzigMorning)
-        assertTrue(result.needsReview, "Unavailable sollte needsReview=true setzen")
+        assertTrue("Unavailable sollte needsReview=true setzen", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
     }
@@ -246,8 +257,8 @@ class RecordMorningCheckInTest {
         assertEquals(date, result.date)
         assertEquals(DayType.WORK, result.dayType)
         assertEquals(java.time.LocalTime.of(8, 0), result.workStart) // Nicht verändert
-        assertEquals(51.410, result.morningLat) // Aktualisiert
-        assertEquals(12.460, result.morningLon) // Aktualisiert
+        assertEquals(51.410, result.morningLat!!, 0.0) // Aktualisiert
+        assertEquals(12.460, result.morningLon!!, 0.0) // Aktualisiert
         assertEquals(150.0f, result.morningAccuracyMeters) // Aktualisiert
         assertTrue(result.updatedAt > existingEntry.updatedAt) // updatedAt aktualisiert
         assertEquals(existingEntry.createdAt, result.createdAt) // createdAt gleich
@@ -287,7 +298,7 @@ class RecordMorningCheckInTest {
         val result = recordMorningCheckIn.invoke(date)
         
         // Assert
-        assertTrue(result.needsReview, "Bestehendes needsReview sollte beibehalten werden")
+        assertTrue("Bestehendes needsReview sollte beibehalten werden", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
     }

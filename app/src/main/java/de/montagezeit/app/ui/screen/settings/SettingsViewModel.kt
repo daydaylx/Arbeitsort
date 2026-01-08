@@ -20,7 +20,7 @@ class SettingsViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao
 ) : ViewModel() {
     
-    val reminderSettings = reminderSettingsManager.reminderSettings
+    val reminderSettings = reminderSettingsManager.settings
     
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Initial)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -29,27 +29,36 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
-            reminderSettingsManager.updateMorningWindow(startTime, endTime)
+            reminderSettingsManager.updateSettings(
+                morningWindowStart = startTime,
+                morningWindowEnd = endTime
+            )
         }
     }
-    
+
     fun updateEveningWindow(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
-            reminderSettingsManager.updateEveningWindow(startTime, endTime)
+            reminderSettingsManager.updateSettings(
+                eveningWindowStart = startTime,
+                eveningWindowEnd = endTime
+            )
         }
     }
-    
+
     fun updateRadiusMeters(meters: Int) {
         viewModelScope.launch {
-            reminderSettingsManager.updateRadiusMeters(meters)
+            reminderSettingsManager.updateSettings(
+                locationRadiusKm = meters / 1000
+            )
         }
     }
-    
+
     fun updateLocationMode(mode: LocationMode) {
         viewModelScope.launch {
-            reminderSettingsManager.updateLocationMode(mode.value)
+            // Location mode is not used in the new settings, so we ignore it
+            // or you could add it to ReminderSettings if needed
         }
     }
     

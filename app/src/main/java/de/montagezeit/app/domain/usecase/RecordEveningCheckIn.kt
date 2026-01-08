@@ -5,8 +5,10 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.location.LocationProvider
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.location.LocationCalculator
 import de.montagezeit.app.domain.model.LocationResult
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
@@ -17,7 +19,8 @@ import java.time.LocalDate
 class RecordEveningCheckIn(
     private val workEntryDao: WorkEntryDao,
     private val locationProvider: LocationProvider,
-    private val locationCalculator: LocationCalculator
+    private val locationCalculator: LocationCalculator,
+    private val reminderSettingsManager: ReminderSettingsManager
 ) {
     
     companion object {
@@ -38,6 +41,10 @@ class RecordEveningCheckIn(
     ): WorkEntry {
         val existingEntry = workEntryDao.getByDate(date)
         
+        // Settings lesen für konfigurierten Radius
+        val settings = reminderSettingsManager.settings.first()
+        val locationRadiusKm = settings.locationRadiusKm.toDouble()
+        
         val locationResult = if (forceWithoutLocation) {
             LocationResult.Unavailable
         } else {
@@ -47,7 +54,8 @@ class RecordEveningCheckIn(
         val updatedEntry = processLocationResult(
             existingEntry = existingEntry,
             locationResult = locationResult,
-            isMorning = false // Abend
+            isMorning = false, // Abend
+            radiusKm = locationRadiusKm
         )
         
         workEntryDao.upsert(updatedEntry)
@@ -60,16 +68,18 @@ class RecordEveningCheckIn(
     private fun processLocationResult(
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
-        isMorning: Boolean
+        isMorning: Boolean,
+        radiusKm: Double
     ): WorkEntry {
         val now = System.currentTimeMillis()
         
         return when (locationResult) {
             is LocationResult.Success -> {
-                // Location OK - Radius-Check
+                // Location OK - Radius-Check mit konfiguriertem Radius
                 val locationCheck = locationCalculator.checkLeipzigLocation(
                     locationResult.lat,
-                    locationResult.lon
+                    locationResult.lon,
+                    radiusKm
                 )
                 
                 val outsideLeipzig = when (locationCheck.isInside) {

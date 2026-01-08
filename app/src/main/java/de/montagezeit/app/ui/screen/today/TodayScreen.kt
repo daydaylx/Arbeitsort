@@ -1,5 +1,9 @@
 package de.montagezeit.app.ui.screen.today
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,8 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
@@ -24,8 +30,41 @@ fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
     onOpenEditSheet: (java.time.LocalDate) -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val todayEntry by viewModel.todayEntry.collectAsState()
+    
+    // Runtime Permission für Standort
+    val locationPermission = Manifest.permission.ACCESS_COARSE_LOCATION
+    var showPermissionRationale by remember { mutableStateOf(false) }
+
+    // Permission-Status prüfen (State, damit es sich aktualisiert)
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                locationPermission
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Permission Launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasLocationPermission = isGranted
+        if (isGranted) {
+            // Permission gewährt - Check-in automatisch auslösen
+            if (todayEntry?.morningCapturedAt == null) {
+                viewModel.onMorningCheckIn()
+            } else if (todayEntry?.eveningCapturedAt == null) {
+                viewModel.onEveningCheckIn()
+            }
+        } else {
+            // Permission abgelehnt
+            showPermissionRationale = true
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -56,6 +95,10 @@ fun TodayScreen(
                 is TodayUiState.Success -> {
                     TodayContent(
                         entry = (uiState as TodayUiState.Success).entry ?: todayEntry,
+                        hasLocationPermission = hasLocationPermission,
+                        onRequestLocationPermission = {
+                            locationPermissionLauncher.launch(locationPermission)
+                        },
                         onMorningCheckIn = { viewModel.onMorningCheckIn() },
                         onEveningCheckIn = { viewModel.onEveningCheckIn() },
                         onOpenEditSheet = { onOpenEditSheet(java.time.LocalDate.now()) },
@@ -119,6 +162,8 @@ fun LoadingLocationContent(
 @Composable
 fun TodayContent(
     entry: WorkEntry?,
+    hasLocationPermission: Boolean,
+    onRequestLocationPermission: () -> Unit,
     onMorningCheckIn: () -> Unit,
     onEveningCheckIn: () -> Unit,
     onOpenEditSheet: () -> Unit,
@@ -134,6 +179,8 @@ fun TodayContent(
         // Check-In Buttons
         CheckInSection(
             entry = entry,
+            hasLocationPermission = hasLocationPermission,
+            onRequestLocationPermission = onRequestLocationPermission,
             onMorningCheckIn = onMorningCheckIn,
             onEveningCheckIn = onEveningCheckIn
         )
@@ -214,6 +261,8 @@ fun StatusCard(entry: WorkEntry?) {
 @Composable
 fun CheckInSection(
     entry: WorkEntry?,
+    hasLocationPermission: Boolean,
+    onRequestLocationPermission: () -> Unit,
     onMorningCheckIn: () -> Unit,
     onEveningCheckIn: () -> Unit
 ) {
@@ -222,8 +271,18 @@ fun CheckInSection(
     ) {
         // Morning Check-In
         val morningCompleted = entry?.morningCapturedAt != null
+        
+        // Permission prüfen vor Morning Check-in
+        val handleMorningCheckIn = {
+            if (hasLocationPermission) {
+                onMorningCheckIn()
+            } else {
+                onRequestLocationPermission()
+            }
+        }
+        
         Button(
-            onClick = onMorningCheckIn,
+            onClick = handleMorningCheckIn,
             enabled = !morningCompleted,
             modifier = Modifier
                 .fillMaxWidth()
@@ -263,8 +322,18 @@ fun CheckInSection(
         
         // Evening Check-In
         val eveningCompleted = entry?.eveningCapturedAt != null
+        
+        // Permission prüfen vor Evening Check-in
+        val handleEveningCheckIn = {
+            if (hasLocationPermission) {
+                onEveningCheckIn()
+            } else {
+                onRequestLocationPermission()
+            }
+        }
+        
         Button(
-            onClick = onEveningCheckIn,
+            onClick = handleEveningCheckIn,
             enabled = !eveningCompleted,
             modifier = Modifier
                 .fillMaxWidth()
@@ -480,6 +549,7 @@ private fun getCurrentDateString(): String {
 }
 
 private fun getCompletedTimeString(timestamp: Long): String {
-    val time = java.time.LocalTime.ofNanoOfDay(timestamp * 1_000_000)
+    val instant = java.time.Instant.ofEpochMilli(timestamp)
+    val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
 }

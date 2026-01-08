@@ -182,9 +182,9 @@ fun WeekGroupCard(
                     )
                 }
             }
-            
-            HorizontalDivider()
-            
+
+            Divider()
+
             // Entries
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 week.entries.forEach { entry ->

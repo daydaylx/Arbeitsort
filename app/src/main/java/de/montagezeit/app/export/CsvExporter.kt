@@ -134,7 +134,7 @@ class CsvExporter @Inject constructor(
     }
     
     private fun formatDate(date: java.time.LocalDate): String {
-        return dateFormat.format(java.sql.Date.valueOf(date))
+        return date.toString()
     }
     
     private fun formatTimestamp(timestamp: Long?): String {
