@@ -22,6 +22,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.ui.screen.today.TodayUiState
+import de.montagezeit.app.ui.screen.travel.TravelSection
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,7 @@ fun TodayScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val todayEntry by viewModel.todayEntry.collectAsState()
+    val travelUiState by viewModel.travelUiState.collectAsState()
     
     // Runtime Permission für Standort
     val locationPermission = Manifest.permission.ACCESS_COARSE_LOCATION
@@ -101,6 +103,12 @@ fun TodayScreen(
                         },
                         onMorningCheckIn = { viewModel.onMorningCheckIn() },
                         onEveningCheckIn = { viewModel.onEveningCheckIn() },
+                        travelUiState = travelUiState,
+                        onTravelFromChange = viewModel::updateTravelFromLabel,
+                        onTravelToChange = viewModel::updateTravelToLabel,
+                        onCalculateDistance = viewModel::calculateRouteDistance,
+                        onManualDistanceChange = viewModel::updateManualDistance,
+                        onSaveManualDistance = viewModel::saveManualDistance,
                         onOpenEditSheet = { onOpenEditSheet(java.time.LocalDate.now()) },
                         modifier = Modifier
                             .fillMaxSize()
@@ -166,6 +174,12 @@ fun TodayContent(
     onRequestLocationPermission: () -> Unit,
     onMorningCheckIn: () -> Unit,
     onEveningCheckIn: () -> Unit,
+    travelUiState: de.montagezeit.app.ui.screen.travel.TravelUiState,
+    onTravelFromChange: (String) -> Unit,
+    onTravelToChange: (String) -> Unit,
+    onCalculateDistance: () -> Unit,
+    onManualDistanceChange: (String) -> Unit,
+    onSaveManualDistance: () -> Unit,
     onOpenEditSheet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -184,6 +198,23 @@ fun TodayContent(
             onMorningCheckIn = onMorningCheckIn,
             onEveningCheckIn = onEveningCheckIn
         )
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                TravelSection(
+                    title = "Fahrt",
+                    travelState = travelUiState,
+                    onFromChange = onTravelFromChange,
+                    onToChange = onTravelToChange,
+                    onCalculateDistance = onCalculateDistance,
+                    onManualDistanceChange = onManualDistanceChange,
+                    onSaveManualDistance = onSaveManualDistance
+                )
+            }
+        }
         
         // Manual Edit Button
         Button(
