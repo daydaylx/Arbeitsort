@@ -70,7 +70,6 @@ class RecordEveningCheckIn(
     private fun processLocationResult(
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
-        date: LocalDate,
         isMorning: Boolean,
         radiusKm: Double,
         date: LocalDate
