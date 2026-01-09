@@ -59,7 +59,8 @@ class RecordMorningCheckIn(
             existingEntry = existingEntry,
             locationResult = locationResult,
             isMorning = true,
-            radiusKm = locationRadiusKm
+            radiusKm = locationRadiusKm,
+            date = date
         )
         
         workEntryDao.upsert(updatedEntry)
@@ -73,7 +74,8 @@ class RecordMorningCheckIn(
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
         isMorning: Boolean,
-        radiusKm: Double
+        radiusKm: Double,
+        date: LocalDate
     ): WorkEntry {
         val now = System.currentTimeMillis()
         
@@ -113,6 +115,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         morningCapturedAt = now,
                         morningLat = locationResult.lat,
                         morningLon = locationResult.lon,
@@ -134,6 +137,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         eveningCapturedAt = now,
                         eveningLat = locationResult.lat,
                         eveningLon = locationResult.lon,
@@ -159,6 +163,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.LOW_ACCURACY,
                         morningAccuracyMeters = locationResult.accuracyMeters,
@@ -174,6 +179,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.LOW_ACCURACY,
                         eveningAccuracyMeters = locationResult.accuracyMeters,
@@ -195,6 +201,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigMorning = null,
@@ -208,6 +215,7 @@ class RecordMorningCheckIn(
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
+                        date = date,
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigEvening = null,
@@ -222,6 +230,7 @@ class RecordMorningCheckIn(
      * Erstellt einen neuen WorkEntry mit Defaults
      */
     private fun createDefaultEntry(
+        date: LocalDate,
         morningCapturedAt: Long? = null,
         morningLat: Double? = null,
         morningLon: Double? = null,
@@ -240,7 +249,7 @@ class RecordMorningCheckIn(
     ): WorkEntry {
         val now = System.currentTimeMillis()
         return WorkEntry(
-            date = LocalDate.now(),
+            date = date,
             dayType = DayType.WORK,
             morningCapturedAt = morningCapturedAt,
             morningLat = morningLat,
