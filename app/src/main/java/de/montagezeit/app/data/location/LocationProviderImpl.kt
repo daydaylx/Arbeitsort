@@ -8,7 +8,6 @@ import android.location.Location
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -51,12 +50,8 @@ class LocationProviderImpl(
         
         return try {
             suspendCancellableCoroutine { continuation ->
-                val locationRequest = LocationRequest.Builder(Priority.PRIORITY_LOW_POWER, timeoutMs)
-                    .setMinUpdateIntervalMillis(timeoutMs)
-                    .build()
-                
                 fusedLocationClient.getCurrentLocation(
-                    locationRequest.priority,
+                    Priority.PRIORITY_LOW_POWER,
                     cancellationTokenSource.token
                 ).addOnSuccessListener { location: Location? ->
                     if (location != null) {
