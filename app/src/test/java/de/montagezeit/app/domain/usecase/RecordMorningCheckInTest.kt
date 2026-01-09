@@ -211,6 +211,22 @@ class RecordMorningCheckInTest {
         coVerify(exactly = 0) { locationProvider.getCurrentLocation(any()) }
         coVerify { workEntryDao.upsert(result) }
     }
+
+    @Test
+    fun `invoke - Nicht-heutiges Datum - Setzt date korrekt`() = runTest {
+        // Arrange
+        val date = LocalDate.of(2024, 1, 15)
+
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.upsert(any()) } just Runs
+
+        // Act
+        val result = recordMorningCheckIn.invoke(date, forceWithoutLocation = true)
+
+        // Assert
+        assertEquals(date, result.date)
+        coVerify { workEntryDao.upsert(result) }
+    }
     
     @Test
     fun `invoke - Idempotent Upsert - Zweiter Morgen Check-in aktualisiert existierenden Eintrag`() = runTest {

@@ -39,21 +39,56 @@ class WindowCheckWorker @AssistedInject constructor(
         val currentTime = LocalTime.now()
         val settings = reminderSettingsManager.settings.first()
         val sharedPreferences = applicationContext.getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
+        val reminderType = reminderTypeOrNull()
         
         try {
-            // Prüfe Morning Reminder
-            if (settings.morningReminderEnabled && isInMorningWindow(currentTime, settings)) {
-                checkAndShowMorningReminder(today, settings, sharedPreferences)
-            }
-            
-            // Prüfe Evening Reminder
-            if (settings.eveningReminderEnabled && isInEveningWindow(currentTime, settings)) {
-                checkAndShowEveningReminder(today, settings, sharedPreferences)
-            }
-            
-            // Prüfe Fallback Reminder
-            if (settings.fallbackEnabled && currentTime.isAfter(settings.fallbackTime)) {
-                checkAndShowFallbackReminder(today, sharedPreferences)
+            when (reminderType) {
+                ReminderType.MORNING -> {
+                    if (!settings.morningReminderEnabled) {
+                        return Result.success()
+                    }
+                    if (!ReminderWindowEvaluator.isInMorningWindow(currentTime, settings)) {
+                        return Result.success()
+                    }
+                    checkAndShowMorningReminder(today, sharedPreferences)
+                }
+                ReminderType.EVENING -> {
+                    if (!settings.eveningReminderEnabled) {
+                        return Result.success()
+                    }
+                    if (!ReminderWindowEvaluator.isInEveningWindow(currentTime, settings)) {
+                        return Result.success()
+                    }
+                    checkAndShowEveningReminder(today, sharedPreferences)
+                }
+                ReminderType.FALLBACK -> {
+                    if (!settings.fallbackEnabled) {
+                        return Result.success()
+                    }
+                    if (!ReminderWindowEvaluator.isAfterFallbackTime(currentTime, settings)) {
+                        return Result.success()
+                    }
+                    checkAndShowFallbackReminder(today, sharedPreferences)
+                }
+                null -> {
+                    if (settings.morningReminderEnabled &&
+                        ReminderWindowEvaluator.isInMorningWindow(currentTime, settings)
+                    ) {
+                        checkAndShowMorningReminder(today, sharedPreferences)
+                    }
+
+                    if (settings.eveningReminderEnabled &&
+                        ReminderWindowEvaluator.isInEveningWindow(currentTime, settings)
+                    ) {
+                        checkAndShowEveningReminder(today, sharedPreferences)
+                    }
+
+                    if (settings.fallbackEnabled &&
+                        ReminderWindowEvaluator.isAfterFallbackTime(currentTime, settings)
+                    ) {
+                        checkAndShowFallbackReminder(today, sharedPreferences)
+                    }
+                }
             }
             
             return Result.success()
@@ -63,27 +98,10 @@ class WindowCheckWorker @AssistedInject constructor(
     }
     
     /**
-     * Prüft ob die aktuelle Zeit im Morning-Fenster liegt
-     */
-    private fun isInMorningWindow(currentTime: LocalTime, settings: de.montagezeit.app.data.preferences.ReminderSettings): Boolean {
-        return !currentTime.isBefore(settings.morningWindowStart) && 
-               currentTime.isBefore(settings.morningWindowEnd)
-    }
-    
-    /**
-     * Prüft ob die aktuelle Zeit im Evening-Fenster liegt
-     */
-    private fun isInEveningWindow(currentTime: LocalTime, settings: de.montagezeit.app.data.preferences.ReminderSettings): Boolean {
-        return !currentTime.isBefore(settings.eveningWindowStart) && 
-               currentTime.isBefore(settings.eveningWindowEnd)
-    }
-    
-    /**
      * Prüft ob Morning Reminder nötig ist und zeigt ihn an
      */
     private suspend fun checkAndShowMorningReminder(
         date: LocalDate,
-        settings: de.montagezeit.app.data.preferences.ReminderSettings,
         sharedPreferences: SharedPreferences
     ) {
         // Prüfe ob schon heute erinnert wurde
@@ -114,7 +132,6 @@ class WindowCheckWorker @AssistedInject constructor(
      */
     private suspend fun checkAndShowEveningReminder(
         date: LocalDate,
-        settings: de.montagezeit.app.data.preferences.ReminderSettings,
         sharedPreferences: SharedPreferences
     ) {
         // Prüfe ob schon heute erinnert wurde
@@ -169,5 +186,14 @@ class WindowCheckWorker @AssistedInject constructor(
                 .putBoolean("fallback_reminded_$date", true)
                 .apply()
         }
+    }
+
+    private fun reminderTypeOrNull(): ReminderType? {
+        val rawType = inputData.getString(KEY_REMINDER_TYPE) ?: return null
+        return runCatching { ReminderType.valueOf(rawType) }.getOrNull()
+    }
+
+    companion object {
+        const val KEY_REMINDER_TYPE = "reminder_type"
     }
 }
