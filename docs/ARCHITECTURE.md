@@ -164,11 +164,11 @@ enum class LocationStatus {
 
 ### Mechanismen
 - **Primary:** WorkManager (PeriodicWorkRequest mit Constraints)
-- **Fallback:** Kein AlarmManager; Reminder sind bewusst inexact und deferrable
+- **Fallback:** Daily PeriodicWorkRequest um 22:30 (Fallback-Worker)
 
 ### Morning Reminder
 - **Fenster:** 06:00 - 13:00 (konfigurierbar)
-- **Trigger:** Alle 2 Stunden innerhalb des Fensters (deferrable)
+- **Trigger:** Start um 06:00, dann alle 2 Stunden innerhalb des Fensters
 - **Notification:** 
   - Title: "Guten Morgen! Check-in?"
   - Actions: "Check-in", "Ohne Standort", "Später"
@@ -176,7 +176,7 @@ enum class LocationStatus {
 
 ### Evening Reminder
 - **Fenster:** 16:00 - 22:30 (konfigurierbar)
-- **Trigger:** Alle 3 Stunden innerhalb des Fensters (deferrable)
+- **Trigger:** Start um 16:00, dann alle 3 Stunden innerhalb des Fensters
 - **Notification:** Analog Morning
 
 ### Fallback Reminder (22:30)

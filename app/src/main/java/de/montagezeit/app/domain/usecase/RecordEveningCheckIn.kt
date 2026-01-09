@@ -54,6 +54,7 @@ class RecordEveningCheckIn(
         val updatedEntry = processLocationResult(
             existingEntry = existingEntry,
             locationResult = locationResult,
+            date = date,
             isMorning = false, // Abend
             radiusKm = locationRadiusKm,
             date = date
