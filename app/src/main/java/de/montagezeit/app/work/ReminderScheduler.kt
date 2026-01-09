@@ -17,9 +17,9 @@ import javax.inject.Singleton
  * Plant WindowCheckWorker mit UniqueWork für Reboot-Resilienz:
  * - Morning Worker: Läuft im Morning Window (06:00-13:00) alle 2 Stunden
  * - Evening Worker: Läuft im Evening Window (16:00-22:30) alle 3 Stunden
- * - Fallback Worker: Läuft nach 22:30 einmal
- * 
- * Verwendet PeriodicWorkRequest für tägliche Wiederholung
+ * - Fallback Worker: Läuft nach 22:30 einmal täglich
+ *
+ * Verwendet PeriodicWorkRequest für wiederholte Ausführung im Fenster
  */
 @Singleton
 class ReminderScheduler @Inject constructor(
@@ -80,7 +80,7 @@ class ReminderScheduler @Inject constructor(
             .build()
         
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
+            repeatInterval = 2, TimeUnit.HOURS
         )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
@@ -89,7 +89,7 @@ class ReminderScheduler @Inject constructor(
         
         workManager.enqueueUniquePeriodicWork(
             MORNING_WORK_NAME,
-            ExistingPeriodicWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
     }
@@ -122,7 +122,7 @@ class ReminderScheduler @Inject constructor(
             .build()
         
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
+            repeatInterval = 3, TimeUnit.HOURS
         )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
@@ -131,7 +131,7 @@ class ReminderScheduler @Inject constructor(
         
         workManager.enqueueUniquePeriodicWork(
             EVENING_WORK_NAME,
-            ExistingPeriodicWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
     }
@@ -173,7 +173,7 @@ class ReminderScheduler @Inject constructor(
         
         workManager.enqueueUniquePeriodicWork(
             FALLBACK_WORK_NAME,
-            ExistingPeriodicWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
     }

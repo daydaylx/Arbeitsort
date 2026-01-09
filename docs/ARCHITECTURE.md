@@ -163,12 +163,12 @@ enum class LocationStatus {
 **Philosophie:** Fenster-basiert, nicht exakt. Android darf "ungefähr" sein.
 
 ### Mechanismen
-- **Primary:** WorkManager (OneTimeWorkRequest mit Constraints)
-- **Fallback:** AlarmManager (inexact) für kritische Reminders
+- **Primary:** WorkManager (PeriodicWorkRequest mit Constraints)
+- **Fallback:** Daily PeriodicWorkRequest um 22:30 (Fallback-Worker)
 
 ### Morning Reminder
 - **Fenster:** 06:00 - 13:00 (konfigurierbar)
-- **Trigger:** Jeden Morgen innerhalb des Fensters
+- **Trigger:** Start um 06:00, dann alle 2 Stunden innerhalb des Fensters
 - **Notification:** 
   - Title: "Guten Morgen! Check-in?"
   - Actions: "Check-in", "Ohne Standort", "Später"
@@ -176,7 +176,7 @@ enum class LocationStatus {
 
 ### Evening Reminder
 - **Fenster:** 16:00 - 22:30 (konfigurierbar)
-- **Trigger:** Jeden Abend innerhalb des Fensters
+- **Trigger:** Start um 16:00, dann alle 3 Stunden innerhalb des Fensters
 - **Notification:** Analog Morning
 
 ### Fallback Reminder (22:30)

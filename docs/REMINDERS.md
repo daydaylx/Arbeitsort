@@ -35,8 +35,8 @@ if (inMorningWindow && !alreadyReminded && (entry == null || entry.dayType == WO
 
 #### 3. ReminderScheduler (`work/`)
 Plant WindowCheckWorker mit UniqueWork:
-- **Morning Worker**: Startet 06:00, wiederholt täglich
-- **Evening Worker**: Startet 16:00, wiederholt täglich
+- **Morning Worker**: Startet 06:00, wiederholt alle 2 Stunden im Fenster
+- **Evening Worker**: Startet 16:00, wiederholt alle 3 Stunden im Fenster
 - **Fallback Worker**: Startet 22:30, wiederholt täglich
 
 **Constraints:**
@@ -180,10 +180,8 @@ PeriodicWorkRequestBuilder<WindowCheckWorker>(1, TimeUnit.DAYS)
 **Problem**: Worker läuft nur 1x pro Tag (PeriodicWorkRequest)
 
 **Lösung**: Worker läuft mehrfach im Fenster
-- Morning: 06:00 (Periodic), WindowCheckWorker prüft im Fenster
-- Evening: 16:00 (Periodic), WindowCheckWorker prüft im Fenster
-
-**Aktuelle Implementierung**: WindowCheckWorker wird mehrfach geplant (TODO: verbessern)
+- Morning: 06:00, dann alle 2 Stunden bis 13:00 (Periodic), WindowCheckWorker prüft im Fenster
+- Evening: 16:00, dann alle 3 Stunden bis 22:30 (Periodic), WindowCheckWorker prüft im Fenster
 
 **Bessere Strategie** (für Zukunft):
 ```kotlin
