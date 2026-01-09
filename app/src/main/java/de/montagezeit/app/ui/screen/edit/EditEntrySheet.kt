@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.montagezeit.app.ui.screen.travel.TravelSection
+import de.montagezeit.app.ui.screen.travel.TravelUiState
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,6 +23,7 @@ fun EditEntrySheet(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formData by viewModel.formData.collectAsState()
+    val travelUiState by viewModel.travelUiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -71,6 +74,12 @@ fun EditEntrySheet(
                         onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
                         onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                         onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                        travelUiState = travelUiState,
+                        onTravelFromChange = { viewModel.updateTravelFromLabel(it) },
+                        onTravelToChange = { viewModel.updateTravelToLabel(it) },
+                        onCalculateDistance = { viewModel.calculateRouteDistance() },
+                        onManualDistanceChange = { viewModel.updateManualDistance(it) },
+                        onSaveManualDistance = { viewModel.saveManualDistance() },
                         onNoteChange = { viewModel.updateNote(it) },
                         onResetReview = { viewModel.resetNeedsReview() },
                         onSave = { viewModel.save() }
@@ -119,6 +128,12 @@ fun EditFormContent(
     onBreakMinutesChange: (Int) -> Unit,
     onMorningLabelChange: (String) -> Unit,
     onEveningLabelChange: (String) -> Unit,
+    travelUiState: TravelUiState,
+    onTravelFromChange: (String) -> Unit,
+    onTravelToChange: (String) -> Unit,
+    onCalculateDistance: () -> Unit,
+    onManualDistanceChange: (String) -> Unit,
+    onSaveManualDistance: () -> Unit,
     onNoteChange: (String) -> Unit,
     onResetReview: () -> Unit,
     onSave: () -> Unit
@@ -158,6 +173,18 @@ fun EditFormContent(
         eveningLabel = formData.eveningLocationLabel,
         onMorningLabelChange = onMorningLabelChange,
         onEveningLabelChange = onEveningLabelChange
+    )
+
+    Divider()
+
+    TravelSection(
+        title = "Fahrt",
+        travelState = travelUiState,
+        onFromChange = onTravelFromChange,
+        onToChange = onTravelToChange,
+        onCalculateDistance = onCalculateDistance,
+        onManualDistanceChange = onManualDistanceChange,
+        onSaveManualDistance = onSaveManualDistance
     )
 
     Divider()

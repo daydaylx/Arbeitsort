@@ -101,6 +101,24 @@ class UpdateEntry(
                 "travelLabelEnd" -> updatedEntry.copy(
                     travelLabelEnd = value as? String
                 )
+                "travelFromLabel" -> updatedEntry.copy(
+                    travelFromLabel = value as? String
+                )
+                "travelToLabel" -> updatedEntry.copy(
+                    travelToLabel = value as? String
+                )
+                "travelDistanceKm" -> updatedEntry.copy(
+                    travelDistanceKm = value as? Double
+                )
+                "travelPaidMinutes" -> updatedEntry.copy(
+                    travelPaidMinutes = value as? Int
+                )
+                "travelSource" -> updatedEntry.copy(
+                    travelSource = value as? de.montagezeit.app.data.local.entity.TravelSource
+                )
+                "travelUpdatedAt" -> updatedEntry.copy(
+                    travelUpdatedAt = value as? Long
+                )
                 else -> updatedEntry
             }
         }

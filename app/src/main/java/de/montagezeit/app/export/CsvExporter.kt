@@ -9,6 +9,8 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,6 +67,7 @@ class CsvExporter @Inject constructor(
             append("morningCapturedAt;morningLocationLabel;morningOutside;")
             append("eveningCapturedAt;eveningLocationLabel;eveningOutside;")
             append("travelStartAt;travelArriveAt;travelLabelStart;travelLabelEnd;")
+            append("travel_from;travel_to;travel_km;travel_paid_hours;travel_source;")
             append("note;needsReview;createdAt;updatedAt")
         })
         
@@ -93,6 +96,11 @@ class CsvExporter @Inject constructor(
                 append(formatTimestamp(entry.travelArriveAt)).append(";")
                 append(escapeCsv(entry.travelLabelStart)).append(";")
                 append(escapeCsv(entry.travelLabelEnd)).append(";")
+                append(escapeCsv(entry.travelFromLabel)).append(";")
+                append(escapeCsv(entry.travelToLabel)).append(";")
+                append(entry.travelDistanceKm?.let { formatDistance(it) } ?: "").append(";")
+                append(entry.travelPaidMinutes?.let { formatPaidHours(it) } ?: "").append(";")
+                append(entry.travelSource?.name ?: "").append(";")
                 
                 // Meta
                 append(escapeCsv(entry.note)).append(";")
@@ -153,5 +161,16 @@ class CsvExporter @Inject constructor(
         
         // Anführungszeichen escapen
         return escaped.replace("\"", "\\\"")
+    }
+
+    private fun formatPaidHours(minutes: Int): String {
+        val hours = minutes / 60.0
+        val formatter = DecimalFormat("0.00", DecimalFormatSymbols(Locale.GERMAN))
+        return formatter.format(hours)
+    }
+
+    private fun formatDistance(distanceKm: Double): String {
+        val formatter = DecimalFormat("0.00", DecimalFormatSymbols(Locale.GERMAN))
+        return formatter.format(distanceKm)
     }
 }

@@ -39,6 +39,12 @@ data class WorkEntry(
     val travelArriveAt: Long? = null,
     val travelLabelStart: String? = null,
     val travelLabelEnd: String? = null,
+    val travelFromLabel: String? = null,
+    val travelToLabel: String? = null,
+    val travelDistanceKm: Double? = null,
+    val travelPaidMinutes: Int? = null,
+    val travelSource: TravelSource? = null,
+    val travelUpdatedAt: Long? = null,
     
     // Meta & Flags
     val needsReview: Boolean = false,
@@ -56,4 +62,10 @@ enum class LocationStatus {
     OK,
     UNAVAILABLE,
     LOW_ACCURACY
+}
+
+enum class TravelSource {
+    MANUAL,
+    ROUTED,
+    ESTIMATED
 }
