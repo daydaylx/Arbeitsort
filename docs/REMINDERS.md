@@ -24,6 +24,7 @@ Prüft regelmäßig ob Reminder notwendig sind:
 - Prüft WorkEntry DB ob Snapshot fehlt
 - Prüft ob dayType == WORK
 - Vermeidet mehrfache Erinnerungen pro Tag (SharedPreferences Flag)
+- **Wichtig**: Pro Worker-Typ nur im eigenen Fenster aktiv, sonst sofort `Result.success()`
 
 **Logik:**
 ```kotlin
@@ -35,8 +36,8 @@ if (inMorningWindow && !alreadyReminded && (entry == null || entry.dayType == WO
 
 #### 3. ReminderScheduler (`work/`)
 Plant WindowCheckWorker mit UniqueWork:
-- **Morning Worker**: Startet 06:00, wiederholt täglich
-- **Evening Worker**: Startet 16:00, wiederholt täglich
+- **Morning Worker**: Startet 06:00 (oder sofort im Fenster), wiederholt alle 2 Stunden
+- **Evening Worker**: Startet 16:00 (oder sofort im Fenster), wiederholt alle 3 Stunden
 - **Fallback Worker**: Startet 22:30, wiederholt täglich
 
 **Constraints:**
@@ -169,36 +170,35 @@ Analog zu Morning, aber:
 
 **Lösung: WorkManager deferrable scheduling**
 ```kotlin
-PeriodicWorkRequestBuilder<WindowCheckWorker>(1, TimeUnit.DAYS)
+PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
     .setInitialDelay(delayTo06:00)
     .setConstraints(noNetworkRequired)
+    .setInputData(workDataOf("reminder_type" to "MORNING"))
     .build()
 ```
 
 ### Window Check Strategie
 
-**Problem**: Worker läuft nur 1x pro Tag (PeriodicWorkRequest)
+**Strategie**: Worker läuft mehrfach im Fenster
+- Morning: alle 2 Stunden im Morning Window
+- Evening: alle 3 Stunden im Evening Window
+- Fallback: 1x nach 22:30
 
-**Lösung**: Worker läuft mehrfach im Fenster
-- Morning: 06:00 (Periodic), WindowCheckWorker prüft im Fenster
-- Evening: 16:00 (Periodic), WindowCheckWorker prüft im Fenster
-
-**Aktuelle Implementierung**: WindowCheckWorker wird mehrfach geplant (TODO: verbessern)
-
-**Bessere Strategie** (für Zukunft):
+**Implementierung**:
 ```kotlin
 // Morning: Alle 2 Stunden im Fenster
 PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
     .setInitialDelay(delayTo06:00)
+    .setInputData(workDataOf("reminder_type" to "MORNING"))
     .addTag("morning_reminder")
     .build()
-// Worker prüft ob im Fenster und ob nötig
+// Worker prüft nur im Fenster und beendet sich sonst sofort
 ```
 
 ## Testing
 
 ### Unit Tests
-- `WindowCheckWorkerTest`: Prüft Logik
+- `ReminderWindowEvaluatorTest`: Prüft Fensterlogik (ohne Android Framework)
 - `ReminderSettingsManagerTest`: Persistenz
 
 ### Instrumented Tests
@@ -271,7 +271,6 @@ lifecycleScope.launch {
 
 - [ ] TimePickerDialog implementieren (aktuell Placeholder)
 - [ ] Edit Action öffnet MainActivity mit Edit-Route
-- [ ] WindowCheckWorker öfter laufen lassen (alle 2-3 Stunden)
 - [ ] Weekend/Feiertage Settings
 - [ ] Reminder History Screen
 - [ ] Snooze Action (erinnere in 10 Minuten)
