@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
+import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
@@ -37,6 +38,7 @@ fun MontageZeitNavGraph(
     // Edit Sheet State
     var showEditSheet by remember { mutableStateOf(false) }
     var editDate by remember { mutableStateOf<String?>(null) }
+    var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
 
     LaunchedEffect(editRequestDate) {
         if (editRequestDate != null) {
@@ -101,9 +103,18 @@ fun MontageZeitNavGraph(
     if (showEditSheet && editDate != null) {
         EditEntrySheet(
             date = LocalDate.parse(editDate),
+            initialFormData = copiedFormData,
             onDismiss = {
                 showEditSheet = false
                 editDate = null
+                copiedFormData = null
+            },
+            onCopyToNewDate = { newDate, formData ->
+                // Schließe aktuelles Sheet und öffne neues mit kopierten Daten
+                showEditSheet = false
+                editDate = newDate.toString()
+                copiedFormData = formData
+                showEditSheet = true
             }
         )
     }

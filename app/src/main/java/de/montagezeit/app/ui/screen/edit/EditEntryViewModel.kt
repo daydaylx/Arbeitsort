@@ -46,6 +46,22 @@ class EditEntryViewModel @Inject constructor(
         savedStateHandle["date"] = date.toString()
         loadEntry(date)
     }
+    
+    /**
+     * Setzt FormData direkt (z.B. beim Kopieren eines Eintrags)
+     */
+    fun setFormData(data: EditFormData) {
+        _formData.value = data
+        // Prüfe ob Eintrag existiert, wenn nicht, setze NewEntry State
+        viewModelScope.launch {
+            val entry = workEntryDao.getByDate(currentDate)
+            if (entry == null) {
+                _uiState.value = EditUiState.NewEntry(currentDate)
+            } else {
+                _uiState.value = EditUiState.Success(entry)
+            }
+        }
+    }
 
     private fun loadEntry(date: LocalDate) {
         viewModelScope.launch {
@@ -57,7 +73,16 @@ class EditEntryViewModel @Inject constructor(
                     _formData.value = EditFormData.fromEntry(entry)
                     _uiState.value = EditUiState.Success(entry)
                 } else {
-                    _uiState.value = EditUiState.NotFound
+                    // Neuen Eintrag mit Defaults erstellen
+                    val defaultEntry = WorkEntry(
+                        date = date,
+                        dayType = DayType.WORK,
+                        workStart = LocalTime.of(8, 0),
+                        workEnd = LocalTime.of(19, 0),
+                        breakMinutes = 60
+                    )
+                    _formData.value = EditFormData.fromEntry(defaultEntry)
+                    _uiState.value = EditUiState.NewEntry(date)
                 }
             } catch (e: Exception) {
                 _uiState.value = EditUiState.Error(e.message ?: "Unbekannter Fehler")
@@ -145,44 +170,75 @@ class EditEntryViewModel @Inject constructor(
             val data = _formData.value
             val currentState = _uiState.value
 
-            if (currentState !is EditUiState.Success) return@launch
-
             // Validate form data before saving
             val validationErrors = data.validate()
             if (validationErrors.isNotEmpty()) {
-                _uiState.value = currentState.copy(validationErrors = validationErrors)
+                when (currentState) {
+                    is EditUiState.Success -> {
+                        _uiState.value = currentState.copy(validationErrors = validationErrors)
+                    }
+                    is EditUiState.NewEntry -> {
+                        _uiState.value = currentState.copy(validationErrors = validationErrors)
+                    }
+                    else -> return@launch
+                }
                 return@launch
             }
 
-            val originalEntry = currentState.entry
+            val entryToSave = when (currentState) {
+                is EditUiState.Success -> {
+                    val originalEntry = currentState.entry
+                    
+                    // Prüfen ob Borderzone-Confirm erforderlich
+                    val isBorderzone = (originalEntry.morningLocationLabel == null ||
+                                     originalEntry.eveningLocationLabel == null)
 
-            // Prüfen ob Borderzone-Confirm erforderlich
-            val isBorderzone = (originalEntry.morningLocationLabel == null ||
-                             originalEntry.eveningLocationLabel == null)
+                    if (isBorderzone && !confirmBorderzone) {
+                        _uiState.value = currentState.copy(showConfirmDialog = true)
+                        return@launch
+                    }
 
-            if (isBorderzone && !confirmBorderzone) {
-                _uiState.value = currentState.copy(showConfirmDialog = true)
-                return@launch
+                    originalEntry.copy(
+                        dayType = data.dayType,
+                        workStart = data.workStart,
+                        workEnd = data.workEnd,
+                        breakMinutes = data.breakMinutes,
+                        morningLocationLabel = data.morningLocationLabel,
+                        eveningLocationLabel = data.eveningLocationLabel,
+                        note = data.note,
+                        travelStartAt = data.travelStartTime?.let { toEpochMillis(originalEntry.date, it) },
+                        travelArriveAt = data.travelArriveTime?.let { toEpochMillis(originalEntry.date, it) },
+                        travelLabelStart = data.travelLabelStart,
+                        travelLabelEnd = data.travelLabelEnd,
+                        needsReview = data.needsReview,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                }
+                is EditUiState.NewEntry -> {
+                    // Neuen Eintrag erstellen
+                    WorkEntry(
+                        date = currentState.date,
+                        dayType = data.dayType,
+                        workStart = data.workStart,
+                        workEnd = data.workEnd,
+                        breakMinutes = data.breakMinutes,
+                        morningLocationLabel = data.morningLocationLabel,
+                        eveningLocationLabel = data.eveningLocationLabel,
+                        note = data.note,
+                        travelStartAt = data.travelStartTime?.let { toEpochMillis(currentState.date, it) },
+                        travelArriveAt = data.travelArriveTime?.let { toEpochMillis(currentState.date, it) },
+                        travelLabelStart = data.travelLabelStart,
+                        travelLabelEnd = data.travelLabelEnd,
+                        needsReview = data.needsReview,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                }
+                else -> return@launch
             }
-
-            val updatedEntry = originalEntry.copy(
-                dayType = data.dayType,
-                workStart = data.workStart,
-                workEnd = data.workEnd,
-                breakMinutes = data.breakMinutes,
-                morningLocationLabel = data.morningLocationLabel,
-                eveningLocationLabel = data.eveningLocationLabel,
-                note = data.note,
-                travelStartAt = data.travelStartTime?.let { toEpochMillis(originalEntry.date, it) },
-                travelArriveAt = data.travelArriveTime?.let { toEpochMillis(originalEntry.date, it) },
-                travelLabelStart = data.travelLabelStart,
-                travelLabelEnd = data.travelLabelEnd,
-                needsReview = data.needsReview,
-                updatedAt = System.currentTimeMillis()
-            )
 
             try {
-                workEntryDao.upsert(updatedEntry)
+                workEntryDao.upsert(entryToSave)
                 _uiState.value = EditUiState.Saved
             } catch (e: Exception) {
                 _uiState.value = EditUiState.Error(e.message ?: "Speichern fehlgeschlagen")
@@ -192,8 +248,18 @@ class EditEntryViewModel @Inject constructor(
 
     fun clearValidationErrors() {
         val currentState = _uiState.value
-        if (currentState is EditUiState.Success && currentState.validationErrors.isNotEmpty()) {
-            _uiState.value = currentState.copy(validationErrors = emptyList())
+        when (currentState) {
+            is EditUiState.Success -> {
+                if (currentState.validationErrors.isNotEmpty()) {
+                    _uiState.value = currentState.copy(validationErrors = emptyList())
+                }
+            }
+            is EditUiState.NewEntry -> {
+                if (currentState.validationErrors.isNotEmpty()) {
+                    _uiState.value = currentState.copy(validationErrors = emptyList())
+                }
+            }
+            else -> {}
         }
     }
     
@@ -206,6 +272,14 @@ class EditEntryViewModel @Inject constructor(
         if (currentState is EditUiState.Success) {
             _uiState.value = currentState.copy(showConfirmDialog = false)
         }
+    }
+    
+    /**
+     * Kopiert die aktuellen FormData für einen neuen Eintrag
+     * Gibt die kopierten FormData zurück, damit sie für ein neues Datum verwendet werden können
+     */
+    fun copyEntryData(): EditFormData {
+        return _formData.value.copy()
     }
 
     private fun toEpochMillis(date: LocalDate, time: LocalTime): Long {
@@ -313,6 +387,10 @@ sealed class EditUiState {
     data class Success(
         val entry: WorkEntry,
         val showConfirmDialog: Boolean = false,
+        val validationErrors: List<ValidationError> = emptyList()
+    ) : EditUiState()
+    data class NewEntry(
+        val date: LocalDate,
         val validationErrors: List<ValidationError> = emptyList()
     ) : EditUiState()
     object NotFound : EditUiState()

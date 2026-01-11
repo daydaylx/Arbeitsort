@@ -22,6 +22,36 @@ import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
 
+data class WeekStats(
+    val totalHours: Double,
+    val workDaysCount: Int,
+    val targetHours: Double
+) {
+    val progress: Float
+        get() = (totalHours / targetHours).coerceIn(0.0, 1.0).toFloat()
+    
+    val isOverTarget: Boolean
+        get() = totalHours > targetHours
+    
+    val isUnderTarget: Boolean
+        get() = totalHours < targetHours * 0.9 // 10% Toleranz
+}
+
+data class MonthStats(
+    val totalHours: Double,
+    val workDaysCount: Int,
+    val targetHours: Double
+) {
+    val progress: Float
+        get() = (totalHours / targetHours).coerceIn(0.0, 1.0).toFloat()
+    
+    val isOverTarget: Boolean
+        get() = totalHours > targetHours
+    
+    val isUnderTarget: Boolean
+        get() = totalHours < targetHours * 0.9 // 10% Toleranz
+}
+
 @HiltViewModel
 class TodayViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
@@ -49,9 +79,16 @@ class TodayViewModel @Inject constructor(
     private val _travelUiState = MutableStateFlow(TravelUiState())
     val travelUiState: StateFlow<TravelUiState> = _travelUiState.asStateFlow()
     
+    private val _weekStats = MutableStateFlow<WeekStats?>(null)
+    val weekStats: StateFlow<WeekStats?> = _weekStats.asStateFlow()
+    
+    private val _monthStats = MutableStateFlow<MonthStats?>(null)
+    val monthStats: StateFlow<MonthStats?> = _monthStats.asStateFlow()
+    
     init {
         loadTodayEntry()
         observeEntryUpdates()
+        loadStatistics()
     }
     
     private fun loadTodayEntry() {
@@ -71,8 +108,69 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch {
             todayEntry.collect { entry ->
                 _travelUiState.value = buildTravelUiState(entry)
+                // Statistiken neu laden, wenn sich Einträge ändern
+                loadStatistics()
             }
         }
+    }
+    
+    private fun loadStatistics() {
+        viewModelScope.launch {
+            try {
+                val now = LocalDate.now()
+                
+                // Aktuelle Woche berechnen
+                val weekFields = java.time.temporal.WeekFields.of(Locale.GERMAN)
+                val weekStart = now.with(weekFields.dayOfWeek(), 1) // Montag
+                val weekEnd = now.with(weekFields.dayOfWeek(), 7) // Sonntag
+                val weekEntries = workEntryDao.getByDateRange(weekStart, weekEnd)
+                _weekStats.value = calculateWeekStats(weekEntries)
+                
+                // Aktueller Monat berechnen
+                val monthStart = now.withDayOfMonth(1)
+                val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
+                val monthEntries = workEntryDao.getByDateRange(monthStart, monthEnd)
+                _monthStats.value = calculateMonthStats(monthEntries)
+            } catch (e: Exception) {
+                // Fehler ignorieren, Statistiken bleiben null
+            }
+        }
+    }
+    
+    private fun calculateWeekStats(entries: List<WorkEntry>): WeekStats {
+        val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+        val totalHours = workEntries.sumOf { entry ->
+            val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+            val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+            val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+            workMinutes / 60.0
+        }
+        val workDaysCount = workEntries.size
+        val targetHours: Double = 40.0 // Standard: 40 Stunden/Woche
+        
+        return WeekStats(
+            totalHours = totalHours,
+            workDaysCount = workDaysCount,
+            targetHours = targetHours
+        )
+    }
+    
+    private fun calculateMonthStats(entries: List<WorkEntry>): MonthStats {
+        val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+        val totalHours = workEntries.sumOf { entry ->
+            val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+            val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+            val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+            workMinutes / 60.0
+        }
+        val workDaysCount = workEntries.size
+        val targetHours: Double = 160.0 // Standard: 160 Stunden/Monat (40h/Woche * 4)
+        
+        return MonthStats(
+            totalHours = totalHours,
+            workDaysCount = workDaysCount,
+            targetHours = targetHours
+        )
     }
     
     fun onMorningCheckIn(forceWithoutLocation: Boolean = false) {

@@ -20,16 +20,26 @@ import java.time.format.DateTimeFormatter
 fun EditEntrySheet(
     date: LocalDate,
     viewModel: EditEntryViewModel = hiltViewModel(),
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialFormData: EditFormData? = null,
+    onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formData by viewModel.formData.collectAsState()
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+    var showCopyDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(date) {
         viewModel.setDate(date)
+    }
+    
+    // Wenn initialFormData vorhanden ist (beim Kopieren), setze es im ViewModel
+    LaunchedEffect(initialFormData) {
+        if (initialFormData != null) {
+            viewModel.setFormData(initialFormData)
+        }
     }
     
     ModalBottomSheet(
@@ -60,6 +70,86 @@ fun EditEntrySheet(
                     )
                 }
                 
+                is EditUiState.NewEntry -> {
+                    // Erstelle Dummy-Entry für UI (wird nicht gespeichert)
+                    val dummyEntry = de.montagezeit.app.data.local.entity.WorkEntry(
+                        date = state.date,
+                        dayType = formData.dayType,
+                        workStart = formData.workStart,
+                        workEnd = formData.workEnd,
+                        breakMinutes = formData.breakMinutes,
+                        morningLocationLabel = formData.morningLocationLabel,
+                        eveningLocationLabel = formData.eveningLocationLabel,
+                        note = formData.note,
+                        needsReview = formData.needsReview
+                    )
+                    EditFormContent(
+                        entry = dummyEntry,
+                        formData = formData,
+                        validationErrors = state.validationErrors,
+                        onDayTypeChange = { viewModel.updateDayType(it) },
+                        onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
+                        onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
+                        onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
+                        onTravelStartChange = { viewModel.updateTravelStart(it) },
+                        onTravelArriveChange = { viewModel.updateTravelArrive(it) },
+                        onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
+                        onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
+                        onTravelClear = { viewModel.clearTravel() },
+                        onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
+                        onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                        onNoteChange = { viewModel.updateNote(it) },
+                        onResetReview = { viewModel.resetNeedsReview() },
+                        onSave = { viewModel.save() },
+                        isNewEntry = true
+                    )
+
+                    // Display validation errors
+                    if (state.validationErrors.isNotEmpty()) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        text = "Eingabefehler",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+
+                                state.validationErrors.forEach { error ->
+                                    Text(
+                                        text = "• ${error.message}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+
+                                TextButton(
+                                    onClick = { viewModel.clearValidationErrors() }
+                                ) {
+                                    Text("OK")
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 is EditUiState.Error -> {
                     Text(
                         text = state.message,
@@ -86,7 +176,10 @@ fun EditEntrySheet(
                         onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                         onNoteChange = { viewModel.updateNote(it) },
                         onResetReview = { viewModel.resetNeedsReview() },
-                        onSave = { viewModel.save() }
+                        onSave = { viewModel.save() },
+                        onCopy = if (onCopyToNewDate != null) {
+                            { showCopyDatePicker = true }
+                        } else null
                     )
 
                     // Display validation errors
@@ -165,6 +258,47 @@ fun EditEntrySheet(
             }
         }
     }
+    
+    // Copy Date Picker Dialog
+    if (showCopyDatePicker && onCopyToNewDate != null) {
+        DatePickerDialog(
+            initialDate = date,
+            onDateSelected = { newDate ->
+                val copiedData = viewModel.copyEntryData()
+                onCopyToNewDate(newDate, copiedData)
+                showCopyDatePicker = false
+                onDismiss() // Schließe aktuelles Sheet
+            },
+            onDismiss = { showCopyDatePicker = false }
+        )
+    }
+}
+
+@Composable
+fun DatePickerDialog(
+    initialDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var selectedDate by remember { mutableStateOf(initialDate) }
+    
+    LaunchedEffect(Unit) {
+        val datePickerDialog = android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                onDateSelected(selectedDate)
+            },
+            initialDate.year,
+            initialDate.monthValue - 1,
+            initialDate.dayOfMonth
+        )
+        datePickerDialog.setOnDismissListener {
+            onDismiss()
+        }
+        datePickerDialog.show()
+    }
 }
 
 @Composable
@@ -185,7 +319,9 @@ fun EditFormContent(
     onEveningLabelChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onResetReview: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    isNewEntry: Boolean = false,
+    onCopy: (() -> Unit)? = null
 ) {
     // Header
     Text(
@@ -264,6 +400,22 @@ fun EditFormContent(
         }
     }
     
+    // Copy Entry Button
+    if (onCopy != null && !isNewEntry) {
+        Divider()
+        OutlinedButton(
+            onClick = onCopy,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text("Eintrag kopieren")
+        }
+    }
+    
     Spacer(modifier = Modifier.height(8.dp))
     
     // Save Button
@@ -278,7 +430,7 @@ fun EditFormContent(
             contentDescription = null,
             modifier = Modifier.padding(end = 8.dp)
         )
-        Text("Speichern")
+        Text(if (isNewEntry) "Erstellen" else "Speichern")
     }
 }
 

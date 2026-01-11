@@ -3,6 +3,7 @@ package de.montagezeit.app.ui.screen.history
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -80,9 +81,10 @@ fun HistoryScreen(
                 }
                 
                 is HistoryUiState.Success -> {
-                    val weeks = (uiState as HistoryUiState.Success).weeks
+                    val successState = uiState as HistoryUiState.Success
                     HistoryContent(
-                        weeks = weeks,
+                        weeks = successState.weeks,
+                        months = successState.months,
                         onEntryClick = onOpenEditSheet,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -103,29 +105,98 @@ fun HistoryScreen(
 @Composable
 fun HistoryContent(
     weeks: List<WeekGroup>,
+    months: List<MonthGroup>,
     onEntryClick: (java.time.LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (weeks.isEmpty()) {
-        EmptyContent(modifier = modifier)
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showMonths by remember { mutableStateOf(false) }
+    
+    if (weeks.isEmpty() && months.isEmpty()) {
+        EmptyContent(
+            modifier = modifier,
+            onAddPastDay = { showDatePicker = true }
+        )
     } else {
         LazyColumn(
             modifier = modifier,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(weeks) { week ->
-                WeekGroupCard(
-                    week = week,
-                    onEntryClick = onEntryClick
-                )
+            item {
+                // Button zum Hinzufügen eines vergangenen Tages
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Vergangenen Tag hinzufügen")
+                }
+            }
+            
+            // Toggle für Wochen/Monats-Ansicht
+            if (months.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        @OptIn(ExperimentalMaterial3Api::class)
+                        FilterChip(
+                            selected = !showMonths,
+                            onClick = { showMonths = false },
+                            label = { Text("Wochen") }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        @OptIn(ExperimentalMaterial3Api::class)
+                        FilterChip(
+                            selected = showMonths,
+                            onClick = { showMonths = true },
+                            label = { Text("Monate") }
+                        )
+                    }
+                }
+            }
+            
+            if (showMonths) {
+                items(months) { month ->
+                    MonthGroupCard(
+                        month = month,
+                        onEntryClick = onEntryClick
+                    )
+                }
+            } else {
+                items(weeks) { week ->
+                    WeekGroupCard(
+                        week = week,
+                        onEntryClick = onEntryClick
+                    )
+                }
             }
         }
+    }
+    
+    if (showDatePicker) {
+        DatePickerDialog(
+            initialDate = java.time.LocalDate.now(),
+            onDateSelected = { date ->
+                onEntryClick(date)
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false }
+        )
     }
 }
 
 @Composable
-fun EmptyContent(modifier: Modifier = Modifier) {
+fun EmptyContent(
+    modifier: Modifier = Modifier,
+    onAddPastDay: () -> Unit = {}
+) {
     Column(
         modifier = modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -150,6 +221,18 @@ fun EmptyContent(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedButton(
+            onClick = onAddPastDay,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text("Vergangenen Tag hinzufügen")
+        }
     }
 }
 
@@ -300,7 +383,176 @@ fun WeekGroupCard(
                 week.entries.forEach { entry ->
                     HistoryEntryItem(
                         entry = entry,
-                        onClick = { onEntryClick(entry.date) }
+                        onClick = { onEntryClick(entry.date) },
+                        onQuickEdit = { onEntryClick(entry.date) } // Öffnet Quick-Edit Dialog
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthGroupCard(
+    month: MonthGroup,
+    onEntryClick: (java.time.LocalDate) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Month Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = month.displayText,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                    Text(
+                        text = year,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Statistics Section
+            if (month.entries.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Total and average hours
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Gesamt:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "%.1f Std.".format(month.totalHours),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        if (month.workDaysCount > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Durchschnitt:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "Ø %.1f Std./Tag".format(month.averageHoursPerDay),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+
+                        // Days breakdown
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Tage:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "${month.workDaysCount} Arbeit${if (month.offDaysCount > 0) ", ${month.offDaysCount} frei" else ""}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        // Warnings/Info
+                        if (month.entriesNeedingReview > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${month.entriesNeedingReview} ${if (month.entriesNeedingReview == 1) "Eintrag" else "Einträge"} benötigt Überprüfung",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        if (month.daysOutsideLeipzig > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${month.daysOutsideLeipzig} ${if (month.daysOutsideLeipzig == 1) "Tag" else "Tage"} außerhalb Leipzig",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            // Entries (show first 5, then "X weitere Tage" if more)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val entriesToShow = month.entries.take(5)
+                val remainingCount = month.entries.size - entriesToShow.size
+                
+                entriesToShow.forEach { entry ->
+                    HistoryEntryItem(
+                        entry = entry,
+                        onClick = { onEntryClick(entry.date) },
+                        onQuickEdit = { onEntryClick(entry.date) } // Öffnet Quick-Edit Dialog
+                    )
+                }
+                
+                if (remainingCount > 0) {
+                    Text(
+                        text = "$remainingCount weitere ${if (remainingCount == 1) "Tag" else "Tage"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp, top = 4.dp)
                     )
                 }
             }
@@ -311,7 +563,8 @@ fun WeekGroupCard(
 @Composable
 fun HistoryEntryItem(
     entry: WorkEntry,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onQuickEdit: () -> Unit = onClick
 ) {
     Card(
         modifier = Modifier
@@ -351,9 +604,19 @@ fun HistoryEntryItem(
                 // Location Status Info
                 LocationSummary(entry = entry)
                 TravelSummaryRow(entry = entry)
+                
+                // Work Hours (only for work days)
+                if (entry.dayType == DayType.WORK) {
+                    val workHours = calculateWorkHours(entry)
+                    Text(
+                        text = formatWorkHours(workHours),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
             
-            // Right side: Warning icon and edit icon
+            // Right side: Warning icon, quick edit button, and edit icon
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -366,12 +629,18 @@ fun HistoryEntryItem(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Bearbeiten",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
-                )
+                // Quick Edit Button
+                IconButton(
+                    onClick = { onQuickEdit() },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Schnell bearbeiten",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -566,8 +835,55 @@ private fun formatDuration(duration: Duration): String {
     }
 }
 
+private fun calculateWorkHours(entry: WorkEntry): Double {
+    if (entry.dayType != DayType.WORK) return 0.0
+    val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+    val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+    val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+    return workMinutes / 60.0
+}
+
+private fun formatWorkHours(hours: Double): String {
+    val totalMinutes = (hours * 60).toInt()
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+    
+    return if (m == 0) {
+        "${h} Std."
+    } else {
+        "${h}h ${m}min"
+    }
+}
+
 private fun handleShareExport(context: Context, fileUri: android.net.Uri) {
     val csvExporter = CsvExporter(context)
     val shareIntent = csvExporter.createShareIntent(fileUri)
     context.startActivity(shareIntent)
+}
+
+@Composable
+fun DatePickerDialog(
+    initialDate: java.time.LocalDate,
+    onDateSelected: (java.time.LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var selectedDate by remember { mutableStateOf(initialDate) }
+    
+    LaunchedEffect(Unit) {
+        val datePickerDialog = android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                selectedDate = java.time.LocalDate.of(year, month + 1, dayOfMonth)
+                onDateSelected(selectedDate)
+            },
+            initialDate.year,
+            initialDate.monthValue - 1,
+            initialDate.dayOfMonth
+        )
+        datePickerDialog.setOnDismissListener {
+            onDismiss()
+        }
+        datePickerDialog.show()
+    }
 }

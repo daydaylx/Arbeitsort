@@ -30,10 +30,12 @@ object ReminderActions {
     
     // Common Actions
     const val ACTION_EDIT_ENTRY = "action_edit_entry"
+    const val ACTION_REMIND_LATER = "action_remind_later"
     
     // Extras
     const val EXTRA_DATE = "extra_date"
     const val EXTRA_ACTION_TYPE = "extra_action_type"
+    const val EXTRA_HOURS_LATER = "extra_hours_later"
 }
 
 /**
@@ -59,6 +61,7 @@ class ReminderNotificationManager @Inject constructor(
         private const val CHANNEL_ID = "reminder_notifications"
         private const val CHANNEL_NAME = "Check-in Erinnerungen"
         private const val CHANNEL_DESCRIPTION = "Erinnerungen für morgendlichen und abendlichen Check-in"
+        private const val NOTIFICATION_GROUP = "reminder_group"
         
         // Request Codes für PendingIntents (müssen einzigartig sein)
         private const val REQUEST_CODE_MORNING_WITH_LOCATION = 2001
@@ -66,6 +69,8 @@ class ReminderNotificationManager @Inject constructor(
         private const val REQUEST_CODE_EVENING_WITH_LOCATION = 2003
         private const val REQUEST_CODE_EVENING_WITHOUT_LOCATION = 2004
         private const val REQUEST_CODE_EDIT = 2005
+        private const val REQUEST_CODE_REMIND_LATER_1H = 2006
+        private const val REQUEST_CODE_REMIND_LATER_2H = 2007
     }
     
     init {
@@ -95,12 +100,27 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Morning-Reminder-Notification an
      */
     fun showMorningReminder(date: LocalDate) {
+        // Erstelle Group Summary Notification (Android 7.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val groupSummary = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Check-in Erinnerungen")
+                .setContentText("Tägliche Check-in Erinnerungen")
+                .setGroupSummary(true)
+                .setGroup(NOTIFICATION_GROUP)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            notificationManager.notify(ReminderNotificationIds.MORNING_REMINDER - 1, groupSummary)
+        }
+        
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_morning_title))
             .setContentText(context.getString(R.string.notification_morning_text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
+            .setOngoing(true) // Persistente Notification
+            .setAutoCancel(false) // Wird manuell entfernt
+            .setGroup(NOTIFICATION_GROUP)
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_morning_check_in),
@@ -119,6 +139,16 @@ class ReminderNotificationManager @Inject constructor(
                     REQUEST_CODE_MORNING_WITHOUT_LOCATION
                 )
             )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (1h)",
+                createRemindLaterPendingIntent(date, 1, REQUEST_CODE_REMIND_LATER_1H)
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (2h)",
+                createRemindLaterPendingIntent(date, 2, REQUEST_CODE_REMIND_LATER_2H)
+            )
             .build()
         
         notificationManager.notify(ReminderNotificationIds.MORNING_REMINDER, notification)
@@ -128,12 +158,27 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Evening-Reminder-Notification an
      */
     fun showEveningReminder(date: LocalDate) {
+        // Erstelle Group Summary Notification (Android 7.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val groupSummary = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Check-in Erinnerungen")
+                .setContentText("Tägliche Check-in Erinnerungen")
+                .setGroupSummary(true)
+                .setGroup(NOTIFICATION_GROUP)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            notificationManager.notify(ReminderNotificationIds.EVENING_REMINDER - 1, groupSummary)
+        }
+        
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_evening_title))
             .setContentText(context.getString(R.string.notification_evening_text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
+            .setOngoing(true) // Persistente Notification
+            .setAutoCancel(false) // Wird manuell entfernt
+            .setGroup(NOTIFICATION_GROUP)
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_evening_check_in),
@@ -152,6 +197,16 @@ class ReminderNotificationManager @Inject constructor(
                     REQUEST_CODE_EVENING_WITHOUT_LOCATION
                 )
             )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (1h)",
+                createRemindLaterPendingIntent(date, 1, REQUEST_CODE_REMIND_LATER_1H)
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (2h)",
+                createRemindLaterPendingIntent(date, 2, REQUEST_CODE_REMIND_LATER_2H)
+            )
             .build()
         
         notificationManager.notify(ReminderNotificationIds.EVENING_REMINDER, notification)
@@ -161,12 +216,27 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Fallback-Reminder-Notification an
      */
     fun showFallbackReminder(date: LocalDate) {
+        // Erstelle Group Summary Notification (Android 7.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val groupSummary = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Check-in Erinnerungen")
+                .setContentText("Tägliche Check-in Erinnerungen")
+                .setGroupSummary(true)
+                .setGroup(NOTIFICATION_GROUP)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            notificationManager.notify(ReminderNotificationIds.FALLBACK_REMINDER - 1, groupSummary)
+        }
+        
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_fallback_title))
             .setContentText(context.getString(R.string.notification_fallback_text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
+            .setOngoing(true) // Persistente Notification
+            .setAutoCancel(false) // Wird manuell entfernt
+            .setGroup(NOTIFICATION_GROUP)
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_edit_entry),
@@ -248,6 +318,28 @@ class ReminderNotificationManager @Inject constructor(
         }
         
         return PendingIntent.getActivity(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+    
+    /**
+     * Erstellt einen PendingIntent für "Später erinnern" Action
+     */
+    private fun createRemindLaterPendingIntent(
+        date: LocalDate,
+        hoursLater: Int,
+        requestCode: Int
+    ): PendingIntent {
+        val intent = Intent(context, CheckInActionService::class.java).apply {
+            action = ReminderActions.ACTION_REMIND_LATER
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_HOURS_LATER, hoursLater)
+        }
+        
+        return PendingIntent.getService(
             context,
             requestCode,
             intent,

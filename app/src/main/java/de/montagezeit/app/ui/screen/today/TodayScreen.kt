@@ -22,6 +22,8 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.ui.screen.today.TodayUiState
+import de.montagezeit.app.ui.screen.today.WeekStats
+import de.montagezeit.app.ui.screen.today.MonthStats
 import java.time.Duration
 import java.time.format.DateTimeFormatter
 
@@ -34,6 +36,8 @@ fun TodayScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val todayEntry by viewModel.todayEntry.collectAsState()
+    val weekStats by viewModel.weekStats.collectAsState()
+    val monthStats by viewModel.monthStats.collectAsState()
     
     // Runtime Permission für Standort
     val locationPermission = Manifest.permission.ACCESS_COARSE_LOCATION
@@ -96,6 +100,8 @@ fun TodayScreen(
                 is TodayUiState.Success -> {
                     TodayContent(
                         entry = (uiState as TodayUiState.Success).entry ?: todayEntry,
+                        weekStats = weekStats,
+                        monthStats = monthStats,
                         hasLocationPermission = hasLocationPermission,
                         onRequestLocationPermission = {
                             locationPermissionLauncher.launch(locationPermission)
@@ -163,6 +169,8 @@ fun LoadingLocationContent(
 @Composable
 fun TodayContent(
     entry: WorkEntry?,
+    weekStats: WeekStats?,
+    monthStats: MonthStats?,
     hasLocationPermission: Boolean,
     onRequestLocationPermission: () -> Unit,
     onMorningCheckIn: () -> Unit,
@@ -176,6 +184,19 @@ fun TodayContent(
     ) {
         // Status Card
         StatusCard(entry = entry)
+        
+        // Work Hours Card
+        if (entry != null && entry.dayType == DayType.WORK) {
+            WorkHoursCard(entry = entry)
+        }
+        
+        // Statistics Dashboard
+        if (weekStats != null || monthStats != null) {
+            StatisticsDashboard(
+                weekStats = weekStats,
+                monthStats = monthStats
+            )
+        }
         
         // Check-In Buttons
         CheckInSection(
@@ -202,6 +223,215 @@ fun TodayContent(
         }
         
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun WorkHoursCard(entry: WorkEntry) {
+    val workHours = calculateWorkHours(entry)
+    val formattedHours = formatWorkHours(workHours)
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccessTime,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(32.dp)
+                )
+                Column {
+                    Text(
+                        text = "Heute",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = formattedHours,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun calculateWorkHours(entry: WorkEntry): Double {
+    if (entry.dayType != DayType.WORK) return 0.0
+    val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+    val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+    val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+    return workMinutes / 60.0
+}
+
+private fun formatWorkHours(hours: Double): String {
+    val totalMinutes = (hours * 60).toInt()
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+    
+    return if (m == 0) {
+        "${h} Std."
+    } else {
+        "${h}h ${m}min"
+    }
+}
+
+@Composable
+fun StatisticsDashboard(
+    weekStats: WeekStats?,
+    monthStats: MonthStats?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Statistiken",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            
+            // Wochenstatistik
+            weekStats?.let { stats ->
+                StatisticCard(
+                    title = "Diese Woche",
+                    currentHours = stats.totalHours,
+                    targetHours = stats.targetHours,
+                    workDaysCount = stats.workDaysCount,
+                    isOverTarget = stats.isOverTarget,
+                    isUnderTarget = stats.isUnderTarget,
+                    progress = stats.progress
+                )
+            }
+            
+            // Monatsstatistik
+            monthStats?.let { stats ->
+                StatisticCard(
+                    title = "Dieser Monat",
+                    currentHours = stats.totalHours,
+                    targetHours = stats.targetHours,
+                    workDaysCount = stats.workDaysCount,
+                    isOverTarget = stats.isOverTarget,
+                    isUnderTarget = stats.isUnderTarget,
+                    progress = stats.progress
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun StatisticCard(
+    title: String,
+    currentHours: Double,
+    targetHours: Double,
+    workDaysCount: Int,
+    isOverTarget: Boolean,
+    isUnderTarget: Boolean,
+    progress: Float
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Text(
+                text = "%.1f / %.1f Std.".format(currentHours, targetHours),
+                style = MaterialTheme.typography.titleMedium,
+                color = when {
+                    isOverTarget -> MaterialTheme.colorScheme.error
+                    isUnderTarget -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onTertiaryContainer
+                }
+            )
+        }
+        
+        // Fortschrittsbalken
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp),
+            color = when {
+                isOverTarget -> MaterialTheme.colorScheme.error
+                isUnderTarget -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.primary
+            },
+            trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f)
+        )
+        
+        // Warnung bei Über-/Unterstunden
+        if (isOverTarget) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Überstunden: +%.1f Std.".format(currentHours - targetHours),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        } else if (isUnderTarget) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Unterstunden: %.1f Std.".format(targetHours - currentHours),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        
+        // Arbeitstage
+        Text(
+            text = "$workDaysCount Arbeitstag${if (workDaysCount != 1) "e" else ""}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+        )
     }
 }
 

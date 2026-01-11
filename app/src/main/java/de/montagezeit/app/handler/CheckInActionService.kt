@@ -18,11 +18,16 @@ import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.notification.ReminderNotificationManager
+import de.montagezeit.app.work.ReminderLaterWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Data
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -121,6 +126,24 @@ class CheckInActionService : Service() {
                 notificationManager.cancelFallbackReminder()
                 stopSelf()
             }
+            
+            ReminderActions.ACTION_REMIND_LATER -> {
+                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
+                
+                // Entferne aktuelle Notification
+                notificationManager.cancelMorningReminder()
+                notificationManager.cancelEveningReminder()
+                notificationManager.cancelFallbackReminder()
+                
+                // Plane neue Notification für später
+                serviceScope.launch {
+                    scheduleReminderLater(date, hoursLater)
+                }
+                
+                stopSelf()
+            }
         }
         
         return START_NOT_STICKY
@@ -175,5 +198,22 @@ class CheckInActionService : Service() {
         serviceScope.launch(Dispatchers.Main) {
             Toast.makeText(this@CheckInActionService, resId, Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    /**
+     * Plant eine Reminder-Notification für später
+     */
+    private suspend fun scheduleReminderLater(date: LocalDate, hoursLater: Int) {
+        val inputData = Data.Builder()
+            .putString("date", date.toString())
+            .putInt("hours_later", hoursLater)
+            .build()
+        
+        val workRequest = OneTimeWorkRequestBuilder<ReminderLaterWorker>()
+            .setInitialDelay(hoursLater.toLong(), TimeUnit.HOURS)
+            .setInputData(inputData)
+            .build()
+        
+        WorkManager.getInstance(this).enqueue(workRequest)
     }
 }

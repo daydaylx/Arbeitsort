@@ -35,12 +35,16 @@ class HistoryViewModel @Inject constructor(
             
             try {
                 val endDate = LocalDate.now()
-                val startDate = endDate.minusDays(30) // Letzte 30 Tage
+                val startDate = endDate.minusDays(90) // Letzte 90 Tage für Monatsübersicht
                 
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
-                val groupedEntries = groupByWeek(entries)
+                val groupedWeeks = groupByWeek(entries)
+                val groupedMonths = groupByMonth(entries)
                 
-                _uiState.value = HistoryUiState.Success(groupedEntries)
+                _uiState.value = HistoryUiState.Success(
+                    weeks = groupedWeeks,
+                    months = groupedMonths
+                )
             } catch (e: Exception) {
                 _uiState.value = HistoryUiState.Error(e.message ?: "Unbekannter Fehler")
             }
@@ -77,6 +81,67 @@ class HistoryViewModel @Inject constructor(
             }
             .sortedByDescending { it.year * 100 + it.week }
     }
+    
+    private fun groupByMonth(entries: List<WorkEntry>): List<MonthGroup> {
+        return entries
+            .groupBy { entry ->
+                Pair(entry.date.year, entry.date.monthValue)
+            }
+            .map { (yearMonth, monthEntries) ->
+                MonthGroup(
+                    year = yearMonth.first,
+                    month = yearMonth.second,
+                    entries = monthEntries.sortedByDescending { it.date }
+                )
+            }
+            .sortedByDescending { it.year * 100 + it.month }
+    }
+}
+
+data class MonthGroup(
+    val year: Int,
+    val month: Int,
+    val entries: List<WorkEntry>
+) {
+    val displayText: String
+        get() {
+            val monthNames = arrayOf(
+                "Januar", "Februar", "März", "April", "Mai", "Juni",
+                "Juli", "August", "September", "Oktober", "November", "Dezember"
+            )
+            return monthNames.getOrNull(month - 1) ?: "Monat $month"
+        }
+
+    val yearText: String
+        get() = if (year == LocalDate.now().year) "" else "$year"
+
+    // Statistics
+    val workDaysCount: Int
+        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+
+    val offDaysCount: Int
+        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.OFF }
+
+    val totalHours: Double
+        get() = entries
+            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+            .sumOf { entry ->
+                val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+                val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+                val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+                workMinutes / 60.0
+            }
+
+    val averageHoursPerDay: Double
+        get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
+
+    val entriesNeedingReview: Int
+        get() = entries.count { it.needsReview }
+
+    val daysOutsideLeipzig: Int
+        get() = entries.count { entry ->
+            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
+        }
 }
 
 data class WeekGroup(
@@ -121,6 +186,9 @@ data class WeekGroup(
 
 sealed class HistoryUiState {
     object Loading : HistoryUiState()
-    data class Success(val weeks: List<WeekGroup>) : HistoryUiState()
+    data class Success(
+        val weeks: List<WeekGroup>,
+        val months: List<MonthGroup> = emptyList()
+    ) : HistoryUiState()
     data class Error(val message: String) : HistoryUiState()
 }
