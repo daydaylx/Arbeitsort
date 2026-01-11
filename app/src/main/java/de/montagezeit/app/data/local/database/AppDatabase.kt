@@ -10,10 +10,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import de.montagezeit.app.data.local.converters.LocalDateConverter
 import de.montagezeit.app.data.local.converters.LocalTimeConverter
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.dao.RouteCacheDao
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.RouteCacheEntry
 
 @Database(
-    entities = [WorkEntry::class],
+    entities = [WorkEntry::class, RouteCacheEntry::class],
     version = 2,
     exportSchema = false
 )
@@ -24,6 +26,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun workEntryDao(): WorkEntryDao
+    abstract fun routeCacheDao(): RouteCacheDao
     
     companion object {
         private const val DATABASE_NAME = "montagezeit.db"

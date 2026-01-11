@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.dao.RouteCacheDao
 import de.montagezeit.app.data.local.database.AppDatabase
 import javax.inject.Singleton
 
@@ -30,5 +31,10 @@ object DatabaseModule {
     @Provides
     fun provideWorkEntryDao(database: AppDatabase): WorkEntryDao {
         return database.workEntryDao()
+    }
+    
+    @Provides
+    fun provideRouteCacheDao(database: AppDatabase): RouteCacheDao {
+        return database.routeCacheDao()
     }
 }

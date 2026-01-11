@@ -17,19 +17,15 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
+import org.junit.Assert.*
 
-class RecordMorningCheckInTest {
+class RecordEveningCheckInTest {
     
     private lateinit var workEntryDao: WorkEntryDao
     private lateinit var locationProvider: LocationProvider
     private lateinit var locationCalculator: LocationCalculator
     private lateinit var reminderSettingsManager: ReminderSettingsManager
-    private lateinit var recordMorningCheckIn: RecordMorningCheckIn
+    private lateinit var recordEveningCheckIn: RecordEveningCheckIn
     
     @Before
     fun setup() {
@@ -41,7 +37,7 @@ class RecordMorningCheckInTest {
         // Default settings mock
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
         
-        recordMorningCheckIn = RecordMorningCheckIn(
+        recordEveningCheckIn = RecordEveningCheckIn(
             workEntryDao,
             locationProvider,
             locationCalculator,
@@ -55,7 +51,7 @@ class RecordMorningCheckInTest {
     }
     
     @Test
-    fun `invoke - Innerhalb Leipzig - Setzt korrekte Werte`() = runTest {
+    fun `invoke - Innerhalb Leipzig - Setzt korrekte Evening Werte`() = runTest {
         // Arrange
         val date = LocalDate.now()
         val locationResult = LocationResult.Success(
@@ -75,24 +71,25 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date)
+        val result = recordEveningCheckIn.invoke(date)
         
         // Assert
         assertEquals(date, result.date)
         assertEquals(DayType.WORK, result.dayType)
-        assertEquals(51.400, result.morningLat!!, 0.0)
-        assertEquals(12.450, result.morningLon!!, 0.0)
-        assertEquals(100.0f, result.morningAccuracyMeters)
-        assertEquals("Leipzig", result.morningLocationLabel)
-        assertTrue(result.outsideLeipzigMorning == false)
-        assertEquals(LocationStatus.OK, result.morningLocationStatus)
-        assertTrue(result.needsReview == false)
+        assertEquals(51.400, result.eveningLat!!, 0.0)
+        assertEquals(12.450, result.eveningLon!!, 0.0)
+        assertEquals(100.0f, result.eveningAccuracyMeters)
+        assertEquals("Leipzig", result.eveningLocationLabel)
+        assertTrue(result.outsideLeipzigEvening == false)
+        assertEquals(LocationStatus.OK, result.eveningLocationStatus)
+        assertNotNull(result.eveningCapturedAt)
+        assertTrue(result.eveningCapturedAt!! > 0)
         
         coVerify { workEntryDao.upsert(result) }
     }
     
     @Test
-    fun `invoke - Außerhalb Leipzig - Setzt outsideLeipzig true`() = runTest {
+    fun `invoke - Außerhalb Leipzig - Setzt outsideLeipzigEvening true`() = runTest {
         // Arrange
         val date = LocalDate.now()
         val locationResult = LocationResult.Success(
@@ -112,42 +109,12 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date)
+        val result = recordEveningCheckIn.invoke(date)
         
         // Assert
-        assertTrue(result.outsideLeipzigMorning == true)
-        assertNull("Label sollte null sein für außerhalb", result.morningLocationLabel)
-        assertEquals(LocationStatus.OK, result.morningLocationStatus)
-        
-        coVerify { workEntryDao.upsert(result) }
-    }
-    
-    @Test
-    fun `invoke - Grenzzone - Setzt confirmRequired und needsReview`() = runTest {
-        // Arrange
-        val date = LocalDate.now()
-        val locationResult = LocationResult.Success(
-            lat = 51.580,
-            lon = 12.200,
-            accuracyMeters = 100.0f
-        )
-        val locationCheck = LocationCheckResult(
-            isInside = null, // Unklar
-            distanceKm = 29.0,
-            confirmRequired = true
-        )
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { locationProvider.getCurrentLocation(any()) } returns locationResult
-        every { locationCalculator.checkLeipzigLocation(51.580, 12.200, any()) } returns locationCheck
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        
-        // Act
-        val result = recordMorningCheckIn.invoke(date)
-        
-        // Assert
-        assertNull("Grenzzone sollte null sein", result.outsideLeipzigMorning)
-        assertTrue("Grenzzone sollte needsReview=true setzen", result.needsReview)
+        assertTrue(result.outsideLeipzigEvening == true)
+        assertNull("Label sollte null sein für außerhalb", result.eveningLocationLabel)
+        assertEquals(LocationStatus.OK, result.eveningLocationStatus)
         
         coVerify { workEntryDao.upsert(result) }
     }
@@ -163,12 +130,12 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date)
+        val result = recordEveningCheckIn.invoke(date)
         
         // Assert
-        assertEquals(LocationStatus.LOW_ACCURACY, result.morningLocationStatus)
-        assertEquals(5000.0f, result.morningAccuracyMeters)
-        assertNull("Low accuracy sollte outside=null setzen", result.outsideLeipzigMorning)
+        assertEquals(LocationStatus.LOW_ACCURACY, result.eveningLocationStatus)
+        assertEquals(5000.0f, result.eveningAccuracyMeters)
+        assertNull("Low accuracy sollte outside=null setzen", result.outsideLeipzigEvening)
         assertTrue("Low accuracy sollte needsReview=true setzen", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
@@ -185,11 +152,11 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date)
+        val result = recordEveningCheckIn.invoke(date)
         
         // Assert
-        assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
-        assertNull(result.outsideLeipzigMorning)
+        assertEquals(LocationStatus.UNAVAILABLE, result.eveningLocationStatus)
+        assertNull(result.outsideLeipzigEvening)
         assertTrue("Unavailable sollte needsReview=true setzen", result.needsReview)
         
         coVerify { workEntryDao.upsert(result) }
@@ -204,32 +171,16 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date, forceWithoutLocation = true)
+        val result = recordEveningCheckIn.invoke(date, forceWithoutLocation = true)
         
         // Assert
-        assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
+        assertEquals(LocationStatus.UNAVAILABLE, result.eveningLocationStatus)
         coVerify(exactly = 0) { locationProvider.getCurrentLocation(any()) }
-        coVerify { workEntryDao.upsert(result) }
-    }
-
-    @Test
-    fun `invoke - Nicht-heutiges Datum - Setzt date korrekt`() = runTest {
-        // Arrange
-        val date = LocalDate.of(2024, 1, 15)
-
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } just Runs
-
-        // Act
-        val result = recordMorningCheckIn.invoke(date, forceWithoutLocation = true)
-
-        // Assert
-        assertEquals(date, result.date)
         coVerify { workEntryDao.upsert(result) }
     }
     
     @Test
-    fun `invoke - Idempotent Upsert - Zweiter Morgen Check-in aktualisiert existierenden Eintrag`() = runTest {
+    fun `invoke - Idempotent Upsert - Zweiter Abend Check-in aktualisiert existierenden Eintrag`() = runTest {
         // Arrange
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
@@ -240,11 +191,61 @@ class RecordMorningCheckInTest {
             breakMinutes = 60,
             morningCapturedAt = 1000000L,
             morningLocationStatus = LocationStatus.OK,
+            eveningCapturedAt = 2000000L,
+            eveningLocationStatus = LocationStatus.OK,
+            eveningLat = 51.400,
+            eveningLon = 12.450,
+            eveningAccuracyMeters = 100.0f,
+            eveningLocationLabel = "Leipzig",
+            outsideLeipzigEvening = false,
+            needsReview = false,
+            createdAt = 1000000L,
+            updatedAt = 2000000L
+        )
+        
+        val locationResult = LocationResult.Success(
+            lat = 51.410,
+            lon = 12.460,
+            accuracyMeters = 150.0f
+        )
+        val locationCheck = LocationCheckResult(
+            isInside = true,
+            distanceKm = 10.0,
+            confirmRequired = false
+        )
+        
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { locationProvider.getCurrentLocation(any()) } returns locationResult
+        every { locationCalculator.checkLeipzigLocation(51.410, 12.460, any()) } returns locationCheck
+        coEvery { workEntryDao.upsert(any()) } just Runs
+        
+        // Act
+        val result = recordEveningCheckIn.invoke(date)
+        
+        // Assert
+        assertEquals(date, result.date)
+        assertEquals(DayType.WORK, result.dayType)
+        assertEquals(51.410, result.eveningLat!!, 0.0) // Aktualisiert
+        assertEquals(12.460, result.eveningLon!!, 0.0) // Aktualisiert
+        assertEquals(150.0f, result.eveningAccuracyMeters) // Aktualisiert
+        assertTrue(result.updatedAt > existingEntry.updatedAt) // updatedAt aktualisiert
+        assertEquals(existingEntry.createdAt, result.createdAt) // createdAt gleich
+        assertEquals(existingEntry.morningCapturedAt, result.morningCapturedAt) // Morning unverändert
+        
+        coVerify { workEntryDao.upsert(result) }
+    }
+    
+    @Test
+    fun `invoke - Existing mit Morning Check-in - Behält Morning Daten`() = runTest {
+        // Arrange
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            morningCapturedAt = 1000000L,
             morningLat = 51.400,
             morningLon = 12.450,
-            morningAccuracyMeters = 100.0f,
-            morningLocationLabel = "Leipzig",
-            outsideLeipzigMorning = false,
+            morningLocationStatus = LocationStatus.OK,
             needsReview = false,
             createdAt = 1000000L,
             updatedAt = 1000000L
@@ -267,55 +268,16 @@ class RecordMorningCheckInTest {
         coEvery { workEntryDao.upsert(any()) } just Runs
         
         // Act
-        val result = recordMorningCheckIn.invoke(date)
+        val result = recordEveningCheckIn.invoke(date)
         
         // Assert
-        assertEquals(date, result.date)
-        assertEquals(DayType.WORK, result.dayType)
-        assertEquals(java.time.LocalTime.of(8, 0), result.workStart) // Nicht verändert
-        assertEquals(51.410, result.morningLat!!, 0.0) // Aktualisiert
-        assertEquals(12.460, result.morningLon!!, 0.0) // Aktualisiert
-        assertEquals(150.0f, result.morningAccuracyMeters) // Aktualisiert
-        assertTrue(result.updatedAt > existingEntry.updatedAt) // updatedAt aktualisiert
-        assertEquals(existingEntry.createdAt, result.createdAt) // createdAt gleich
-        
-        coVerify { workEntryDao.upsert(result) }
-    }
-    
-    @Test
-    fun `invoke - Existing mit needsReview true - Behält needsReview true`() = runTest {
-        // Arrange
-        val date = LocalDate.now()
-        val existingEntry = WorkEntry(
-            date = date,
-            dayType = DayType.WORK,
-            needsReview = true, // Bereits needsReview
-            createdAt = 1000000L,
-            updatedAt = 1000000L
-        )
-        
-        val locationResult = LocationResult.Success(
-            lat = 51.400,
-            lon = 12.450,
-            accuracyMeters = 100.0f
-        )
-        val locationCheck = LocationCheckResult(
-            isInside = true,
-            distanceKm = 10.0,
-            confirmRequired = false
-        )
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { locationProvider.getCurrentLocation(any()) } returns locationResult
-        every { locationCalculator.checkLeipzigLocation(51.400, 12.450, any()) } returns locationCheck
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        
-        // Act
-        val result = recordMorningCheckIn.invoke(date)
-        
-        // Assert
-        assertTrue("Bestehendes needsReview sollte beibehalten werden", result.needsReview)
+        assertEquals(existingEntry.morningCapturedAt, result.morningCapturedAt)
+        assertEquals(existingEntry.morningLat, result.morningLat)
+        assertEquals(existingEntry.morningLon, result.morningLon)
+        assertNotNull(result.eveningCapturedAt)
+        assertEquals(51.410, result.eveningLat!!, 0.0)
         
         coVerify { workEntryDao.upsert(result) }
     }
 }
+

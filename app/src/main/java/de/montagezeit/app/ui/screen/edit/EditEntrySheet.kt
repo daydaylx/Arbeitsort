@@ -72,6 +72,7 @@ fun EditEntrySheet(
                     EditFormContent(
                         entry = entry,
                         formData = formData,
+                        validationErrors = state.validationErrors,
                         onDayTypeChange = { viewModel.updateDayType(it) },
                         onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                         onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
@@ -170,6 +171,7 @@ fun EditEntrySheet(
 fun EditFormContent(
     entry: de.montagezeit.app.data.local.entity.WorkEntry,
     formData: EditFormData,
+    validationErrors: List<ValidationError> = emptyList(),
     onDayTypeChange: (de.montagezeit.app.data.local.entity.DayType) -> Unit,
     onWorkStartChange: (Int, Int) -> Unit,
     onWorkEndChange: (Int, Int) -> Unit,
@@ -206,6 +208,7 @@ fun EditFormContent(
         workStart = formData.workStart,
         workEnd = formData.workEnd,
         breakMinutes = formData.breakMinutes,
+        validationErrors = validationErrors,
         onStartChange = onWorkStartChange,
         onEndChange = onWorkEndChange,
         onBreakChange = onBreakMinutesChange
@@ -218,6 +221,7 @@ fun EditFormContent(
         travelArriveTime = formData.travelArriveTime,
         travelLabelStart = formData.travelLabelStart,
         travelLabelEnd = formData.travelLabelEnd,
+        validationErrors = validationErrors,
         onTravelStartChange = onTravelStartChange,
         onTravelArriveChange = onTravelArriveChange,
         onTravelLabelStartChange = onTravelLabelStartChange,
@@ -318,12 +322,18 @@ fun WorkTimesSection(
     workStart: java.time.LocalTime,
     workEnd: java.time.LocalTime,
     breakMinutes: Int,
+    validationErrors: List<ValidationError> = emptyList(),
     onStartChange: (Int, Int) -> Unit,
     onEndChange: (Int, Int) -> Unit,
     onBreakChange: (Int) -> Unit
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
+    
+    val hasWorkTimeError = validationErrors.any { it is ValidationError.WorkEndBeforeStart }
+    val hasBreakError = validationErrors.any { 
+        it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime 
+    }
     
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -337,7 +347,14 @@ fun WorkTimesSection(
         ) {
             OutlinedButton(
                 onClick = { showStartPicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = if (hasWorkTimeError) {
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -353,7 +370,14 @@ fun WorkTimesSection(
             
             OutlinedButton(
                 onClick = { showEndPicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = if (hasWorkTimeError) {
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -368,6 +392,15 @@ fun WorkTimesSection(
             }
         }
         
+        if (hasWorkTimeError) {
+            Text(
+                text = "⚠ ${ValidationError.WorkEndBeforeStart.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+        
         // Break Time
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -377,11 +410,13 @@ fun WorkTimesSection(
             ) {
                 Text(
                     text = "Pause (Minuten)",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "$breakMinutes min",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
             }
             
@@ -390,8 +425,30 @@ fun WorkTimesSection(
                 onValueChange = { onBreakChange(it.toInt()) },
                 valueRange = 0f..120f,
                 steps = 120,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = if (hasBreakError) {
+                    SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.error,
+                        activeTrackColor = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    SliderDefaults.colors()
+                }
             )
+            
+            if (hasBreakError) {
+                val breakError = validationErrors.firstOrNull { 
+                    it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime 
+                }
+                breakError?.let {
+                    Text(
+                        text = "⚠ ${it.message}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
         }
     }
     
@@ -418,6 +475,7 @@ fun TravelSection(
     travelArriveTime: java.time.LocalTime?,
     travelLabelStart: String?,
     travelLabelEnd: String?,
+    validationErrors: List<ValidationError> = emptyList(),
     onTravelStartChange: (java.time.LocalTime?) -> Unit,
     onTravelArriveChange: (java.time.LocalTime?) -> Unit,
     onTravelLabelStartChange: (String) -> Unit,
@@ -434,6 +492,7 @@ fun TravelSection(
         calculateTravelDuration(travelStartTime, travelArriveTime)
     }
     val durationText = duration?.let { formatDuration(it) }
+    val hasTravelError = validationErrors.any { it is ValidationError.TravelArriveBeforeStart }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -447,7 +506,14 @@ fun TravelSection(
         ) {
             OutlinedButton(
                 onClick = { showStartPicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = if (hasTravelError) {
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -463,7 +529,14 @@ fun TravelSection(
 
             OutlinedButton(
                 onClick = { showArrivePicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = if (hasTravelError) {
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -476,6 +549,15 @@ fun TravelSection(
                     )
                 }
             }
+        }
+        
+        if (hasTravelError) {
+            Text(
+                text = "⚠ ${ValidationError.TravelArriveBeforeStart.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp)
+            )
         }
 
         durationText?.let {

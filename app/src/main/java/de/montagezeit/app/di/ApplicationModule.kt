@@ -9,8 +9,12 @@ import dagger.hilt.components.SingletonComponent
 import de.montagezeit.app.data.location.LocationProvider
 import de.montagezeit.app.data.location.LocationProviderImpl
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.dao.RouteCacheDao
+import de.montagezeit.app.data.network.DistanceService
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.location.LocationCalculator
+import de.montagezeit.app.domain.usecase.CalculateTravelCompensation
+import de.montagezeit.app.domain.usecase.FetchRouteDistance
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.SetDayType
@@ -83,5 +87,18 @@ object ApplicationModule {
     @Provides
     fun provideSetTravelEvent(workEntryDao: WorkEntryDao): SetTravelEvent {
         return SetTravelEvent(workEntryDao)
+    }
+
+    @Provides
+    fun provideCalculateTravelCompensation(): CalculateTravelCompensation {
+        return CalculateTravelCompensation()
+    }
+
+    @Provides
+    fun provideFetchRouteDistance(
+        distanceService: DistanceService,
+        routeCacheDao: RouteCacheDao
+    ): FetchRouteDistance {
+        return FetchRouteDistance(distanceService, routeCacheDao)
     }
 }

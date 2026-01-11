@@ -8,12 +8,12 @@ import android.location.Location
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import de.montagezeit.app.domain.model.LocationResult
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
@@ -48,29 +48,34 @@ class LocationProviderImpl(
         }
         
         val cancellationTokenSource = CancellationTokenSource()
-        
+
         return try {
-            suspendCancellableCoroutine { continuation ->
-                val locationRequest = LocationRequest.Builder(Priority.PRIORITY_LOW_POWER, timeoutMs)
-                    .setMinUpdateIntervalMillis(timeoutMs)
-                    .build()
-                
-                fusedLocationClient.getCurrentLocation(
-                    locationRequest.priority,
-                    cancellationTokenSource.token
-                ).addOnSuccessListener { location: Location? ->
-                    if (location != null) {
-                        val result = processLocation(location)
-                        continuation.resume(result)
-                    } else {
-                        continuation.resume(LocationResult.Unavailable)
+            val locationResult = withTimeoutOrNull(timeoutMs) {
+                suspendCancellableCoroutine { continuation ->
+                    continuation.invokeOnCancellation { cancellationTokenSource.cancel() }
+
+                    fusedLocationClient.getCurrentLocation(
+                        Priority.PRIORITY_LOW_POWER,
+                        cancellationTokenSource.token
+                    ).addOnSuccessListener { location: Location? ->
+                        if (location != null) {
+                            val result = processLocation(location)
+                            continuation.resume(result)
+                        } else {
+                            continuation.resume(LocationResult.Unavailable)
+                        }
+                    }.addOnFailureListener {
+                        // Timeout oder anderer Fehler
+                        continuation.resume(LocationResult.Timeout)
+                    }.addOnCanceledListener {
+                        continuation.resume(LocationResult.Timeout)
                     }
-                }.addOnFailureListener { exception ->
-                    // Timeout oder anderer Fehler
-                    continuation.resume(LocationResult.Timeout)
-                }.addOnCanceledListener {
-                    continuation.resume(LocationResult.Timeout)
                 }
+            }
+
+            locationResult ?: run {
+                cancellationTokenSource.cancel()
+                LocationResult.Timeout
             }
         } catch (e: Exception) {
             LocationResult.Timeout
