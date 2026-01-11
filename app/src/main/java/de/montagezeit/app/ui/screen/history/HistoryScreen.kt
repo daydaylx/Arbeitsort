@@ -21,6 +21,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.export.CsvExporter
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -183,6 +184,115 @@ fun WeekGroupCard(
                 }
             }
 
+            // Statistics Section
+            if (week.entries.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Total and average hours
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Gesamt:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "%.1f Std.".format(week.totalHours),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        if (week.workDaysCount > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Durchschnitt:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "Ø %.1f Std./Tag".format(week.averageHoursPerDay),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+
+                        // Days breakdown
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Tage:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "${week.workDaysCount} Arbeit${if (week.offDaysCount > 0) ", ${week.offDaysCount} frei" else ""}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        // Warnings/Info
+                        if (week.entriesNeedingReview > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${week.entriesNeedingReview} ${if (week.entriesNeedingReview == 1) "Eintrag" else "Einträge"} benötigt Überprüfung",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        if (week.daysOutsideLeipzig > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${week.daysOutsideLeipzig} ${if (week.daysOutsideLeipzig == 1) "Tag" else "Tage"} außerhalb Leipzig",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Divider()
 
             // Entries
@@ -240,6 +350,7 @@ fun HistoryEntryItem(
                 
                 // Location Status Info
                 LocationSummary(entry = entry)
+                TravelSummaryRow(entry = entry)
             }
             
             // Right side: Warning icon and edit icon
@@ -324,6 +435,58 @@ fun LocationSummary(entry: WorkEntry) {
 }
 
 @Composable
+fun TravelSummaryRow(entry: WorkEntry) {
+    val startAt = entry.travelStartAt
+    val arriveAt = entry.travelArriveAt
+    val labelText = when {
+        !entry.travelLabelStart.isNullOrBlank() && !entry.travelLabelEnd.isNullOrBlank() ->
+            "${entry.travelLabelStart} → ${entry.travelLabelEnd}"
+        !entry.travelLabelStart.isNullOrBlank() -> "Von ${entry.travelLabelStart}"
+        !entry.travelLabelEnd.isNullOrBlank() -> "Nach ${entry.travelLabelEnd}"
+        else -> null
+    }
+
+    if (startAt == null && arriveAt == null && labelText == null) return
+
+    val timeText = when {
+        startAt != null && arriveAt != null ->
+            "${formatTime(startAt)} – ${formatTime(arriveAt)}"
+        startAt != null -> "Start: ${formatTime(startAt)}"
+        arriveAt != null -> "Ankunft: ${formatTime(arriveAt)}"
+        else -> null
+    }
+    val durationText = calculateTravelDuration(startAt, arriveAt)?.let { formatDuration(it) }
+    val summaryText = listOfNotNull(timeText, durationText?.let { "Fahrzeit $it" })
+        .joinToString(" · ")
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.DirectionsCar,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            modifier = Modifier.size(14.dp)
+        )
+        Column {
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+            )
+            labelText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun LocationStatusIcon(status: LocationStatus) {
     val (icon, color) = when (status) {
         LocationStatus.OK -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
@@ -372,6 +535,35 @@ private fun formatEntryDate(date: java.time.LocalDate): String {
     return date.format(
         DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
     )
+}
+
+private fun formatTime(timestamp: Long): String {
+    val instant = java.time.Instant.ofEpochMilli(timestamp)
+    val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+}
+
+private fun calculateTravelDuration(startAt: Long?, arriveAt: Long?): Duration? {
+    if (startAt == null || arriveAt == null) return null
+    var duration = Duration.between(
+        java.time.Instant.ofEpochMilli(startAt),
+        java.time.Instant.ofEpochMilli(arriveAt)
+    )
+    if (duration.isNegative) {
+        duration = duration.plusDays(1)
+    }
+    return duration
+}
+
+private fun formatDuration(duration: Duration): String {
+    val totalMinutes = duration.toMinutes()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) {
+        "${hours}h ${minutes}m"
+    } else {
+        "${minutes}m"
+    }
 }
 
 private fun handleShareExport(context: Context, fileUri: android.net.Uri) {

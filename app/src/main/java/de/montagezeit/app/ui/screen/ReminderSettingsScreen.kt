@@ -3,8 +3,8 @@ package de.montagezeit.app.ui.screen
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.ui.screen.settings.TimePickerDialog
 import de.montagezeit.app.ui.screen.viewmodel.ReminderSettingsViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -38,13 +39,14 @@ fun ReminderSettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState(initial = ReminderSettings())
     val context = LocalContext.current
+    val activity = context as? ComponentActivity
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Erinnerungseinstellungen") },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO: Navigate back */ }) {
+                    IconButton(onClick = { activity?.onBackPressedDispatcher?.onBackPressed() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück")
                     }
                 }
@@ -329,11 +331,15 @@ fun TimeSetting(
         }
     }
     
-    // TODO: TimePickerDialog implementieren
     if (showDialog) {
-        // Placeholder - in production implement TimePicker
-        onTimeChange(time)
-        showDialog = false
+        TimePickerDialog(
+            initialTime = time,
+            onTimeSelected = {
+                onTimeChange(it)
+                showDialog = false
+            },
+            onDismiss = { showDialog = false }
+        )
     }
 }
 
@@ -376,14 +382,25 @@ fun TimeRangeSetting(
         }
     }
     
-    // TODO: TimePickerDialog implementieren
     if (showStartDialog) {
-        // Placeholder
-        showStartDialog = false
+        TimePickerDialog(
+            initialTime = startTime,
+            onTimeSelected = {
+                onStartTimeChange(it)
+                showStartDialog = false
+            },
+            onDismiss = { showStartDialog = false }
+        )
     }
     if (showEndDialog) {
-        // Placeholder
-        showEndDialog = false
+        TimePickerDialog(
+            initialTime = endTime,
+            onTimeSelected = {
+                onEndTimeChange(it)
+                showEndDialog = false
+            },
+            onDismiss = { showEndDialog = false }
+        )
     }
 }
 

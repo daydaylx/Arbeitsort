@@ -11,11 +11,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.time.LocalDate
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEntrySheet(
+    date: LocalDate,
     viewModel: EditEntryViewModel = hiltViewModel(),
     onDismiss: () -> Unit
 ) {
@@ -24,6 +27,10 @@ fun EditEntrySheet(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+
+    LaunchedEffect(date) {
+        viewModel.setDate(date)
+    }
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -69,13 +76,63 @@ fun EditEntrySheet(
                         onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                         onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
                         onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
+                        onTravelStartChange = { viewModel.updateTravelStart(it) },
+                        onTravelArriveChange = { viewModel.updateTravelArrive(it) },
+                        onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
+                        onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
+                        onTravelClear = { viewModel.clearTravel() },
                         onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                         onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                         onNoteChange = { viewModel.updateNote(it) },
                         onResetReview = { viewModel.resetNeedsReview() },
                         onSave = { viewModel.save() }
                     )
-                    
+
+                    // Display validation errors
+                    if (state.validationErrors.isNotEmpty()) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        text = "Eingabefehler",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+
+                                state.validationErrors.forEach { error ->
+                                    Text(
+                                        text = "• ${error.message}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+
+                                TextButton(
+                                    onClick = { viewModel.clearValidationErrors() }
+                                ) {
+                                    Text("OK")
+                                }
+                            }
+                        }
+                    }
+
                     if (state.showConfirmDialog) {
                         BorderzoneConfirmDialog(
                             onConfirm = { viewModel.confirmAndSave() },
@@ -117,6 +174,11 @@ fun EditFormContent(
     onWorkStartChange: (Int, Int) -> Unit,
     onWorkEndChange: (Int, Int) -> Unit,
     onBreakMinutesChange: (Int) -> Unit,
+    onTravelStartChange: (java.time.LocalTime?) -> Unit,
+    onTravelArriveChange: (java.time.LocalTime?) -> Unit,
+    onTravelLabelStartChange: (String) -> Unit,
+    onTravelLabelEndChange: (String) -> Unit,
+    onTravelClear: () -> Unit,
     onMorningLabelChange: (String) -> Unit,
     onEveningLabelChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
@@ -147,6 +209,20 @@ fun EditFormContent(
         onStartChange = onWorkStartChange,
         onEndChange = onWorkEndChange,
         onBreakChange = onBreakMinutesChange
+    )
+
+    Divider()
+
+    TravelSection(
+        travelStartTime = formData.travelStartTime,
+        travelArriveTime = formData.travelArriveTime,
+        travelLabelStart = formData.travelLabelStart,
+        travelLabelEnd = formData.travelLabelEnd,
+        onTravelStartChange = onTravelStartChange,
+        onTravelArriveChange = onTravelArriveChange,
+        onTravelLabelStartChange = onTravelLabelStartChange,
+        onTravelLabelEndChange = onTravelLabelEndChange,
+        onClearTravel = onTravelClear
     )
 
     Divider()
@@ -337,6 +413,139 @@ fun WorkTimesSection(
 }
 
 @Composable
+fun TravelSection(
+    travelStartTime: java.time.LocalTime?,
+    travelArriveTime: java.time.LocalTime?,
+    travelLabelStart: String?,
+    travelLabelEnd: String?,
+    onTravelStartChange: (java.time.LocalTime?) -> Unit,
+    onTravelArriveChange: (java.time.LocalTime?) -> Unit,
+    onTravelLabelStartChange: (String) -> Unit,
+    onTravelLabelEndChange: (String) -> Unit,
+    onClearTravel: () -> Unit
+) {
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showArrivePicker by remember { mutableStateOf(false) }
+    val hasTravelData = travelStartTime != null ||
+        travelArriveTime != null ||
+        !travelLabelStart.isNullOrBlank() ||
+        !travelLabelEnd.isNullOrBlank()
+    val duration = remember(travelStartTime, travelArriveTime) {
+        calculateTravelDuration(travelStartTime, travelArriveTime)
+    }
+    val durationText = duration?.let { formatDuration(it) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Reise / Fahrzeit",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = { showStartPicker = true },
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Start",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = travelStartTime?.let { formatTime(it) } ?: "Zeit wählen",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = { showArrivePicker = true },
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Ankunft",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = travelArriveTime?.let { formatTime(it) } ?: "Zeit wählen",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+        }
+
+        durationText?.let {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DirectionsCar,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Fahrzeit: $it",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = travelLabelStart ?: "",
+            onValueChange = onTravelLabelStartChange,
+            label = { Text("Von (Optional)") },
+            placeholder = { Text("Startort") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = travelLabelEnd ?: "",
+            onValueChange = onTravelLabelEndChange,
+            label = { Text("Nach (Optional)") },
+            placeholder = { Text("Zielort") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        if (hasTravelData) {
+            TextButton(
+                onClick = onClearTravel,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text("Reisedaten löschen")
+            }
+        }
+    }
+
+    if (showStartPicker) {
+        SimpleTimePickerDialog(
+            initialTime = travelStartTime ?: java.time.LocalTime.of(8, 0),
+            onTimeSelected = { onTravelStartChange(it); showStartPicker = false },
+            onDismiss = { showStartPicker = false }
+        )
+    }
+
+    if (showArrivePicker) {
+        SimpleTimePickerDialog(
+            initialTime = travelArriveTime ?: java.time.LocalTime.of(9, 0),
+            onTimeSelected = { onTravelArriveChange(it); showArrivePicker = false },
+            onDismiss = { showArrivePicker = false }
+        )
+    }
+}
+
+@Composable
 fun LocationLabelsSection(
     entry: de.montagezeit.app.data.local.entity.WorkEntry,
     morningLabel: String?,
@@ -507,4 +716,27 @@ private fun formatDate(date: java.time.LocalDate): String {
 
 private fun formatTime(time: java.time.LocalTime): String {
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+}
+
+private fun calculateTravelDuration(
+    start: java.time.LocalTime?,
+    arrive: java.time.LocalTime?
+): Duration? {
+    if (start == null || arrive == null) return null
+    var duration = Duration.between(start, arrive)
+    if (duration.isNegative) {
+        duration = duration.plusHours(24)
+    }
+    return duration
+}
+
+private fun formatDuration(duration: Duration): String {
+    val totalMinutes = duration.toMinutes()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) {
+        "${hours}h ${minutes}m"
+    } else {
+        "${minutes}m"
+    }
 }

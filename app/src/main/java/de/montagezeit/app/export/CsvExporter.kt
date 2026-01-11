@@ -148,10 +148,14 @@ class CsvExporter @Inject constructor(
     private fun escapeCsv(value: String?): String {
         if (value == null) return ""
         
-        // Semikolon escapen
-        val escaped = value.replace(";", "\\;")
+        // RFC 4180: If value contains delimiter, quote, or newline, enclose in quotes.
+        // Quotes inside field must be escaped by another quote.
+        val needsQuotes = value.contains(";") || value.contains("\"") || value.contains("\n")
         
-        // Anführungszeichen escapen
-        return escaped.replace("\"", "\\\"")
+        return if (needsQuotes) {
+            "\"" + value.replace("\"", "\"\"") + "\""
+        } else {
+            value
+        }
     }
 }

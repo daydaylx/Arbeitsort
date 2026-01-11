@@ -1,43 +1,55 @@
 package de.montagezeit.app.handler
 
-/*
-// Dependencies missing for local Robolectric tests (RobolectricTestRunner).
-// Also Hilt testing dependencies for local unit tests are missing.
-// TODO: Enable this test when dependencies are added to build.gradle.kts
-
-import android.content.Context
+import android.app.Application
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.domain.model.LocationResult
-import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
-import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.MainActivity
 import de.montagezeit.app.notification.ReminderActions
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.time.LocalDate
-import javax.inject.Inject
 
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30]) // HiltTestApplication not easily available in local unit test without Robolectric+Hilt setup
+@Config(application = HiltTestApplication::class, sdk = [30])
 class CheckInActionServiceTest {
-    
-    // ... code commented out ...
-}
-*/
-class CheckInActionServiceTest {
-    // Placeholder to allow compilation
+
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
+    @Before
+    fun setUp() {
+        hiltRule.inject()
+    }
+
+    @Test
+    fun editAction_startsMainActivity() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val date = LocalDate.of(2024, 1, 5)
+        val intent = Intent(application, CheckInActionService::class.java).apply {
+            action = ReminderActions.ACTION_EDIT_ENTRY
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
+        }
+
+        Robolectric.buildService(CheckInActionService::class.java, intent)
+            .create()
+            .startCommand(0, 0)
+
+        val nextIntent = Shadows.shadowOf(application).nextStartedActivity
+        assertNotNull(nextIntent)
+        assertEquals(MainActivity::class.java.name, nextIntent?.component?.className)
+        assertEquals(date.toString(), nextIntent?.getStringExtra(ReminderActions.EXTRA_DATE))
+    }
 }

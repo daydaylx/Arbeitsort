@@ -10,9 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.widget.Toast
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -43,7 +47,8 @@ fun SettingsScreen(
                 },
                 onUpdateRadius = { viewModel.updateRadiusMeters(it) },
                 onUpdateLocationMode = { viewModel.updateLocationMode(it) },
-                onExport = { viewModel.exportToCsv() },
+                onExportCsv = { viewModel.exportToCsv() },
+                onExportJson = { viewModel.exportToJson() },
                 onResetExportState = { viewModel.resetExportState() },
                 modifier = Modifier
                     .padding(paddingValues)
@@ -61,7 +66,8 @@ fun SettingsContent(
     onUpdateEveningWindow: (Int, Int, Int, Int) -> Unit,
     onUpdateRadius: (Int) -> Unit,
     onUpdateLocationMode: (LocationMode) -> Unit,
-    onExport: () -> Unit,
+    onExportCsv: () -> Unit,
+    onExportJson: () -> Unit,
     onResetExportState: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -77,7 +83,7 @@ fun SettingsContent(
                 breakMinutes = settings.breakMinutes
             )
         }
-        
+
         // Reminder Settings Section
         SettingsSection(title = "Erinnerungen") {
             ReminderSettingsSection(
@@ -99,16 +105,17 @@ fun SettingsContent(
                 onUpdateLocationMode = onUpdateLocationMode
             )
         }
-        
+
         // Export Section
         SettingsSection(title = "Export") {
             ExportSection(
                 uiState = uiState,
-                onExport = onExport,
+                onExportCsv = onExportCsv,
+                onExportJson = onExportJson,
                 onResetState = onResetExportState
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -361,30 +368,50 @@ fun LocationSettingsSection(
 @Composable
 fun ExportSection(
     uiState: SettingsUiState,
-    onExport: () -> Unit,
+    onExportCsv: () -> Unit,
+    onExportJson: () -> Unit,
     onResetState: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Alle Einträge als CSV exportieren",
+            text = "Alle Einträge exportieren",
             style = MaterialTheme.typography.bodyMedium
         )
-        
+
         when (uiState) {
             is SettingsUiState.Initial -> {
-                Button(
-                    onClick = onExport,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text("Exportieren")
+                    Button(
+                        onClick = onExportCsv,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("CSV")
+                    }
+
+                    Button(
+                        onClick = onExportJson,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("JSON")
+                    }
                 }
             }
-            
+
             is SettingsUiState.Exporting -> {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -395,48 +422,61 @@ fun ExportSection(
                     Text("Exportiere...")
                 }
             }
-            
+
             is SettingsUiState.ExportSuccess -> {
-                val csv = (uiState as SettingsUiState.ExportSuccess).csv
-                var showCopyDialog by remember { mutableStateOf(true) }
-                
+                val fileUri = uiState.fileUri
+                val format = uiState.format
+                var showShareDialog by remember { mutableStateOf(true) }
+
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 ) {
-                    Text(
-                        text = "Export erfolgreich!",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Export erfolgreich!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                        Text(
+                            text = "Format: ${format.name}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
-                
-                if (showCopyDialog) {
+
+                if (showShareDialog) {
                     AlertDialog(
-                        onDismissRequest = { 
-                            showCopyDialog = false
+                        onDismissRequest = {
+                            showShareDialog = false
                             onResetState()
                         },
-                        title = { Text("CSV kopieren") },
+                        title = { Text("${format.name} Export") },
                         text = {
                             Text(
-                                "Die CSV-Daten wurden generiert. Möchten Sie sie in die Zwischenablage kopieren?",
+                                "Die Datei wurde erstellt. Möchten Sie sie teilen?",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         },
                         confirmButton = {
                             Button(onClick = {
-                                // TODO: Implement clipboard copy
-                                showCopyDialog = false
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = if (format == ExportFormat.CSV) "text/csv" else "application/json"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "MontageZeit Export (${format.name})")
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Export teilen"))
+                                showShareDialog = false
                                 onResetState()
                             }) {
-                                Text("Kopieren")
+                                Text("Teilen")
                             }
                         },
                         dismissButton = {
                             TextButton(onClick = {
-                                showCopyDialog = false
+                                showShareDialog = false
                                 onResetState()
                             }) {
                                 Text("Schließen")
@@ -445,9 +485,9 @@ fun ExportSection(
                     )
                 }
             }
-            
+
             is SettingsUiState.ExportError -> {
-                val error = (uiState as SettingsUiState.ExportError).message
+                val error = uiState.message
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer

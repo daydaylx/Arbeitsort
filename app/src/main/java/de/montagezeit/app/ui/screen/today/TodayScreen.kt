@@ -22,6 +22,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.ui.screen.today.TodayUiState
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -235,6 +236,7 @@ fun StatusCard(entry: WorkEntry?) {
                 DayTypeText(dayType = entry.dayType)
                 Spacer(modifier = Modifier.height(4.dp))
                 LocationStatusText(entry = entry)
+                TravelSummary(entry = entry)
                 
                 if (entry.needsReview) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -492,6 +494,57 @@ fun LocationStatusText(entry: WorkEntry) {
 }
 
 @Composable
+fun TravelSummary(entry: WorkEntry) {
+    val startAt = entry.travelStartAt
+    val arriveAt = entry.travelArriveAt
+    val labelText = when {
+        !entry.travelLabelStart.isNullOrBlank() && !entry.travelLabelEnd.isNullOrBlank() ->
+            "${entry.travelLabelStart} → ${entry.travelLabelEnd}"
+        !entry.travelLabelStart.isNullOrBlank() -> "Von ${entry.travelLabelStart}"
+        !entry.travelLabelEnd.isNullOrBlank() -> "Nach ${entry.travelLabelEnd}"
+        else -> null
+    }
+
+    if (startAt == null && arriveAt == null && labelText == null) return
+
+    val timeText = when {
+        startAt != null && arriveAt != null ->
+            "${getCompletedTimeString(startAt)} – ${getCompletedTimeString(arriveAt)}"
+        startAt != null -> "Start: ${getCompletedTimeString(startAt)}"
+        arriveAt != null -> "Ankunft: ${getCompletedTimeString(arriveAt)}"
+        else -> null
+    }
+    val durationText = calculateTravelDuration(startAt, arriveAt)?.let { formatDuration(it) }
+    val summaryText = listOfNotNull(timeText, durationText?.let { "Fahrzeit $it" })
+        .joinToString(" · ")
+
+    Spacer(modifier = Modifier.height(6.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.DirectionsCar,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
+        Column {
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodySmall
+            )
+            labelText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun LocationRow(
     label: String,
     locationStatus: LocationStatus,
@@ -552,4 +605,27 @@ private fun getCompletedTimeString(timestamp: Long): String {
     val instant = java.time.Instant.ofEpochMilli(timestamp)
     val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+}
+
+private fun calculateTravelDuration(startAt: Long?, arriveAt: Long?): Duration? {
+    if (startAt == null || arriveAt == null) return null
+    var duration = Duration.between(
+        java.time.Instant.ofEpochMilli(startAt),
+        java.time.Instant.ofEpochMilli(arriveAt)
+    )
+    if (duration.isNegative) {
+        duration = duration.plusDays(1)
+    }
+    return duration
+}
+
+private fun formatDuration(duration: Duration): String {
+    val totalMinutes = duration.toMinutes()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) {
+        "${hours}h ${minutes}m"
+    } else {
+        "${minutes}m"
+    }
 }

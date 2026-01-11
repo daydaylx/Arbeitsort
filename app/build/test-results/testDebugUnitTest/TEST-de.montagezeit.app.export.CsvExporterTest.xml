@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="de.montagezeit.app.export.CsvExporterTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-01-06T00:19:28" hostname="lx" time="4.264">
-  <properties/>
-  <testcase name="exportToCsv mit leeren Eintraegen sollte null zurueckgeben" classname="de.montagezeit.app.export.CsvExporterTest" time="4.171"/>
-  <testcase name="exportToCsv mit einem Eintrag sollte korrektes Format haben" classname="de.montagezeit.app.export.CsvExporterTest" time="0.093"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -86,9 +86,37 @@ data class WeekGroup(
 ) {
     val displayText: String
         get() = "KW $week"
-    
+
     val yearText: String
         get() = if (year == LocalDate.now().year) "" else "$year"
+
+    // Statistics
+    val workDaysCount: Int
+        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+
+    val offDaysCount: Int
+        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.OFF }
+
+    val totalHours: Double
+        get() = entries
+            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+            .sumOf { entry ->
+                val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
+                val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+                val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+                workMinutes / 60.0
+            }
+
+    val averageHoursPerDay: Double
+        get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
+
+    val entriesNeedingReview: Int
+        get() = entries.count { it.needsReview }
+
+    val daysOutsideLeipzig: Int
+        get() = entries.count { entry ->
+            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
+        }
 }
 
 sealed class HistoryUiState {

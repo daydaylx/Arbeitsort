@@ -18,23 +18,12 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        // TODO: VOR RELEASE entfernen - fallbackToDestructiveMigration() löscht ALLE Nutzerdaten!
-        //
-        // PROBLEM: Diese Konfiguration löscht die komplette Datenbank bei Schema-Updates.
-        // Akzeptabel für MVP-Entwicklung, aber KATASTROPHAL für Produktivnutzer.
-        //
-        // LÖSUNG VOR RELEASE:
-        // 1. Entferne .fallbackToDestructiveMigration()
-        // 2. Implementiere echte Migrationen mit .addMigrations(MIGRATION_X_Y)
-        // 3. Siehe AppDatabase.kt für detaillierte Migrations-Anleitung
-        //
-        // REF: https://developer.android.com/training/data-storage/room/migrating-db-versions
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "montagezeit_database"
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(*AppDatabase.MIGRATIONS)
             .build()
     }
     

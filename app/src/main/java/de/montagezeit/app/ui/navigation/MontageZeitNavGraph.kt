@@ -17,6 +17,7 @@ import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
+import java.time.LocalDate
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Today : Screen("today", "Heute", Icons.Default.Today)
@@ -25,7 +26,10 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 }
 
 @Composable
-fun MontageZeitNavGraph() {
+fun MontageZeitNavGraph(
+    editRequestDate: String? = null,
+    onEditRequestConsumed: (() -> Unit)? = null
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -33,6 +37,14 @@ fun MontageZeitNavGraph() {
     // Edit Sheet State
     var showEditSheet by remember { mutableStateOf(false) }
     var editDate by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(editRequestDate) {
+        if (editRequestDate != null) {
+            editDate = editRequestDate
+            showEditSheet = true
+            onEditRequestConsumed?.invoke()
+        }
+    }
     
     Scaffold(
         bottomBar = {
@@ -88,6 +100,7 @@ fun MontageZeitNavGraph() {
     // Edit Modal Bottom Sheet
     if (showEditSheet && editDate != null) {
         EditEntrySheet(
+            date = LocalDate.parse(editDate),
             onDismiss = {
                 showEditSheet = false
                 editDate = null

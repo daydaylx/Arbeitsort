@@ -1,0 +1,27 @@
+# Android
+.gradle/
+.idea/
+build/
+app/build/
+local.properties
+*.iml
+*.log
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Node/TypeScript (mcp_servers)
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+# Project specific
+logs/
+build_output.log
+lint_output.log
+test_output.log
+.clineignore
+.gemini/
+tmp/

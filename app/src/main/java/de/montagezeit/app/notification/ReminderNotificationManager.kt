@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
 import de.montagezeit.app.handler.CheckInActionService
 import java.time.LocalDate
@@ -235,15 +236,18 @@ class ReminderNotificationManager @Inject constructor(
         date: LocalDate,
         requestCode: Int
     ): PendingIntent {
-        // TODO: Implementiere Edit-Action (öffnet MainActivity mit Edit-Route)
-        // Vorläufig verwenden wir einen Service der nur den Intent loggt
-        val intent = Intent(context, CheckInActionService::class.java).apply {
+        val intent = Intent(context, MainActivity::class.java).apply {
             action = ReminderActions.ACTION_EDIT_ENTRY
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
             putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
         }
         
-        return PendingIntent.getService(
+        return PendingIntent.getActivity(
             context,
             requestCode,
             intent,

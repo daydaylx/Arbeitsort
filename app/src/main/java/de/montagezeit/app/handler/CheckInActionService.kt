@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
+import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
@@ -105,9 +106,19 @@ class CheckInActionService : Service() {
             
             ReminderActions.ACTION_EDIT_ENTRY -> {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                // TODO: Implementiere Edit-Action (öffnet MainActivity mit Edit-Route)
-                // Vorläufig zeigen wir nur einen Toast
-                showToast("Eintrag bearbeiten - Feature kommt bald")
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val editIntent = Intent(this, MainActivity::class.java).apply {
+                    action = ReminderActions.ACTION_EDIT_ENTRY
+                    putExtra(ReminderActions.EXTRA_DATE, date.toString())
+                    putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
+                }
+                startActivity(editIntent)
+                notificationManager.cancelFallbackReminder()
                 stopSelf()
             }
         }

@@ -2,6 +2,30 @@
 
 Offline-first Stunden- & Ortslog für Montage mit Fokus auf Standort-Snapshots (Morgens + Abends).
 
+## MCP Server
+
+Dieses Projekt enthält MCP (Model Context Protocol) Server für spezialisierte Entwicklungstools. Siehe [`mcp_servers/README.md`](mcp_servers/README.md) für Details.
+
+### Verfügbare Server
+
+- **kotlin-reviewer** - Automatischer Code-Review für Kotlin-Code mit Fokus auf Android-Best Practices, Compose-Patterns und Clean Architecture
+- **android-tester** - Generiert Unit- und Instrumented-Tests basierend auf existierendem Code
+- **gradle-auditor** - Prüft Dependencies auf Sicherheitslücken, veraltete Versionen und Lizenzprobleme
+
+### Schnellstart
+
+```bash
+# MCP Server CLI
+cd mcp_servers
+npm install
+npm run build
+node cli.js <server> help
+
+# Smoke-Tests
+npm run smoke-test
+```
+
+
 ## Projektstatus
 
 ✅ **MVP abgeschlossen** - Produktionsreif  

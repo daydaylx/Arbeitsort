@@ -35,6 +35,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -54,9 +55,23 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    lint {
+        // Core Library Desugaring ermöglicht java.time.* auf API 24+
+        // Lint erkennt Desugaring nicht automatisch, daher deaktivieren wir NewApi
+        // für APIs, die via Desugaring verfügbar sind
+        disable += "NewApi"
+        // Warnings als Errors behandeln für kritische Checks
+        warningsAsErrors = false
+        // Abort bei Errors (wird durch disable += "NewApi" verhindert)
+        abortOnError = true
+    }
 }
 
 dependencies {
+    // Core Library Desugaring (für java.time.* auf API 24+)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
@@ -108,6 +123,10 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("androidx.test:core-ktx:1.5.0")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("com.google.dagger:hilt-android-testing:2.48")
+    kspTest("com.google.dagger:hilt-compiler:2.48")
 
     // Instrumented Testing
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

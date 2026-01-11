@@ -80,7 +80,7 @@ class ReminderScheduler @Inject constructor(
             .build()
         
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
+            repeatInterval = 2, TimeUnit.HOURS
         )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
@@ -122,7 +122,7 @@ class ReminderScheduler @Inject constructor(
             .build()
         
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
+            repeatInterval = 3, TimeUnit.HOURS
         )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
