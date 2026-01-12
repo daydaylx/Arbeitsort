@@ -7,11 +7,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.UpdateEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -22,6 +28,7 @@ import javax.inject.Inject
 class EditEntryViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
     private val updateEntry: UpdateEntry,
+    private val reminderSettingsManager: ReminderSettingsManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -73,13 +80,15 @@ class EditEntryViewModel @Inject constructor(
                     _formData.value = EditFormData.fromEntry(entry)
                     _uiState.value = EditUiState.Success(entry)
                 } else {
+                    val settings = reminderSettingsManager.settings.first()
+                    val defaultDayType = defaultDayTypeForDate(date, settings)
                     // Neuen Eintrag mit Defaults erstellen
                     val defaultEntry = WorkEntry(
                         date = date,
-                        dayType = DayType.WORK,
-                        workStart = LocalTime.of(8, 0),
-                        workEnd = LocalTime.of(19, 0),
-                        breakMinutes = 60
+                        dayType = defaultDayType,
+                        workStart = settings.workStart,
+                        workEnd = settings.workEnd,
+                        breakMinutes = settings.breakMinutes
                     )
                     _formData.value = EditFormData.fromEntry(defaultEntry)
                     _uiState.value = EditUiState.NewEntry(date)
@@ -163,6 +172,37 @@ class EditEntryViewModel @Inject constructor(
         _formData.value = _formData.value.copy(
             needsReview = false
         )
+    }
+
+    fun applyDefaultWorkTimes() {
+        viewModelScope.launch {
+            val settings = reminderSettingsManager.settings.first()
+            _formData.value = _formData.value.copy(
+                workStart = settings.workStart,
+                workEnd = settings.workEnd,
+                breakMinutes = settings.breakMinutes
+            )
+        }
+    }
+
+    fun copyFromPreviousDay(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val previousDate = currentDate.minusDays(1)
+            val entry = workEntryDao.getByDate(previousDate)
+            withContext(Dispatchers.Main) {
+                if (entry != null) {
+                    val copied = EditFormData.fromEntry(entry).copy(
+                        morningLocationLabel = null,
+                        eveningLocationLabel = null,
+                        needsReview = false
+                    )
+                    _formData.value = copied
+                    onResult(true)
+                } else {
+                    onResult(false)
+                }
+            }
+        }
     }
     
     fun save(confirmBorderzone: Boolean = false) {
@@ -287,6 +327,19 @@ class EditEntryViewModel @Inject constructor(
             .atZone(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
+    }
+
+    private fun defaultDayTypeForDate(
+        date: LocalDate,
+        settings: ReminderSettings
+    ): DayType {
+        val isWeekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+        val isHoliday = settings.holidayDates.contains(date)
+        return if ((settings.autoOffWeekends && isWeekend) || (settings.autoOffHolidays && isHoliday)) {
+            DayType.OFF
+        } else {
+            DayType.WORK
+        }
     }
 }
 

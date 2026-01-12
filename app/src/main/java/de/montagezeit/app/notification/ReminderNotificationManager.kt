@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
 import de.montagezeit.app.handler.CheckInActionService
+import de.montagezeit.app.work.ReminderType
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,11 +32,13 @@ object ReminderActions {
     // Common Actions
     const val ACTION_EDIT_ENTRY = "action_edit_entry"
     const val ACTION_REMIND_LATER = "action_remind_later"
+    const val ACTION_MARK_DAY_OFF = "action_mark_day_off"
     
     // Extras
     const val EXTRA_DATE = "extra_date"
     const val EXTRA_ACTION_TYPE = "extra_action_type"
     const val EXTRA_HOURS_LATER = "extra_hours_later"
+    const val EXTRA_REMINDER_TYPE = "extra_reminder_type"
 }
 
 /**
@@ -45,6 +48,7 @@ object ReminderNotificationIds {
     const val MORNING_REMINDER = 1001
     const val EVENING_REMINDER = 1002
     const val FALLBACK_REMINDER = 1003
+    const val DAILY_REMINDER = 1004
 }
 
 /**
@@ -69,8 +73,19 @@ class ReminderNotificationManager @Inject constructor(
         private const val REQUEST_CODE_EVENING_WITH_LOCATION = 2003
         private const val REQUEST_CODE_EVENING_WITHOUT_LOCATION = 2004
         private const val REQUEST_CODE_EDIT = 2005
-        private const val REQUEST_CODE_REMIND_LATER_1H = 2006
-        private const val REQUEST_CODE_REMIND_LATER_2H = 2007
+        private const val REQUEST_CODE_REMIND_LATER_1H_MORNING = 2006
+        private const val REQUEST_CODE_REMIND_LATER_2H_MORNING = 2007
+        private const val REQUEST_CODE_REMIND_LATER_1H_EVENING = 2015
+        private const val REQUEST_CODE_REMIND_LATER_2H_EVENING = 2016
+        private const val REQUEST_CODE_REMIND_LATER_1H_FALLBACK = 2017
+        private const val REQUEST_CODE_REMIND_LATER_2H_FALLBACK = 2018
+        private const val REQUEST_CODE_MARK_DAY_OFF_MORNING = 2008
+        private const val REQUEST_CODE_MARK_DAY_OFF_EVENING = 2009
+        private const val REQUEST_CODE_MARK_DAY_OFF_FALLBACK = 2010
+        private const val REQUEST_CODE_MARK_DAY_OFF_DAILY = 2011
+        private const val REQUEST_CODE_DAILY_EDIT = 2012
+        private const val REQUEST_CODE_REMIND_LATER_DAILY_1H = 2013
+        private const val REQUEST_CODE_REMIND_LATER_DAILY_2H = 2014
     }
     
     init {
@@ -142,12 +157,30 @@ class ReminderNotificationManager @Inject constructor(
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 "Später (1h)",
-                createRemindLaterPendingIntent(date, 1, REQUEST_CODE_REMIND_LATER_1H)
+                createRemindLaterPendingIntent(
+                    date,
+                    1,
+                    ReminderType.MORNING,
+                    REQUEST_CODE_REMIND_LATER_1H_MORNING
+                )
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 "Später (2h)",
-                createRemindLaterPendingIntent(date, 2, REQUEST_CODE_REMIND_LATER_2H)
+                createRemindLaterPendingIntent(
+                    date,
+                    2,
+                    ReminderType.MORNING,
+                    REQUEST_CODE_REMIND_LATER_2H_MORNING
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_mark_day_off),
+                createMarkDayOffPendingIntent(
+                    date,
+                    REQUEST_CODE_MARK_DAY_OFF_MORNING
+                )
             )
             .build()
         
@@ -200,12 +233,30 @@ class ReminderNotificationManager @Inject constructor(
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 "Später (1h)",
-                createRemindLaterPendingIntent(date, 1, REQUEST_CODE_REMIND_LATER_1H)
+                createRemindLaterPendingIntent(
+                    date,
+                    1,
+                    ReminderType.EVENING,
+                    REQUEST_CODE_REMIND_LATER_1H_EVENING
+                )
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 "Später (2h)",
-                createRemindLaterPendingIntent(date, 2, REQUEST_CODE_REMIND_LATER_2H)
+                createRemindLaterPendingIntent(
+                    date,
+                    2,
+                    ReminderType.EVENING,
+                    REQUEST_CODE_REMIND_LATER_2H_EVENING
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_mark_day_off),
+                createMarkDayOffPendingIntent(
+                    date,
+                    REQUEST_CODE_MARK_DAY_OFF_EVENING
+                )
             )
             .build()
         
@@ -242,9 +293,96 @@ class ReminderNotificationManager @Inject constructor(
                 context.getString(R.string.action_edit_entry),
                 createEditPendingIntent(date, REQUEST_CODE_EDIT)
             )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (1h)",
+                createRemindLaterPendingIntent(
+                    date,
+                    1,
+                    ReminderType.FALLBACK,
+                    REQUEST_CODE_REMIND_LATER_1H_FALLBACK
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (2h)",
+                createRemindLaterPendingIntent(
+                    date,
+                    2,
+                    ReminderType.FALLBACK,
+                    REQUEST_CODE_REMIND_LATER_2H_FALLBACK
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_mark_day_off),
+                createMarkDayOffPendingIntent(
+                    date,
+                    REQUEST_CODE_MARK_DAY_OFF_FALLBACK
+                )
+            )
             .build()
         
         notificationManager.notify(ReminderNotificationIds.FALLBACK_REMINDER, notification)
+    }
+
+    fun showDailyReminder(date: LocalDate) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val groupSummary = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Check-in Erinnerungen")
+                .setContentText("Tägliche Check-in Erinnerungen")
+                .setGroupSummary(true)
+                .setGroup(NOTIFICATION_GROUP)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            notificationManager.notify(ReminderNotificationIds.DAILY_REMINDER - 1, groupSummary)
+        }
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.notification_daily_title))
+            .setContentText(context.getString(R.string.notification_daily_text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setGroup(NOTIFICATION_GROUP)
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_edit_entry),
+                createEditPendingIntent(date, REQUEST_CODE_DAILY_EDIT)
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (1h)",
+                createRemindLaterPendingIntent(
+                    date,
+                    1,
+                    ReminderType.DAILY,
+                    REQUEST_CODE_REMIND_LATER_DAILY_1H
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                "Später (2h)",
+                createRemindLaterPendingIntent(
+                    date,
+                    2,
+                    ReminderType.DAILY,
+                    REQUEST_CODE_REMIND_LATER_DAILY_2H
+                )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_mark_day_off),
+                createMarkDayOffPendingIntent(
+                    date,
+                    REQUEST_CODE_MARK_DAY_OFF_DAILY
+                )
+            )
+            .build()
+
+        notificationManager.notify(ReminderNotificationIds.DAILY_REMINDER, notification)
     }
     
     /**
@@ -267,6 +405,10 @@ class ReminderNotificationManager @Inject constructor(
     fun cancelFallbackReminder() {
         notificationManager.cancel(ReminderNotificationIds.FALLBACK_REMINDER)
     }
+
+    fun cancelDailyReminder() {
+        notificationManager.cancel(ReminderNotificationIds.DAILY_REMINDER)
+    }
     
     /**
      * Cancel alle Reminder-Notifications
@@ -275,6 +417,7 @@ class ReminderNotificationManager @Inject constructor(
         notificationManager.cancel(ReminderNotificationIds.MORNING_REMINDER)
         notificationManager.cancel(ReminderNotificationIds.EVENING_REMINDER)
         notificationManager.cancel(ReminderNotificationIds.FALLBACK_REMINDER)
+        notificationManager.cancel(ReminderNotificationIds.DAILY_REMINDER)
     }
     
     /**
@@ -331,14 +474,34 @@ class ReminderNotificationManager @Inject constructor(
     private fun createRemindLaterPendingIntent(
         date: LocalDate,
         hoursLater: Int,
+        reminderType: ReminderType,
         requestCode: Int
     ): PendingIntent {
         val intent = Intent(context, CheckInActionService::class.java).apply {
             action = ReminderActions.ACTION_REMIND_LATER
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
             putExtra(ReminderActions.EXTRA_HOURS_LATER, hoursLater)
+            putExtra(ReminderActions.EXTRA_REMINDER_TYPE, reminderType.name)
         }
         
+        return PendingIntent.getService(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun createMarkDayOffPendingIntent(
+        date: LocalDate,
+        requestCode: Int
+    ): PendingIntent {
+        val intent = Intent(context, CheckInActionService::class.java).apply {
+            action = ReminderActions.ACTION_MARK_DAY_OFF
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_MARK_DAY_OFF)
+        }
+
         return PendingIntent.getService(
             context,
             requestCode,

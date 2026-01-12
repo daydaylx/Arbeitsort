@@ -73,12 +73,11 @@ class LocationProviderImpl(
                 }
             }
 
-            locationResult ?: run {
-                cancellationTokenSource.cancel()
-                LocationResult.Timeout
-            }
+            locationResult ?: LocationResult.Timeout
         } catch (e: Exception) {
             LocationResult.Timeout
+        } finally {
+            cancellationTokenSource.cancel()
         }
     }
     

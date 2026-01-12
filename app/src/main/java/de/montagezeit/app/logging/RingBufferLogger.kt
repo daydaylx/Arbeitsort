@@ -24,7 +24,9 @@ class RingBufferLogger @Inject constructor(
     
     private val logFile: File
     private val maxFileSize = 2 * 1024 * 1024L // 2MB
-    private val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.GERMAN)
+    private val timestampFormat = ThreadLocal.withInitial {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.GERMAN)
+    }
     
     init {
         val logDir = File(context.filesDir, "logs")
@@ -45,7 +47,7 @@ class RingBufferLogger @Inject constructor(
     suspend fun log(level: Level, tag: String, message: String, throwable: Throwable? = null) {
         withContext(Dispatchers.IO) {
             try {
-                val timestamp = timestampFormat.format(Date())
+                val timestamp = timestampFormat.get()!!.format(Date())
                 val stackTrace = throwable?.let { "\n${it.stackTraceToString()}" } ?: ""
                 
                 val logLine = "$timestamp [${level.name}] [$tag] $message$stackTrace\n"

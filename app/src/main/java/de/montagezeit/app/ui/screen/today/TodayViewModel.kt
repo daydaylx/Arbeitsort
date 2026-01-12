@@ -12,12 +12,14 @@ import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.ui.screen.travel.TravelStatus
 import de.montagezeit.app.ui.screen.travel.TravelUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
@@ -92,14 +94,20 @@ class TodayViewModel @Inject constructor(
     }
     
     private fun loadTodayEntry() {
-        viewModelScope.launch {
-            _uiState.value = TodayUiState.Loading
-            
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.Loading
+            }
+
             try {
                 val entry = workEntryDao.getByDate(LocalDate.now())
-                _uiState.value = TodayUiState.Success(entry)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
             } catch (e: Exception) {
-                _uiState.value = TodayUiState.Error(e.message ?: "Unbekannter Fehler")
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Error(e.message ?: "Unbekannter Fehler")
+                }
             }
         }
     }
@@ -115,22 +123,27 @@ class TodayViewModel @Inject constructor(
     }
     
     private fun loadStatistics() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val now = LocalDate.now()
-                
+
                 // Aktuelle Woche berechnen
                 val weekFields = java.time.temporal.WeekFields.of(Locale.GERMAN)
                 val weekStart = now.with(weekFields.dayOfWeek(), 1) // Montag
                 val weekEnd = now.with(weekFields.dayOfWeek(), 7) // Sonntag
                 val weekEntries = workEntryDao.getByDateRange(weekStart, weekEnd)
-                _weekStats.value = calculateWeekStats(weekEntries)
-                
+                val weekStats = calculateWeekStats(weekEntries)
+
                 // Aktueller Monat berechnen
                 val monthStart = now.withDayOfMonth(1)
                 val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
                 val monthEntries = workEntryDao.getByDateRange(monthStart, monthEnd)
-                _monthStats.value = calculateMonthStats(monthEntries)
+                val monthStats = calculateMonthStats(monthEntries)
+
+                withContext(Dispatchers.Main) {
+                    _weekStats.value = weekStats
+                    _monthStats.value = monthStats
+                }
             } catch (e: Exception) {
                 // Fehler ignorieren, Statistiken bleiben null
             }
@@ -174,25 +187,31 @@ class TodayViewModel @Inject constructor(
     }
     
     fun onMorningCheckIn(forceWithoutLocation: Boolean = false) {
-        viewModelScope.launch {
-            _uiState.value = TodayUiState.LoadingLocation
-            
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.LoadingLocation
+            }
+
             try {
                 val entry = recordMorningCheckIn(LocalDate.now(), forceWithoutLocation)
-                _uiState.value = TodayUiState.Success(entry)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
             } catch (e: Exception) {
-                when (e) {
-                    is SecurityException -> {
-                        _uiState.value = TodayUiState.LocationError(
-                            "Standortberechtigung fehlt",
-                            canRetry = false
-                        )
-                    }
-                    else -> {
-                        _uiState.value = TodayUiState.LocationError(
-                            e.message ?: "Standort konnte nicht ermittelt werden",
-                            canRetry = true
-                        )
+                withContext(Dispatchers.Main) {
+                    when (e) {
+                        is SecurityException -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                "Standortberechtigung fehlt",
+                                canRetry = false
+                            )
+                        }
+                        else -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                canRetry = true
+                            )
+                        }
                     }
                 }
             }
@@ -200,25 +219,31 @@ class TodayViewModel @Inject constructor(
     }
     
     fun onEveningCheckIn(forceWithoutLocation: Boolean = false) {
-        viewModelScope.launch {
-            _uiState.value = TodayUiState.LoadingLocation
-            
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.LoadingLocation
+            }
+
             try {
                 val entry = recordEveningCheckIn(LocalDate.now(), forceWithoutLocation)
-                _uiState.value = TodayUiState.Success(entry)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
             } catch (e: Exception) {
-                when (e) {
-                    is SecurityException -> {
-                        _uiState.value = TodayUiState.LocationError(
-                            "Standortberechtigung fehlt",
-                            canRetry = false
-                        )
-                    }
-                    else -> {
-                        _uiState.value = TodayUiState.LocationError(
-                            e.message ?: "Standort konnte nicht ermittelt werden",
-                            canRetry = true
-                        )
+                withContext(Dispatchers.Main) {
+                    when (e) {
+                        is SecurityException -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                "Standortberechtigung fehlt",
+                                canRetry = false
+                            )
+                        }
+                        else -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                canRetry = true
+                            )
+                        }
                     }
                 }
             }
@@ -267,17 +292,21 @@ class TodayViewModel @Inject constructor(
     }
 
     fun calculateRouteDistance() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val current = _travelUiState.value
             if (current.fromLabel.isBlank() || current.toLabel.isBlank()) {
-                _travelUiState.value = current.copy(
-                    status = TravelStatus.Error,
-                    errorMessage = "Bitte Start- und Zieladresse eingeben"
-                )
+                withContext(Dispatchers.Main) {
+                    _travelUiState.value = current.copy(
+                        status = TravelStatus.Error,
+                        errorMessage = "Bitte Start- und Zieladresse eingeben"
+                    )
+                }
                 return@launch
             }
 
-            _travelUiState.value = current.copy(status = TravelStatus.Loading, errorMessage = null)
+            withContext(Dispatchers.Main) {
+                _travelUiState.value = current.copy(status = TravelStatus.Loading, errorMessage = null)
+            }
 
             when (val result = fetchRouteDistance(current.fromLabel, current.toLabel)) {
                 is FetchRouteDistance.Result.Success -> {
@@ -294,9 +323,11 @@ class TodayViewModel @Inject constructor(
                         paidMinutes = compensation.paidMinutes,
                         source = TravelSource.ROUTED
                     )
-                    _travelUiState.value = buildTravelUiState(updatedEntry).copy(
-                        status = TravelStatus.Success
-                    )
+                    withContext(Dispatchers.Main) {
+                        _travelUiState.value = buildTravelUiState(updatedEntry).copy(
+                            status = TravelStatus.Success
+                        )
+                    }
                 }
                 is FetchRouteDistance.Result.Error -> {
                     val message = when (result.reason) {
@@ -304,24 +335,28 @@ class TodayViewModel @Inject constructor(
                         FetchRouteDistance.ErrorReason.GEOCODE_FAILED -> "Adresse nicht gefunden"
                         FetchRouteDistance.ErrorReason.API_FAILED -> "Routing-Service nicht verfügbar"
                     }
-                    _travelUiState.value = current.copy(
-                        status = TravelStatus.Error,
-                        errorMessage = message
-                    )
+                    withContext(Dispatchers.Main) {
+                        _travelUiState.value = current.copy(
+                            status = TravelStatus.Error,
+                            errorMessage = message
+                        )
+                    }
                 }
             }
         }
     }
 
     fun saveManualDistance() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val current = _travelUiState.value
             val distanceKm = current.manualDistanceKm.replace(',', '.').toDoubleOrNull()
             if (distanceKm == null || distanceKm <= 0.0) {
-                _travelUiState.value = current.copy(
-                    status = TravelStatus.Error,
-                    errorMessage = "Bitte gültige Km eingeben"
-                )
+                withContext(Dispatchers.Main) {
+                    _travelUiState.value = current.copy(
+                        status = TravelStatus.Error,
+                        errorMessage = "Bitte gültige Km eingeben"
+                    )
+                }
                 return@launch
             }
 
@@ -338,9 +373,11 @@ class TodayViewModel @Inject constructor(
                 paidMinutes = compensation.paidMinutes,
                 source = TravelSource.MANUAL
             )
-            _travelUiState.value = buildTravelUiState(updatedEntry).copy(
-                status = TravelStatus.Success
-            )
+            withContext(Dispatchers.Main) {
+                _travelUiState.value = buildTravelUiState(updatedEntry).copy(
+                    status = TravelStatus.Success
+                )
+            }
         }
     }
 

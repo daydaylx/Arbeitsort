@@ -3,6 +3,7 @@ package de.montagezeit.app.data.preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -30,7 +31,16 @@ data class ReminderSettings(
     
     // Fallback
     val fallbackEnabled: Boolean = true,
-    val fallbackTime: LocalTime = LocalTime.of(22, 30)
+    val fallbackTime: LocalTime = LocalTime.of(22, 30),
+
+    // Tägliche Erinnerung
+    val dailyReminderEnabled: Boolean = true,
+    val dailyReminderTime: LocalTime = LocalTime.of(18, 0),
+
+    // Arbeitsfreie Tage
+    val autoOffWeekends: Boolean = true,
+    val autoOffHolidays: Boolean = true,
+    val holidayDates: Set<LocalDate> = emptySet()
 )
 
 /**
@@ -58,12 +68,22 @@ object ReminderSettingsKeys {
     // Fallback
     val FALLBACK_ENABLED = booleanPreferencesKey("fallback_enabled")
     val FALLBACK_TIME = stringPreferencesKey("fallback_time")
+
+    // Tägliche Erinnerung
+    val DAILY_REMINDER_ENABLED = booleanPreferencesKey("daily_reminder_enabled")
+    val DAILY_REMINDER_TIME = stringPreferencesKey("daily_reminder_time")
+
+    // Arbeitsfreie Tage
+    val AUTO_OFF_WEEKENDS = booleanPreferencesKey("auto_off_weekends")
+    val AUTO_OFF_HOLIDAYS = booleanPreferencesKey("auto_off_holidays")
+    val HOLIDAY_DATES = stringPreferencesKey("holiday_dates")
 }
 
 /**
  * Hilfsfunktionen für LocalTime Konvertierung
  */
 private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+private val DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
 
 fun LocalTime.toPrefString(): String = this.format(TIME_FORMATTER)
 
@@ -77,4 +97,21 @@ fun String?.toLocalTime(): LocalTime {
             LocalTime.MIDNIGHT
         }
     }
+}
+
+fun Set<LocalDate>.toPrefString(): String {
+    if (this.isEmpty()) return ""
+    return this.joinToString(",") { it.format(DATE_FORMATTER) }
+}
+
+fun String?.toLocalDateSet(): Set<LocalDate> {
+    if (this.isNullOrBlank()) return emptySet()
+    return this.split(",")
+        .mapNotNull { token ->
+            val trimmed = token.trim()
+            if (trimmed.isBlank()) null else runCatching {
+                LocalDate.parse(trimmed, DATE_FORMATTER)
+            }.getOrNull()
+        }
+        .toSet()
 }

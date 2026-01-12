@@ -6,11 +6,18 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.ExportDataUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.WeekFields
 import java.util.Locale
@@ -19,6 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
+    private val reminderSettingsManager: ReminderSettingsManager,
     private val exportDataUseCase: ExportDataUseCase
 ) : ViewModel() {
     
@@ -30,35 +38,104 @@ class HistoryViewModel @Inject constructor(
     }
     
     fun loadHistory() {
-        viewModelScope.launch {
-            _uiState.value = HistoryUiState.Loading
-            
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = HistoryUiState.Loading
+            }
+
             try {
                 val endDate = LocalDate.now()
-                val startDate = endDate.minusDays(90) // Letzte 90 Tage für Monatsübersicht
-                
+                val startDate = endDate.minusDays(365) // Kalenderansicht: letztes Jahr
+
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 val groupedWeeks = groupByWeek(entries)
                 val groupedMonths = groupByMonth(entries)
-                
-                _uiState.value = HistoryUiState.Success(
-                    weeks = groupedWeeks,
-                    months = groupedMonths
-                )
+                val entriesByDate = entries.associateBy { it.date }
+
+                withContext(Dispatchers.Main) {
+                    _uiState.value = HistoryUiState.Success(
+                        weeks = groupedWeeks,
+                        months = groupedMonths,
+                        entriesByDate = entriesByDate
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.value = HistoryUiState.Error(e.message ?: "Unbekannter Fehler")
+                withContext(Dispatchers.Main) {
+                    _uiState.value = HistoryUiState.Error(e.message ?: "Unbekannter Fehler")
+                }
             }
         }
     }
     
     fun exportToCsv(onResult: (Uri?) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val uri = exportDataUseCase()
-                onResult(uri)
+                withContext(Dispatchers.Main) {
+                    onResult(uri)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                onResult(null)
+                withContext(Dispatchers.Main) {
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+    fun applyBatchEdit(
+        request: BatchEditRequest,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val settings = reminderSettingsManager.settings.first()
+                val existingEntries = workEntryDao.getByDateRange(request.startDate, request.endDate)
+                val entriesByDate = existingEntries.associateBy { it.date }
+                val dates = buildDateRange(request.startDate, request.endDate)
+                val now = System.currentTimeMillis()
+
+                for (date in dates) {
+                    val existing = entriesByDate[date]
+                    val baseEntry = existing ?: WorkEntry(
+                        date = date,
+                        dayType = defaultDayTypeForDate(date, settings),
+                        workStart = settings.workStart,
+                        workEnd = settings.workEnd,
+                        breakMinutes = settings.breakMinutes,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+
+                    var updated = baseEntry
+                    if (request.dayType != null) {
+                        updated = updated.copy(dayType = request.dayType)
+                    }
+                    if (request.applyDefaultTimes) {
+                        updated = updated.copy(
+                            workStart = settings.workStart,
+                            workEnd = settings.workEnd,
+                            breakMinutes = settings.breakMinutes
+                        )
+                    }
+                    if (request.applyNote) {
+                        updated = updated.copy(note = request.note?.takeIf { it.isNotBlank() })
+                    }
+
+                    if (updated != baseEntry || existing == null) {
+                        updated = updated.copy(updatedAt = now)
+                        workEntryDao.upsert(updated)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    onResult(true)
+                    loadHistory()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(false)
+                }
             }
         }
     }
@@ -95,6 +172,26 @@ class HistoryViewModel @Inject constructor(
                 )
             }
             .sortedByDescending { it.year * 100 + it.month }
+    }
+
+    private fun buildDateRange(start: LocalDate, end: LocalDate): List<LocalDate> {
+        val dates = mutableListOf<LocalDate>()
+        var current = start
+        while (!current.isAfter(end)) {
+            dates.add(current)
+            current = current.plusDays(1)
+        }
+        return dates
+    }
+
+    private fun defaultDayTypeForDate(date: LocalDate, settings: ReminderSettings): DayType {
+        val isWeekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+        val isHoliday = settings.holidayDates.contains(date)
+        return if ((settings.autoOffWeekends && isWeekend) || (settings.autoOffHolidays && isHoliday)) {
+            DayType.OFF
+        } else {
+            DayType.WORK
+        }
     }
 }
 
@@ -184,11 +281,21 @@ data class WeekGroup(
         }
 }
 
+data class BatchEditRequest(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val dayType: DayType?,
+    val applyDefaultTimes: Boolean,
+    val note: String?,
+    val applyNote: Boolean
+)
+
 sealed class HistoryUiState {
     object Loading : HistoryUiState()
     data class Success(
         val weeks: List<WeekGroup>,
-        val months: List<MonthGroup> = emptyList()
+        val months: List<MonthGroup> = emptyList(),
+        val entriesByDate: Map<LocalDate, WorkEntry> = emptyMap()
     ) : HistoryUiState()
     data class Error(val message: String) : HistoryUiState()
 }

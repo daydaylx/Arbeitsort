@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.work.ReminderScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -15,7 +16,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class ReminderSettingsViewModel @Inject constructor(
-    private val settingsManager: ReminderSettingsManager
+    private val settingsManager: ReminderSettingsManager,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
     
     val settings = settingsManager.settings
@@ -58,6 +60,7 @@ class ReminderSettingsViewModel @Inject constructor(
                 fallbackEnabled = fallbackEnabled,
                 fallbackTime = fallbackTime
             )
+            reminderScheduler.scheduleAll()
         }
     }
 }

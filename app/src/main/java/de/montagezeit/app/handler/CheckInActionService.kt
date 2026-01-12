@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -12,10 +13,10 @@ import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
 import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.work.ReminderLaterWorker
@@ -41,13 +42,13 @@ import javax.inject.Inject
 class CheckInActionService : Service() {
     
     @Inject
-    lateinit var workEntryDao: WorkEntryDao
-    
-    @Inject
     lateinit var recordMorningCheckIn: RecordMorningCheckIn
     
     @Inject
     lateinit var recordEveningCheckIn: RecordEveningCheckIn
+
+    @Inject
+    lateinit var setDayType: SetDayType
     
     @Inject
     lateinit var notificationManager: ReminderNotificationManager
@@ -131,18 +132,47 @@ class CheckInActionService : Service() {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
+                val reminderTypeRaw = intent.getStringExtra(ReminderActions.EXTRA_REMINDER_TYPE)
                 
                 // Entferne aktuelle Notification
                 notificationManager.cancelMorningReminder()
                 notificationManager.cancelEveningReminder()
                 notificationManager.cancelFallbackReminder()
+                notificationManager.cancelDailyReminder()
                 
                 // Plane neue Notification für später
                 serviceScope.launch {
-                    scheduleReminderLater(date, hoursLater)
+                    scheduleReminderLater(
+                        date = date,
+                        hoursLater = hoursLater,
+                        reminderType = reminderTypeRaw
+                    )
                 }
                 
                 stopSelf()
+            }
+
+            ReminderActions.ACTION_MARK_DAY_OFF -> {
+                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+
+                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag als frei markieren..."))
+
+                serviceScope.launch {
+                    try {
+                        setDayType(date, DayType.OFF)
+                        showToast("Tag als frei markiert")
+                        markReminderFlags(date)
+                        notificationManager.cancelMorningReminder()
+                        notificationManager.cancelEveningReminder()
+                        notificationManager.cancelFallbackReminder()
+                        notificationManager.cancelDailyReminder()
+                    } catch (e: Exception) {
+                        showToast("Konnte Tag nicht als frei markieren")
+                    } finally {
+                        stopSelf()
+                    }
+                }
             }
         }
         
@@ -203,10 +233,15 @@ class CheckInActionService : Service() {
     /**
      * Plant eine Reminder-Notification für später
      */
-    private suspend fun scheduleReminderLater(date: LocalDate, hoursLater: Int) {
+    private suspend fun scheduleReminderLater(
+        date: LocalDate,
+        hoursLater: Int,
+        reminderType: String?
+    ) {
         val inputData = Data.Builder()
             .putString("date", date.toString())
             .putInt("hours_later", hoursLater)
+            .putString(ReminderActions.EXTRA_REMINDER_TYPE, reminderType)
             .build()
         
         val workRequest = OneTimeWorkRequestBuilder<ReminderLaterWorker>()
@@ -215,5 +250,15 @@ class CheckInActionService : Service() {
             .build()
         
         WorkManager.getInstance(this).enqueue(workRequest)
+    }
+
+    private fun markReminderFlags(date: LocalDate) {
+        val prefs = getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("morning_reminded_$date", true)
+            .putBoolean("evening_reminded_$date", true)
+            .putBoolean("fallback_reminded_$date", true)
+            .putBoolean("daily_reminded_$date", true)
+            .apply()
     }
 }

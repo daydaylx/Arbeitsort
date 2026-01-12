@@ -12,6 +12,7 @@
     <string name="action_morning_check_in">Mit Standort check-in</string>
     <string name="action_morning_check_in_no_location">Ohne Standort speichern</string>
     <string name="action_edit_entry">Eintrag bearbeiten</string>
+    <string name="action_mark_day_off">Heute frei</string>
     
     <!-- Evening Reminder -->
     <string name="notification_evening_title">Abendlicher Check-in</string>
@@ -22,6 +23,10 @@
     <!-- Fallback Reminder -->
     <string name="notification_fallback_title">Unvollständiger Tag</string>
     <string name="notification_fallback_text">Du hast heute nicht vollständig protokolliert. Möchtest du den Eintrag jetzt vervollständigen?</string>
+
+    <!-- Daily Reminder -->
+    <string name="notification_daily_title">Tägliche Erinnerung</string>
+    <string name="notification_daily_text">Kurz prüfen: Ist der Tag korrekt erfasst?</string>
     
     <!-- Success Messages -->
     <string name="toast_check_in_success">Erfolgreich protokolliert</string>

@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.edit
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,6 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import java.time.LocalDate
@@ -22,14 +26,18 @@ fun EditEntrySheet(
     viewModel: EditEntryViewModel = hiltViewModel(),
     onDismiss: () -> Unit,
     initialFormData: EditFormData? = null,
-    onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)? = null
+    onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)? = null,
+    onNavigateDate: ((LocalDate) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formData by viewModel.formData.collectAsState()
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+    val context = LocalContext.current
     var showCopyDatePicker by remember { mutableStateOf(false) }
+    var showNavigateDatePicker by remember { mutableStateOf(false) }
+    val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     LaunchedEffect(date) {
         viewModel.setDate(date)
@@ -50,10 +58,37 @@ fun EditEntrySheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .pointerInput(date, onNavigateDate) {
+                    val navigate = onNavigateDate ?: return@pointerInput
+                    var dragAccum = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                        onDragEnd = {
+                            if (dragAccum > swipeThresholdPx) {
+                                navigate(date.minusDays(1))
+                            } else if (dragAccum < -swipeThresholdPx) {
+                                navigate(date.plusDays(1))
+                            }
+                            dragAccum = 0f
+                        },
+                        onDragCancel = { dragAccum = 0f }
+                    )
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (onNavigateDate != null) {
+                DateNavigationRow(
+                    date = date,
+                    onPrevious = { onNavigateDate(date.minusDays(1)) },
+                    onNext = { onNavigateDate(date.plusDays(1)) },
+                    onToday = { onNavigateDate(LocalDate.now()) },
+                    onPickDate = { showNavigateDatePicker = true }
+                )
+                Divider()
+            }
+
             when (val state = uiState) {
                 is EditUiState.Loading -> {
                     CircularProgressIndicator(
@@ -101,6 +136,18 @@ fun EditEntrySheet(
                         onNoteChange = { viewModel.updateNote(it) },
                         onResetReview = { viewModel.resetNeedsReview() },
                         onSave = { viewModel.save() },
+                        onCopyPrevious = {
+                            viewModel.copyFromPreviousDay { success ->
+                                if (!success) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Kein Eintrag am Vortag",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
                         isNewEntry = true
                     )
 
@@ -177,6 +224,18 @@ fun EditEntrySheet(
                         onNoteChange = { viewModel.updateNote(it) },
                         onResetReview = { viewModel.resetNeedsReview() },
                         onSave = { viewModel.save() },
+                        onCopyPrevious = {
+                            viewModel.copyFromPreviousDay { success ->
+                                if (!success) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Kein Eintrag am Vortag",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
                         onCopy = if (onCopyToNewDate != null) {
                             { showCopyDatePicker = true }
                         } else null
@@ -272,6 +331,17 @@ fun EditEntrySheet(
             onDismiss = { showCopyDatePicker = false }
         )
     }
+
+    if (showNavigateDatePicker && onNavigateDate != null) {
+        DatePickerDialog(
+            initialDate = date,
+            onDateSelected = { newDate ->
+                onNavigateDate(newDate)
+                showNavigateDatePicker = false
+            },
+            onDismiss = { showNavigateDatePicker = false }
+        )
+    }
 }
 
 @Composable
@@ -302,6 +372,40 @@ fun DatePickerDialog(
 }
 
 @Composable
+fun DateNavigationRow(
+    date: LocalDate,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onToday: () -> Unit,
+    onPickDate: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Vortag"
+            )
+        }
+        TextButton(onClick = onPickDate) {
+            Text(formatShortDate(date))
+        }
+        IconButton(onClick = onNext) {
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Naechster Tag"
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        TextButton(onClick = onToday) {
+            Text("Heute")
+        }
+    }
+}
+
+@Composable
 fun EditFormContent(
     entry: de.montagezeit.app.data.local.entity.WorkEntry,
     formData: EditFormData,
@@ -319,6 +423,8 @@ fun EditFormContent(
     onEveningLabelChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onResetReview: () -> Unit,
+    onApplyDefaultTimes: (() -> Unit)? = null,
+    onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
     isNewEntry: Boolean = false,
     onCopy: (() -> Unit)? = null
@@ -347,7 +453,8 @@ fun EditFormContent(
         validationErrors = validationErrors,
         onStartChange = onWorkStartChange,
         onEndChange = onWorkEndChange,
-        onBreakChange = onBreakMinutesChange
+        onBreakChange = onBreakMinutesChange,
+        onApplyDefaults = onApplyDefaultTimes
     )
 
     Divider()
@@ -397,6 +504,21 @@ fun EditFormContent(
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text("Überprüfungsflag zurücksetzen")
+        }
+    }
+
+    if (onCopyPrevious != null) {
+        Divider()
+        OutlinedButton(
+            onClick = onCopyPrevious,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text("Vortag kopieren")
         }
     }
     
@@ -477,7 +599,8 @@ fun WorkTimesSection(
     validationErrors: List<ValidationError> = emptyList(),
     onStartChange: (Int, Int) -> Unit,
     onEndChange: (Int, Int) -> Unit,
-    onBreakChange: (Int) -> Unit
+    onBreakChange: (Int) -> Unit,
+    onApplyDefaults: (() -> Unit)? = null
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
@@ -600,6 +723,20 @@ fun WorkTimesSection(
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
+            }
+        }
+
+        if (onApplyDefaults != null) {
+            TextButton(
+                onClick = onApplyDefaults,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text("Standardzeiten anwenden")
             }
         }
     }
@@ -945,6 +1082,12 @@ fun SimpleTimePickerDialog(
 private fun formatDate(date: java.time.LocalDate): String {
     return date.format(
         DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", java.util.Locale.GERMAN)
+    )
+}
+
+private fun formatShortDate(date: java.time.LocalDate): String {
+    return date.format(
+        DateTimeFormatter.ofPattern("E, dd.MM.", java.util.Locale.GERMAN)
     )
 }
 

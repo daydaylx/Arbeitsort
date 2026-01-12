@@ -115,6 +115,10 @@ fun MontageZeitNavGraph(
                 editDate = newDate.toString()
                 copiedFormData = formData
                 showEditSheet = true
+            },
+            onNavigateDate = { newDate ->
+                editDate = newDate.toString()
+                copiedFormData = null
             }
         )
     }

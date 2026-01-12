@@ -74,6 +74,7 @@ class RecordEveningCheckIn(
         radiusKm: Double
     ): WorkEntry {
         val now = System.currentTimeMillis()
+        val normalizedEntry = existingEntry?.copy(dayType = DayType.WORK)
         
         return when (locationResult) {
             is LocationResult.Success -> {
@@ -90,7 +91,7 @@ class RecordEveningCheckIn(
                     null -> null // Unklar (Grenzzone)
                 }
                 
-                val needsReview = existingEntry?.needsReview ?: false || 
+                val needsReview = normalizedEntry?.needsReview ?: false || 
                                    locationCheck.confirmRequired
                 
                 val locationLabel = if (locationCheck.isInside == true) {
@@ -100,7 +101,7 @@ class RecordEveningCheckIn(
                 }
                 
                 if (isMorning) {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         morningCapturedAt = now,
                         morningLat = locationResult.lat,
                         morningLon = locationResult.lon,
@@ -122,7 +123,7 @@ class RecordEveningCheckIn(
                         needsReview = needsReview
                     )
                 } else {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         eveningCapturedAt = now,
                         eveningLat = locationResult.lat,
                         eveningLon = locationResult.lon,
@@ -151,7 +152,7 @@ class RecordEveningCheckIn(
                 val needsReview = true // Immer needsReview bei niedriger Accuracy
                 
                 if (isMorning) {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.LOW_ACCURACY,
                         morningAccuracyMeters = locationResult.accuracyMeters,
@@ -167,7 +168,7 @@ class RecordEveningCheckIn(
                         needsReview = needsReview
                     )
                 } else {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.LOW_ACCURACY,
                         eveningAccuracyMeters = locationResult.accuracyMeters,
@@ -190,7 +191,7 @@ class RecordEveningCheckIn(
                 val needsReview = true
                 
                 if (isMorning) {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigMorning = null,
@@ -204,7 +205,7 @@ class RecordEveningCheckIn(
                         needsReview = needsReview
                     )
                 } else {
-                    existingEntry?.copy(
+                    normalizedEntry?.copy(
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigEvening = null,

@@ -7,6 +7,7 @@ import androidx.work.Data
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.notification.ReminderNotificationManager
 import java.time.LocalDate
 
@@ -23,16 +24,26 @@ class ReminderLaterWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val dateStr = inputData.getString("date")
         val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+        val reminderTypeRaw = inputData.getString(ReminderActions.EXTRA_REMINDER_TYPE)
         
         // Bestimme, ob es ein Morning- oder Evening-Reminder war
         // (vereinfacht: prüfe ob es vor 13:00 ist für Morning, sonst Evening)
         val currentHour = java.time.LocalTime.now().hour
         
         return try {
-            if (currentHour < 13) {
-                notificationManager.showMorningReminder(date)
-            } else {
-                notificationManager.showEveningReminder(date)
+            val reminderType = reminderTypeRaw?.let { runCatching { ReminderType.valueOf(it) }.getOrNull() }
+            when (reminderType) {
+                ReminderType.MORNING -> notificationManager.showMorningReminder(date)
+                ReminderType.EVENING -> notificationManager.showEveningReminder(date)
+                ReminderType.FALLBACK -> notificationManager.showFallbackReminder(date)
+                ReminderType.DAILY -> notificationManager.showDailyReminder(date)
+                null -> {
+                    if (currentHour < 13) {
+                        notificationManager.showMorningReminder(date)
+                    } else {
+                        notificationManager.showEveningReminder(date)
+                    }
+                }
             }
             Result.success()
         } catch (e: Exception) {
@@ -40,4 +51,3 @@ class ReminderLaterWorker @AssistedInject constructor(
         }
     }
 }
-

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,7 +60,17 @@ class ReminderSettingsManager @Inject constructor(
             // Fallback
             fallbackEnabled = preferences[ReminderSettingsKeys.FALLBACK_ENABLED] ?: true,
             fallbackTime = preferences[ReminderSettingsKeys.FALLBACK_TIME]?.toLocalTime() 
-                ?: LocalTime.of(22, 30)
+                ?: LocalTime.of(22, 30),
+
+            // Tägliche Erinnerung
+            dailyReminderEnabled = preferences[ReminderSettingsKeys.DAILY_REMINDER_ENABLED] ?: true,
+            dailyReminderTime = preferences[ReminderSettingsKeys.DAILY_REMINDER_TIME]?.toLocalTime()
+                ?: LocalTime.of(18, 0),
+
+            // Arbeitsfreie Tage
+            autoOffWeekends = preferences[ReminderSettingsKeys.AUTO_OFF_WEEKENDS] ?: true,
+            autoOffHolidays = preferences[ReminderSettingsKeys.AUTO_OFF_HOLIDAYS] ?: true,
+            holidayDates = preferences[ReminderSettingsKeys.HOLIDAY_DATES].toLocalDateSet()
         )
     }
     
@@ -80,7 +91,12 @@ class ReminderSettingsManager @Inject constructor(
         eveningWindowEnd: LocalTime? = null,
         eveningCheckIntervalMinutes: Int? = null,
         fallbackEnabled: Boolean? = null,
-        fallbackTime: LocalTime? = null
+        fallbackTime: LocalTime? = null,
+        dailyReminderEnabled: Boolean? = null,
+        dailyReminderTime: LocalTime? = null,
+        autoOffWeekends: Boolean? = null,
+        autoOffHolidays: Boolean? = null,
+        holidayDates: Set<LocalDate>? = null
     ) {
         dataStore.edit { preferences ->
             workStart?.let { preferences[ReminderSettingsKeys.WORK_START] = it.toPrefString() }
@@ -100,6 +116,13 @@ class ReminderSettingsManager @Inject constructor(
             
             fallbackEnabled?.let { preferences[ReminderSettingsKeys.FALLBACK_ENABLED] = it }
             fallbackTime?.let { preferences[ReminderSettingsKeys.FALLBACK_TIME] = it.toPrefString() }
+
+            dailyReminderEnabled?.let { preferences[ReminderSettingsKeys.DAILY_REMINDER_ENABLED] = it }
+            dailyReminderTime?.let { preferences[ReminderSettingsKeys.DAILY_REMINDER_TIME] = it.toPrefString() }
+
+            autoOffWeekends?.let { preferences[ReminderSettingsKeys.AUTO_OFF_WEEKENDS] = it }
+            autoOffHolidays?.let { preferences[ReminderSettingsKeys.AUTO_OFF_HOLIDAYS] = it }
+            holidayDates?.let { preferences[ReminderSettingsKeys.HOLIDAY_DATES] = it.toPrefString() }
         }
     }
     

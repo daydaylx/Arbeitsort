@@ -36,8 +36,9 @@ class TimeChangeReceiver : BroadcastReceiver() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
             "android.intent.action.TIME_SET" -> {
-                
-                // Reschedule alle Reminder-Worker
+
+                // Keep receiver alive until async work completes
+                val pendingResult = goAsync()
                 val scope = CoroutineScope(Dispatchers.IO)
                 scope.launch {
                     try {
@@ -45,6 +46,8 @@ class TimeChangeReceiver : BroadcastReceiver() {
                         reminderScheduler.scheduleAll()
                     } catch (e: Exception) {
                         logger.e("TimeChangeReceiver", "Fehler beim Reschedule nach Zeitänderung", e)
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             }

@@ -28,11 +28,16 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            
-            // Reschedule alle Reminder-Worker
+
+            // Keep receiver alive until async work completes
+            val pendingResult = goAsync()
             val scope = CoroutineScope(Dispatchers.IO)
             scope.launch {
-                reminderScheduler.scheduleAll()
+                try {
+                    reminderScheduler.scheduleAll()
+                } finally {
+                    pendingResult.finish()
+                }
             }
         }
     }

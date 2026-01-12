@@ -1,0 +1,90 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Android: Build Debug APK",
+      "type": "shell",
+      "command": "./gradlew :app:assembleDebug",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Install Debug APK",
+      "type": "shell",
+      "command": "./gradlew :app:installDebug",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Launch App",
+      "type": "shell",
+      "command": "adb -s RFCY210JHMJ shell am start -n de.montagezeit.app/de.montagezeit.app.MainActivity",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: View Logcat",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "PID=$(adb -s RFCY210JHMJ shell pidof de.montagezeit.app 2>/dev/null) && adb -s RFCY210JHMJ logcat --pid=$PID -v time || adb -s RFCY210JHMJ logcat -v time | grep montagezeit"
+      ],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Clear App Data",
+      "type": "shell",
+      "command": "adb -s RFCY210JHMJ shell pm clear de.montagezeit.app",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Full Debug Run",
+      "type": "shell",
+      "command": "./scripts/android_debug_run.sh",
+      "args": ["RFCY210JHMJ"],
+      "isBackground": false,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Device List",
+      "type": "shell",
+      "command": "adb devices -l",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

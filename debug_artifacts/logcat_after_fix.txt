@@ -1,0 +1,30 @@
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.MontageZeitApp.getWorkerFactory(MontageZeitApp.kt:23)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.MontageZeitApp.getWorkManagerConfiguration(MontageZeitApp.kt:27)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.work.ReminderScheduler.<init>(ReminderScheduler.kt:29)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl$SwitchingProvider.get(DaggerMontageZeitApp_HiltComponents_SingletonC.java:818)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl.injectMontageZeitApp2(DaggerMontageZeitApp_HiltComponents_SingletonC.java:784)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl.injectMontageZeitApp(DaggerMontageZeitApp_HiltComponents_SingletonC.java:769)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.Hilt_MontageZeitApp.hiltInternalInject(Hilt_MontageZeitApp.java:51)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.Hilt_MontageZeitApp.onCreate(Hilt_MontageZeitApp.java:42)
+01-11 22:27:43.859 E/AndroidRuntime(  584): 	at de.montagezeit.app.MontageZeitApp.onCreate(MontageZeitApp.kt:31)
+01-11 22:28:44.541 E/AndroidRuntime(  751): Process: de.montagezeit.app, PID: 751
+01-11 22:28:44.541 E/AndroidRuntime(  751): java.lang.RuntimeException: Unable to create application de.montagezeit.app.MontageZeitApp: kotlin.UninitializedPropertyAccessException: lateinit property workerFactory has not been initialized
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.MontageZeitApp.getWorkerFactory(MontageZeitApp.kt:23)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.MontageZeitApp.getWorkManagerConfiguration(MontageZeitApp.kt:27)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.work.ReminderScheduler.<init>(ReminderScheduler.kt:29)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl$SwitchingProvider.get(DaggerMontageZeitApp_HiltComponents_SingletonC.java:818)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl.injectMontageZeitApp2(DaggerMontageZeitApp_HiltComponents_SingletonC.java:784)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.DaggerMontageZeitApp_HiltComponents_SingletonC$SingletonCImpl.injectMontageZeitApp(DaggerMontageZeitApp_HiltComponents_SingletonC.java:769)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.Hilt_MontageZeitApp.hiltInternalInject(Hilt_MontageZeitApp.java:51)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.Hilt_MontageZeitApp.onCreate(Hilt_MontageZeitApp.java:42)
+01-11 22:28:44.541 E/AndroidRuntime(  751): 	at de.montagezeit.app.MontageZeitApp.onCreate(MontageZeitApp.kt:31)
+01-11 22:31:19.247 E/SatelliteAppTracker( 4010): packageName: de.montagezeit.app, value: null
+01-11 22:31:19.247 E/SatelliteAppTracker( 4010): packageName: de.montagezeit.app, value: null
+01-11 22:31:19.247 E/SatelliteAppTracker( 4010): packageName: de.montagezeit.app, value: null
+01-11 22:31:19.247 E/SatelliteAppTracker( 4010): packageName: de.montagezeit.app, value: null
+01-11 22:31:20.446 E/AndroidRuntime( 1502): Process: de.montagezeit.app, PID: 1502
+01-11 22:31:20.446 E/AndroidRuntime( 1502): 	at de.montagezeit.app.MontageZeitApp$onCreate$1.invokeSuspend(MontageZeitApp.kt:33)
+01-11 22:31:35.303 E/montagezeit.app( 1913): Invalid resource ID 0x00000000.
+01-11 22:31:35.430 E/montagezeit.app( 1913): Unable to open libpenguin.so: dlopen failed: library "libpenguin.so" not found.
+01-11 22:31:35.796 E/AndroidRuntime( 1913): Process: de.montagezeit.app, PID: 1913
+01-11 22:31:35.796 E/AndroidRuntime( 1913): 	at de.montagezeit.app.MontageZeitApp$onCreate$1.invokeSuspend(MontageZeitApp.kt:33)

@@ -1,11 +1,19 @@
 package de.montagezeit.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 import java.time.LocalTime
 
-@Entity(tableName = "work_entries")
+@Entity(
+    tableName = "work_entries",
+    indices = [
+        Index(value = ["needsReview"]),
+        Index(value = ["date"], unique = true),
+        Index(value = ["createdAt"])
+    ]
+)
 data class WorkEntry(
     @PrimaryKey
     val date: LocalDate,

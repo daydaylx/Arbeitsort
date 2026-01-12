@@ -16,7 +16,7 @@ import de.montagezeit.app.data.local.entity.RouteCacheEntry
 
 @Database(
     entities = [WorkEntry::class, RouteCacheEntry::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun routeCacheDao(): RouteCacheDao
     
     companion object {
-        private const val DATABASE_NAME = "montagezeit.db"
+        const val DATABASE_NAME = "montagezeit_database"
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -37,23 +37,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2)
-        
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-        
-        fun getInstance(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    DATABASE_NAME
-                )
-                    .addMigrations(*MIGRATIONS)
-                    .build()
-                INSTANCE = instance
-                instance
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add indices for performance
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+                // Note: date already has unique index as PRIMARY KEY
             }
         }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
     }
 }
