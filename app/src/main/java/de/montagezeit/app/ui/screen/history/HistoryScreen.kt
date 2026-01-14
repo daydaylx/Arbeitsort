@@ -1,7 +1,5 @@
 package de.montagezeit.app.ui.screen.history
 
-import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,13 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.export.CsvExporter
 import java.time.Duration
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -42,7 +40,6 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var isExporting by remember { mutableStateOf(false) }
     var showBatchEditDialog by remember { mutableStateOf(false) }
     var isBatchEditing by remember { mutableStateOf(false) }
     
@@ -65,29 +62,6 @@ fun HistoryScreen(
                         Icon(
                             imageVector = Icons.Default.DateRange,
                             contentDescription = "Mehrfach bearbeiten"
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            isExporting = true
-                            viewModel.exportToCsv { uri ->
-                                isExporting = false
-                                if (uri != null) {
-                                    handleShareExport(context, uri)
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Export fehlgeschlagen",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        },
-                        enabled = !isExporting
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Export teilen"
                         )
                     }
                 }
@@ -148,6 +122,7 @@ fun HistoryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryContent(
     weeks: List<WeekGroup>,
@@ -167,76 +142,83 @@ fun HistoryContent(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OutlinedButton(
-            onClick = { showDatePicker = true },
+        Card(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text("Datum wählen")
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            @OptIn(ExperimentalMaterial3Api::class)
-            FilterChip(
-                selected = !showCalendar,
-                onClick = { showCalendar = false },
-                label = { Text("Liste") }
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            @OptIn(ExperimentalMaterial3Api::class)
-            FilterChip(
-                selected = showCalendar,
-                onClick = { showCalendar = true },
-                label = { Text("Kalender") }
-            )
-        }
-
-        if (showCalendar) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                @OptIn(ExperimentalMaterial3Api::class)
-                FilterChip(
-                    selected = calendarMode == CalendarMode.WEEK,
-                    onClick = { calendarMode = CalendarMode.WEEK },
-                    label = { Text("Woche") }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                @OptIn(ExperimentalMaterial3Api::class)
-                FilterChip(
-                    selected = calendarMode == CalendarMode.MONTH,
-                    onClick = { calendarMode = CalendarMode.MONTH },
-                    label = { Text("Monat") }
-                )
-            }
-        }
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Datum wählen")
+                }
 
-        if (!showCalendar && months.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                @OptIn(ExperimentalMaterial3Api::class)
-                FilterChip(
-                    selected = !showMonths,
-                    onClick = { showMonths = false },
-                    label = { Text("Wochen") }
+                Divider()
+
+                Text(
+                    text = "Ansicht",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                @OptIn(ExperimentalMaterial3Api::class)
-                FilterChip(
-                    selected = showMonths,
-                    onClick = { showMonths = true },
-                    label = { Text("Monate") }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = !showCalendar,
+                        onClick = { showCalendar = false },
+                        label = { Text("Liste") }
+                    )
+                    FilterChip(
+                        selected = showCalendar,
+                        onClick = { showCalendar = true },
+                        label = { Text("Kalender") }
+                    )
+                }
+
+                if (showCalendar) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = calendarMode == CalendarMode.WEEK,
+                            onClick = { calendarMode = CalendarMode.WEEK },
+                            label = { Text("Woche") }
+                        )
+                        FilterChip(
+                            selected = calendarMode == CalendarMode.MONTH,
+                            onClick = { calendarMode = CalendarMode.MONTH },
+                            label = { Text("Monat") }
+                        )
+                    }
+                }
+
+                if (!showCalendar && months.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !showMonths,
+                            onClick = { showMonths = false },
+                            label = { Text("Wochen") }
+                        )
+                        FilterChip(
+                            selected = showMonths,
+                            onClick = { showMonths = true },
+                            label = { Text("Monate") }
+                        )
+                    }
+                }
             }
         }
 
@@ -328,7 +310,7 @@ fun CalendarView(
     val days = remember(month) { buildCalendarDays(month) }
     val weeks = remember(days) { days.chunked(7) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -342,7 +324,7 @@ fun CalendarView(
             }
             Text(
                 text = formatMonth(month),
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium
             )
             IconButton(onClick = onNextMonth) {
                 Icon(
@@ -392,7 +374,7 @@ fun WeekCalendarView(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -406,7 +388,7 @@ fun WeekCalendarView(
             }
             Text(
                 text = "KW $weekNumber · ${formatShortDate(weekStart)} – ${formatShortDate(weekEnd)}",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleSmall
             )
             IconButton(onClick = onNextWeek) {
                 Icon(
@@ -786,7 +768,7 @@ fun WeekGroupCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Week Header
             Row(
@@ -796,12 +778,12 @@ fun WeekGroupCard(
             ) {
                 Text(
                     text = week.displayText,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleMedium
                 )
                 week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
                     Text(
                         text = year,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -816,8 +798,8 @@ fun WeekGroupCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Total and average hours
                         Row(
@@ -923,8 +905,7 @@ fun WeekGroupCard(
                 week.entries.forEach { entry ->
                     HistoryEntryItem(
                         entry = entry,
-                        onClick = { onEntryClick(entry.date) },
-                        onQuickEdit = { onEntryClick(entry.date) } // Öffnet Quick-Edit Dialog
+                        onClick = { onEntryClick(entry.date) }
                     )
                 }
             }
@@ -942,7 +923,7 @@ fun MonthGroupCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Month Header
             Row(
@@ -952,12 +933,12 @@ fun MonthGroupCard(
             ) {
                 Text(
                     text = month.displayText,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleMedium
                 )
                 month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
                     Text(
                         text = year,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -972,8 +953,8 @@ fun MonthGroupCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Total and average hours
                         Row(
@@ -1082,8 +1063,7 @@ fun MonthGroupCard(
                 entriesToShow.forEach { entry ->
                     HistoryEntryItem(
                         entry = entry,
-                        onClick = { onEntryClick(entry.date) },
-                        onQuickEdit = { onEntryClick(entry.date) } // Öffnet Quick-Edit Dialog
+                        onClick = { onEntryClick(entry.date) }
                     )
                 }
                 
@@ -1103,8 +1083,7 @@ fun MonthGroupCard(
 @Composable
 fun HistoryEntryItem(
     entry: WorkEntry,
-    onClick: () -> Unit,
-    onQuickEdit: () -> Unit = onClick
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -1118,17 +1097,16 @@ fun HistoryEntryItem(
             }
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Left side: Date, DayType, Location info
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1139,13 +1117,16 @@ fun HistoryEntryItem(
                         style = MaterialTheme.typography.titleMedium
                     )
                     DayTypeIndicator(dayType = entry.dayType)
+                    if (entry.needsReview) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Überprüfung erforderlich",
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-                
-                // Location Status Info
-                LocationSummary(entry = entry)
-                TravelSummaryRow(entry = entry)
-                
-                // Work Hours (only for work days)
+
                 if (entry.dayType == DayType.WORK) {
                     val workHours = calculateWorkHours(entry)
                     Text(
@@ -1155,33 +1136,10 @@ fun HistoryEntryItem(
                     )
                 }
             }
-            
-            // Right side: Warning icon, quick edit button, and edit icon
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (entry.needsReview) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Überprüfung erforderlich",
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                // Quick Edit Button
-                IconButton(
-                    onClick = { onQuickEdit() },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Schnell bearbeiten",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
+
+            // Location Status Info
+            LocationSummary(entry = entry)
+            TravelSummaryRow(entry = entry)
         }
     }
 }
@@ -1432,12 +1390,6 @@ private fun formatWorkHours(hours: Double): String {
     } else {
         "${h}h ${m}min"
     }
-}
-
-private fun handleShareExport(context: Context, fileUri: android.net.Uri) {
-    val csvExporter = CsvExporter(context)
-    val shareIntent = csvExporter.createShareIntent(fileUri)
-    context.startActivity(shareIntent)
 }
 
 @Composable

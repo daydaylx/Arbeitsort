@@ -1,6 +1,5 @@
 package de.montagezeit.app.ui.screen.history
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,7 +8,6 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.ExportDataUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,8 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager,
-    private val exportDataUseCase: ExportDataUseCase
+    private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
@@ -67,22 +64,6 @@ class HistoryViewModel @Inject constructor(
         }
     }
     
-    fun exportToCsv(onResult: (Uri?) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val uri = exportDataUseCase()
-                withContext(Dispatchers.Main) {
-                    onResult(uri)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    onResult(null)
-                }
-            }
-        }
-    }
-
     fun applyBatchEdit(
         request: BatchEditRequest,
         onResult: (Boolean) -> Unit

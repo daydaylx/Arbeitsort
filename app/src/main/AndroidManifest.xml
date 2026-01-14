@@ -78,7 +78,7 @@
             </intent-filter>
         </receiver>
         
-        <!-- FileProvider für CSV Export -->
+        <!-- FileProvider fuer Export -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

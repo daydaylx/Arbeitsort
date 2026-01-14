@@ -40,7 +40,13 @@ data class ReminderSettings(
     // Arbeitsfreie Tage
     val autoOffWeekends: Boolean = true,
     val autoOffHolidays: Boolean = true,
-    val holidayDates: Set<LocalDate> = emptySet()
+    val holidayDates: Set<LocalDate> = emptySet(),
+
+    // PDF Export Settings
+    val pdfEmployeeName: String? = null,
+    val pdfCompany: String? = null,
+    val pdfProject: String? = null,
+    val pdfPersonnelNumber: String? = null
 )
 
 /**
@@ -77,6 +83,12 @@ object ReminderSettingsKeys {
     val AUTO_OFF_WEEKENDS = booleanPreferencesKey("auto_off_weekends")
     val AUTO_OFF_HOLIDAYS = booleanPreferencesKey("auto_off_holidays")
     val HOLIDAY_DATES = stringPreferencesKey("holiday_dates")
+
+    // PDF Export Settings
+    val PDF_EMPLOYEE_NAME = stringPreferencesKey("pdf_employee_name")
+    val PDF_COMPANY = stringPreferencesKey("pdf_company")
+    val PDF_PROJECT = stringPreferencesKey("pdf_project")
+    val PDF_PERSONNEL_NUMBER = stringPreferencesKey("pdf_personnel_number")
 }
 
 /**

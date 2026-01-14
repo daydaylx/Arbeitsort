@@ -70,7 +70,13 @@ class ReminderSettingsManager @Inject constructor(
             // Arbeitsfreie Tage
             autoOffWeekends = preferences[ReminderSettingsKeys.AUTO_OFF_WEEKENDS] ?: true,
             autoOffHolidays = preferences[ReminderSettingsKeys.AUTO_OFF_HOLIDAYS] ?: true,
-            holidayDates = preferences[ReminderSettingsKeys.HOLIDAY_DATES].toLocalDateSet()
+            holidayDates = preferences[ReminderSettingsKeys.HOLIDAY_DATES].toLocalDateSet(),
+
+            // PDF Export Settings
+            pdfEmployeeName = preferences[ReminderSettingsKeys.PDF_EMPLOYEE_NAME],
+            pdfCompany = preferences[ReminderSettingsKeys.PDF_COMPANY],
+            pdfProject = preferences[ReminderSettingsKeys.PDF_PROJECT],
+            pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER]
         )
     }
     
@@ -96,7 +102,11 @@ class ReminderSettingsManager @Inject constructor(
         dailyReminderTime: LocalTime? = null,
         autoOffWeekends: Boolean? = null,
         autoOffHolidays: Boolean? = null,
-        holidayDates: Set<LocalDate>? = null
+        holidayDates: Set<LocalDate>? = null,
+        pdfEmployeeName: String? = null,
+        pdfCompany: String? = null,
+        pdfProject: String? = null,
+        pdfPersonnelNumber: String? = null
     ) {
         dataStore.edit { preferences ->
             workStart?.let { preferences[ReminderSettingsKeys.WORK_START] = it.toPrefString() }
@@ -123,6 +133,11 @@ class ReminderSettingsManager @Inject constructor(
             autoOffWeekends?.let { preferences[ReminderSettingsKeys.AUTO_OFF_WEEKENDS] = it }
             autoOffHolidays?.let { preferences[ReminderSettingsKeys.AUTO_OFF_HOLIDAYS] = it }
             holidayDates?.let { preferences[ReminderSettingsKeys.HOLIDAY_DATES] = it.toPrefString() }
+            
+            pdfEmployeeName?.let { preferences[ReminderSettingsKeys.PDF_EMPLOYEE_NAME] = it }
+            pdfCompany?.let { preferences[ReminderSettingsKeys.PDF_COMPANY] = it }
+            pdfProject?.let { preferences[ReminderSettingsKeys.PDF_PROJECT] = it }
+            pdfPersonnelNumber?.let { preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER] = it }
         }
     }
     

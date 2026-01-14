@@ -41,7 +41,9 @@ class ReminderSettingsViewModel @Inject constructor(
         eveningWindowEnd: LocalTime? = null,
         eveningCheckIntervalMinutes: Int? = null,
         fallbackEnabled: Boolean? = null,
-        fallbackTime: LocalTime? = null
+        fallbackTime: LocalTime? = null,
+        dailyReminderEnabled: Boolean? = null,
+        dailyReminderTime: LocalTime? = null
     ) {
         viewModelScope.launch {
             settingsManager.updateSettings(
@@ -58,7 +60,9 @@ class ReminderSettingsViewModel @Inject constructor(
                 eveningWindowEnd = eveningWindowEnd,
                 eveningCheckIntervalMinutes = eveningCheckIntervalMinutes,
                 fallbackEnabled = fallbackEnabled,
-                fallbackTime = fallbackTime
+                fallbackTime = fallbackTime,
+                dailyReminderEnabled = dailyReminderEnabled,
+                dailyReminderTime = dailyReminderTime
             )
             reminderScheduler.scheduleAll()
         }

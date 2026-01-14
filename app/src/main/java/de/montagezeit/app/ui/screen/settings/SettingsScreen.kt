@@ -108,8 +108,12 @@ fun SettingsScreen(
                 onUpdateAutoOffHolidays = { viewModel.updateAutoOffHolidays(it) },
                 onAddHolidayDate = { viewModel.addHolidayDate(it) },
                 onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
-                onExportCsv = { viewModel.exportToCsv() },
-                onExportJson = { viewModel.exportToJson() },
+                onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
+                onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
+                onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
+                onUpdatePdfSettings = { name, company, project, personnel -> 
+                    viewModel.updatePdfSettings(name, company, project, personnel) 
+                },
                 onResetExportState = { viewModel.resetExportState() },
                 hasNotificationPermission = hasNotificationPermission,
                 hasLocationPermission = hasLocationPermission,
@@ -152,8 +156,10 @@ fun SettingsContent(
     onUpdateAutoOffHolidays: (Boolean) -> Unit,
     onAddHolidayDate: (LocalDate) -> Unit,
     onRemoveHolidayDate: (LocalDate) -> Unit,
-    onExportCsv: () -> Unit,
-    onExportJson: () -> Unit,
+    onExportPdfCurrentMonth: () -> Unit,
+    onExportPdfLast30Days: () -> Unit,
+    onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
     hasLocationPermission: Boolean,
@@ -244,8 +250,14 @@ fun SettingsContent(
         SettingsSection(title = "Export") {
             ExportSection(
                 uiState = uiState,
-                onExportCsv = onExportCsv,
-                onExportJson = onExportJson,
+                onExportPdfCurrentMonth = onExportPdfCurrentMonth,
+                onExportPdfLast30Days = onExportPdfLast30Days,
+                onExportPdfCustomRange = onExportPdfCustomRange,
+                pdfEmployeeName = settings.pdfEmployeeName,
+                pdfCompany = settings.pdfCompany,
+                pdfProject = settings.pdfProject,
+                pdfPersonnelNumber = settings.pdfPersonnelNumber,
+                onUpdatePdfSettings = onUpdatePdfSettings,
                 onResetState = onResetExportState
             )
         }
@@ -356,119 +368,79 @@ fun ReminderSettingsSection(
     var showFallbackPicker by remember { mutableStateOf(false) }
     var showDailyPicker by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Morning Window
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Morgen-Erinnerung",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Switch(
-                checked = morningReminderEnabled,
-                onCheckedChange = onUpdateMorningEnabled
-            )
-        }
+        SettingsToggleRow(
+            title = "Morgen-Erinnerung",
+            checked = morningReminderEnabled,
+            onCheckedChange = onUpdateMorningEnabled
+        )
         
         if (morningReminderEnabled) {
             TimeRangePicker(
-                label = "Erinnerungszeitraum",
+                label = "Zeitraum",
                 startTime = morningWindowStart,
                 endTime = morningWindowEnd,
                 onTimeRangeChanged = { start, end ->
                     onUpdateMorningWindow(start.hour, start.minute, end.hour, end.minute)
-                }
+                },
+                modifier = Modifier.padding(start = 12.dp)
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Divider()
         
         // Evening Window
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Abend-Erinnerung",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Switch(
-                checked = eveningReminderEnabled,
-                onCheckedChange = onUpdateEveningEnabled
-            )
-        }
+        SettingsToggleRow(
+            title = "Abend-Erinnerung",
+            checked = eveningReminderEnabled,
+            onCheckedChange = onUpdateEveningEnabled
+        )
         
         if (eveningReminderEnabled) {
             TimeRangePicker(
-                label = "Erinnerungszeitraum",
+                label = "Zeitraum",
                 startTime = eveningWindowStart,
                 endTime = eveningWindowEnd,
                 onTimeRangeChanged = { start, end ->
                     onUpdateEveningWindow(start.hour, start.minute, end.hour, end.minute)
-                }
+                },
+                modifier = Modifier.padding(start = 12.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Divider()
 
         // Fallback Reminder
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Fallback am Abend",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Switch(
-                checked = fallbackEnabled,
-                onCheckedChange = onUpdateFallbackEnabled
-            )
-        }
-        OutlinedButton(
-            onClick = { showFallbackPicker = true },
+        SettingsToggleRow(
+            title = "Fallback am Abend",
+            checked = fallbackEnabled,
+            onCheckedChange = onUpdateFallbackEnabled
+        )
+        SettingsTimeButtonRow(
+            label = "Uhrzeit",
+            time = fallbackTime,
             enabled = fallbackEnabled,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(formatTime(fallbackTime))
-        }
+            onClick = { showFallbackPicker = true },
+            modifier = Modifier.padding(start = 12.dp)
+        )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Divider()
 
         // Daily Reminder
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Tägliche Erinnerung",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = "Erinnert jeden Tag, auch wenn bereits erfasst",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = dailyReminderEnabled,
-                onCheckedChange = onUpdateDailyEnabled
-            )
-        }
-        OutlinedButton(
-            onClick = { showDailyPicker = true },
+        SettingsToggleRow(
+            title = "Tägliche Erinnerung",
+            supportingText = "Erinnert jeden Tag, auch wenn bereits erfasst",
+            checked = dailyReminderEnabled,
+            onCheckedChange = onUpdateDailyEnabled
+        )
+        SettingsTimeButtonRow(
+            label = "Uhrzeit",
+            time = dailyReminderTime,
             enabled = dailyReminderEnabled,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(formatTime(dailyReminderTime))
-        }
+            onClick = { showDailyPicker = true },
+            modifier = Modifier.padding(start = 12.dp)
+        )
     }
 
     if (showFallbackPicker) {
@@ -499,15 +471,20 @@ fun TimeRangePicker(
     label: String,
     startTime: LocalTime,
     endTime: LocalTime,
-    onTimeRangeChanged: (LocalTime, LocalTime) -> Unit
+    onTimeRangeChanged: (LocalTime, LocalTime) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         Row(
@@ -629,7 +606,7 @@ fun SetupSection(
     onOpenBatterySettings: () -> Unit,
     onSendTestReminder: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SetupRow(
             title = "Benachrichtigungen",
             status = if (hasNotificationPermission) "Aktiv" else "Nicht erlaubt",
@@ -637,6 +614,8 @@ fun SetupSection(
             onAction = if (hasNotificationPermission) onOpenNotificationSettings else onRequestNotificationPermission,
             isOk = hasNotificationPermission
         )
+
+        Divider()
 
         SetupRow(
             title = "Standort",
@@ -646,6 +625,8 @@ fun SetupSection(
             isOk = hasLocationPermission
         )
 
+        Divider()
+
         SetupRow(
             title = "Akku-Optimierung",
             status = if (isIgnoringBatteryOptimizations) "Ausgenommen" else "Optimiert",
@@ -653,6 +634,8 @@ fun SetupSection(
             onAction = onOpenBatterySettings,
             isOk = isIgnoringBatteryOptimizations
         )
+
+        Divider()
 
         OutlinedButton(
             onClick = onSendTestReminder,
@@ -705,6 +688,65 @@ fun SetupRow(
 }
 
 @Composable
+fun SettingsToggleRow(
+    title: String,
+    supportingText: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (!supportingText.isNullOrBlank()) {
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+
+@Composable
+fun SettingsTimeButtonRow(
+    label: String,
+    time: LocalTime,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled
+        ) {
+            Text(formatTime(time))
+        }
+    }
+}
+
+@Composable
 fun NonWorkingDaysSection(
     autoOffWeekends: Boolean,
     autoOffHolidays: Boolean,
@@ -717,64 +759,43 @@ fun NonWorkingDaysSection(
     var showHolidayPicker by remember { mutableStateOf(false) }
     val sortedHolidays = remember(holidayDates) { holidayDates.sorted() }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Wochenenden automatisch frei",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Setzt Tagtyp auf Frei und skippt Erinnerungen",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = autoOffWeekends,
-                onCheckedChange = onUpdateAutoOffWeekends
-            )
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SettingsToggleRow(
+            title = "Wochenenden automatisch frei",
+            supportingText = "Setzt Tagtyp auf Frei und pausiert Erinnerungen",
+            checked = autoOffWeekends,
+            onCheckedChange = onUpdateAutoOffWeekends
+        )
 
         Divider()
 
+        SettingsToggleRow(
+            title = "Feiertage automatisch frei",
+            supportingText = "Manuelle Feiertage werden als frei behandelt",
+            checked = autoOffHolidays,
+            onCheckedChange = onUpdateAutoOffHolidays
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Feiertage automatisch frei",
-                    style = MaterialTheme.typography.bodyMedium
+            Text(
+                text = "Feiertage",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TextButton(
+                onClick = { showHolidayPicker = true },
+                enabled = autoOffHolidays
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
                 )
-                Text(
-                    text = "Manuelle Feiertage werden als frei behandelt",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Hinzufügen")
             }
-            Switch(
-                checked = autoOffHolidays,
-                onCheckedChange = onUpdateAutoOffHolidays
-            )
-        }
-
-        OutlinedButton(
-            onClick = { showHolidayPicker = true },
-            enabled = autoOffHolidays,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text("Feiertag hinzufügen")
         }
 
         if (sortedHolidays.isEmpty()) {
@@ -791,7 +812,10 @@ fun NonWorkingDaysSection(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = formatDate(date))
+                        Text(
+                            text = formatDate(date),
+                            modifier = Modifier.weight(1f)
+                        )
                         IconButton(onClick = { onRemoveHolidayDate(date) }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -819,50 +843,96 @@ fun NonWorkingDaysSection(
 @Composable
 fun ExportSection(
     uiState: SettingsUiState,
-    onExportCsv: () -> Unit,
-    onExportJson: () -> Unit,
+    onExportPdfCurrentMonth: () -> Unit,
+    onExportPdfLast30Days: () -> Unit,
+    onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    pdfEmployeeName: String?,
+    pdfCompany: String?,
+    pdfProject: String?,
+    pdfPersonnelNumber: String?,
+    onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onResetState: () -> Unit
 ) {
     val context = LocalContext.current
+    
+    var showPdfSettingsDialog by remember { mutableStateOf(false) }
+    var showPdfCustomRangeDialog by remember { mutableStateOf(false) }
+    
+    val employeeName = pdfEmployeeName.orEmpty()
+    val company = pdfCompany.orEmpty()
+    val project = pdfProject.orEmpty()
+    val personnelNumber = pdfPersonnelNumber.orEmpty()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Alle Einträge exportieren",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        when (uiState) {
-            is SettingsUiState.Initial -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onExportCsv,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text("CSV")
-                    }
-
-                    Button(
-                        onClick = onExportJson,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text("JSON")
-                    }
-                }
+        // PDF Export Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "PDF Export",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            IconButton(onClick = { showPdfSettingsDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "PDF Settings"
+                )
             }
-
+        }
+        
+        // Name-Validierungs-Info
+        if (employeeName.isBlank()) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "⚠️ Name fehlt! Bitte zuerst in den Settings eingeben.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+        
+        // PDF Export Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onExportPdfCurrentMonth,
+                modifier = Modifier.weight(1f),
+                enabled = employeeName.isNotBlank()
+            ) {
+                Text("Dieser Monat")
+            }
+            
+            Button(
+                onClick = onExportPdfLast30Days,
+                modifier = Modifier.weight(1f),
+                enabled = employeeName.isNotBlank()
+            ) {
+                Text("30 Tage")
+            }
+            
+            Button(
+                onClick = { showPdfCustomRangeDialog = true },
+                modifier = Modifier.weight(1f),
+                enabled = employeeName.isNotBlank()
+            ) {
+                Text("Benutzerdef.")
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        when (uiState) {
+            is SettingsUiState.Initial -> Unit
             is SettingsUiState.Exporting -> {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -898,6 +968,7 @@ fun ExportSection(
                 }
 
                 if (showShareDialog) {
+                    val mimeType = "application/pdf"
                     AlertDialog(
                         onDismissRequest = {
                             showShareDialog = false
@@ -913,7 +984,7 @@ fun ExportSection(
                         confirmButton = {
                             Button(onClick = {
                                 val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = if (format == ExportFormat.CSV) "text/csv" else "application/json"
+                                    type = mimeType
                                     putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "MontageZeit Export (${format.name})")
@@ -953,6 +1024,32 @@ fun ExportSection(
                 }
             }
         }
+    }
+    
+    // PDF Settings Dialog
+    if (showPdfSettingsDialog) {
+        PdfSettingsDialog(
+            initialEmployeeName = employeeName,
+            initialCompany = company.ifBlank { null },
+            initialProject = project.ifBlank { null },
+            initialPersonnelNumber = personnelNumber.ifBlank { null },
+            onSave = { name, comp, proj, pers ->
+                onUpdatePdfSettings(name, comp, proj, pers)
+                showPdfSettingsDialog = false
+            },
+            onDismiss = { showPdfSettingsDialog = false }
+        )
+    }
+    
+    // PDF Custom Range Dialog
+    if (showPdfCustomRangeDialog) {
+        PdfCustomRangeDialog(
+            onDateRangeSelected = { start, end ->
+                onExportPdfCustomRange(start, end)
+                showPdfCustomRangeDialog = false
+            },
+            onDismiss = { showPdfCustomRangeDialog = false }
+        )
     }
 }
 
@@ -1101,7 +1198,7 @@ fun SettingsDatePickerDialog(
         val datePickerDialog = android.app.DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                selectedDate = LocalDate.of(year, month +1, dayOfMonth)
                 onDateSelected(selectedDate)
             },
             initialDate.year,
@@ -1110,5 +1207,173 @@ fun SettingsDatePickerDialog(
         )
         datePickerDialog.setOnDismissListener { onDismiss() }
         datePickerDialog.show()
+    }
+}
+
+@Composable
+fun PdfSettingsDialog(
+    initialEmployeeName: String,
+    initialCompany: String?,
+    initialProject: String?,
+    initialPersonnelNumber: String?,
+    onSave: (String?, String?, String?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var employeeName by remember { mutableStateOf(initialEmployeeName) }
+    var company by remember { mutableStateOf(initialCompany ?: "") }
+    var project by remember { mutableStateOf(initialProject ?: "") }
+    var personnelNumber by remember { mutableStateOf(initialPersonnelNumber ?: "") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("PDF Settings") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = employeeName,
+                    onValueChange = { employeeName = it },
+                    label = { Text("Mitarbeiter-Name *") },
+                    placeholder = { Text("Max Mustermann") },
+                    singleLine = true,
+                    isError = employeeName.isBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = company,
+                    onValueChange = { company = it },
+                    label = { Text("Firma") },
+                    placeholder = { Text("Musterfirma GmbH") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = project,
+                    onValueChange = { project = it },
+                    label = { Text("Projekt") },
+                    placeholder = { Text("Projekt X") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = personnelNumber,
+                    onValueChange = { personnelNumber = it },
+                    label = { Text("Personalnummer") },
+                    placeholder = { Text("12345") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Text(
+                    text = "* Pflichtfeld",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(
+                        employeeName.ifBlank { null },
+                        company.ifBlank { null },
+                        project.ifBlank { null },
+                        personnelNumber.ifBlank { null }
+                    )
+                },
+                enabled = employeeName.isNotBlank()
+            ) {
+                Text("Speichern")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Abbrechen")
+            }
+        }
+    )
+}
+
+@Composable
+fun PdfCustomRangeDialog(
+    onDateRangeSelected: (LocalDate, LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var startDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var endDate by remember { mutableStateOf(LocalDate.now()) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Benutzerdefinierter Zeitraum") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Start Date
+                Text(
+                    text = "Von",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedButton(
+                    onClick = { showStartDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(formatDate(startDate))
+                }
+                
+                // End Date
+                Text(
+                    text = "Bis",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedButton(
+                    onClick = { showEndDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(formatDate(endDate))
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onDateRangeSelected(startDate, endDate)
+                },
+                enabled = !startDate.isAfter(endDate)
+            ) {
+                Text("Exportieren")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Abbrechen")
+            }
+        }
+    )
+    
+    // Start Date Picker
+    if (showStartDatePicker) {
+        SettingsDatePickerDialog(
+            initialDate = startDate,
+            onDateSelected = {
+                startDate = it
+                showStartDatePicker = false
+            },
+            onDismiss = { showStartDatePicker = false }
+        )
+    }
+    
+    // End Date Picker
+    if (showEndDatePicker) {
+        SettingsDatePickerDialog(
+            initialDate = endDate,
+            onDateSelected = {
+                endDate = it
+                showEndDatePicker = false
+            },
+            onDismiss = { showEndDatePicker = false }
+        )
     }
 }

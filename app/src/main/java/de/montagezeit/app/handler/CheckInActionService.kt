@@ -17,12 +17,16 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.SetDayType
+import de.montagezeit.app.domain.usecase.ConfirmWorkDay
+import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.notification.ConfirmationReminderLimiter
 import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.work.ReminderLaterWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Data
+import de.montagezeit.app.work.ReminderType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,13 +56,22 @@ class CheckInActionService : Service() {
     
     @Inject
     lateinit var notificationManager: ReminderNotificationManager
-    
+
+    @Inject
+    lateinit var confirmWorkDay: ConfirmWorkDay
+
+    @Inject
+    lateinit var confirmOffDay: ConfirmOffDay
+
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     
     companion object {
         private const val NOTIFICATION_ID = 3000
         private const val CHANNEL_ID = "check_in_action_service"
         private const val CHANNEL_NAME = "Check-In Aktionen"
+        private const val CONFIRMATION_REMINDER_PREFS = "confirmation_reminder_count"
+        private const val CONFIRMATION_REMINDER_MAX = 2
+        private const val CONFIRMATION_REMIND_LATER_MINUTES = 60
     }
     
     override fun onCreate() {
@@ -150,6 +163,77 @@ class CheckInActionService : Service() {
                 }
                 
                 stopSelf()
+            }
+
+            ReminderActions.ACTION_CONFIRM_WORK_DAY -> {
+                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
+
+                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag wird bestätigt..."))
+
+                serviceScope.launch {
+                    try {
+                        confirmWorkDay(date, source = source)
+                        showToast("Arbeitstag bestätigt")
+                        markConfirmationReminderFlag(date)
+                        confirmationLimiter().reset(date)
+                        notificationManager.cancelDailyReminder()
+                    } catch (e: Exception) {
+                        showToast("Konnte Tag nicht bestätigen")
+                    } finally {
+                        stopSelf()
+                    }
+                }
+            }
+
+            ReminderActions.ACTION_CONFIRM_OFF_DAY -> {
+                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
+
+                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag wird bestätigt..."))
+
+                serviceScope.launch {
+                    try {
+                        confirmOffDay(date, source = source)
+                        showToast("Freier Tag bestätigt")
+                        markConfirmationReminderFlag(date)
+                        confirmationLimiter().reset(date)
+                        notificationManager.cancelDailyReminder()
+                    } catch (e: Exception) {
+                        showToast("Konnte Tag nicht bestätigen")
+                    } finally {
+                        stopSelf()
+                    }
+                }
+            }
+
+            ReminderActions.ACTION_REMIND_LATER_CONFIRMATION -> {
+                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val limiter = confirmationLimiter()
+
+                // Prüfe Reminder Counter (max 2x pro Tag)
+                if (!limiter.canSchedule(date)) {
+                    showToast("Maximale Anzahl an Erinnerungen erreicht")
+                    notificationManager.cancelDailyReminder()
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+
+                // Entferne aktuelle Notification
+                notificationManager.cancelDailyReminder()
+
+                // Inkrementiere Counter
+                limiter.increment(date)
+
+                // Plane neue Notification in +60 Minuten
+                serviceScope.launch {
+                    scheduleConfirmationReminderLater(date, CONFIRMATION_REMIND_LATER_MINUTES)
+                    showToast("Erinnerung in 60 Minuten")
+                    stopSelf()
+                }
             }
 
             ReminderActions.ACTION_MARK_DAY_OFF -> {
@@ -260,5 +344,32 @@ class CheckInActionService : Service() {
             .putBoolean("fallback_reminded_$date", true)
             .putBoolean("daily_reminded_$date", true)
             .apply()
+    }
+
+    private fun markConfirmationReminderFlag(date: LocalDate) {
+        val prefs = getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("confirmation_reminded_$date", true)
+            .apply()
+    }
+
+    private fun confirmationLimiter(): ConfirmationReminderLimiter {
+        val prefs = getSharedPreferences(CONFIRMATION_REMINDER_PREFS, Context.MODE_PRIVATE)
+        return ConfirmationReminderLimiter(prefs, CONFIRMATION_REMINDER_MAX)
+    }
+
+    private fun scheduleConfirmationReminderLater(date: LocalDate, minutesLater: Int) {
+        val inputData = Data.Builder()
+            .putString("date", date.toString())
+            .putInt("minutes_later", minutesLater)
+            .putString(ReminderActions.EXTRA_REMINDER_TYPE, ReminderType.DAILY.name)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<ReminderLaterWorker>()
+            .setInitialDelay(minutesLater.toLong(), TimeUnit.MINUTES)
+            .setInputData(inputData)
+            .build()
+
+        WorkManager.getInstance(this).enqueue(workRequest)
     }
 }

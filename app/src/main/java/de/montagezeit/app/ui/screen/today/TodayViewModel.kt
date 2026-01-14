@@ -10,6 +10,10 @@ import de.montagezeit.app.domain.usecase.CalculateTravelCompensation
 import de.montagezeit.app.domain.usecase.FetchRouteDistance
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.domain.usecase.ConfirmWorkDay
+import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.ResolveReview
+import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.ui.screen.travel.TravelStatus
 import de.montagezeit.app.ui.screen.travel.TravelUiState
 import kotlinx.coroutines.Dispatchers
@@ -59,8 +63,11 @@ class TodayViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
     private val recordMorningCheckIn: RecordMorningCheckIn,
     private val recordEveningCheckIn: RecordEveningCheckIn,
+    private val confirmWorkDay: ConfirmWorkDay,
+    private val confirmOffDay: ConfirmOffDay,
     private val fetchRouteDistance: FetchRouteDistance,
-    private val calculateTravelCompensation: CalculateTravelCompensation
+    private val calculateTravelCompensation: CalculateTravelCompensation,
+    private val resolveReview: ResolveReview
 ) : ViewModel() {
     
     companion object {
@@ -86,6 +93,12 @@ class TodayViewModel @Inject constructor(
     
     private val _monthStats = MutableStateFlow<MonthStats?>(null)
     val monthStats: StateFlow<MonthStats?> = _monthStats.asStateFlow()
+    
+    private val _showReviewSheet = MutableStateFlow(false)
+    val showReviewSheet: StateFlow<Boolean> = _showReviewSheet.asStateFlow()
+    
+    private val _reviewScope = MutableStateFlow<ReviewScope?>(null)
+    val reviewScope: StateFlow<ReviewScope?> = _reviewScope.asStateFlow()
     
     init {
         loadTodayEntry()
@@ -155,7 +168,14 @@ class TodayViewModel @Inject constructor(
         val totalHours = workEntries.sumOf { entry ->
             val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
             val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-            val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+            val grossWorkMinutes = endMinutes - startMinutes
+
+            // Validierung: Skip invalid entries
+            if (grossWorkMinutes <= 0 || entry.breakMinutes >= grossWorkMinutes) {
+                return@sumOf 0.0
+            }
+
+            val workMinutes = grossWorkMinutes - entry.breakMinutes
             workMinutes / 60.0
         }
         val workDaysCount = workEntries.size
@@ -173,7 +193,14 @@ class TodayViewModel @Inject constructor(
         val totalHours = workEntries.sumOf { entry ->
             val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
             val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-            val workMinutes = endMinutes - startMinutes - entry.breakMinutes
+            val grossWorkMinutes = endMinutes - startMinutes
+
+            // Validierung: Skip invalid entries
+            if (grossWorkMinutes <= 0 || entry.breakMinutes >= grossWorkMinutes) {
+                return@sumOf 0.0
+            }
+
+            val workMinutes = grossWorkMinutes - entry.breakMinutes
             workMinutes / 60.0
         }
         val workDaysCount = workEntries.size
@@ -252,14 +279,12 @@ class TodayViewModel @Inject constructor(
     
     fun onSkipLocation() {
         // Wird beim Location-Error verwendet, um ohne Location zu speichern
-        val currentState = _uiState.value
-        if (currentState is TodayUiState.Success) {
-            // Prüfen welcher Check-In gerade versucht wurde
-            if (currentState.entry?.morningCapturedAt == null) {
-                onMorningCheckIn(forceWithoutLocation = true)
-            } else if (currentState.entry?.eveningCapturedAt == null) {
-                onEveningCheckIn(forceWithoutLocation = true)
-            }
+        val entry = todayEntry.value
+        // Prüfen welcher Check-In fehlt
+        if (entry == null || entry.morningCapturedAt == null) {
+            onMorningCheckIn(forceWithoutLocation = true)
+        } else if (entry.eveningCapturedAt == null) {
+            onEveningCheckIn(forceWithoutLocation = true)
         }
     }
     
@@ -268,9 +293,109 @@ class TodayViewModel @Inject constructor(
         _uiState.value = TodayUiState.Success(currentEntry)
     }
     
+    @Suppress("UNUSED_PARAMETER")
     fun openEditSheet(date: LocalDate) {
         // Wird von UI verwendet, um EditSheet zu öffnen
         // Implementierung in Navigation
+    }
+
+    fun onConfirmWorkDay() {
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.LoadingLocation
+            }
+
+            try {
+                val entry = confirmWorkDay(LocalDate.now(), source = "UI")
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    when (e) {
+                        is SecurityException -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                "Standortberechtigung fehlt",
+                                canRetry = false
+                            )
+                        }
+                        else -> {
+                            _uiState.value = TodayUiState.LocationError(
+                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                canRetry = true
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun onConfirmOffDay() {
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.Loading
+            }
+
+            try {
+                val entry = confirmOffDay(LocalDate.now(), source = "UI")
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Error(e.message ?: "Konnte Tag nicht bestätigen")
+                }
+            }
+        }
+    }
+    
+    fun onOpenReviewSheet() {
+        val entry = todayEntry.value ?: return
+        
+        // Scope basierend auf vorhanden Check-Ins ermitteln
+        val scope = when {
+            entry.morningCapturedAt == null && entry.eveningCapturedAt == null -> ReviewScope.BOTH
+            entry.morningCapturedAt != null && entry.eveningCapturedAt != null -> ReviewScope.BOTH
+            entry.morningCapturedAt != null -> ReviewScope.MORNING
+            else -> ReviewScope.EVENING
+        }
+        
+        _reviewScope.value = scope
+        _showReviewSheet.value = true
+    }
+    
+    fun onResolveReview(label: String, isLeipzig: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val scope = _reviewScope.value ?: return@launch
+            
+            withContext(Dispatchers.Main) {
+                _uiState.value = TodayUiState.Loading
+            }
+            
+            try {
+                val entry = resolveReview(
+                    date = LocalDate.now(),
+                    scope = scope,
+                    resolvedLabel = label,
+                    isLeipzig = isLeipzig
+                )
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                    _showReviewSheet.value = false
+                    _reviewScope.value = null
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Error(e.message ?: "Prüfung konnte nicht gespeichert werden")
+                }
+            }
+        }
+    }
+    
+    fun onDismissReviewSheet() {
+        _showReviewSheet.value = false
+        _reviewScope.value = null
     }
 
     fun updateTravelFromLabel(value: String) {

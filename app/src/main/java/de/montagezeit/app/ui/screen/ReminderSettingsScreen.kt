@@ -162,6 +162,29 @@ fun ReminderSettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Daily Confirmation
+            SettingsSection(title = "Tägliche Bestätigung") {
+                SwitchSetting(
+                    title = "Aktiviert",
+                    checked = settings?.dailyReminderEnabled ?: true,
+                    onCheckedChange = { enabled ->
+                        viewModel.updateSettings(dailyReminderEnabled = enabled)
+                    }
+                )
+
+                if (settings?.dailyReminderEnabled == true) {
+                    TimeSetting(
+                        title = "Uhrzeit",
+                        time = settings?.dailyReminderTime ?: LocalTime.of(18, 0),
+                        onTimeChange = { time ->
+                            viewModel.updateSettings(dailyReminderTime = time)
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Work Defaults
             SettingsSection(title = "Arbeitszeit-Defaults") {
                 TimeRangeSetting(

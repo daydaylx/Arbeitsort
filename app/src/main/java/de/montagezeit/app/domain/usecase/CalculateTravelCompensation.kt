@@ -12,6 +12,7 @@ class CalculateTravelCompensation {
         val paidHoursDisplay: String
     )
 
+    @Suppress("UNUSED_PARAMETER")
     operator fun invoke(
         fromLabel: String?,
         toLabel: String?,

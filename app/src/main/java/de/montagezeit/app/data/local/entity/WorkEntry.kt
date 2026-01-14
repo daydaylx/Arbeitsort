@@ -54,6 +54,11 @@ data class WorkEntry(
     val travelSource: TravelSource? = null,
     val travelUpdatedAt: Long? = null,
     
+    // Daily Confirmation
+    val confirmedWorkDay: Boolean = false,
+    val confirmationAt: Long? = null,
+    val confirmationSource: String? = null,
+    
     // Meta & Flags
     val needsReview: Boolean = false,
     val note: String? = null,

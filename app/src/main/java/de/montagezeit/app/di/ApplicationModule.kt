@@ -20,6 +20,9 @@ import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.SetTravelEvent
 import de.montagezeit.app.domain.usecase.UpdateEntry
+import de.montagezeit.app.domain.usecase.ConfirmWorkDay
+import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.ResolveReview
 import javax.inject.Singleton
 
 @Module
@@ -100,5 +103,30 @@ object ApplicationModule {
         routeCacheDao: RouteCacheDao
     ): FetchRouteDistance {
         return FetchRouteDistance(distanceService, routeCacheDao)
+    }
+
+    @Provides
+    fun provideConfirmWorkDay(
+        workEntryDao: WorkEntryDao,
+        locationProvider: LocationProvider,
+        locationCalculator: LocationCalculator,
+        reminderSettingsManager: ReminderSettingsManager
+    ): ConfirmWorkDay {
+        return ConfirmWorkDay(
+            workEntryDao = workEntryDao,
+            locationProvider = locationProvider,
+            locationCalculator = locationCalculator,
+            reminderSettingsManager = reminderSettingsManager
+        )
+    }
+
+    @Provides
+    fun provideConfirmOffDay(workEntryDao: WorkEntryDao): ConfirmOffDay {
+        return ConfirmOffDay(workEntryDao)
+    }
+    
+    @Provides
+    fun provideResolveReview(workEntryDao: WorkEntryDao): ResolveReview {
+        return ResolveReview(workEntryDao)
     }
 }

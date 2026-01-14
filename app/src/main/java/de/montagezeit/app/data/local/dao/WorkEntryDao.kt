@@ -20,7 +20,10 @@ interface WorkEntryDao {
     
     @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
-    
+
+    @Query("SELECT * FROM work_entries ORDER BY date DESC")
+    suspend fun getAll(): List<WorkEntry>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: WorkEntry): Long
     

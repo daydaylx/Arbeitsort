@@ -34,8 +34,7 @@ class TimeChangeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED,
-            "android.intent.action.TIME_SET" -> {
+            Intent.ACTION_TIMEZONE_CHANGED -> {
 
                 // Keep receiver alive until async work completes
                 val pendingResult = goAsync()

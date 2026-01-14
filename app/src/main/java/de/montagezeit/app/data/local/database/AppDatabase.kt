@@ -16,7 +16,7 @@ import de.montagezeit.app.data.local.entity.RouteCacheEntry
 
 @Database(
     entities = [WorkEntry::class, RouteCacheEntry::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(
@@ -32,20 +32,29 @@ abstract class AppDatabase : RoomDatabase() {
         const val DATABASE_NAME = "montagezeit_database"
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // No schema changes between v1 and v2.
             }
         }
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // Add indices for performance
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
                 // Note: date already has unique index as PRIMARY KEY
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add Daily Confirmation fields
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN confirmedWorkDay INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN confirmationAt INTEGER")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN confirmationSource TEXT")
+            }
+        }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
     }
 }
