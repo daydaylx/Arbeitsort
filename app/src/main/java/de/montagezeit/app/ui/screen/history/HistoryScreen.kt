@@ -819,6 +819,25 @@ fun WeekGroupCard(
                             )
                         }
 
+                        if (kotlin.math.abs(week.totalPaidHours - week.totalHours) > 0.01) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Bezahlt:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "%.1f Std.".format(week.totalPaidHours),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+
                         if (week.workDaysCount > 0) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -972,6 +991,25 @@ fun MonthGroupCard(
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
+                        }
+
+                        if (kotlin.math.abs(month.totalPaidHours - month.totalHours) > 0.01) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Bezahlt:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = "%.1f Std.".format(month.totalPaidHours),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
 
                         if (month.workDaysCount > 0) {

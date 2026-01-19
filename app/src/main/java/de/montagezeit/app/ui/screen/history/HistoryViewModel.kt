@@ -8,6 +8,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.TimeCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -203,12 +204,12 @@ data class MonthGroup(
     val totalHours: Double
         get() = entries
             .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-            .sumOf { entry ->
-                val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-                val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-                val workMinutes = endMinutes - startMinutes - entry.breakMinutes
-                workMinutes / 60.0
-            }
+            .sumOf { TimeCalculator.calculateWorkHours(it) }
+
+    val totalPaidHours: Double
+        get() = entries
+            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+            .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
 
     val averageHoursPerDay: Double
         get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
@@ -243,12 +244,12 @@ data class WeekGroup(
     val totalHours: Double
         get() = entries
             .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-            .sumOf { entry ->
-                val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-                val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-                val workMinutes = endMinutes - startMinutes - entry.breakMinutes
-                workMinutes / 60.0
-            }
+            .sumOf { TimeCalculator.calculateWorkHours(it) }
+
+    val totalPaidHours: Double
+        get() = entries
+            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+            .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
 
     val averageHoursPerDay: Double
         get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0

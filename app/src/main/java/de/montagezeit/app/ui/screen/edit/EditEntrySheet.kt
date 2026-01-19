@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.montagezeit.app.ui.common.TimePickerDialog
 import java.time.LocalDate
 import java.time.Duration
 import java.time.format.DateTimeFormatter
@@ -742,7 +743,7 @@ fun WorkTimesSection(
     }
     
     if (showStartPicker) {
-        SimpleTimePickerDialog(
+TimePickerDialog(
             initialTime = workStart,
             onTimeSelected = { onStartChange(it.hour, it.minute); showStartPicker = false },
             onDismiss = { showStartPicker = false }
@@ -750,7 +751,7 @@ fun WorkTimesSection(
     }
     
     if (showEndPicker) {
-        SimpleTimePickerDialog(
+TimePickerDialog(
             initialTime = workEnd,
             onTimeSelected = { onEndChange(it.hour, it.minute); showEndPicker = false },
             onDismiss = { showEndPicker = false }
@@ -900,7 +901,7 @@ fun TravelSection(
     }
 
     if (showStartPicker) {
-        SimpleTimePickerDialog(
+TimePickerDialog(
             initialTime = travelStartTime ?: java.time.LocalTime.of(8, 0),
             onTimeSelected = { onTravelStartChange(it); showStartPicker = false },
             onDismiss = { showStartPicker = false }
@@ -908,7 +909,7 @@ fun TravelSection(
     }
 
     if (showArrivePicker) {
-        SimpleTimePickerDialog(
+TimePickerDialog(
             initialTime = travelArriveTime ?: java.time.LocalTime.of(9, 0),
             onTimeSelected = { onTravelArriveChange(it); showArrivePicker = false },
             onDismiss = { showArrivePicker = false }
@@ -1004,80 +1005,7 @@ fun BorderzoneConfirmDialog(
     )
 }
 
-@Composable
-fun SimpleTimePickerDialog(
-    initialTime: java.time.LocalTime,
-    onTimeSelected: (java.time.LocalTime) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selectedTime by remember { mutableStateOf(initialTime) }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Zeit wählen") },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = formatTime(selectedTime),
-                    style = MaterialTheme.typography.headlineLarge
-                )
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Stunde",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                        Slider(
-                            value = selectedTime.hour.toFloat(),
-                            onValueChange = { selectedTime = selectedTime.withHour(it.toInt()) },
-                            valueRange = 0f..23f
-                        )
-                        Text(
-                            text = selectedTime.hour.toString(),
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Minute",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                        Slider(
-                            value = selectedTime.minute.toFloat(),
-                            onValueChange = { selectedTime = selectedTime.withMinute(it.toInt()) },
-                            valueRange = 0f..59f,
-                            steps = 59
-                        )
-                        Text(
-                            text = selectedTime.minute.toString(),
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onTimeSelected(selectedTime) }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen")
-            }
-        }
-    )
-}
+
 
 private fun formatDate(date: java.time.LocalDate): String {
     return date.format(

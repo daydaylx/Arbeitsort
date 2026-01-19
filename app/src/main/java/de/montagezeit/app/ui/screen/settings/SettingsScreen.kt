@@ -31,6 +31,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import de.montagezeit.app.ui.common.TimePickerDialog
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -1053,67 +1054,7 @@ fun ExportSection(
     }
 }
 
-@Composable
-fun TimePickerDialog(
-    initialTime: LocalTime,
-    onTimeSelected: (LocalTime) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selectedTime by remember { mutableStateOf(initialTime) }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Zeit wählen") },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Simple time picker with sliders
-                Text(
-                    text = formatTime(selectedTime),
-                    style = MaterialTheme.typography.headlineLarge
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Stunde",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Slider(
-                    value = selectedTime.hour.toFloat(),
-                    onValueChange = { selectedTime = selectedTime.withHour(it.toInt()) },
-                    valueRange = 0f..23f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Minute",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Slider(
-                    value = selectedTime.minute.toFloat(),
-                    onValueChange = { selectedTime = selectedTime.withMinute(it.toInt()) },
-                    valueRange = 0f..59f,
-                    steps = 59,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onTimeSelected(selectedTime) }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen")
-            }
-        }
-    )
-}
+
 
 private fun checkNotificationPermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

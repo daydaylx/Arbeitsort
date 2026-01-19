@@ -28,8 +28,11 @@ import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
 
+import de.montagezeit.app.domain.util.TimeCalculator
+
 data class WeekStats(
     val totalHours: Double,
+    val totalPaidHours: Double,
     val workDaysCount: Int,
     val targetHours: Double
 ) {
@@ -45,6 +48,7 @@ data class WeekStats(
 
 data class MonthStats(
     val totalHours: Double,
+    val totalPaidHours: Double,
     val workDaysCount: Int,
     val targetHours: Double
 ) {
@@ -165,24 +169,14 @@ class TodayViewModel @Inject constructor(
     
     private fun calculateWeekStats(entries: List<WorkEntry>): WeekStats {
         val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-        val totalHours = workEntries.sumOf { entry ->
-            val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-            val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-            val grossWorkMinutes = endMinutes - startMinutes
-
-            // Validierung: Skip invalid entries
-            if (grossWorkMinutes <= 0 || entry.breakMinutes >= grossWorkMinutes) {
-                return@sumOf 0.0
-            }
-
-            val workMinutes = grossWorkMinutes - entry.breakMinutes
-            workMinutes / 60.0
-        }
+        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
         val targetHours: Double = 40.0 // Standard: 40 Stunden/Woche
         
         return WeekStats(
             totalHours = totalHours,
+            totalPaidHours = totalPaidHours,
             workDaysCount = workDaysCount,
             targetHours = targetHours
         )
@@ -190,24 +184,14 @@ class TodayViewModel @Inject constructor(
     
     private fun calculateMonthStats(entries: List<WorkEntry>): MonthStats {
         val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-        val totalHours = workEntries.sumOf { entry ->
-            val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-            val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-            val grossWorkMinutes = endMinutes - startMinutes
-
-            // Validierung: Skip invalid entries
-            if (grossWorkMinutes <= 0 || entry.breakMinutes >= grossWorkMinutes) {
-                return@sumOf 0.0
-            }
-
-            val workMinutes = grossWorkMinutes - entry.breakMinutes
-            workMinutes / 60.0
-        }
+        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
         val targetHours: Double = 160.0 // Standard: 160 Stunden/Monat (40h/Woche * 4)
         
         return MonthStats(
             totalHours = totalHours,
+            totalPaidHours = totalPaidHours,
             workDaysCount = workDaysCount,
             targetHours = targetHours
         )

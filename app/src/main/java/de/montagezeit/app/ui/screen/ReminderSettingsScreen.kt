@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.data.preferences.ReminderSettings
-import de.montagezeit.app.ui.screen.settings.TimePickerDialog
+import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.screen.viewmodel.ReminderSettingsViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

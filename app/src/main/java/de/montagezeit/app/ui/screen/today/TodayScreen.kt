@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.screen.today.TodayUiState
 import de.montagezeit.app.ui.screen.today.WeekStats
@@ -318,8 +319,16 @@ fun TodayContent(
 
 @Composable
 fun WorkHoursCard(entry: WorkEntry) {
-    val workHours = calculateWorkHours(entry)
-    val formattedHours = formatWorkHours(workHours)
+    val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
+    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
+    val totalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+    
+    // Helper local format function
+    fun formatMin(min: Int): String {
+        val h = min / 60
+        val m = min % 60
+        return if (m == 0) "${h} Std." else "${h}h ${m}min"
+    }
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -327,33 +336,57 @@ fun WorkHoursCard(entry: WorkEntry) {
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.AccessTime,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(32.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccessTime,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Gesamt (Bezahlt)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = formatMin(totalMinutes),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+            
+            if (travelMinutes > 0) {
+                Divider(
+                    modifier = Modifier.padding(vertical = 8.dp), 
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
                 )
-                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = stringResource(R.string.today_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        text = "Arbeit: ${formatMin(workMinutes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                     Text(
-                        text = formattedHours,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        text = "Reise: ${formatMin(travelMinutes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -361,25 +394,7 @@ fun WorkHoursCard(entry: WorkEntry) {
     }
 }
 
-private fun calculateWorkHours(entry: WorkEntry): Double {
-    if (entry.dayType != DayType.WORK) return 0.0
-    val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-    val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-    val workMinutes = endMinutes - startMinutes - entry.breakMinutes
-    return workMinutes / 60.0
-}
 
-private fun formatWorkHours(hours: Double): String {
-    val totalMinutes = (hours * 60).toInt()
-    val h = totalMinutes / 60
-    val m = totalMinutes % 60
-    
-    return if (m == 0) {
-        "${h} Std."
-    } else {
-        "${h}h ${m}min"
-    }
-}
 
 @Composable
 fun StatisticsDashboard(
@@ -393,6 +408,7 @@ fun StatisticsDashboard(
     
     // Stats-Properties basierend auf Typ extrahieren
     val totalHours: Double
+    val totalPaidHours: Double
     val targetHours: Double
     val workDaysCount: Int
     val progress: Float
@@ -403,6 +419,7 @@ fun StatisticsDashboard(
     when (stats) {
         is WeekStats -> {
             totalHours = stats.totalHours
+            totalPaidHours = stats.totalPaidHours
             targetHours = stats.targetHours
             workDaysCount = stats.workDaysCount
             progress = stats.progress
@@ -412,6 +429,7 @@ fun StatisticsDashboard(
         }
         is MonthStats -> {
             totalHours = stats.totalHours
+            totalPaidHours = stats.totalPaidHours
             targetHours = stats.targetHours
             workDaysCount = stats.workDaysCount
             progress = stats.progress
@@ -460,6 +478,16 @@ fun StatisticsDashboard(
                     style = MaterialTheme.typography.titleMedium,
                     color = accentColor
                 )
+                
+                if (kotlin.math.abs(totalPaidHours - totalHours) > 0.01) {
+                    Text(
+                        text = "Bezahlt: " + String.format(java.util.Locale.GERMAN, "%.2f", totalPaidHours) + " h",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+
                 Text(
                     text = "$label · ${pluralStringResource(R.plurals.today_workday_count, workDaysCount, workDaysCount)}",
                     style = MaterialTheme.typography.bodySmall,

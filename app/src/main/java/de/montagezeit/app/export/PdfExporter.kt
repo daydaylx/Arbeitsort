@@ -10,6 +10,7 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -45,14 +46,14 @@ class PdfExporter @Inject constructor(
         private const val SIGNATURE_HEIGHT = 80
         
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
-        private const val COL_DATE = 70
-        private const val COL_START = 55
-        private const val COL_END = 55
-        private const val COL_BREAK = 50
-        private const val COL_WORK_TIME = 70
-        private const val COL_LOCATION = 80
-        private const val COL_TRAVEL = 60
-        private const val COL_NOTE = 125 // Rest
+        private const val COL_DATE = 65
+        private const val COL_START = 50
+        private const val COL_END = 50
+        private const val COL_BREAK = 45
+        private const val COL_WORK_TIME = 90
+        private const val COL_LOCATION = 70
+        private const val COL_TRAVEL = 55
+        private const val COL_NOTE = 90 // Rest
     }
     
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
@@ -266,7 +267,7 @@ class PdfExporter @Inject constructor(
         canvas.drawText("Pause", xPos, yPos + 20, paintTableHeader)
         xPos += COL_BREAK
         
-        canvas.drawText("Arbeitszeit", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText("Arbeit / Ges.", xPos, yPos + 20, paintTableHeader)
         xPos += COL_WORK_TIME
         
         canvas.drawText("Ort", xPos, yPos + 20, paintTableHeader)
@@ -333,9 +334,16 @@ class PdfExporter @Inject constructor(
             xPos += COL_BREAK
             
             // Arbeitszeit
-            val workHours = PdfUtilities.calculateWorkHours(entry)
+            val workHours = TimeCalculator.calculateWorkHours(entry)
+            val totalHours = TimeCalculator.calculatePaidTotalHours(entry)
+            
+            var timeText = PdfUtilities.formatWorkHours(workHours)
+            if (kotlin.math.abs(totalHours - workHours) > 0.01) {
+                timeText += " / ${PdfUtilities.formatWorkHours(totalHours)}"
+            }
+            
             activeCanvas.drawText(
-                PdfUtilities.formatWorkHours(workHours) + " h",
+                timeText + " h",
                 xPos,
                 y + 15,
                 paintTableText
@@ -402,6 +410,15 @@ class PdfExporter @Inject constructor(
         if (totalTravelMinutes > 0) {
             canvas.drawText(
                 "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} Stunden",
+                MARGIN.toFloat(),
+                yPos,
+                paintSummary
+            )
+            yPos += 25
+            
+            val totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+            canvas.drawText(
+                "Summe Gesamt (Bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} Stunden",
                 MARGIN.toFloat(),
                 yPos,
                 paintSummary

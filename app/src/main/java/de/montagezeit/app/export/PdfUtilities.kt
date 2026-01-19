@@ -2,6 +2,7 @@ package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.TimeCalculator
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -15,23 +16,14 @@ object PdfUtilities {
     private val hoursFormatter = DecimalFormat("0.00", DecimalFormatSymbols(Locale.GERMAN))
     private val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     private val dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")
-    
+
     /**
      * Berechnet die Arbeitszeit in Stunden für einen WorkEntry
      * Arbeitszeit = (workEnd - workStart - pause) / 60
      * Für OFF-Tage: 0.0
      */
     fun calculateWorkHours(entry: WorkEntry): Double {
-        if (entry.dayType == DayType.OFF) {
-            return 0.0
-        }
-        
-        val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-        val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-        val breakMinutes = entry.breakMinutes
-        
-        val workMinutes = endMinutes - startMinutes - breakMinutes
-        return workMinutes / 60.0
+        return TimeCalculator.calculateWorkHours(entry)
     }
     
     /**
@@ -93,7 +85,7 @@ object PdfUtilities {
      * Berechnet die Summe der Reisezeit in Minuten für eine Liste von WorkEntries
      */
     fun sumTravelMinutes(entries: List<WorkEntry>): Int {
-        return entries.sumOf { it.travelPaidMinutes ?: 0 }
+        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
     }
     
     /**
