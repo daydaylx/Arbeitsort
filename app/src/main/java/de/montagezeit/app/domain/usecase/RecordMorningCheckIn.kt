@@ -60,7 +60,8 @@ class RecordMorningCheckIn(
             existingEntry = existingEntry,
             locationResult = locationResult,
             isMorning = true,
-            radiusKm = locationRadiusKm
+            radiusKm = locationRadiusKm,
+            date = date
         )
         
         workEntryDao.upsert(updatedEntry)
@@ -75,7 +76,8 @@ class RecordMorningCheckIn(
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
         isMorning: Boolean,
-        radiusKm: Double
+        radiusKm: Double,
+        date: LocalDate
     ): WorkEntry {
         val now = System.currentTimeMillis()
         val normalizedEntry = existingEntry?.copy(dayType = DayType.WORK)
