@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.CalculateTravelCompensation
 import de.montagezeit.app.domain.usecase.FetchRouteDistance
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
@@ -16,11 +18,13 @@ import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.ui.screen.travel.TravelStatus
 import de.montagezeit.app.ui.screen.travel.TravelUiState
+import de.montagezeit.app.work.ReminderWindowEvaluator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -80,7 +84,8 @@ class TodayViewModel @Inject constructor(
     private val confirmOffDay: ConfirmOffDay,
     private val fetchRouteDistance: FetchRouteDistance,
     private val calculateTravelCompensation: CalculateTravelCompensation,
-    private val resolveReview: ResolveReview
+    private val resolveReview: ResolveReview,
+    private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
     
     companion object {
@@ -293,6 +298,35 @@ class TodayViewModel @Inject constructor(
     fun onResetError() {
         val currentEntry = todayEntry.value
         _uiState.value = TodayUiState.Success(currentEntry)
+    }
+
+    fun ensureTodayEntryThen(onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val today = LocalDate.now()
+            try {
+                val existing = workEntryDao.getByDate(today)
+                if (existing == null) {
+                    val settings = reminderSettingsManager.settings.first()
+                    val isNonWorking = ReminderWindowEvaluator.isNonWorkingDay(today, settings)
+                    val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
+                    val now = System.currentTimeMillis()
+                    val entry = WorkEntry(
+                        date = today,
+                        dayType = dayType,
+                        workStart = settings.workStart,
+                        workEnd = settings.workEnd,
+                        breakMinutes = settings.breakMinutes,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                    workEntryDao.upsert(entry)
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    onDone()
+                }
+            }
+        }
     }
     
     @Suppress("UNUSED_PARAMETER")

@@ -9,15 +9,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
-import de.montagezeit.app.ui.screen.export.ExportPreviewScreen
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
@@ -27,12 +24,6 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Today : Screen("today", "Heute", Icons.Default.Today)
     object History : Screen("history", "Verlauf", Icons.Default.History)
     object Settings : Screen("settings", "Einstellungen", Icons.Default.Settings)
-}
-
-private const val exportPreviewRoute = "exportPreview/{startDate}/{endDate}"
-
-private fun buildExportPreviewRoute(startDate: LocalDate, endDate: LocalDate): String {
-    return "exportPreview/${startDate}/${endDate}"
 }
 
 @Composable
@@ -94,6 +85,15 @@ fun MontageZeitNavGraph(
                 TodayScreen(
                     onOpenEditSheet = { date ->
                         openEditSheet(date)
+                    },
+                    onOpenWeekView = {
+                        navController.navigate(Screen.History.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
@@ -108,21 +108,6 @@ fun MontageZeitNavGraph(
             
             composable(Screen.Settings.route) {
                 SettingsScreen(
-                    onOpenExportPreview = { startDate, endDate ->
-                        navController.navigate(buildExportPreviewRoute(startDate, endDate))
-                    }
-                )
-            }
-
-            composable(
-                route = exportPreviewRoute,
-                arguments = listOf(
-                    navArgument("startDate") { type = NavType.StringType },
-                    navArgument("endDate") { type = NavType.StringType }
-                )
-            ) {
-                ExportPreviewScreen(
-                    onBack = { navController.popBackStack() },
                     onOpenEditSheet = { date, onDismissed ->
                         openEditSheet(date, onDismissed)
                     }

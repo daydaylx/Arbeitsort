@@ -2,7 +2,7 @@ package de.montagezeit.app.ui.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.ui.screen.export.calculatePreviewSummary
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -11,7 +11,7 @@ import java.time.LocalTime
 class ExportPreviewViewModelTest {
 
     @Test
-    fun `calculateSummary sums work travel and paid times`() {
+    fun `calculatePreviewSummary sums work travel and paid minutes`() {
         val entries = listOf(
             WorkEntry(
                 date = LocalDate.of(2026, 1, 10),
@@ -35,15 +35,11 @@ class ExportPreviewViewModelTest {
             )
         )
 
-        val viewModel = ExportPreviewViewModel()
-        val summary = viewModel.calculateSummary(entries)
+        val summary = calculatePreviewSummary(entries)
 
-        assertEquals(16.5, summary.workHours, 0.01)
+        assertEquals(1020, summary.workMinutes)
         assertEquals(90, summary.travelMinutes)
-        assertEquals(1.5, summary.travelHours, 0.01)
-        assertEquals(18.0, summary.paidHours, 0.01)
-
-        val paidHoursByTimeCalculator = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-        assertEquals(paidHoursByTimeCalculator, summary.paidHours, 0.01)
+        assertEquals(1110, summary.paidMinutes)
+        assertEquals(summary.workMinutes + summary.travelMinutes, summary.paidMinutes)
     }
 }

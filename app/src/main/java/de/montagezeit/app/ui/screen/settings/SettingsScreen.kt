@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import de.montagezeit.app.ui.common.TimePickerDialog
+import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -43,7 +44,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onOpenExportPreview: (LocalDate, LocalDate) -> Unit
+    onOpenEditSheet: (LocalDate, () -> Unit) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.reminderSettings.collectAsState(initial = null)
@@ -59,6 +60,8 @@ fun SettingsScreen(
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkBatteryOptimizations(context))
     }
+    var previewRange by remember { mutableStateOf<Pair<LocalDate, LocalDate>?>(null) }
+    var showPreviewSheet by remember { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -116,7 +119,10 @@ fun SettingsScreen(
                 onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
                 onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
                 onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
-                onOpenExportPreview = onOpenExportPreview,
+                onOpenExportPreview = { start, end ->
+                    previewRange = start to end
+                    showPreviewSheet = true
+                },
                 onUpdatePdfSettings = { name, company, project, personnel -> 
                     viewModel.updatePdfSettings(name, company, project, personnel) 
                 },
@@ -141,6 +147,15 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
             )
         }
+    }
+
+    val activeRange = previewRange
+    if (showPreviewSheet && activeRange != null) {
+        ExportPreviewBottomSheet(
+            range = activeRange,
+            onDismiss = { showPreviewSheet = false },
+            onOpenEditSheet = onOpenEditSheet
+        )
     }
 }
 

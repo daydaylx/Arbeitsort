@@ -1,7 +1,6 @@
 package de.montagezeit.app.ui.screen.export
 
 import android.net.Uri
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,96 +36,122 @@ data class ExportPreviewRow(
     val locationNote: String?
 )
 
-sealed class ExportPreviewExportStatus {
-    object Idle : ExportPreviewExportStatus()
-    object Exporting : ExportPreviewExportStatus()
-    data class Success(val fileUri: Uri) : ExportPreviewExportStatus()
-    data class Error(val message: String) : ExportPreviewExportStatus()
+data class PreviewSummary(
+    val workMinutes: Int,
+    val travelMinutes: Int,
+    val paidMinutes: Int
+) {
+    val workHours: Double = workMinutes / 60.0
+    val travelHours: Double = travelMinutes / 60.0
+    val paidHours: Double = paidMinutes / 60.0
 }
 
-sealed class ExportPreviewUiState {
-    object Loading : ExportPreviewUiState()
-    data class Error(val message: String) : ExportPreviewUiState()
-    data class Empty(
-        val header: String,
-        val isNameMissing: Boolean,
-        val exportStatus: ExportPreviewExportStatus = ExportPreviewExportStatus.Idle
-    ) : ExportPreviewUiState()
-    data class Content(
+internal fun calculatePreviewSummary(entries: List<WorkEntry>): PreviewSummary {
+    val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it) }
+    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
+    val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it) }
+    return PreviewSummary(
+        workMinutes = workMinutes,
+        travelMinutes = travelMinutes,
+        paidMinutes = paidMinutes
+    )
+}
+
+sealed class PreviewState {
+    data class List(
         val header: String,
         val totals: ExportPreviewTotals,
-        val rows: List<ExportPreviewRow>,
-        val isNameMissing: Boolean,
-        val exportStatus: ExportPreviewExportStatus = ExportPreviewExportStatus.Idle
-    ) : ExportPreviewUiState()
+        val rows: kotlin.collections.List<ExportPreviewRow>
+    ) : PreviewState()
+
+    data class Empty(
+        val header: String,
+        val message: String
+    ) : PreviewState()
+
+    object CreatingPdf : PreviewState()
+
+    data class PdfReady(
+        val fileUri: Uri,
+        val fileName: String
+    ) : PreviewState()
+
+    data class Error(
+        val message: String,
+        val canReturn: Boolean
+    ) : PreviewState()
 }
 
 @HiltViewModel
 class ExportPreviewViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val pdfExporter: PdfExporter,
-    savedStateHandle: SavedStateHandle
+    private val pdfExporter: PdfExporter
 ) : ViewModel() {
 
-    private val startDate = savedStateHandle.get<String>("startDate")?.let(LocalDate::parse)
-    private val endDate = savedStateHandle.get<String>("endDate")?.let(LocalDate::parse)
+    private val _uiState = MutableStateFlow<PreviewState>(
+        PreviewState.Empty(header = "", message = "Lade Vorschau...")
+    )
+    val uiState: StateFlow<PreviewState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow<ExportPreviewUiState>(ExportPreviewUiState.Loading)
-    val uiState: StateFlow<ExportPreviewUiState> = _uiState.asStateFlow()
+    private var currentRange: DateRange? = null
+    private var lastPreviewState: PreviewState? = null
 
-    init {
+    fun loadRange(startDate: LocalDate, endDate: LocalDate) {
+        currentRange = DateRange(startDate, endDate)
         refresh()
     }
 
     fun refresh() {
+        val range = currentRange
+        if (range == null) {
+            updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = false))
+            return
+        }
+        val header = buildHeader(range)
+        updateState(PreviewState.Empty(header = header, message = "Lade Vorschau..."))
         viewModelScope.launch {
-            _uiState.value = ExportPreviewUiState.Loading
             try {
-                val start = startDate
-                val end = endDate
-                if (start == null || end == null) {
-                    _uiState.value = ExportPreviewUiState.Error("Zeitraum konnte nicht geladen werden.")
-                    return@launch
-                }
-                val entries = workEntryDao.getByDateRange(start, end)
-                val settings = reminderSettingsManager.settings.first()
-                val isNameMissing = settings.pdfEmployeeName.isNullOrBlank()
-                val header = "${PdfUtilities.formatDate(start)} – ${PdfUtilities.formatDate(end)}"
+                val entries = workEntryDao.getByDateRange(range.start, range.end)
                 if (entries.isEmpty()) {
-                    _uiState.value = ExportPreviewUiState.Empty(header = header, isNameMissing = isNameMissing)
-                    return@launch
+                    updateState(PreviewState.Empty(header = header, message = "Keine Einträge im Zeitraum"))
+                } else {
+                    updateState(
+                        PreviewState.List(
+                            header = header,
+                            totals = buildTotals(entries),
+                            rows = entries.map { buildRow(it) }
+                        )
+                    )
                 }
-                _uiState.value = ExportPreviewUiState.Content(
-                    header = header,
-                    totals = buildTotals(entries),
-                    rows = entries.map { buildRow(it) },
-                    isNameMissing = isNameMissing
-                )
             } catch (e: Exception) {
-                _uiState.value = ExportPreviewUiState.Error(e.message ?: "Export fehlgeschlagen")
+                updateState(PreviewState.Error(e.message ?: "Export fehlgeschlagen", canReturn = false))
             }
         }
     }
 
     fun createPdf() {
+        val range = currentRange
+        if (range == null) {
+            updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = true))
+            return
+        }
         viewModelScope.launch {
-            val currentStart = startDate
-            val currentEnd = endDate
-            if (currentStart == null || currentEnd == null) {
-                updateExportStatus(ExportPreviewExportStatus.Error("Zeitraum konnte nicht geladen werden."))
-                return@launch
-            }
             val settings = reminderSettingsManager.settings.first()
             if (settings.pdfEmployeeName.isNullOrBlank()) {
-                updateExportStatus(ExportPreviewExportStatus.Error("Name fehlt. Bitte zuerst in den Settings eingeben."))
+                updateState(
+                    PreviewState.Error(
+                        "Name fehlt. Bitte in Einstellungen Profil ausfüllen.",
+                        canReturn = true
+                    )
+                )
                 return@launch
             }
-            updateExportStatus(ExportPreviewExportStatus.Exporting)
+            updateState(PreviewState.CreatingPdf)
             try {
-                val entries = workEntryDao.getByDateRange(currentStart, currentEnd)
+                val entries = workEntryDao.getByDateRange(range.start, range.end)
                 if (entries.isEmpty()) {
-                    updateExportStatus(ExportPreviewExportStatus.Error("Keine Einträge im Zeitraum"))
+                    updateState(PreviewState.Error("Keine Einträge im Zeitraum", canReturn = true))
                     return@launch
                 }
                 val fileUri = pdfExporter.exportToPdf(
@@ -135,41 +160,47 @@ class ExportPreviewViewModel @Inject constructor(
                     company = settings.pdfCompany,
                     project = settings.pdfProject,
                     personnelNumber = settings.pdfPersonnelNumber,
-                    startDate = currentStart,
-                    endDate = currentEnd
+                    startDate = range.start,
+                    endDate = range.end
                 )
                 if (fileUri != null) {
-                    updateExportStatus(ExportPreviewExportStatus.Success(fileUri))
+                    val fileName = fileUri.lastPathSegment ?: "montagezeit_export.pdf"
+                    updateState(PreviewState.PdfReady(fileUri = fileUri, fileName = fileName))
                 } else {
-                    updateExportStatus(ExportPreviewExportStatus.Error("Export fehlgeschlagen"))
+                    updateState(PreviewState.Error("Export fehlgeschlagen", canReturn = true))
                 }
             } catch (e: Exception) {
-                updateExportStatus(ExportPreviewExportStatus.Error(e.message ?: "Export fehlgeschlagen"))
+                updateState(PreviewState.Error(e.message ?: "Export fehlgeschlagen", canReturn = true))
             }
         }
     }
 
-    fun clearExportStatus() {
-        updateExportStatus(ExportPreviewExportStatus.Idle)
-    }
-
-    private fun updateExportStatus(status: ExportPreviewExportStatus) {
-        val state = _uiState.value
-        _uiState.value = when (state) {
-            is ExportPreviewUiState.Content -> state.copy(exportStatus = status)
-            is ExportPreviewUiState.Empty -> state.copy(exportStatus = status)
-            else -> state
+    fun returnToPreview() {
+        val cached = lastPreviewState
+        if (cached != null) {
+            _uiState.value = cached
+        } else {
+            refresh()
         }
     }
 
+    private fun updateState(state: PreviewState) {
+        _uiState.value = state
+        if (state is PreviewState.List || state is PreviewState.Empty) {
+            lastPreviewState = state
+        }
+    }
+
+    private fun buildHeader(range: DateRange): String {
+        return "${PdfUtilities.formatDate(range.start)} – ${PdfUtilities.formatDate(range.end)}"
+    }
+
     private fun buildTotals(entries: List<WorkEntry>): ExportPreviewTotals {
-        val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it) }
-        val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
-        val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it) }
+        val summary = calculatePreviewSummary(entries)
         return ExportPreviewTotals(
-            workHours = formatMinutes(workMinutes),
-            travelHours = formatMinutes(travelMinutes),
-            paidHours = formatMinutes(paidMinutes)
+            workHours = formatMinutes(summary.workMinutes),
+            travelHours = formatMinutes(summary.travelMinutes),
+            paidHours = formatMinutes(summary.paidMinutes)
         )
     }
 
@@ -206,4 +237,6 @@ class ExportPreviewViewModel @Inject constructor(
             combined
         }
     }
+
+    private data class DateRange(val start: LocalDate, val end: LocalDate)
 }

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -15,6 +16,7 @@ import de.montagezeit.app.MainActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class ExportPreviewFlowTest {
@@ -25,6 +27,7 @@ class ExportPreviewFlowTest {
     @Test
     fun exportPreviewFlowDoesNotCrash() {
         val editTodayDescription = composeTestRule.activity.getString(R.string.cd_edit_today)
+        val today = LocalDate.now().toString()
 
         composeTestRule.onNodeWithText("Verlauf").performClick()
         composeTestRule.onNodeWithContentDescription(editTodayDescription).performClick()
@@ -45,11 +48,23 @@ class ExportPreviewFlowTest {
 
         composeTestRule.onNodeWithText("Benutzerdef.").performClick()
         waitUntilAtLeastOneExists(hasText("Benutzerdefinierter Zeitraum"))
-        composeTestRule.onNodeWithText("Exportieren").performClick()
+        composeTestRule.onNodeWithText("Vorschau").performClick()
 
-        waitUntilAtLeastOneExists(hasText("Export erfolgreich!"))
-        composeTestRule.onNodeWithText("Export erfolgreich!").assertExists()
-        composeTestRule.onNodeWithText("Schließen").performClick()
+        waitUntilAtLeastOneExists(hasText("PDF erstellen"))
+        composeTestRule.onNodeWithContentDescription("ExportPreviewRow-$today").performClick()
+
+        waitUntilAtLeastOneExists(hasText("Speichern"))
+        composeTestRule.onNodeWithText("Speichern").performClick()
+
+        waitUntilAtLeastOneExists(hasText("Gespeichert!"))
+        composeTestRule.onAllNodesWithText("Schließen").onLast().performClick()
+
+        waitUntilAtLeastOneExists(hasText("PDF erstellen"))
+        composeTestRule.onNodeWithText("PDF erstellen").performClick()
+
+        waitUntilAtLeastOneExists(hasText("PDF erstellt"))
+        composeTestRule.onNodeWithText("PDF erstellt").assertExists()
+        composeTestRule.onNodeWithText("Zurück zur Vorschau").performClick()
     }
 
     private fun waitUntilAtLeastOneExists(

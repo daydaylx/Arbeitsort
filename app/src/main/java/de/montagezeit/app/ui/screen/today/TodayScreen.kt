@@ -45,7 +45,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
-    onOpenEditSheet: (java.time.LocalDate) -> Unit
+    onOpenEditSheet: (java.time.LocalDate) -> Unit,
+    onOpenWeekView: () -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -89,6 +90,11 @@ fun TodayScreen(
     }
 
     val openEditToday = { onOpenEditSheet(java.time.LocalDate.now()) }
+    val openEditTodayEnsured = {
+        viewModel.ensureTodayEntryThen {
+            onOpenEditSheet(java.time.LocalDate.now())
+        }
+    }
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
     val needsReview = currentEntry?.needsReview == true
     var isReviewBannerVisible by rememberSaveable { mutableStateOf(true) }
@@ -185,6 +191,8 @@ fun TodayScreen(
                             onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
                             showReviewBanner = needsReview && isReviewBannerVisible,
                             onDismissReviewBanner = { isReviewBannerVisible = false },
+                            onEditToday = openEditTodayEnsured,
+                            onOpenWeekView = onOpenWeekView,
                             showLocationLoading = isLoadingLocation,
                             onSkipLocation = { viewModel.onSkipLocation() },
                             isMorningLoading = isMorningLoading,
@@ -322,6 +330,8 @@ fun TodayContent(
     onOpenReviewSheet: () -> Unit = {},
     showReviewBanner: Boolean = false,
     onDismissReviewBanner: () -> Unit = {},
+    onEditToday: () -> Unit = {},
+    onOpenWeekView: () -> Unit = {},
     showLocationLoading: Boolean = false,
     onSkipLocation: () -> Unit = {},
     isMorningLoading: Boolean = false,
@@ -351,7 +361,7 @@ fun TodayContent(
         }
 
         // Status Card
-        StatusCard(entry = entry, onOpenReviewSheet = onOpenReviewSheet)
+        StatusCard(entry = entry, onEditToday = onEditToday)
         
         // Work Hours Card
         if (entry != null && entry.dayType == DayType.WORK) {
@@ -362,7 +372,8 @@ fun TodayContent(
         if (weekStats != null || monthStats != null) {
             StatisticsDashboard(
                 weekStats = weekStats,
-                monthStats = monthStats
+                monthStats = monthStats,
+                onOpenWeekView = onOpenWeekView
             )
         }
 
@@ -464,7 +475,8 @@ fun WorkHoursCard(entry: WorkEntry) {
 @Composable
 fun StatisticsDashboard(
     weekStats: WeekStats?,
-    monthStats: MonthStats?
+    monthStats: MonthStats?,
+    onOpenWeekView: () -> Unit
 ) {
     // Woche priorisieren, Monat nur anzeigen wenn Woche fehlt
     val stats = weekStats ?: monthStats
@@ -517,7 +529,9 @@ fun StatisticsDashboard(
     }
     
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenWeekView),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.tertiaryContainer
         )
@@ -525,8 +539,7 @@ fun StatisticsDashboard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
-                .clickable { /* TODO: Open details bottom sheet */ },
+                .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -580,9 +593,11 @@ fun StatisticsDashboard(
 }
 
 @Composable
-fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
+fun StatusCard(entry: WorkEntry?, onEditToday: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onEditToday),
         colors = CardDefaults.cardColors(
             containerColor = when {
                 entry?.needsReview == true -> MaterialTheme.colorScheme.errorContainer
@@ -633,11 +648,6 @@ fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
                         needsReview -> MaterialTheme.colorScheme.onErrorContainer
                         isConfirmed -> MaterialTheme.colorScheme.onSecondaryContainer
                         else -> MaterialTheme.colorScheme.onErrorContainer
-                    },
-                    onClick = if (needsReview) {
-                        onOpenReviewSheet
-                    } else {
-                        null
                     }
                 )
             }
@@ -659,8 +669,7 @@ fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
                     StatusHintRow(
                         text = getReviewReason(entry),
                         icon = Icons.Default.Warning,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        onClick = onOpenReviewSheet
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
@@ -673,18 +682,10 @@ private fun StatusBadge(
     text: String,
     icon: ImageVector,
     containerColor: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color,
-    onClick: (() -> Unit)? = null
+    contentColor: androidx.compose.ui.graphics.Color
 ) {
-    val modifier = if (onClick != null) {
-        Modifier.clickable(onClick = onClick)
-    } else {
-        Modifier
-    }
-    
     Surface(
-        onClick = onClick ?: {},
-        modifier = modifier,
+        modifier = Modifier,
         color = containerColor,
         contentColor = contentColor,
         shape = RoundedCornerShape(999.dp)
@@ -711,19 +712,12 @@ private fun StatusBadge(
 private fun StatusHintRow(
     text: String,
     icon: ImageVector,
-    contentColor: androidx.compose.ui.graphics.Color,
-    onClick: (() -> Unit)? = null
+    contentColor: androidx.compose.ui.graphics.Color
 ) {
-    val modifier = if (onClick != null) {
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    } else {
-        Modifier.fillMaxWidth()
-    }
-    
     Row(
-        modifier = modifier.padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -738,15 +732,6 @@ private fun StatusHintRow(
             style = MaterialTheme.typography.bodyMedium,
             color = contentColor
         )
-        if (onClick != null) {
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = stringResource(R.string.cd_action_chevron),
-                tint = contentColor,
-                modifier = Modifier.size(20.dp)
-            )
-        }
     }
 }
 
