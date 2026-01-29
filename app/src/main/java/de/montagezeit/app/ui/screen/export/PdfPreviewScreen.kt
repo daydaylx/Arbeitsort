@@ -75,7 +75,7 @@ fun PdfPreviewScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Visibility,
-                    contentDescription = null,
+                    contentDescription = "PDF öffnen",
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text("PDF öffnen")
