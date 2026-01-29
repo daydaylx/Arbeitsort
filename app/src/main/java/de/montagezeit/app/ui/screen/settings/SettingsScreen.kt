@@ -42,7 +42,8 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onOpenExportPreview: (LocalDate, LocalDate) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.reminderSettings.collectAsState(initial = null)
@@ -115,6 +116,7 @@ fun SettingsScreen(
                 onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
                 onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
                 onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
+                onOpenExportPreview = onOpenExportPreview,
                 onUpdatePdfSettings = { name, company, project, personnel -> 
                     viewModel.updatePdfSettings(name, company, project, personnel) 
                 },
@@ -163,6 +165,7 @@ fun SettingsContent(
     onExportPdfCurrentMonth: () -> Unit,
     onExportPdfLast30Days: () -> Unit,
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
@@ -257,6 +260,7 @@ fun SettingsContent(
                 onExportPdfCurrentMonth = onExportPdfCurrentMonth,
                 onExportPdfLast30Days = onExportPdfLast30Days,
                 onExportPdfCustomRange = onExportPdfCustomRange,
+                onOpenExportPreview = onOpenExportPreview,
                 pdfEmployeeName = settings.pdfEmployeeName,
                 pdfCompany = settings.pdfCompany,
                 pdfProject = settings.pdfProject,
@@ -850,6 +854,7 @@ fun ExportSection(
     onExportPdfCurrentMonth: () -> Unit,
     onExportPdfLast30Days: () -> Unit,
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     pdfEmployeeName: String?,
     pdfCompany: String?,
     pdfProject: String?,
@@ -1052,6 +1057,10 @@ fun ExportSection(
                 onExportPdfCustomRange(start, end)
                 showPdfCustomRangeDialog = false
             },
+            onPreviewRangeSelected = { start, end ->
+                onOpenExportPreview(start, end)
+                showPdfCustomRangeDialog = false
+            },
             onDismiss = { showPdfCustomRangeDialog = false }
         )
     }
@@ -1243,6 +1252,7 @@ fun PdfSettingsDialog(
 @Composable
 fun PdfCustomRangeDialog(
     onDateRangeSelected: (LocalDate, LocalDate) -> Unit,
+    onPreviewRangeSelected: (LocalDate, LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
     var startDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
@@ -1281,13 +1291,19 @@ fun PdfCustomRangeDialog(
             }
         },
         confirmButton = {
-            PrimaryActionButton(
-                onClick = {
-                    onDateRangeSelected(startDate, endDate)
-                },
-                enabled = !startDate.isAfter(endDate)
-            ) {
-                Text("Exportieren")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SecondaryActionButton(
+                    onClick = { onPreviewRangeSelected(startDate, endDate) },
+                    enabled = !startDate.isAfter(endDate)
+                ) {
+                    Text("Vorschau")
+                }
+                PrimaryActionButton(
+                    onClick = { onDateRangeSelected(startDate, endDate) },
+                    enabled = !startDate.isAfter(endDate)
+                ) {
+                    Text("Exportieren")
+                }
             }
         },
         dismissButton = {
