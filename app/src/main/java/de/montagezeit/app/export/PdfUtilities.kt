@@ -5,6 +5,8 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -43,6 +45,20 @@ object PdfUtilities {
         }
         val hours = minutes / 60.0
         return hoursFormatter.format(hours)
+    }
+
+    /**
+     * Formatiert Reisezeit von–bis (HH:mm–HH:mm)
+     * Wenn Start/Ende fehlen: leerer String
+     */
+    fun formatTravelWindow(startAt: Long?, arriveAt: Long?): String {
+        if (startAt == null || arriveAt == null) {
+            return ""
+        }
+        val zoneId = ZoneId.systemDefault()
+        val startTime = Instant.ofEpochMilli(startAt).atZone(zoneId).toLocalTime()
+        val arriveTime = Instant.ofEpochMilli(arriveAt).atZone(zoneId).toLocalTime()
+        return "${formatTime(startTime)}–${formatTime(arriveTime)}"
     }
     
     /**
@@ -85,7 +101,7 @@ object PdfUtilities {
      * Berechnet die Summe der Reisezeit in Minuten für eine Liste von WorkEntries
      */
     fun sumTravelMinutes(entries: List<WorkEntry>): Int {
-        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
+        return entries.sumOf { it.travelPaidMinutes ?: 0 }
     }
     
     /**
