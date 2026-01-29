@@ -112,7 +112,7 @@ class ConfirmWorkDay(
                     null -> null // Unklar (Grenzzone)
                 }
                 
-                val needsReview = existingEntry?.needsReview ?: false || 
+                val needsReview = (existingEntry?.needsReview ?: false) ||
                                    locationCheck.confirmRequired
                 
                 val locationLabel = if (locationCheck.isInside == true) {

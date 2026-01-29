@@ -91,7 +91,7 @@ class RecordEveningCheckIn(
                     null -> null // Unklar (Grenzzone)
                 }
                 
-                val needsReview = normalizedEntry?.needsReview ?: false || 
+                val needsReview = (normalizedEntry?.needsReview ?: false) ||
                                    locationCheck.confirmRequired
                 
                 val locationLabel = if (locationCheck.isInside == true) {
