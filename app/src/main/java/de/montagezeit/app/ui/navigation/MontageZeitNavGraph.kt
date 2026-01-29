@@ -9,15 +9,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import de.montagezeit.app.ui.screen.export.PdfPreviewScreen
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
+import android.net.Uri
 import java.time.LocalDate
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -25,6 +29,8 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object History : Screen("history", "Verlauf", Icons.Default.History)
     object Settings : Screen("settings", "Einstellungen", Icons.Default.Settings)
 }
+
+private const val PdfPreviewRoute = "pdfPreview"
 
 @Composable
 fun MontageZeitNavGraph(
@@ -94,7 +100,24 @@ fun MontageZeitNavGraph(
             }
             
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onShowPdfPreview = { fileUri ->
+                        val encodedUri = Uri.encode(fileUri.toString())
+                        navController.navigate("$PdfPreviewRoute?fileUri=$encodedUri")
+                    }
+                )
+            }
+
+            composable(
+                route = "$PdfPreviewRoute?fileUri={fileUri}",
+                arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val uriArgument = backStackEntry.arguments?.getString("fileUri").orEmpty()
+                val fileUri = Uri.parse(uriArgument)
+                PdfPreviewScreen(
+                    fileUri = fileUri,
+                    onBackToPreview = { navController.popBackStack() }
+                )
             }
         }
     }
