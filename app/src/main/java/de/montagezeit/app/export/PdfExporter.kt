@@ -345,7 +345,7 @@ class PdfExporter @Inject constructor(
             
             // Arbeitszeit
             val workHours = TimeCalculator.calculateWorkHours(entry)
-            val travelMinutes = entry.travelPaidMinutes ?: 0
+            val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
             val travelHours = travelMinutes / 60.0
             val totalHours = workHours + travelHours
             val workText = "${PdfUtilities.formatWorkHours(workHours)} h"

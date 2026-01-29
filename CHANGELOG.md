@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
   - Improved error handling during file writing.
 
 ### Fixed
+- **PDF Export**:
+  - Fixed "Travel Time" appearing as empty when paid minutes are missing; now falls back to calculation.
 - **Logic**: Clarified boolean precedence in `ConfirmWorkDay`, `RecordEveningCheckIn`, and `RecordMorningCheckIn` to correctly determine `needsReview` status.
 - **CSV Export**: Sanitized note fields by removing newlines and returns to prevent CSV format corruption.
 
