@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -626,30 +627,43 @@ fun StatusCard(entry: WorkEntry?, onEditToday: () -> Unit) {
                     }
                 }
 
-                val isConfirmed = entry?.confirmedWorkDay == true
-                val needsReview = entry?.needsReview == true
-                StatusBadge(
-                    text = when {
-                        needsReview -> getReviewReason(entry)
-                        isConfirmed -> stringResource(R.string.today_confirmed)
-                        else -> stringResource(R.string.today_unconfirmed)
-                    },
-                    icon = when {
-                        needsReview -> Icons.Default.Warning
-                        isConfirmed -> Icons.Default.CheckCircle
-                        else -> Icons.Default.Warning
-                    },
-                    containerColor = when {
-                        needsReview -> MaterialTheme.colorScheme.errorContainer
-                        isConfirmed -> MaterialTheme.colorScheme.secondaryContainer
-                        else -> MaterialTheme.colorScheme.errorContainer
-                    },
-                    contentColor = when {
-                        needsReview -> MaterialTheme.colorScheme.onErrorContainer
-                        isConfirmed -> MaterialTheme.colorScheme.onSecondaryContainer
-                        else -> MaterialTheme.colorScheme.onErrorContainer
-                    }
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isConfirmed = entry?.confirmedWorkDay == true
+                    val needsReview = entry?.needsReview == true
+                    StatusBadge(
+                        text = when {
+                            needsReview -> getReviewReason(entry)
+                            isConfirmed -> stringResource(R.string.today_confirmed)
+                            else -> stringResource(R.string.today_unconfirmed)
+                        },
+                        icon = when {
+                            needsReview -> Icons.Default.Warning
+                            isConfirmed -> Icons.Default.CheckCircle
+                            else -> Icons.Default.Warning
+                        },
+                        containerColor = when {
+                            needsReview -> MaterialTheme.colorScheme.errorContainer
+                            isConfirmed -> MaterialTheme.colorScheme.secondaryContainer
+                            else -> MaterialTheme.colorScheme.errorContainer
+                        },
+                        contentColor = when {
+                            needsReview -> MaterialTheme.colorScheme.onErrorContainer
+                            isConfirmed -> MaterialTheme.colorScheme.onSecondaryContainer
+                            else -> MaterialTheme.colorScheme.onErrorContainer
+                        }
+                    )
+
+                    // Visueller Hinweis für Klickbarkeit
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Bearbeiten",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             if (entry == null) {
