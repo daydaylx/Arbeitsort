@@ -30,6 +30,7 @@ val Neutral90 = Color(0xFFE1E3E2)
 val Neutral99 = Color(0xFFF7FAF9)
 
 val NeutralVariant30 = Color(0xFF3F4947)
+val NeutralVariant40 = Color(0xFF586460)
 val NeutralVariant60 = Color(0xFF899391)
 val NeutralVariant80 = Color(0xFFBFC8C6)
 val NeutralVariant90 = Color(0xFFDBE4E1)

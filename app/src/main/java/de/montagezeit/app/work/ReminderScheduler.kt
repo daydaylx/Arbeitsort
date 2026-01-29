@@ -16,14 +16,11 @@ import de.montagezeit.app.data.preferences.ReminderSettings
 /**
  * Scheduler für Reminder-Worker
  *
- * Nutzt OneTimeWorkRequest für Window-Based Workers (morning, evening):
- * - Morning Worker: Startet am Anfang des Morning Windows (z.B. 06:00)
- * - Evening Worker: Startet am Anfang des Evening Windows (z.B. 18:00)
+ * Nutzt PeriodicWorkRequest für Window-Based Workers (morning, evening):
+ * - Morning Worker: Startet am Anfang des Morning Windows (z.B. 06:00), dann alle 15 Min
+ * - Evening Worker: Startet am Anfang des Evening Windows (z.B. 18:00), dann alle 15 Min
  * - Fallback Worker: Startet zur Fallback-Zeit (z.B. 22:30), periodic
  * - Daily Worker: Startet zur konfigurierten Zeit, periodic
- *
- * Workers reschedule sich selbst alle 60 Sekunden während sie im Window sind.
- * Keine Battery/Storage Constraints - Reminders sind kritisch für den User.
  */
 @Singleton
 class ReminderScheduler @Inject constructor(
@@ -38,6 +35,8 @@ class ReminderScheduler @Inject constructor(
         private const val EVENING_WORK_NAME = "evening_reminder_work"
         private const val FALLBACK_WORK_NAME = "fallback_reminder_work"
         private const val DAILY_WORK_NAME = "daily_reminder_work"
+        private const val WINDOW_REPEAT_MINUTES = 15L
+        private const val WINDOW_FLEX_MINUTES = 5L
     }
 
     /**
@@ -66,7 +65,7 @@ class ReminderScheduler @Inject constructor(
      *
      * Strategie:
      * - Startet am Anfang des Morning Windows (z.B. 06:00)
-     * - OneTimeWork (keine Wiederholung, Worker reschedult sich selbst)
+     * - Periodic (alle 15 Minuten innerhalb des Systemschedules)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
     private suspend fun scheduleMorningWorker(settings: ReminderSettings) {
@@ -86,16 +85,21 @@ class ReminderScheduler @Inject constructor(
             .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
             .build()
 
-        val workRequest = OneTimeWorkRequestBuilder<WindowCheckWorker>()
+        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
+            repeatInterval = WINDOW_REPEAT_MINUTES,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES,
+            flexTimeInterval = WINDOW_FLEX_MINUTES,
+            flexTimeIntervalUnit = TimeUnit.MINUTES
+        )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
             .addTag("morning_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.MORNING.name))
             .build()
 
-        workManager.enqueueUniqueWork(
+        workManager.enqueueUniquePeriodicWork(
             MORNING_WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
     }
@@ -105,7 +109,7 @@ class ReminderScheduler @Inject constructor(
      *
      * Strategie:
      * - Startet am Anfang des Evening Windows (z.B. 18:00)
-     * - OneTimeWork (keine Wiederholung, Worker reschedult sich selbst)
+     * - Periodic (alle 15 Minuten innerhalb des Systemschedules)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
     private suspend fun scheduleEveningWorker(settings: ReminderSettings) {
@@ -125,16 +129,21 @@ class ReminderScheduler @Inject constructor(
             .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
             .build()
 
-        val workRequest = OneTimeWorkRequestBuilder<WindowCheckWorker>()
+        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
+            repeatInterval = WINDOW_REPEAT_MINUTES,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES,
+            flexTimeInterval = WINDOW_FLEX_MINUTES,
+            flexTimeIntervalUnit = TimeUnit.MINUTES
+        )
             .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
             .setConstraints(constraints)
             .addTag("evening_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.EVENING.name))
             .build()
 
-        workManager.enqueueUniqueWork(
+        workManager.enqueueUniquePeriodicWork(
             EVENING_WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
     }
@@ -214,40 +223,6 @@ class ReminderScheduler @Inject constructor(
         workManager.enqueueUniquePeriodicWork(
             DAILY_WORK_NAME,
             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
-            workRequest
-        )
-    }
-
-    /**
-     * Schedult den nächsten WindowCheck-Worker für das spezifizierte Window
-     *
-     * Wird von WindowCheckWorker aufgerufen, um sich selbst zu reschedlen.
-     *
-     * @param reminderType Das Window für das reschedult werden soll
-     * @param delayMinutes Verzögerung in Minuten (normalerweise 1 für 60 Sekunden)
-     */
-    fun scheduleNextWindowCheck(reminderType: ReminderType, delayMinutes: Long = 1) {
-        val workName = when (reminderType) {
-            ReminderType.MORNING -> MORNING_WORK_NAME
-            ReminderType.EVENING -> EVENING_WORK_NAME
-            ReminderType.FALLBACK -> return // Fallback ist periodic, kein reschedule nötig
-            ReminderType.DAILY -> return // Daily ist periodic, kein reschedule nötig
-        }
-
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val workRequest = OneTimeWorkRequestBuilder<WindowCheckWorker>()
-            .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .addTag(reminderType.name.lowercase() + "_reminder")
-            .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to reminderType.name))
-            .build()
-
-        workManager.enqueueUniqueWork(
-            workName,
-            ExistingWorkPolicy.REPLACE,
             workRequest
         )
     }

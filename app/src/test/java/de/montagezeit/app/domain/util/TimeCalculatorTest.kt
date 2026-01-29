@@ -90,4 +90,45 @@ class TimeCalculatorTest {
         assertEquals(120, TimeCalculator.calculateTravelMinutes(entry))
         assertEquals(120, TimeCalculator.calculatePaidTotalMinutes(entry))
     }
+
+    @Test
+    fun `calculate - Paid Total uses Travel Time`() {
+        // Requirement: Paid Total = Work + Travel
+        val entry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0), // 9h = 540 min
+            breakMinutes = 40, // Work = 500 min
+            travelPaidMinutes = 45 // Travel = 45 min
+        )
+
+        val work = TimeCalculator.calculateWorkMinutes(entry)
+        val travel = TimeCalculator.calculateTravelMinutes(entry)
+        val total = TimeCalculator.calculatePaidTotalMinutes(entry)
+
+        assertEquals(500, work)
+        assertEquals(45, travel)
+        assertEquals(545, total) // 500 + 45
+    }
+
+    @Test
+    fun `calculate - Travel from Timestamps`() {
+        val start = date.atTime(7, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val end = date.atTime(9, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        
+        val entry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(9, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            travelPaidMinutes = null,
+            travelStartAt = start,
+            travelArriveAt = end
+        )
+
+        assertEquals(120, TimeCalculator.calculateTravelMinutes(entry))
+        assertEquals(420 + 120, TimeCalculator.calculatePaidTotalMinutes(entry))
+    }
 }

@@ -29,14 +29,26 @@ object TimeCalculator {
     /**
      * Gibt die bezahlten Reiseminuten zurück.
      * Nutzt travelPaidMinutes falls vorhanden.
+     * Andernfalls wird die Differenz zwischen travelStartAt und travelArriveAt berechnet.
      */
     fun calculateTravelMinutes(entry: WorkEntry): Int {
-        return entry.travelPaidMinutes ?: 0
+        if (entry.travelPaidMinutes != null) {
+            return entry.travelPaidMinutes
+        }
+        if (entry.travelStartAt != null && entry.travelArriveAt != null) {
+            val diff = entry.travelArriveAt - entry.travelStartAt
+            // Negative Differenz (z.B. über Mitternacht) müsste speziell behandelt werden,
+            // aber hier nehmen wir erstmal die einfache Differenz an, da WorkEntry tagesbasiert ist.
+            // Falls Ankunft < Start, geben wir 0 zurück.
+            return if (diff > 0) (diff / 60000).toInt() else 0
+        }
+        return 0
     }
 
     /**
      * Berechnet die gesamte bezahlte Zeit in Minuten.
      * Arbeitszeit + Reisezeit.
+     * Hinweis: An OFF-Tagen ist die Arbeitszeit 0, daher ist die Gesamtzeit = Reisezeit.
      */
     fun calculatePaidTotalMinutes(entry: WorkEntry): Int {
         return calculateWorkMinutes(entry) + calculateTravelMinutes(entry)

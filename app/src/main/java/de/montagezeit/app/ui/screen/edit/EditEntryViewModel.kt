@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
@@ -35,11 +36,8 @@ class EditEntryViewModel @Inject constructor(
     private var currentDate: LocalDate =
         savedStateHandle.get<String>("date")?.let { LocalDate.parse(it) } ?: LocalDate.now()
     
-    private val _uiState = MutableStateFlow<EditUiState>(EditUiState.Loading)
-    val uiState: StateFlow<EditUiState> = _uiState.asStateFlow()
-    
-    private val _formData = MutableStateFlow(EditFormData())
-    val formData: StateFlow<EditFormData> = _formData.asStateFlow()
+    private val _screenState = MutableStateFlow(EditScreenState())
+    val screenState: StateFlow<EditScreenState> = _screenState.asStateFlow()
     
     init {
         loadEntry(currentDate)
@@ -58,27 +56,37 @@ class EditEntryViewModel @Inject constructor(
      * Setzt FormData direkt (z.B. beim Kopieren eines Eintrags)
      */
     fun setFormData(data: EditFormData) {
-        _formData.value = data
+        _screenState.update { it.copy(formData = data) }
         // Prüfe ob Eintrag existiert, wenn nicht, setze NewEntry State
         viewModelScope.launch {
             val entry = workEntryDao.getByDate(currentDate)
-            if (entry == null) {
-                _uiState.value = EditUiState.NewEntry(currentDate)
-            } else {
-                _uiState.value = EditUiState.Success(entry)
+            _screenState.update { state ->
+                state.copy(
+                    uiState = if (entry == null) {
+                        EditUiState.NewEntry(currentDate)
+                    } else {
+                        EditUiState.Success(entry)
+                    }
+                )
             }
         }
     }
 
     private fun loadEntry(date: LocalDate) {
         viewModelScope.launch {
-            _uiState.value = EditUiState.Loading
+            _screenState.update { it.copy(uiState = EditUiState.Loading, isSaving = false) }
             
             try {
                 val entry = workEntryDao.getByDate(date)
                 if (entry != null) {
-                    _formData.value = EditFormData.fromEntry(entry)
-                    _uiState.value = EditUiState.Success(entry)
+                    val formData = EditFormData.fromEntry(entry)
+                    _screenState.update {
+                        it.copy(
+                            formData = formData,
+                            uiState = EditUiState.Success(entry),
+                            isSaving = false
+                        )
+                    }
                 } else {
                     val settings = reminderSettingsManager.settings.first()
                     val defaultDayType = defaultDayTypeForDate(date, settings)
@@ -90,98 +98,92 @@ class EditEntryViewModel @Inject constructor(
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes
                     )
-                    _formData.value = EditFormData.fromEntry(defaultEntry)
-                    _uiState.value = EditUiState.NewEntry(date)
+                    val formData = EditFormData.fromEntry(defaultEntry)
+                    _screenState.update {
+                        it.copy(
+                            formData = formData,
+                            uiState = EditUiState.NewEntry(date),
+                            isSaving = false
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = EditUiState.Error(e.message ?: "Unbekannter Fehler")
+                _screenState.update {
+                    it.copy(uiState = EditUiState.Error(e.message ?: "Unbekannter Fehler"), isSaving = false)
+                }
             }
         }
     }
     
     fun updateDayType(dayType: DayType) {
-        _formData.value = _formData.value.copy(dayType = dayType)
+        updateFormData { it.copy(dayType = dayType) }
     }
     
     fun updateWorkStart(hour: Int, minute: Int) {
-        _formData.value = _formData.value.copy(
-            workStart = LocalTime.of(hour, minute)
-        )
+        updateFormData { it.copy(workStart = LocalTime.of(hour, minute)) }
     }
     
     fun updateWorkEnd(hour: Int, minute: Int) {
-        _formData.value = _formData.value.copy(
-            workEnd = LocalTime.of(hour, minute)
-        )
+        updateFormData { it.copy(workEnd = LocalTime.of(hour, minute)) }
     }
     
     fun updateBreakMinutes(minutes: Int) {
-        _formData.value = _formData.value.copy(
-            breakMinutes = minutes
-        )
+        updateFormData { it.copy(breakMinutes = minutes) }
     }
     
     fun updateMorningLocationLabel(label: String) {
-        _formData.value = _formData.value.copy(
-            morningLocationLabel = label.takeIf { it.isNotBlank() }
-        )
+        updateFormData { it.copy(morningLocationLabel = label.takeIf { it.isNotBlank() }) }
     }
     
     fun updateEveningLocationLabel(label: String) {
-        _formData.value = _formData.value.copy(
-            eveningLocationLabel = label.takeIf { it.isNotBlank() }
-        )
+        updateFormData { it.copy(eveningLocationLabel = label.takeIf { it.isNotBlank() }) }
     }
     
     fun updateNote(note: String) {
-        _formData.value = _formData.value.copy(
-            note = note.takeIf { it.isNotBlank() }
-        )
+        updateFormData { it.copy(note = note.takeIf { it.isNotBlank() }) }
     }
 
     fun updateTravelStart(time: LocalTime?) {
-        _formData.value = _formData.value.copy(travelStartTime = time)
+        updateFormData { it.copy(travelStartTime = time) }
     }
 
     fun updateTravelArrive(time: LocalTime?) {
-        _formData.value = _formData.value.copy(travelArriveTime = time)
+        updateFormData { it.copy(travelArriveTime = time) }
     }
 
     fun updateTravelLabelStart(label: String) {
-        _formData.value = _formData.value.copy(
-            travelLabelStart = label.takeIf { it.isNotBlank() }
-        )
+        updateFormData { it.copy(travelLabelStart = label.takeIf { it.isNotBlank() }) }
     }
 
     fun updateTravelLabelEnd(label: String) {
-        _formData.value = _formData.value.copy(
-            travelLabelEnd = label.takeIf { it.isNotBlank() }
-        )
+        updateFormData { it.copy(travelLabelEnd = label.takeIf { it.isNotBlank() }) }
     }
 
     fun clearTravel() {
-        _formData.value = _formData.value.copy(
-            travelStartTime = null,
-            travelArriveTime = null,
-            travelLabelStart = null,
-            travelLabelEnd = null
-        )
+        updateFormData {
+            it.copy(
+                travelStartTime = null,
+                travelArriveTime = null,
+                travelLabelStart = null,
+                travelLabelEnd = null
+            )
+        }
     }
     
     fun resetNeedsReview() {
-        _formData.value = _formData.value.copy(
-            needsReview = false
-        )
+        updateFormData { it.copy(needsReview = false) }
     }
 
     fun applyDefaultWorkTimes() {
         viewModelScope.launch {
             val settings = reminderSettingsManager.settings.first()
-            _formData.value = _formData.value.copy(
-                workStart = settings.workStart,
-                workEnd = settings.workEnd,
-                breakMinutes = settings.breakMinutes
-            )
+            updateFormData {
+                it.copy(
+                    workStart = settings.workStart,
+                    workEnd = settings.workEnd,
+                    breakMinutes = settings.breakMinutes
+                )
+            }
         }
     }
 
@@ -196,7 +198,7 @@ class EditEntryViewModel @Inject constructor(
                         eveningLocationLabel = null,
                         needsReview = false
                     )
-                    _formData.value = copied
+                    _screenState.update { it.copy(formData = copied) }
                     onResult(true)
                 } else {
                     onResult(false)
@@ -207,18 +209,22 @@ class EditEntryViewModel @Inject constructor(
     
     fun save(confirmBorderzone: Boolean = false) {
         viewModelScope.launch {
-            val data = _formData.value
-            val currentState = _uiState.value
+            val stateSnapshot = _screenState.value
+            if (stateSnapshot.isSaving) {
+                return@launch
+            }
+            val data = stateSnapshot.formData
+            val currentState = stateSnapshot.uiState
 
             // Validate form data before saving
             val validationErrors = data.validate()
             if (validationErrors.isNotEmpty()) {
                 when (currentState) {
                     is EditUiState.Success -> {
-                        _uiState.value = currentState.copy(validationErrors = validationErrors)
+                        _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
                     }
                     is EditUiState.NewEntry -> {
-                        _uiState.value = currentState.copy(validationErrors = validationErrors)
+                        _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
                     }
                     else -> return@launch
                 }
@@ -234,7 +240,7 @@ class EditEntryViewModel @Inject constructor(
                                      originalEntry.eveningLocationLabel == null)
 
                     if (isBorderzone && !confirmBorderzone) {
-                        _uiState.value = currentState.copy(showConfirmDialog = true)
+                        _screenState.update { it.copy(uiState = currentState.copy(showConfirmDialog = true)) }
                         return@launch
                     }
 
@@ -278,25 +284,31 @@ class EditEntryViewModel @Inject constructor(
             }
 
             try {
+                _screenState.update { it.copy(isSaving = true) }
                 workEntryDao.upsert(entryToSave)
-                _uiState.value = EditUiState.Saved
+                _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
             } catch (e: Exception) {
-                _uiState.value = EditUiState.Error(e.message ?: "Speichern fehlgeschlagen")
+                _screenState.update {
+                    it.copy(
+                        isSaving = false,
+                        uiState = EditUiState.Error(e.message ?: "Speichern fehlgeschlagen")
+                    )
+                }
             }
         }
     }
 
     fun clearValidationErrors() {
-        val currentState = _uiState.value
+        val currentState = _screenState.value.uiState
         when (currentState) {
             is EditUiState.Success -> {
                 if (currentState.validationErrors.isNotEmpty()) {
-                    _uiState.value = currentState.copy(validationErrors = emptyList())
+                    _screenState.update { it.copy(uiState = currentState.copy(validationErrors = emptyList())) }
                 }
             }
             is EditUiState.NewEntry -> {
                 if (currentState.validationErrors.isNotEmpty()) {
-                    _uiState.value = currentState.copy(validationErrors = emptyList())
+                    _screenState.update { it.copy(uiState = currentState.copy(validationErrors = emptyList())) }
                 }
             }
             else -> {}
@@ -308,9 +320,9 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun dismissConfirmDialog() {
-        val currentState = _uiState.value
+        val currentState = _screenState.value.uiState
         if (currentState is EditUiState.Success) {
-            _uiState.value = currentState.copy(showConfirmDialog = false)
+            _screenState.update { it.copy(uiState = currentState.copy(showConfirmDialog = false)) }
         }
     }
     
@@ -319,7 +331,7 @@ class EditEntryViewModel @Inject constructor(
      * Gibt die kopierten FormData zurück, damit sie für ein neues Datum verwendet werden können
      */
     fun copyEntryData(): EditFormData {
-        return _formData.value.copy()
+        return _screenState.value.formData.copy()
     }
 
     private fun toEpochMillis(date: LocalDate, time: LocalTime): Long {
@@ -341,7 +353,19 @@ class EditEntryViewModel @Inject constructor(
             DayType.WORK
         }
     }
+
+    private inline fun updateFormData(update: (EditFormData) -> EditFormData) {
+        _screenState.update { state ->
+            state.copy(formData = update(state.formData))
+        }
+    }
 }
+
+data class EditScreenState(
+    val uiState: EditUiState = EditUiState.Loading,
+    val formData: EditFormData = EditFormData(),
+    val isSaving: Boolean = false
+)
 
 data class EditFormData(
     val dayType: DayType = DayType.WORK,

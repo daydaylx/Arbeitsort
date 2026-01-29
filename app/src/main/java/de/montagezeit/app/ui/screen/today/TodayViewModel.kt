@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -60,6 +61,14 @@ data class MonthStats(
     
     val isUnderTarget: Boolean
         get() = totalHours < targetHours * 0.9 // 10% Toleranz
+}
+
+enum class TodayAction {
+    MORNING_CHECK_IN,
+    EVENING_CHECK_IN,
+    CONFIRM_WORKDAY,
+    CONFIRM_OFFDAY,
+    RESOLVE_REVIEW
 }
 
 @HiltViewModel
@@ -103,6 +112,9 @@ class TodayViewModel @Inject constructor(
     
     private val _reviewScope = MutableStateFlow<ReviewScope?>(null)
     val reviewScope: StateFlow<ReviewScope?> = _reviewScope.asStateFlow()
+
+    private val _loadingActions = MutableStateFlow<Set<TodayAction>>(emptySet())
+    val loadingActions: StateFlow<Set<TodayAction>> = _loadingActions.asStateFlow()
     
     init {
         loadTodayEntry()
@@ -199,6 +211,7 @@ class TodayViewModel @Inject constructor(
     
     fun onMorningCheckIn(forceWithoutLocation: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
+            addLoadingAction(TodayAction.MORNING_CHECK_IN)
             withContext(Dispatchers.Main) {
                 _uiState.value = TodayUiState.LoadingLocation
             }
@@ -225,12 +238,15 @@ class TodayViewModel @Inject constructor(
                         }
                     }
                 }
+            } finally {
+                removeLoadingAction(TodayAction.MORNING_CHECK_IN)
             }
         }
     }
     
     fun onEveningCheckIn(forceWithoutLocation: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
+            addLoadingAction(TodayAction.EVENING_CHECK_IN)
             withContext(Dispatchers.Main) {
                 _uiState.value = TodayUiState.LoadingLocation
             }
@@ -257,6 +273,8 @@ class TodayViewModel @Inject constructor(
                         }
                     }
                 }
+            } finally {
+                removeLoadingAction(TodayAction.EVENING_CHECK_IN)
             }
         }
     }
@@ -285,6 +303,7 @@ class TodayViewModel @Inject constructor(
 
     fun onConfirmWorkDay() {
         viewModelScope.launch(Dispatchers.IO) {
+            addLoadingAction(TodayAction.CONFIRM_WORKDAY)
             withContext(Dispatchers.Main) {
                 _uiState.value = TodayUiState.LoadingLocation
             }
@@ -311,12 +330,15 @@ class TodayViewModel @Inject constructor(
                         }
                     }
                 }
+            } finally {
+                removeLoadingAction(TodayAction.CONFIRM_WORKDAY)
             }
         }
     }
 
     fun onConfirmOffDay() {
         viewModelScope.launch(Dispatchers.IO) {
+            addLoadingAction(TodayAction.CONFIRM_OFFDAY)
             withContext(Dispatchers.Main) {
                 _uiState.value = TodayUiState.Loading
             }
@@ -330,6 +352,8 @@ class TodayViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     _uiState.value = TodayUiState.Error(e.message ?: "Konnte Tag nicht bestätigen")
                 }
+            } finally {
+                removeLoadingAction(TodayAction.CONFIRM_OFFDAY)
             }
         }
     }
@@ -352,6 +376,7 @@ class TodayViewModel @Inject constructor(
     fun onResolveReview(label: String, isLeipzig: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val scope = _reviewScope.value ?: return@launch
+            addLoadingAction(TodayAction.RESOLVE_REVIEW)
             
             withContext(Dispatchers.Main) {
                 _uiState.value = TodayUiState.Loading
@@ -373,6 +398,8 @@ class TodayViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     _uiState.value = TodayUiState.Error(e.message ?: "Prüfung konnte nicht gespeichert werden")
                 }
+            } finally {
+                removeLoadingAction(TodayAction.RESOLVE_REVIEW)
             }
         }
     }
@@ -525,6 +552,14 @@ class TodayViewModel @Inject constructor(
         }
         workEntryDao.upsert(updated)
         return updated
+    }
+
+    private fun addLoadingAction(action: TodayAction) {
+        _loadingActions.update { it + action }
+    }
+
+    private fun removeLoadingAction(action: TodayAction) {
+        _loadingActions.update { it - action }
     }
 
     private fun buildTravelUiState(entry: WorkEntry?): TravelUiState {

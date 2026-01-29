@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -31,6 +32,12 @@ import de.montagezeit.app.R
 import de.montagezeit.app.ui.screen.today.TodayUiState
 import de.montagezeit.app.ui.screen.today.WeekStats
 import de.montagezeit.app.ui.screen.today.MonthStats
+import de.montagezeit.app.ui.util.DateTimeUtils
+import de.montagezeit.app.ui.util.Formatters
+import de.montagezeit.app.ui.util.getReviewReason
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import java.time.Duration
 import java.time.format.DateTimeFormatter
 
@@ -47,6 +54,7 @@ fun TodayScreen(
     val monthStats by viewModel.monthStats.collectAsState()
     val showReviewSheet by viewModel.showReviewSheet.collectAsState()
     val reviewScope by viewModel.reviewScope.collectAsState()
+    val loadingActions by viewModel.loadingActions.collectAsState()
     
     // Runtime Permission für Standort
     val locationPermission = Manifest.permission.ACCESS_COARSE_LOCATION
@@ -83,6 +91,19 @@ fun TodayScreen(
     val openEditToday = { onOpenEditSheet(java.time.LocalDate.now()) }
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
     val needsReview = currentEntry?.needsReview == true
+    var isReviewBannerVisible by rememberSaveable { mutableStateOf(true) }
+
+    val isMorningLoading = loadingActions.contains(TodayAction.MORNING_CHECK_IN)
+    val isEveningLoading = loadingActions.contains(TodayAction.EVENING_CHECK_IN)
+    val isConfirmWorkdayLoading = loadingActions.contains(TodayAction.CONFIRM_WORKDAY)
+    val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
+    val isReviewResolving = loadingActions.contains(TodayAction.RESOLVE_REVIEW)
+
+    LaunchedEffect(needsReview) {
+        if (!needsReview) {
+            isReviewBannerVisible = true
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -111,50 +132,13 @@ fun TodayScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Sticky Review Banner (immer oben, wenn needsReview)
-            if (needsReview) {
-                ReviewBanner(
-                    onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                )
-            }
-            
+            val isLoadingLocation = uiState is TodayUiState.LoadingLocation
+            val isLoading = uiState is TodayUiState.Loading
+            val canShowContent = uiState is TodayUiState.Success ||
+                isLoadingLocation ||
+                (isLoading && currentEntry != null)
+
             when (uiState) {
-                is TodayUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                
-                is TodayUiState.LoadingLocation -> {
-                    LoadingLocationContent(
-                        onSkipLocation = { viewModel.onSkipLocation() },
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                
-                is TodayUiState.Success -> {
-                    TodayContent(
-                        entry = currentEntry,
-                        weekStats = weekStats,
-                        monthStats = monthStats,
-                        hasLocationPermission = hasLocationPermission,
-                        onRequestLocationPermission = {
-                            locationPermissionLauncher.launch(locationPermission)
-                        },
-                        onMorningCheckIn = { viewModel.onMorningCheckIn() },
-                        onEveningCheckIn = { viewModel.onEveningCheckIn() },
-                        onConfirmWorkDay = { viewModel.onConfirmWorkDay() },
-                        onConfirmOffDay = { viewModel.onConfirmOffDay() },
-                        onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                    )
-                }
-                
                 is TodayUiState.Error -> {
                     ErrorContent(
                         message = (uiState as TodayUiState.Error).message,
@@ -162,13 +146,13 @@ fun TodayScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                
+
                 is TodayUiState.LocationError -> {
                     val errorState = uiState as TodayUiState.LocationError
                     LocationErrorContent(
                         message = errorState.message,
                         canRetry = errorState.canRetry,
-                        onRetry = { 
+                        onRetry = {
                             if (todayEntry?.morningCapturedAt == null) {
                                 viewModel.onMorningCheckIn()
                             } else {
@@ -178,6 +162,40 @@ fun TodayScreen(
                         onSkipLocation = { viewModel.onSkipLocation() },
                         modifier = Modifier.align(Alignment.Center)
                     )
+                }
+
+                else -> {
+                    if (!canShowContent) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    } else {
+                        TodayContent(
+                            entry = currentEntry,
+                            weekStats = weekStats,
+                            monthStats = monthStats,
+                            hasLocationPermission = hasLocationPermission,
+                            onRequestLocationPermission = {
+                                locationPermissionLauncher.launch(locationPermission)
+                            },
+                            onMorningCheckIn = { viewModel.onMorningCheckIn() },
+                            onEveningCheckIn = { viewModel.onEveningCheckIn() },
+                            onConfirmWorkDay = { viewModel.onConfirmWorkDay() },
+                            onConfirmOffDay = { viewModel.onConfirmOffDay() },
+                            onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
+                            showReviewBanner = needsReview && isReviewBannerVisible,
+                            onDismissReviewBanner = { isReviewBannerVisible = false },
+                            showLocationLoading = isLoadingLocation,
+                            onSkipLocation = { viewModel.onSkipLocation() },
+                            isMorningLoading = isMorningLoading,
+                            isEveningLoading = isEveningLoading,
+                            isConfirmWorkdayLoading = isConfirmWorkdayLoading,
+                            isConfirmOffdayLoading = isConfirmOffdayLoading,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
                 }
             }
             
@@ -189,6 +207,8 @@ fun TodayScreen(
                         isVisible = showReviewSheet,
                         onDismissRequest = { viewModel.onDismissReviewSheet() },
                         scope = currentScope,
+                        reviewReason = getReviewReason(currentEntry),
+                        isResolving = isReviewResolving,
                         onResolve = { label, isLeipzig -> 
                             viewModel.onResolveReview(label, isLeipzig)
                         }
@@ -201,50 +221,67 @@ fun TodayScreen(
 
 @Composable
 fun ReviewBanner(
+    entry: WorkEntry?,
     onOpenReviewSheet: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onOpenReviewSheet)
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(24.dp)
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onOpenReviewSheet),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.today_needs_review),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
-                Text(
-                    text = "Standort prüfen",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.today_needs_review),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = getReviewReason(entry),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(20.dp)
-            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cd_dismiss_review_banner),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -265,7 +302,7 @@ fun LoadingLocationContent(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = onSkipLocation) {
+        TertiaryActionButton(onClick = onSkipLocation) {
             Text(stringResource(R.string.action_save_without_location))
         }
     }
@@ -283,12 +320,36 @@ fun TodayContent(
     onConfirmWorkDay: () -> Unit = {},
     onConfirmOffDay: () -> Unit = {},
     onOpenReviewSheet: () -> Unit = {},
+    showReviewBanner: Boolean = false,
+    onDismissReviewBanner: () -> Unit = {},
+    showLocationLoading: Boolean = false,
+    onSkipLocation: () -> Unit = {},
+    isMorningLoading: Boolean = false,
+    isEveningLoading: Boolean = false,
+    isConfirmWorkdayLoading: Boolean = false,
+    isConfirmOffdayLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (showReviewBanner) {
+            ReviewBanner(
+                entry = entry,
+                onOpenReviewSheet = onOpenReviewSheet,
+                onDismiss = onDismissReviewBanner,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (showLocationLoading) {
+            LoadingLocationContent(
+                onSkipLocation = onSkipLocation,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         // Status Card
         StatusCard(entry = entry, onOpenReviewSheet = onOpenReviewSheet)
         
@@ -312,7 +373,11 @@ fun TodayContent(
             onMorningCheckIn = onMorningCheckIn,
             onEveningCheckIn = onEveningCheckIn,
             onConfirmWorkDay = onConfirmWorkDay,
-            onConfirmOffDay = onConfirmOffDay
+            onConfirmOffDay = onConfirmOffDay,
+            isMorningLoading = isMorningLoading,
+            isEveningLoading = isEveningLoading,
+            isConfirmWorkdayLoading = isConfirmWorkdayLoading,
+            isConfirmOffdayLoading = isConfirmOffdayLoading
         )
     }
 }
@@ -528,7 +593,7 @@ fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -550,7 +615,7 @@ fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
                 val needsReview = entry?.needsReview == true
                 StatusBadge(
                     text = when {
-                        needsReview -> stringResource(R.string.today_needs_review)
+                        needsReview -> getReviewReason(entry)
                         isConfirmed -> stringResource(R.string.today_confirmed)
                         else -> stringResource(R.string.today_unconfirmed)
                     },
@@ -592,7 +657,7 @@ fun StatusCard(entry: WorkEntry?, onOpenReviewSheet: () -> Unit) {
                 if (entry.needsReview) {
                     Divider()
                     StatusHintRow(
-                        text = stringResource(R.string.today_needs_review),
+                        text = getReviewReason(entry),
                         icon = Icons.Default.Warning,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         onClick = onOpenReviewSheet
@@ -625,14 +690,14 @@ private fun StatusBadge(
         shape = RoundedCornerShape(999.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp)
+                contentDescription = null, // Dekorativ, Text daneben
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 text = text,
@@ -658,16 +723,16 @@ private fun StatusHintRow(
     }
     
     Row(
-        modifier = modifier.padding(vertical = 4.dp),
+        modifier = modifier.padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = null, // Dekorativ, Text daneben
             tint = contentColor,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
@@ -677,9 +742,9 @@ private fun StatusHintRow(
             Spacer(modifier = Modifier.weight(1f))
             Icon(
                 imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_action_chevron),
                 tint = contentColor,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -693,7 +758,11 @@ fun TodayActionsCard(
     onMorningCheckIn: () -> Unit,
     onEveningCheckIn: () -> Unit,
     onConfirmWorkDay: () -> Unit,
-    onConfirmOffDay: () -> Unit
+    onConfirmOffDay: () -> Unit,
+    isMorningLoading: Boolean = false,
+    isEveningLoading: Boolean = false,
+    isConfirmWorkdayLoading: Boolean = false,
+    isConfirmOffdayLoading: Boolean = false
 ) {
     val morningCompleted = entry?.morningCapturedAt != null
     val eveningCompleted = entry?.eveningCapturedAt != null
@@ -774,7 +843,8 @@ fun TodayActionsCard(
                 icon = Icons.Default.WbSunny,
                 actionLabel = morningActionLabel,
                 onAction = handleMorningCheckIn,
-                isPrimary = !morningCompleted
+                isPrimary = !morningCompleted,
+                isLoading = isMorningLoading
             )
 
             Divider()
@@ -786,7 +856,8 @@ fun TodayActionsCard(
                 icon = Icons.Default.Nightlight,
                 actionLabel = eveningActionLabel,
                 onAction = handleEveningCheckIn,
-                isPrimary = morningCompleted && !eveningCompleted
+                isPrimary = morningCompleted && !eveningCompleted,
+                isLoading = isEveningLoading
             )
 
             Divider()
@@ -798,18 +869,36 @@ fun TodayActionsCard(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    FilledTonalButton(
+                    PrimaryActionButton(
                         onClick = onConfirmWorkDay,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = !isConfirmWorkdayLoading
                     ) {
+                        if (isConfirmWorkdayLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
                         Text(stringResource(R.string.action_confirm_workday))
                     }
-                    OutlinedButton(
+                    SecondaryActionButton(
                         onClick = onConfirmOffDay,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = !isConfirmOffdayLoading
                     ) {
+                        if (isConfirmOffdayLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
                         Text(stringResource(R.string.action_confirm_offday))
                     }
                 }
@@ -841,7 +930,8 @@ private fun ActionRow(
     icon: ImageVector,
     actionLabel: String,
     onAction: () -> Unit,
-    isPrimary: Boolean
+    isPrimary: Boolean,
+    isLoading: Boolean = false
 ) {
     val completedText = completedAt?.let {
         stringResource(R.string.today_completed_at, getCompletedTimeString(it))
@@ -887,17 +977,35 @@ private fun ActionRow(
         } else {
             val buttonModifier = Modifier.heightIn(min = 40.dp)
             if (isPrimary) {
-                Button(
+                PrimaryActionButton(
                     onClick = onAction,
-                    modifier = buttonModifier
+                    modifier = buttonModifier,
+                    enabled = !isLoading
                 ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(end = 8.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
                     Text(actionLabel)
                 }
             } else {
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = onAction,
-                    modifier = buttonModifier
+                    modifier = buttonModifier,
+                    enabled = !isLoading
                 ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(end = 8.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
                     Text(actionLabel)
                 }
             }
@@ -928,7 +1036,7 @@ fun ErrorContent(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
+        PrimaryActionButton(onClick = onRetry) {
             Text(stringResource(R.string.action_retry))
         }
     }
@@ -961,16 +1069,16 @@ fun LocationErrorContent(
         Spacer(modifier = Modifier.height(16.dp))
         
         if (canRetry) {
-            Button(
+            PrimaryActionButton(
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_retry_location))
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
         
-        OutlinedButton(
+        SecondaryActionButton(
             onClick = onSkipLocation,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -1060,7 +1168,7 @@ fun TravelSummary(entry: WorkEntry) {
         arriveAt != null -> stringResource(R.string.travel_time_arrive, getCompletedTimeString(arriveAt))
         else -> null
     }
-    val durationText = calculateTravelDuration(startAt, arriveAt)?.let { formatDuration(it) }
+    val durationText = DateTimeUtils.calculateTravelDuration(startAt, arriveAt)?.let { Formatters.formatDuration(it) }
     val summaryText = listOfNotNull(
         timeText,
         durationText?.let { stringResource(R.string.travel_duration_label, it) }
@@ -1158,25 +1266,6 @@ private fun getCompletedTimeString(timestamp: Long): String {
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
 }
 
-private fun calculateTravelDuration(startAt: Long?, arriveAt: Long?): Duration? {
-    if (startAt == null || arriveAt == null) return null
-    var duration = Duration.between(
-        java.time.Instant.ofEpochMilli(startAt),
-        java.time.Instant.ofEpochMilli(arriveAt)
-    )
-    if (duration.isNegative) {
-        duration = duration.plusDays(1)
-    }
-    return duration
-}
+// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
 
-private fun formatDuration(duration: Duration): String {
-    val totalMinutes = duration.toMinutes()
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m"
-    }
-}
+// Removed: formatDuration - now using Formatters.formatDuration

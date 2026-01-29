@@ -15,7 +15,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.montagezeit.app.ui.common.DestructiveActionButton
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
+import de.montagezeit.app.ui.util.DateTimeUtils
+import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalDate
 import java.time.Duration
 import java.time.format.DateTimeFormatter
@@ -30,8 +36,10 @@ fun EditEntrySheet(
     onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)? = null,
     onNavigateDate: ((LocalDate) -> Unit)? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val formData by viewModel.formData.collectAsState()
+    val screenState by viewModel.screenState.collectAsState()
+    val uiState = screenState.uiState
+    val formData = screenState.formData
+    val isSaving = screenState.isSaving
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -149,6 +157,7 @@ fun EditEntrySheet(
                             }
                         },
                         onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
+                        isSaving = isSaving,
                         isNewEntry = true
                     )
 
@@ -188,7 +197,7 @@ fun EditEntrySheet(
                                     )
                                 }
 
-                                TextButton(
+                                TertiaryActionButton(
                                     onClick = { viewModel.clearValidationErrors() }
                                 ) {
                                     Text("OK")
@@ -237,6 +246,7 @@ fun EditEntrySheet(
                             }
                         },
                         onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
+                        isSaving = isSaving,
                         onCopy = if (onCopyToNewDate != null) {
                             { showCopyDatePicker = true }
                         } else null
@@ -278,7 +288,7 @@ fun EditEntrySheet(
                                     )
                                 }
 
-                                TextButton(
+                                TertiaryActionButton(
                                     onClick = { viewModel.clearValidationErrors() }
                                 ) {
                                     Text("OK")
@@ -310,7 +320,7 @@ fun EditEntrySheet(
                             text = "Gespeichert!",
                             style = MaterialTheme.typography.headlineSmall
                         )
-                        Button(onClick = onDismiss) {
+                        PrimaryActionButton(onClick = onDismiss) {
                             Text("Schließen")
                         }
                     }
@@ -427,6 +437,7 @@ fun EditFormContent(
     onApplyDefaultTimes: (() -> Unit)? = null,
     onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
+    isSaving: Boolean = false,
     isNewEntry: Boolean = false,
     onCopy: (() -> Unit)? = null
 ) {
@@ -492,68 +503,81 @@ fun EditFormContent(
         onNoteChange = onNoteChange
     )
 
-    // Reset Needs Review
-    if (formData.needsReview || entry.needsReview) {
-        Divider()
-        OutlinedButton(
-            onClick = onResetReview,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text("Überprüfungsflag zurücksetzen")
-        }
-    }
+    Divider()
 
-    if (onCopyPrevious != null) {
-        Divider()
-        OutlinedButton(
-            onClick = onCopyPrevious,
-            modifier = Modifier.fillMaxWidth()
+    val showSecondaryActions = (formData.needsReview || entry.needsReview) ||
+        onCopyPrevious != null ||
+        (onCopy != null && !isNewEntry)
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (formData.needsReview || entry.needsReview) {
+            SecondaryActionButton(
+                onClick = onResetReview,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text("Überprüfungsflag zurücksetzen")
+            }
+        }
+
+        if (onCopyPrevious != null) {
+            SecondaryActionButton(
+                onClick = onCopyPrevious,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text("Vortag kopieren")
+            }
+        }
+        
+        if (onCopy != null && !isNewEntry) {
+            SecondaryActionButton(
+                onClick = onCopy,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text("Eintrag kopieren")
+            }
+        }
+
+        if (showSecondaryActions) {
+            Divider()
+        }
+        
+        PrimaryActionButton(
+            onClick = onSave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            enabled = !isSaving
         ) {
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .padding(end = 8.dp),
+                    strokeWidth = 2.dp
+                )
+            }
             Icon(
-                imageVector = Icons.Default.History,
+                imageVector = Icons.Default.Save,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 8.dp)
             )
-            Text("Vortag kopieren")
+            Text(if (isNewEntry) "Erstellen" else "Speichern")
         }
-    }
-    
-    // Copy Entry Button
-    if (onCopy != null && !isNewEntry) {
-        Divider()
-        OutlinedButton(
-            onClick = onCopy,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.ContentCopy,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text("Eintrag kopieren")
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(8.dp))
-    
-    // Save Button
-    Button(
-        onClick = onSave,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Save,
-            contentDescription = null,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(if (isNewEntry) "Erstellen" else "Speichern")
     }
 }
 
@@ -779,9 +803,9 @@ fun TravelSection(
         !travelLabelStart.isNullOrBlank() ||
         !travelLabelEnd.isNullOrBlank()
     val duration = remember(travelStartTime, travelArriveTime) {
-        calculateTravelDuration(travelStartTime, travelArriveTime)
+        DateTimeUtils.calculateTravelDuration(travelStartTime, travelArriveTime)
     }
-    val durationText = duration?.let { formatDuration(it) }
+    val durationText = duration?.let { Formatters.formatDuration(it) }
     val hasTravelError = validationErrors.any { it is ValidationError.TravelArriveBeforeStart }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -886,7 +910,7 @@ fun TravelSection(
         )
 
         if (hasTravelData) {
-            TextButton(
+            DestructiveActionButton(
                 onClick = onClearTravel,
                 modifier = Modifier.align(Alignment.End)
             ) {
@@ -993,12 +1017,12 @@ fun BorderzoneConfirmDialog(
             )
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
+            PrimaryActionButton(onClick = onConfirm) {
                 Text("Ja, speichern")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text("Abbrechen")
             }
         }
@@ -1023,25 +1047,6 @@ private fun formatTime(time: java.time.LocalTime): String {
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
 }
 
-private fun calculateTravelDuration(
-    start: java.time.LocalTime?,
-    arrive: java.time.LocalTime?
-): Duration? {
-    if (start == null || arrive == null) return null
-    var duration = Duration.between(start, arrive)
-    if (duration.isNegative) {
-        duration = duration.plusHours(24)
-    }
-    return duration
-}
+// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
 
-private fun formatDuration(duration: Duration): String {
-    val totalMinutes = duration.toMinutes()
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m"
-    }
-}
+// Removed: formatDuration - now using Formatters.formatDuration

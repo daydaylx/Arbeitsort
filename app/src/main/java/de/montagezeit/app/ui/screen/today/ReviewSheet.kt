@@ -12,11 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.domain.usecase.ReviewScope
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 
 private enum class LocationOption {
     LEIPZIG,
@@ -29,6 +32,8 @@ fun ReviewSheet(
     isVisible: Boolean,
     onDismissRequest: () -> Unit,
     @Suppress("UNUSED_PARAMETER") scope: ReviewScope,
+    reviewReason: String? = null,
+    isResolving: Boolean = false,
     onResolve: (label: String, isLeipzig: Boolean) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(
@@ -69,6 +74,17 @@ fun ReviewSheet(
                         Text(
                             text = stringResource(R.string.today_needs_review),
                             style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+
+                    reviewReason?.let { reason ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = reason,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -125,30 +141,40 @@ fun ReviewSheet(
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
+                val leipzigLabel = stringResource(R.string.location_leipzig)
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
+                    TertiaryActionButton(
                         onClick = onDismissRequest,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enabled = !isResolving
                     ) {
                         Text(stringResource(R.string.action_cancel))
                     }
                     
-                    Button(
+                    PrimaryActionButton(
                         onClick = {
                             val label = if (selectedOption == LocationOption.LEIPZIG) {
-                                "Leipzig"
+                                leipzigLabel
                             } else {
                                 customLocation.trim()
                             }
                             onResolve(label, selectedOption == LocationOption.LEIPZIG)
                         },
-                        enabled = selectedOption == LocationOption.LEIPZIG || customLocation.trim().isNotEmpty(),
+                        enabled = !isResolving && (selectedOption == LocationOption.LEIPZIG || customLocation.trim().isNotEmpty()),
                         modifier = Modifier.weight(1f)
                     ) {
+                        if (isResolving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
                         Text(stringResource(R.string.action_apply))
                     }
                 }

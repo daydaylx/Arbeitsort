@@ -26,9 +26,6 @@ import java.time.LocalTime
  * - Evening Window (16:00-22:30): analog
  * - Fallback 22:30: wenn Tag unvollständig, 1x Reminder
  * - Daily: tägliche Erinnerung
- *
- * Self-Rescheduling: Morning/Evening workers reschedlen sich selbst alle 60 Sekunden
- * während sie im Window sind. Fallback/Daily sind periodic (1x pro Tag).
  */
 @HiltWorker
 class WindowCheckWorker @AssistedInject constructor(
@@ -36,8 +33,7 @@ class WindowCheckWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val workEntryDao: WorkEntryDao,
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val notificationManager: ReminderNotificationManager,
-    private val reminderScheduler: ReminderScheduler
+    private val notificationManager: ReminderNotificationManager
 ) : CoroutineWorker(context, workerParams) {
 
     // Mutex für atomare Operations (SharedPreferences + DB + Notification)
@@ -61,8 +57,6 @@ class WindowCheckWorker @AssistedInject constructor(
                         return Result.success()
                     }
                     checkAndShowMorningReminder(today, settings, sharedPreferences)
-                    // Self-reschedule: Schedule next check in 60 seconds if still in window
-                    reminderScheduler.scheduleNextWindowCheck(ReminderType.MORNING, delayMinutes = 1)
                 }
                 ReminderType.EVENING -> {
                     if (!settings.eveningReminderEnabled) {
@@ -73,8 +67,6 @@ class WindowCheckWorker @AssistedInject constructor(
                         return Result.success()
                     }
                     checkAndShowEveningReminder(today, settings, sharedPreferences)
-                    // Self-reschedule: Schedule next check in 60 seconds if still in window
-                    reminderScheduler.scheduleNextWindowCheck(ReminderType.EVENING, delayMinutes = 1)
                 }
                 ReminderType.FALLBACK -> {
                     if (!settings.fallbackEnabled) {

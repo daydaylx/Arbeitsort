@@ -28,6 +28,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.widget.Toast
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -490,9 +493,9 @@ fun TimeRangePicker(
         
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedButton(
+            SecondaryActionButton(
                 onClick = { showStartPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
@@ -505,7 +508,7 @@ fun TimeRangePicker(
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
             
-            OutlinedButton(
+            SecondaryActionButton(
                 onClick = { showEndPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
@@ -638,7 +641,7 @@ fun SetupSection(
 
         Divider()
 
-        OutlinedButton(
+        SecondaryActionButton(
             onClick = onSendTestReminder,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -682,7 +685,7 @@ fun SetupRow(
                 )
             }
         }
-        TextButton(onClick = onAction) {
+        TertiaryActionButton(onClick = onAction) {
             Text(actionLabel)
         }
     }
@@ -738,7 +741,7 @@ fun SettingsTimeButtonRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        OutlinedButton(
+        SecondaryActionButton(
             onClick = onClick,
             enabled = enabled
         ) {
@@ -786,7 +789,7 @@ fun NonWorkingDaysSection(
                 text = "Feiertage",
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextButton(
+            TertiaryActionButton(
                 onClick = { showHolidayPicker = true },
                 enabled = autoOffHolidays
             ) {
@@ -904,9 +907,9 @@ fun ExportSection(
         // PDF Export Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Button(
+            PrimaryActionButton(
                 onClick = onExportPdfCurrentMonth,
                 modifier = Modifier.weight(1f),
                 enabled = employeeName.isNotBlank()
@@ -914,7 +917,7 @@ fun ExportSection(
                 Text("Dieser Monat")
             }
             
-            Button(
+            PrimaryActionButton(
                 onClick = onExportPdfLast30Days,
                 modifier = Modifier.weight(1f),
                 enabled = employeeName.isNotBlank()
@@ -922,7 +925,7 @@ fun ExportSection(
                 Text("30 Tage")
             }
             
-            Button(
+            PrimaryActionButton(
                 onClick = { showPdfCustomRangeDialog = true },
                 modifier = Modifier.weight(1f),
                 enabled = employeeName.isNotBlank()
@@ -983,7 +986,7 @@ fun ExportSection(
                             )
                         },
                         confirmButton = {
-                            Button(onClick = {
+                            PrimaryActionButton(onClick = {
                                 val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = mimeType
                                     putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
@@ -998,7 +1001,7 @@ fun ExportSection(
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = {
+                            TertiaryActionButton(onClick = {
                                 showShareDialog = false
                                 onResetState()
                             }) {
@@ -1215,7 +1218,7 @@ fun PdfSettingsDialog(
             }
         },
         confirmButton = {
-            Button(
+            PrimaryActionButton(
                 onClick = {
                     onSave(
                         employeeName.ifBlank { null },
@@ -1230,7 +1233,7 @@ fun PdfSettingsDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text("Abbrechen")
             }
         }
@@ -1257,7 +1260,7 @@ fun PdfCustomRangeDialog(
                     text = "Von",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { showStartDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1269,7 +1272,7 @@ fun PdfCustomRangeDialog(
                     text = "Bis",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { showEndDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1278,7 +1281,7 @@ fun PdfCustomRangeDialog(
             }
         },
         confirmButton = {
-            Button(
+            PrimaryActionButton(
                 onClick = {
                     onDateRangeSelected(startDate, endDate)
                 },
@@ -1288,7 +1291,7 @@ fun PdfCustomRangeDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text("Abbrechen")
             }
         }

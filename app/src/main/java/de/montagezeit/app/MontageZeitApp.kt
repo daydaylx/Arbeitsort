@@ -16,20 +16,25 @@ import javax.inject.Inject
 @HiltAndroidApp
 class MontageZeitApp : Application(), Configuration.Provider {
     @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
     lateinit var appDatabase: AppDatabase
 
     @Inject
     lateinit var reminderScheduler: ReminderScheduler
 
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
-
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() = if (::workerFactory.isInitialized) {
+            Configuration.Builder()
+                .setWorkerFactory(workerFactory)
+                .build()
+        } else {
+            // Fallback for early access during injection
+            Configuration.Builder().build()
+        }
 
     override fun onCreate() {
         super.onCreate()

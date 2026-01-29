@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,9 +22,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.ui.util.DateTimeUtils
+import de.montagezeit.app.ui.util.Formatters
+import de.montagezeit.app.ui.util.getReviewReason
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import java.time.Duration
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -53,7 +62,7 @@ fun HistoryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Today,
-                            contentDescription = "Heute bearbeiten"
+                            contentDescription = stringResource(R.string.cd_edit_today)
                         )
                     }
                     IconButton(
@@ -61,7 +70,7 @@ fun HistoryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.DateRange,
-                            contentDescription = "Mehrfach bearbeiten"
+                            contentDescription = stringResource(R.string.cd_batch_edit)
                         )
                     }
                 }
@@ -137,6 +146,37 @@ fun HistoryContent(
     var calendarMode by remember { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var showNeedsReviewOnly by rememberSaveable { mutableStateOf(false) }
+
+    val filteredWeeks = remember(weeks, showNeedsReviewOnly) {
+        if (!showNeedsReviewOnly) {
+            weeks
+        } else {
+            weeks.mapNotNull { week ->
+                val filteredEntries = week.entries.filter { it.needsReview }
+                if (filteredEntries.isEmpty()) null else week.copy(entries = filteredEntries)
+            }
+        }
+    }
+
+    val filteredMonths = remember(months, showNeedsReviewOnly) {
+        if (!showNeedsReviewOnly) {
+            months
+        } else {
+            months.mapNotNull { month ->
+                val filteredEntries = month.entries.filter { it.needsReview }
+                if (filteredEntries.isEmpty()) null else month.copy(entries = filteredEntries)
+            }
+        }
+    }
+
+    val filteredEntriesByDate = remember(entriesByDate, showNeedsReviewOnly) {
+        if (!showNeedsReviewOnly) {
+            entriesByDate
+        } else {
+            entriesByDate.filterValues { it.needsReview }
+        }
+    }
 
     Column(
         modifier = modifier.padding(16.dp),
@@ -149,7 +189,7 @@ fun HistoryContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -219,6 +259,24 @@ fun HistoryContent(
                         )
                     }
                 }
+
+                Divider()
+
+                Text(
+                    text = "Filter",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = showNeedsReviewOnly,
+                        onClick = { showNeedsReviewOnly = !showNeedsReviewOnly },
+                        label = { Text("Nur mit Review") }
+                    )
+                }
             }
         }
 
@@ -227,7 +285,7 @@ fun HistoryContent(
                 if (calendarMode == CalendarMode.MONTH) {
                     CalendarView(
                         month = selectedMonth,
-                        entriesByDate = entriesByDate,
+                        entriesByDate = filteredEntriesByDate,
                         onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
                         onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
                         onDayClick = { date ->
@@ -239,7 +297,7 @@ fun HistoryContent(
                 } else {
                     WeekCalendarView(
                         selectedDate = selectedDate,
-                        entriesByDate = entriesByDate,
+                        entriesByDate = filteredEntriesByDate,
                         onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
                         onNextWeek = { selectedDate = selectedDate.plusDays(7) },
                         onDayClick = { date ->
@@ -250,11 +308,17 @@ fun HistoryContent(
                     )
                 }
             }
-            weeks.isEmpty() && months.isEmpty() -> {
+            filteredWeeks.isEmpty() && filteredMonths.isEmpty() -> {
                 EmptyContent(
                     modifier = Modifier.fillMaxWidth(),
                     onAddPastDay = { showDatePicker = true },
-                    showAddButton = false
+                    showAddButton = false,
+                    title = if (showNeedsReviewOnly) "Keine Review-Einträge" else "Keine Einträge vorhanden",
+                    subtitle = if (showNeedsReviewOnly) {
+                        "Filter deaktivieren, um alle Einträge zu sehen."
+                    } else {
+                        "Check-in-Einträge erscheinen hier"
+                    }
                 )
             }
             else -> {
@@ -266,14 +330,14 @@ fun HistoryContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (showMonths) {
-                        items(months) { month ->
+                        items(filteredMonths) { month ->
                             MonthGroupCard(
                                 month = month,
                                 onEntryClick = onEntryClick
                             )
                         }
                     } else {
-                        items(weeks) { week ->
+                        items(filteredWeeks) { week ->
                             WeekGroupCard(
                                 week = week,
                                 onEntryClick = onEntryClick
@@ -556,14 +620,14 @@ fun BatchEditDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Zeitraum", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SecondaryActionButton(
                         onClick = { showStartPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(formatShortDate(startDate))
                     }
-                    OutlinedButton(
+                    SecondaryActionButton(
                         onClick = { showEndPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -652,7 +716,7 @@ fun BatchEditDialog(
             }
         },
         confirmButton = {
-            Button(
+            PrimaryActionButton(
                 onClick = {
                     onApply(
                         BatchEditRequest(
@@ -679,7 +743,7 @@ fun BatchEditDialog(
             }
         },
         dismissButton = {
-            TextButton(
+            TertiaryActionButton(
                 onClick = onDismiss,
                 enabled = !isSubmitting
             ) {
@@ -715,7 +779,9 @@ fun BatchEditDialog(
 fun EmptyContent(
     modifier: Modifier = Modifier,
     onAddPastDay: () -> Unit = {},
-    showAddButton: Boolean = true
+    showAddButton: Boolean = true,
+    title: String = "Keine Einträge vorhanden",
+    subtitle: String = "Check-in-Einträge erscheinen hier"
 ) {
     Column(
         modifier = modifier.padding(24.dp),
@@ -730,20 +796,20 @@ fun EmptyContent(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Keine Einträge vorhanden",
+            text = title,
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Check-in-Einträge erscheinen hier",
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         if (showAddButton) {
             Spacer(modifier = Modifier.height(24.dp))
-            OutlinedButton(
+            PrimaryActionButton(
                 onClick = onAddPastDay,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1165,14 +1231,35 @@ fun HistoryEntryItem(
                     }
                 }
 
-                if (entry.dayType == DayType.WORK) {
-                    val workHours = calculateWorkHours(entry)
-                    Text(
-                        text = formatWorkHours(workHours),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                if (entry.dayType == DayType.WORK || TimeCalculator.calculateTravelMinutes(entry) > 0) {
+                    val workHours = TimeCalculator.calculateWorkHours(entry)
+                    val totalPaidHours = TimeCalculator.calculatePaidTotalHours(entry)
+                    
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatWorkHours(workHours),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        
+                        if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                            Text(
+                                text = "Gesamt: ${formatWorkHours(totalPaidHours)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
+            }
+
+            if (entry.needsReview) {
+                Text(
+                    text = getReviewReason(entry),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
             }
 
             // Location Status Info
@@ -1260,7 +1347,7 @@ fun TravelSummaryRow(entry: WorkEntry) {
         arriveAt != null -> "Ankunft: ${formatTime(arriveAt)}"
         else -> null
     }
-    val durationText = calculateTravelDuration(startAt, arriveAt)?.let { formatDuration(it) }
+    val durationText = DateTimeUtils.calculateTravelDuration(startAt, arriveAt)?.let { Formatters.formatDuration(it) }
     val summaryText = listOfNotNull(timeText, durationText?.let { "Fahrzeit $it" })
         .joinToString(" · ")
 
@@ -1330,7 +1417,7 @@ fun ErrorContent(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
+        PrimaryActionButton(onClick = onRetry) {
             Text("Wiederholen")
         }
     }
@@ -1387,36 +1474,9 @@ private fun formatTime(timestamp: Long): String {
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
 }
 
-private fun calculateTravelDuration(startAt: Long?, arriveAt: Long?): Duration? {
-    if (startAt == null || arriveAt == null) return null
-    var duration = Duration.between(
-        java.time.Instant.ofEpochMilli(startAt),
-        java.time.Instant.ofEpochMilli(arriveAt)
-    )
-    if (duration.isNegative) {
-        duration = duration.plusDays(1)
-    }
-    return duration
-}
+// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
 
-private fun formatDuration(duration: Duration): String {
-    val totalMinutes = duration.toMinutes()
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m"
-    }
-}
-
-private fun calculateWorkHours(entry: WorkEntry): Double {
-    if (entry.dayType != DayType.WORK) return 0.0
-    val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-    val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
-    val workMinutes = endMinutes - startMinutes - entry.breakMinutes
-    return workMinutes / 60.0
-}
+// Removed: formatDuration - now using Formatters.formatDuration
 
 private fun formatWorkHours(hours: Double): String {
     val totalMinutes = (hours * 60).toInt()

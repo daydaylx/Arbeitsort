@@ -41,6 +41,19 @@
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
+    <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
+    <string name="cd_batch_edit">Mehrfach bearbeiten</string>
+    <string name="cd_calendar">Kalender</string>
+    <string name="cd_status_completed">Status: Abgeschlossen</string>
+    <string name="cd_status_pending">Status: Ausstehend</string>
+    <string name="cd_status_warning">Status: Prüfung erforderlich</string>
+    <string name="cd_status_info">Information</string>
+    <string name="cd_action_chevron">Aktion öffnen</string>
+    <string name="cd_dismiss_review_banner">Review-Banner schließen</string>
+    <string name="cd_location_icon">Standort-Icon</string>
+    <string name="cd_time_icon">Zeit-Icon</string>
+    <string name="cd_work_icon">Arbeitszeit-Icon</string>
+    <string name="cd_travel_icon">Reise-Icon</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
     <string name="today_location_loading">Standort wird ermittelt...</string>
     <string name="action_save_without_location">Ohne Speichern</string>
@@ -59,6 +72,14 @@
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
     <string name="today_needs_review">Standort prüfen</string>
+    <string name="review_reason_low_accuracy_morning">GPS-Genauigkeit niedrig (morgens)</string>
+    <string name="review_reason_low_accuracy_evening">GPS-Genauigkeit niedrig (abends)</string>
+    <string name="review_reason_low_accuracy_both">GPS-Genauigkeit niedrig</string>
+    <string name="review_reason_unavailable_morning">Standort nicht verfügbar (morgens)</string>
+    <string name="review_reason_unavailable_evening">Standort nicht verfügbar (abends)</string>
+    <string name="review_reason_leipzig_check_morning">Leipzig-Prüfung ausstehend (morgens)</string>
+    <string name="review_reason_leipzig_check_evening">Leipzig-Prüfung ausstehend (abends)</string>
+    <string name="review_reason_generic">Bitte Daten prüfen</string>
     <string name="action_check_in_morning">Check-in morgens</string>
     <string name="action_allow_location">Standort erlauben</string>
     <string name="today_morning_support">Check-in morgens</string>

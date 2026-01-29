@@ -16,7 +16,7 @@ import de.montagezeit.app.data.local.entity.RouteCacheEntry
 
 @Database(
     entities = [WorkEntry::class, RouteCacheEntry::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(
@@ -33,16 +33,37 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // No schema changes between v1 and v2.
+                // Ensure route_cache table is created (was missing in original migration)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `route_cache` (
+                        `fromLabel` TEXT NOT NULL, 
+                        `toLabel` TEXT NOT NULL, 
+                        `distanceKm` REAL NOT NULL, 
+                        `updatedAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`fromLabel`, `toLabel`)
+                    )
+                """.trimIndent())
             }
         }
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add indices for performance
+                // Ensure route_cache table exists (for users stuck on V2 without it)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `route_cache` (
+                        `fromLabel` TEXT NOT NULL, 
+                        `toLabel` TEXT NOT NULL, 
+                        `distanceKm` REAL NOT NULL, 
+                        `updatedAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`fromLabel`, `toLabel`)
+                    )
+                """.trimIndent())
+
+                // Add indices for performance and Room schema matching
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
-                // Note: date already has unique index as PRIMARY KEY
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
             }
         }
 
@@ -55,6 +76,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Backfill missing composite index added after v4 release
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            }
+        }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }

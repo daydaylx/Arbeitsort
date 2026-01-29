@@ -203,12 +203,10 @@ data class MonthGroup(
 
     val totalHours: Double
         get() = entries
-            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
             .sumOf { TimeCalculator.calculateWorkHours(it) }
 
     val totalPaidHours: Double
         get() = entries
-            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
             .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
 
     val averageHoursPerDay: Double
@@ -243,12 +241,10 @@ data class WeekGroup(
 
     val totalHours: Double
         get() = entries
-            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
             .sumOf { TimeCalculator.calculateWorkHours(it) }
 
     val totalPaidHours: Double
         get() = entries
-            .filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
             .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
 
     val averageHoursPerDay: Double

@@ -11,7 +11,8 @@ import java.time.LocalTime
     indices = [
         Index(value = ["needsReview"]),
         Index(value = ["date"], unique = true),
-        Index(value = ["createdAt"])
+        Index(value = ["createdAt"]),
+        Index(value = ["dayType", "date"]) // Composite index für Work-Entry-Queries
     ]
 )
 data class WorkEntry(
