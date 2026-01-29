@@ -46,14 +46,16 @@ class PdfExporter @Inject constructor(
         private const val SIGNATURE_HEIGHT = 80
         
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
-        private const val COL_DATE = 65
-        private const val COL_START = 50
-        private const val COL_END = 50
-        private const val COL_BREAK = 45
-        private const val COL_WORK_TIME = 90
-        private const val COL_LOCATION = 70
-        private const val COL_TRAVEL = 55
-        private const val COL_NOTE = 90 // Rest
+        private const val COL_DATE = 55
+        private const val COL_START = 45
+        private const val COL_END = 45
+        private const val COL_BREAK = 40
+        private const val COL_WORK_TIME = 55
+        private const val COL_TRAVEL_WINDOW = 70
+        private const val COL_TRAVEL_TIME = 50
+        private const val COL_TOTAL_TIME = 55
+        private const val COL_LOCATION = 50
+        private const val COL_NOTE = 50 // Rest
     }
     
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
@@ -267,15 +269,21 @@ class PdfExporter @Inject constructor(
         canvas.drawText("Pause", xPos, yPos + 20, paintTableHeader)
         xPos += COL_BREAK
         
-        canvas.drawText("Arbeit / Ges.", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText("Arbeit", xPos, yPos + 20, paintTableHeader)
         xPos += COL_WORK_TIME
-        
+
+        canvas.drawText("Reise (von–bis)", xPos, yPos + 20, paintTableHeader)
+        xPos += COL_TRAVEL_WINDOW
+
+        canvas.drawText("Reisezeit", xPos, yPos + 20, paintTableHeader)
+        xPos += COL_TRAVEL_TIME
+
+        canvas.drawText("Gesamt", xPos, yPos + 20, paintTableHeader)
+        xPos += COL_TOTAL_TIME
+
         canvas.drawText("Ort", xPos, yPos + 20, paintTableHeader)
         xPos += COL_LOCATION
-        
-        canvas.drawText("Reisezeit", xPos, yPos + 20, paintTableHeader)
-        xPos += COL_TRAVEL
-        
+
         canvas.drawText("Notiz", xPos, yPos + 20, paintTableHeader)
         
         // Trennlinie unter Tabellenkopf
@@ -335,39 +343,38 @@ class PdfExporter @Inject constructor(
             
             // Arbeitszeit
             val workHours = TimeCalculator.calculateWorkHours(entry)
-            val totalHours = TimeCalculator.calculatePaidTotalHours(entry)
-            
-            var timeText = PdfUtilities.formatWorkHours(workHours)
-            if (kotlin.math.abs(totalHours - workHours) > 0.01) {
-                timeText += " / ${PdfUtilities.formatWorkHours(totalHours)}"
-            }
-            
-            activeCanvas.drawText(
-                timeText + " h",
-                xPos,
-                y + 15,
-                paintTableText
-            )
+            val travelMinutes = entry.travelPaidMinutes ?: 0
+            val travelHours = travelMinutes / 60.0
+            val totalHours = workHours + travelHours
+            val workText = "${PdfUtilities.formatWorkHours(workHours)} h"
+            activeCanvas.drawText(workText, xPos, y + 15, paintTableText)
             xPos += COL_WORK_TIME
-            
+
+            // Reise (von–bis)
+            val travelWindow = PdfUtilities.formatTravelWindow(entry.travelStartAt, entry.travelArriveAt)
+            val travelWindowText = if (travelWindow.isNotBlank()) travelWindow else "–"
+            activeCanvas.drawText(travelWindowText, xPos, y + 15, paintTableText)
+            xPos += COL_TRAVEL_WINDOW
+
+            // Reisezeit
+            val travelTime = PdfUtilities.formatTravelTime(travelMinutes)
+            val travelTimeText = if (travelMinutes > 0) "$travelTime h" else "–"
+            activeCanvas.drawText(travelTimeText, xPos, y + 15, paintTableText)
+            xPos += COL_TRAVEL_TIME
+
+            // Gesamtzeit
+            val totalText = "${PdfUtilities.formatWorkHours(totalHours)} h"
+            activeCanvas.drawText(totalText, xPos, y + 15, paintTableText)
+            xPos += COL_TOTAL_TIME
+
             // Ort
             val location = PdfUtilities.getLocation(entry)
-            activeCanvas.drawText(location.take(12), xPos, y + 15, paintTableText) // Truncate zu 12 Zeichen
+            activeCanvas.drawText(location.take(8), xPos, y + 15, paintTableText) // Truncate zu 8 Zeichen
             xPos += COL_LOCATION
-            
-            // Reisezeit
-            val travelTime = PdfUtilities.formatTravelTime(entry.travelPaidMinutes)
-            activeCanvas.drawText(
-                if (travelTime.isNotBlank()) "$travelTime h" else "",
-                xPos,
-                y + 15,
-                paintTableText
-            )
-            xPos += COL_TRAVEL
-            
+
             // Notiz
             val note = PdfUtilities.getNote(entry)
-            activeCanvas.drawText(note.take(18), xPos, y + 15, paintTableText) // Truncate zu 18 Zeichen
+            activeCanvas.drawText(note.take(10), xPos, y + 15, paintTableText) // Truncate zu 10 Zeichen
             
             y += ROW_HEIGHT
         }
@@ -395,6 +402,7 @@ class PdfExporter @Inject constructor(
         val totalWorkHours = PdfUtilities.sumWorkHours(entries)
         val totalTravelMinutes = PdfUtilities.sumTravelMinutes(entries)
         val totalTravelHours = totalTravelMinutes / 60.0
+        val totalPaidHours = totalWorkHours + totalTravelHours
         
         canvas.drawText("Arbeitstage: $workDays", MARGIN.toFloat(), yPos, paintSummary)
         yPos += 25
@@ -407,24 +415,21 @@ class PdfExporter @Inject constructor(
         )
         yPos += 25
         
-        if (totalTravelMinutes > 0) {
-            canvas.drawText(
-                "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} Stunden",
-                MARGIN.toFloat(),
-                yPos,
-                paintSummary
-            )
-            yPos += 25
-            
-            val totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-            canvas.drawText(
-                "Summe Gesamt (Bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} Stunden",
-                MARGIN.toFloat(),
-                yPos,
-                paintSummary
-            )
-            yPos += 25
-        }
+        canvas.drawText(
+            "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} Stunden",
+            MARGIN.toFloat(),
+            yPos,
+            paintSummary
+        )
+        yPos += 25
+
+        canvas.drawText(
+            "Summe Gesamtzeit (bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} Stunden",
+            MARGIN.toFloat(),
+            yPos,
+            paintSummary
+        )
+        yPos += 25
         
         // Trennlinie
         canvas.drawLine(MARGIN.toFloat(), yPos, (PAGE_WIDTH - MARGIN).toFloat(), yPos, paintLine)
