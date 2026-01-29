@@ -103,6 +103,7 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     fun refresh() {
+        // Lokale Kopie erstellen, um Race Condition zu vermeiden
         val range = currentRange
         if (range == null) {
             updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = false))
@@ -131,6 +132,7 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     fun createPdf() {
+        // Lokale Kopie erstellen, um Race Condition zu vermeiden
         val range = currentRange
         if (range == null) {
             updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = true))
@@ -167,7 +169,13 @@ class ExportPreviewViewModel @Inject constructor(
                     val fileName = fileUri.lastPathSegment ?: "montagezeit_export.pdf"
                     updateState(PreviewState.PdfReady(fileUri = fileUri, fileName = fileName))
                 } else {
-                    updateState(PreviewState.Error("Export fehlgeschlagen", canReturn = true))
+                    // Spezifischere Error-Message basierend auf Kontext
+                    updateState(
+                        PreviewState.Error(
+                            "PDF konnte nicht erstellt werden. Prüfen Sie den verfügbaren Speicher und versuchen Sie es erneut.",
+                            canReturn = true
+                        )
+                    )
                 }
             } catch (e: Exception) {
                 updateState(PreviewState.Error(e.message ?: "Export fehlgeschlagen", canReturn = true))

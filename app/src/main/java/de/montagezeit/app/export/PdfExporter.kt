@@ -13,11 +13,13 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.os.StatFs
 
 /**
  * PDF Exporter für MontageZeit
@@ -484,7 +486,15 @@ class PdfExporter @Inject constructor(
             if (!cacheDir.exists()) {
                 cacheDir.mkdirs()
             }
-            
+
+            // Speicherplatz-Check BEVOR PDF geschrieben wird
+            val stat = StatFs(cacheDir.absolutePath)
+            val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
+            val minRequiredBytes = 5 * 1024 * 1024L  // 5MB Reserve
+            if (availableBytes < minRequiredBytes) {
+                throw IOException("Nicht genug Speicherplatz verfügbar (benötigt: 5 MB)")
+            }
+
             // Dateiname mit Zeitraum
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.GERMAN).format(Date())
             val dateRange = if (startDate == endDate) {
@@ -494,9 +504,15 @@ class PdfExporter @Inject constructor(
             }
             val filename = "montagezeit_pdf_${dateRange}_$timestamp.pdf"
             val file = File(cacheDir, filename)
-            
-            FileOutputStream(file).use { fos ->
-                pdfDocument.writeTo(fos)
+
+            // PDF schreiben mit Fehlerbehandlung
+            try {
+                FileOutputStream(file).use { fos ->
+                    pdfDocument.writeTo(fos)
+                }
+            } catch (e: IOException) {
+                file.delete()  // Partielle Datei löschen
+                throw e  // Exception weiterwerfen
             }
             
             // Uri via FileProvider erstellen

@@ -64,7 +64,7 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(paidTotalMinutes) // NEW FIELD
                         append(";")
-                        append(entry.note?.replace(";", ",") ?: "") // Escape semicolons
+                        append(entry.note?.replace(";", ",")?.replace("\n", " ")?.replace("\r", "") ?: "") // Escape special chars
                         append("\n")
                     }
                     it.write(line.toByteArray(Charsets.UTF_8))
