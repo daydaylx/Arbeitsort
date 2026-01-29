@@ -9,12 +9,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
+import de.montagezeit.app.ui.screen.export.ExportPreviewScreen
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
@@ -24,6 +27,12 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Today : Screen("today", "Heute", Icons.Default.Today)
     object History : Screen("history", "Verlauf", Icons.Default.History)
     object Settings : Screen("settings", "Einstellungen", Icons.Default.Settings)
+}
+
+private const val exportPreviewRoute = "exportPreview/{startDate}/{endDate}"
+
+private fun buildExportPreviewRoute(startDate: LocalDate, endDate: LocalDate): String {
+    return "exportPreview/${startDate}/${endDate}"
 }
 
 @Composable
@@ -39,11 +48,17 @@ fun MontageZeitNavGraph(
     var showEditSheet by remember { mutableStateOf(false) }
     var editDate by remember { mutableStateOf<String?>(null) }
     var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
+    var onEditSheetDismissed by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun openEditSheet(date: LocalDate, onDismissed: (() -> Unit)? = null) {
+        editDate = date.toString()
+        showEditSheet = true
+        onEditSheetDismissed = onDismissed
+    }
 
     LaunchedEffect(editRequestDate) {
         if (editRequestDate != null) {
-            editDate = editRequestDate
-            showEditSheet = true
+            openEditSheet(LocalDate.parse(editRequestDate))
             onEditRequestConsumed?.invoke()
         }
     }
@@ -78,8 +93,7 @@ fun MontageZeitNavGraph(
             composable(Screen.Today.route) {
                 TodayScreen(
                     onOpenEditSheet = { date ->
-                        editDate = date.toString()
-                        showEditSheet = true
+                        openEditSheet(date)
                     }
                 )
             }
@@ -87,14 +101,32 @@ fun MontageZeitNavGraph(
             composable(Screen.History.route) {
                 HistoryScreen(
                     onOpenEditSheet = { date ->
-                        editDate = date.toString()
-                        showEditSheet = true
+                        openEditSheet(date)
                     }
                 )
             }
             
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onOpenExportPreview = { startDate, endDate ->
+                        navController.navigate(buildExportPreviewRoute(startDate, endDate))
+                    }
+                )
+            }
+
+            composable(
+                route = exportPreviewRoute,
+                arguments = listOf(
+                    navArgument("startDate") { type = NavType.StringType },
+                    navArgument("endDate") { type = NavType.StringType }
+                )
+            ) {
+                ExportPreviewScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenEditSheet = { date, onDismissed ->
+                        openEditSheet(date, onDismissed)
+                    }
+                )
             }
         }
     }
@@ -108,6 +140,8 @@ fun MontageZeitNavGraph(
                 showEditSheet = false
                 editDate = null
                 copiedFormData = null
+                onEditSheetDismissed?.invoke()
+                onEditSheetDismissed = null
             },
             onCopyToNewDate = { newDate, formData ->
                 // Schließe aktuelles Sheet und öffne neues mit kopierten Daten
