@@ -104,11 +104,11 @@ fun PdfPreviewScreen(
 
             SecondaryActionButton(onClick = onBackToPreview) {
                 Icon(
-                    imageVector = Icons.Default.PictureAsPdf,
-                    contentDescription = null,
+                    imageVector = Icons.Default.ArrowBack, // Bitte importieren: androidx.compose.material.icons.filled.ArrowBack
+                    contentDescription = "Zurück",
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Zurück zur Vorschau")
+                Text("Zurück")
             }
         }
     }
