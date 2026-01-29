@@ -27,7 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.widget.Toast
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
@@ -42,7 +41,8 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onShowPdfPreview: (Uri) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.reminderSettings.collectAsState(initial = null)
@@ -69,6 +69,14 @@ fun SettingsScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasLocationPermission = granted
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is SettingsUiState.ExportSuccess) {
+            val successState = uiState as SettingsUiState.ExportSuccess
+            onShowPdfPreview(successState.fileUri)
+            viewModel.resetExportState()
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -118,7 +126,6 @@ fun SettingsScreen(
                 onUpdatePdfSettings = { name, company, project, personnel -> 
                     viewModel.updatePdfSettings(name, company, project, personnel) 
                 },
-                onResetExportState = { viewModel.resetExportState() },
                 hasNotificationPermission = hasNotificationPermission,
                 hasLocationPermission = hasLocationPermission,
                 isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
@@ -164,7 +171,6 @@ fun SettingsContent(
     onExportPdfLast30Days: () -> Unit,
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
-    onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
     hasLocationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
@@ -261,8 +267,7 @@ fun SettingsContent(
                 pdfCompany = settings.pdfCompany,
                 pdfProject = settings.pdfProject,
                 pdfPersonnelNumber = settings.pdfPersonnelNumber,
-                onUpdatePdfSettings = onUpdatePdfSettings,
-                onResetState = onResetExportState
+                onUpdatePdfSettings = onUpdatePdfSettings
             )
         }
 
@@ -854,11 +859,8 @@ fun ExportSection(
     pdfCompany: String?,
     pdfProject: String?,
     pdfPersonnelNumber: String?,
-    onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
-    onResetState: () -> Unit
+    onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit
 ) {
-    val context = LocalContext.current
-    
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
     var showPdfCustomRangeDialog by remember { mutableStateOf(false) }
     
@@ -949,10 +951,7 @@ fun ExportSection(
             }
 
             is SettingsUiState.ExportSuccess -> {
-                val fileUri = uiState.fileUri
                 val format = uiState.format
-                var showShareDialog by remember { mutableStateOf(true) }
-
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -960,55 +959,15 @@ fun ExportSection(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Export erfolgreich!",
+                            text = "PDF bereit",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         )
                         Text(
-                            text = "Format: ${format.name}",
+                            text = "Format: ${format.name} · Vorschau wird geöffnet",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                }
-
-                if (showShareDialog) {
-                    val mimeType = "application/pdf"
-                    AlertDialog(
-                        onDismissRequest = {
-                            showShareDialog = false
-                            onResetState()
-                        },
-                        title = { Text("${format.name} Export") },
-                        text = {
-                            Text(
-                                "Die Datei wurde erstellt. Möchten Sie sie teilen?",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        },
-                        confirmButton = {
-                            PrimaryActionButton(onClick = {
-                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = mimeType
-                                    putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
-                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "MontageZeit Export (${format.name})")
-                                }
-                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Export teilen"))
-                                showShareDialog = false
-                                onResetState()
-                            }) {
-                                Text("Teilen")
-                            }
-                        },
-                        dismissButton = {
-                            TertiaryActionButton(onClick = {
-                                showShareDialog = false
-                                onResetState()
-                            }) {
-                                Text("Schließen")
-                            }
-                        }
-                    )
                 }
             }
 
