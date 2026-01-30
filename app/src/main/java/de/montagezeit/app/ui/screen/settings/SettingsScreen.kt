@@ -105,6 +105,9 @@ fun SettingsScreen(
                     viewModel.updateEveningWindow(startH, startM, endH, endM)
                 },
                 onUpdateRadius = { viewModel.updateRadiusMeters(it) },
+                onUpdateDefaultDayLocationLabel = { viewModel.updateDefaultDayLocationLabel(it) },
+                onUpdatePreferGpsLocation = { viewModel.updatePreferGpsLocation(it) },
+                onUpdateFallbackOnLowAccuracy = { viewModel.updateFallbackOnLowAccuracy(it) },
                 onUpdateLocationMode = { viewModel.updateLocationMode(it) },
                 onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
                 onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
@@ -166,6 +169,9 @@ fun SettingsContent(
     onUpdateMorningWindow: (Int, Int, Int, Int) -> Unit,
     onUpdateEveningWindow: (Int, Int, Int, Int) -> Unit,
     onUpdateRadius: (Int) -> Unit,
+    onUpdateDefaultDayLocationLabel: (String) -> Unit,
+    onUpdatePreferGpsLocation: (Boolean) -> Unit,
+    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
     onUpdateLocationMode: (LocationMode) -> Unit,
     onUpdateMorningEnabled: (Boolean) -> Unit,
     onUpdateEveningEnabled: (Boolean) -> Unit,
@@ -249,8 +255,14 @@ fun SettingsContent(
         SettingsSection(title = "Standort") {
             LocationSettingsSection(
                 radiusMeters = (settings.locationRadiusKm * 1000),
+                defaultDayLocationLabel = settings.defaultDayLocationLabel,
+                preferGpsLocation = settings.preferGpsLocation,
+                fallbackOnLowAccuracy = settings.fallbackOnLowAccuracy,
                 locationMode = "check_in_only",
                 onUpdateRadius = onUpdateRadius,
+                onUpdateDefaultDayLocationLabel = onUpdateDefaultDayLocationLabel,
+                onUpdatePreferGpsLocation = onUpdatePreferGpsLocation,
+                onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy,
                 onUpdateLocationMode = onUpdateLocationMode
             )
         }
@@ -562,11 +574,48 @@ fun TimeRangePicker(
 @Composable
 fun LocationSettingsSection(
     radiusMeters: Int,
+    defaultDayLocationLabel: String,
+    preferGpsLocation: Boolean,
+    fallbackOnLowAccuracy: Boolean,
     locationMode: String,
     onUpdateRadius: (Int) -> Unit,
+    onUpdateDefaultDayLocationLabel: (String) -> Unit,
+    onUpdatePreferGpsLocation: (Boolean) -> Unit,
+    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
     onUpdateLocationMode: (LocationMode) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = defaultDayLocationLabel,
+            onValueChange = onUpdateDefaultDayLocationLabel,
+            label = { Text("Standard-Stadt") },
+            placeholder = { Text("z.B. Leipzig") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Text(
+            text = "Wird genutzt, wenn GPS nicht verfügbar ist",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        SettingsToggleRow(
+            title = "GPS bevorzugen",
+            supportingText = "Standort wird beim Check-in automatisch ermittelt",
+            checked = preferGpsLocation,
+            onCheckedChange = onUpdatePreferGpsLocation
+        )
+
+        SettingsToggleRow(
+            title = "Fallback bei ungenauer GPS",
+            supportingText = "Standard-Stadt nutzen, wenn Genauigkeit zu niedrig ist",
+            checked = fallbackOnLowAccuracy,
+            onCheckedChange = onUpdateFallbackOnLowAccuracy
+        )
+
+        Divider()
+
         // Radius
         Text(
             text = "Radius um Leipzig (km)",

@@ -16,6 +16,7 @@ import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
+import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.ui.screen.travel.TravelStatus
 import de.montagezeit.app.ui.screen.travel.TravelUiState
 import de.montagezeit.app.work.ReminderWindowEvaluator
@@ -85,6 +86,7 @@ class TodayViewModel @Inject constructor(
     private val fetchRouteDistance: FetchRouteDistance,
     private val calculateTravelCompensation: CalculateTravelCompensation,
     private val resolveReview: ResolveReview,
+    private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
     
@@ -310,12 +312,15 @@ class TodayViewModel @Inject constructor(
                     val isNonWorking = ReminderWindowEvaluator.isNonWorkingDay(today, settings)
                     val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
                     val now = System.currentTimeMillis()
+                    val defaultLocation = settings.defaultDayLocationLabel.ifBlank { "Leipzig" }
                     val entry = WorkEntry(
                         date = today,
                         dayType = dayType,
                         workStart = settings.workStart,
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes,
+                        dayLocationLabel = defaultLocation,
+                        dayLocationSource = de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -441,6 +446,28 @@ class TodayViewModel @Inject constructor(
     fun onDismissReviewSheet() {
         _showReviewSheet.value = false
         _reviewScope.value = null
+    }
+
+    fun onUpdateDayLocation(label: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val trimmed = label.trim()
+            if (trimmed.isBlank()) {
+                return@launch
+            }
+            addLoadingAction(TodayAction.RESOLVE_REVIEW)
+            try {
+                val entry = setDayLocation(LocalDate.now(), trimmed)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Error(e.message ?: "Ort konnte nicht gespeichert werden")
+                }
+            } finally {
+                removeLoadingAction(TodayAction.RESOLVE_REVIEW)
+            }
+        }
     }
 
     fun updateTravelFromLabel(value: String) {

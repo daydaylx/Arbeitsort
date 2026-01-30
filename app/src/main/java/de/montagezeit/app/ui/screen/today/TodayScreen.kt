@@ -99,6 +99,8 @@ fun TodayScreen(
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
     val needsReview = currentEntry?.needsReview == true
     var isReviewBannerVisible by rememberSaveable { mutableStateOf(true) }
+    var showDayLocationDialog by rememberSaveable { mutableStateOf(false) }
+    var dayLocationInput by rememberSaveable { mutableStateOf("") }
 
     val isMorningLoading = loadingActions.contains(TodayAction.MORNING_CHECK_IN)
     val isEveningLoading = loadingActions.contains(TodayAction.EVENING_CHECK_IN)
@@ -190,6 +192,10 @@ fun TodayScreen(
                             onConfirmWorkDay = { viewModel.onConfirmWorkDay() },
                             onConfirmOffDay = { viewModel.onConfirmOffDay() },
                             onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
+                            onEditDayLocation = {
+                                dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
+                                showDayLocationDialog = true
+                            },
                             showReviewBanner = needsReview && isReviewBannerVisible,
                             onDismissReviewBanner = { isReviewBannerVisible = false },
                             onEditToday = openEditTodayEnsured,
@@ -223,6 +229,46 @@ fun TodayScreen(
                         }
                     )
                 }
+            }
+
+            if (showDayLocationDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDayLocationDialog = false },
+                    title = { Text(stringResource(R.string.day_location_dialog_title)) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value = dayLocationInput,
+                                onValueChange = { dayLocationInput = it },
+                                label = { Text(stringResource(R.string.day_location_dialog_label)) },
+                                placeholder = { Text(stringResource(R.string.day_location_dialog_placeholder)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                text = stringResource(R.string.day_location_dialog_support),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        PrimaryActionButton(
+                            onClick = {
+                                viewModel.onUpdateDayLocation(dayLocationInput)
+                                showDayLocationDialog = false
+                            },
+                            enabled = dayLocationInput.trim().isNotEmpty()
+                        ) {
+                            Text(stringResource(R.string.action_apply))
+                        }
+                    },
+                    dismissButton = {
+                        TertiaryActionButton(onClick = { showDayLocationDialog = false }) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    }
+                )
             }
         }
     }
@@ -329,6 +375,7 @@ fun TodayContent(
     onConfirmWorkDay: () -> Unit = {},
     onConfirmOffDay: () -> Unit = {},
     onOpenReviewSheet: () -> Unit = {},
+    onEditDayLocation: () -> Unit = {},
     showReviewBanner: Boolean = false,
     onDismissReviewBanner: () -> Unit = {},
     onEditToday: () -> Unit = {},
@@ -362,7 +409,11 @@ fun TodayContent(
         }
 
         // Status Card
-        StatusCard(entry = entry, onEditToday = onEditToday)
+        StatusCard(
+            entry = entry,
+            onEditToday = onEditToday,
+            onEditDayLocation = onEditDayLocation
+        )
         
         // Work Hours Card
         if (entry != null && entry.dayType == DayType.WORK) {
@@ -594,7 +645,11 @@ fun StatisticsDashboard(
 }
 
 @Composable
-fun StatusCard(entry: WorkEntry?, onEditToday: () -> Unit) {
+fun StatusCard(
+    entry: WorkEntry?,
+    onEditToday: () -> Unit,
+    onEditDayLocation: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -673,6 +728,37 @@ fun StatusCard(entry: WorkEntry?, onEditToday: () -> Unit) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.day_location_label),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = entry.dayLocationLabel,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = when (entry.dayLocationSource) {
+                                de.montagezeit.app.data.local.entity.DayLocationSource.GPS -> stringResource(R.string.day_location_source_gps)
+                                de.montagezeit.app.data.local.entity.DayLocationSource.MANUAL -> stringResource(R.string.day_location_source_manual)
+                                de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK -> stringResource(R.string.day_location_source_fallback)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                    TextButton(onClick = onEditDayLocation) {
+                        Text(stringResource(R.string.action_change_location))
+                    }
+                }
+
                 Divider()
 
                 LocationStatusText(entry = entry)

@@ -1,6 +1,7 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
@@ -49,6 +50,11 @@ class ResolveReview(
                     existing.copy(
                         morningLocationLabel = resolvedLabel,
                         outsideLeipzigMorning = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
+                        dayLocationLat = null,
+                        dayLocationLon = null,
+                        dayLocationAccuracyMeters = null,
                         needsReview = false,
                         updatedAt = now
                     )
@@ -57,6 +63,11 @@ class ResolveReview(
                     existing.copy(
                         eveningLocationLabel = resolvedLabel,
                         outsideLeipzigEvening = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
+                        dayLocationLat = null,
+                        dayLocationLon = null,
+                        dayLocationAccuracyMeters = null,
                         needsReview = false,
                         updatedAt = now
                     )
@@ -67,6 +78,11 @@ class ResolveReview(
                         eveningLocationLabel = resolvedLabel,
                         outsideLeipzigMorning = if (isLeipzig) false else true,
                         outsideLeipzigEvening = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
+                        dayLocationLat = null,
+                        dayLocationLon = null,
+                        dayLocationAccuracyMeters = null,
                         needsReview = false,
                         updatedAt = now
                     )
@@ -81,6 +97,8 @@ class ResolveReview(
                         date = date,
                         morningLocationLabel = resolvedLabel,
                         outsideLeipzigMorning = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
                         needsReview = false,
                         createdAt = now,
                         updatedAt = now
@@ -91,6 +109,8 @@ class ResolveReview(
                         date = date,
                         eveningLocationLabel = resolvedLabel,
                         outsideLeipzigEvening = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
                         needsReview = false,
                         createdAt = now,
                         updatedAt = now
@@ -103,6 +123,8 @@ class ResolveReview(
                         eveningLocationLabel = resolvedLabel,
                         outsideLeipzigMorning = if (isLeipzig) false else true,
                         outsideLeipzigEvening = if (isLeipzig) false else true,
+                        dayLocationLabel = resolvedLabel,
+                        dayLocationSource = DayLocationSource.MANUAL,
                         needsReview = false,
                         createdAt = now,
                         updatedAt = now

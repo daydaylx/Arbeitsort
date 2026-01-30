@@ -39,7 +39,7 @@ class CsvExporter @Inject constructor(
                 it.write(0xBF) // UTF-8 BOM
                 
                 // Header
-                val header = "date;dayType;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;note\n"
+                val header = "date;dayType;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
                 entries.forEach { entry ->
@@ -51,6 +51,10 @@ class CsvExporter @Inject constructor(
                         append(entry.date.format(dateFormatter))
                         append(";")
                         append(entry.dayType.name)
+                        append(";")
+                        append(entry.dayLocationLabel.replace(";", ","))
+                        append(";")
+                        append(entry.dayLocationSource.name)
                         append(";")
                         append(entry.workStart.format(timeFormatter))
                         append(";")

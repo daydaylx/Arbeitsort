@@ -122,6 +122,11 @@ fun EditEntrySheet(
                         workStart = formData.workStart,
                         workEnd = formData.workEnd,
                         breakMinutes = formData.breakMinutes,
+                        dayLocationLabel = formData.dayLocationLabel ?: "Leipzig",
+                        dayLocationSource = formData.dayLocationSource,
+                        dayLocationLat = formData.dayLocationLat,
+                        dayLocationLon = formData.dayLocationLon,
+                        dayLocationAccuracyMeters = formData.dayLocationAccuracyMeters,
                         morningLocationLabel = formData.morningLocationLabel,
                         eveningLocationLabel = formData.eveningLocationLabel,
                         note = formData.note,
@@ -140,6 +145,7 @@ fun EditEntrySheet(
                         onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
                         onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
                         onTravelClear = { viewModel.clearTravel() },
+                        onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                         onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                         onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                         onNoteChange = { viewModel.updateNote(it) },
@@ -229,6 +235,7 @@ fun EditEntrySheet(
                         onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
                         onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
                         onTravelClear = { viewModel.clearTravel() },
+                        onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                         onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                         onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                         onNoteChange = { viewModel.updateNote(it) },
@@ -430,6 +437,7 @@ fun EditFormContent(
     onTravelLabelStartChange: (String) -> Unit,
     onTravelLabelEndChange: (String) -> Unit,
     onTravelClear: () -> Unit,
+    onDayLocationChange: (String) -> Unit,
     onMorningLabelChange: (String) -> Unit,
     onEveningLabelChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
@@ -489,6 +497,8 @@ fun EditFormContent(
     // Location Labels
     LocationLabelsSection(
         entry = entry,
+        dayLocationLabel = formData.dayLocationLabel,
+        onDayLocationChange = onDayLocationChange,
         morningLabel = formData.morningLocationLabel,
         eveningLabel = formData.eveningLocationLabel,
         onMorningLabelChange = onMorningLabelChange,
@@ -944,6 +954,8 @@ TimePickerDialog(
 @Composable
 fun LocationLabelsSection(
     entry: de.montagezeit.app.data.local.entity.WorkEntry,
+    dayLocationLabel: String?,
+    onDayLocationChange: (String) -> Unit,
     morningLabel: String?,
     eveningLabel: String?,
     onMorningLabelChange: (String) -> Unit,
@@ -953,6 +965,15 @@ fun LocationLabelsSection(
         Text(
             text = "Standort",
             style = MaterialTheme.typography.titleMedium
+        )
+
+        OutlinedTextField(
+            value = dayLocationLabel ?: "",
+            onValueChange = onDayLocationChange,
+            label = { Text("Tagesort (Pflicht)") },
+            placeholder = { Text("z.B. Leipzig") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
         
         if (entry.morningCapturedAt != null) {

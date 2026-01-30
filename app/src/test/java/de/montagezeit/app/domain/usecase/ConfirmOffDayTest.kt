@@ -3,7 +3,10 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import io.mockk.*
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -17,12 +20,15 @@ class ConfirmOffDayTest {
 
     private lateinit var confirmOffDay: ConfirmOffDay
     private lateinit var workEntryDao: WorkEntryDao
+    private lateinit var reminderSettingsManager: ReminderSettingsManager
 
     @Before
     fun setup() {
         workEntryDao = mockk(relaxed = true)
+        reminderSettingsManager = mockk(relaxed = true)
         coEvery { workEntryDao.getByDate(any()) } returns null
-        confirmOffDay = ConfirmOffDay(workEntryDao)
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        confirmOffDay = ConfirmOffDay(workEntryDao, reminderSettingsManager)
     }
 
     @After

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -96,7 +97,9 @@ class EditEntryViewModel @Inject constructor(
                         dayType = defaultDayType,
                         workStart = settings.workStart,
                         workEnd = settings.workEnd,
-                        breakMinutes = settings.breakMinutes
+                        breakMinutes = settings.breakMinutes,
+                        dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { "Leipzig" },
+                        dayLocationSource = DayLocationSource.FALLBACK
                     )
                     val formData = EditFormData.fromEntry(defaultEntry)
                     _screenState.update {
@@ -137,6 +140,23 @@ class EditEntryViewModel @Inject constructor(
     
     fun updateEveningLocationLabel(label: String) {
         updateFormData { it.copy(eveningLocationLabel = label.takeIf { it.isNotBlank() }) }
+    }
+
+    fun updateDayLocationLabel(label: String) {
+        updateFormData {
+            val trimmed = label.trim()
+            if (trimmed.isBlank()) {
+                it.copy(dayLocationLabel = null)
+            } else {
+                it.copy(
+                    dayLocationLabel = trimmed,
+                    dayLocationSource = DayLocationSource.MANUAL,
+                    dayLocationLat = null,
+                    dayLocationLon = null,
+                    dayLocationAccuracyMeters = null
+                )
+            }
+        }
     }
     
     fun updateNote(note: String) {
@@ -249,6 +269,11 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
+                        dayLocationLabel = data.dayLocationLabel ?: "Leipzig",
+                        dayLocationSource = data.dayLocationSource,
+                        dayLocationLat = data.dayLocationLat,
+                        dayLocationLon = data.dayLocationLon,
+                        dayLocationAccuracyMeters = data.dayLocationAccuracyMeters,
                         morningLocationLabel = data.morningLocationLabel,
                         eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
@@ -268,6 +293,11 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
+                        dayLocationLabel = data.dayLocationLabel ?: "Leipzig",
+                        dayLocationSource = data.dayLocationSource,
+                        dayLocationLat = data.dayLocationLat,
+                        dayLocationLon = data.dayLocationLon,
+                        dayLocationAccuracyMeters = data.dayLocationAccuracyMeters,
                         morningLocationLabel = data.morningLocationLabel,
                         eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
@@ -372,6 +402,11 @@ data class EditFormData(
     val workStart: LocalTime = LocalTime.of(8, 0),
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
+    val dayLocationLabel: String? = "Leipzig",
+    val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
+    val dayLocationLat: Double? = null,
+    val dayLocationLon: Double? = null,
+    val dayLocationAccuracyMeters: Float? = null,
     val morningLocationLabel: String? = null,
     val eveningLocationLabel: String? = null,
     val note: String? = null,
@@ -387,6 +422,10 @@ data class EditFormData(
      */
     fun validate(): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
+
+        if (dayLocationLabel.isNullOrBlank()) {
+            errors.add(ValidationError.MissingDayLocation)
+        }
 
         // 1. Check if workEnd is after workStart
         val workTimeValid = workEnd > workStart
@@ -430,6 +469,11 @@ data class EditFormData(
                 workStart = entry.workStart,
                 workEnd = entry.workEnd,
                 breakMinutes = entry.breakMinutes,
+                dayLocationLabel = entry.dayLocationLabel,
+                dayLocationSource = entry.dayLocationSource,
+                dayLocationLat = entry.dayLocationLat,
+                dayLocationLon = entry.dayLocationLon,
+                dayLocationAccuracyMeters = entry.dayLocationAccuracyMeters,
                 morningLocationLabel = entry.morningLocationLabel,
                 eveningLocationLabel = entry.eveningLocationLabel,
                 note = entry.note,
@@ -453,6 +497,7 @@ data class EditFormData(
  * Validation errors for EditFormData
  */
 sealed class ValidationError(val message: String) {
+    object MissingDayLocation : ValidationError("Tagesort ist erforderlich")
     object WorkEndBeforeStart : ValidationError("Arbeitsende muss nach Arbeitsbeginn liegen")
     object NegativeBreakMinutes : ValidationError("Pause kann nicht negativ sein")
     object BreakLongerThanWorkTime : ValidationError("Pause kann nicht länger als die Arbeitszeit sein")

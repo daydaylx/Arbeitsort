@@ -2,7 +2,10 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
@@ -13,7 +16,8 @@ import java.time.LocalDate
  * 2. confirmedWorkDay=true, confirmationAt=now setzen
  */
 class ConfirmOffDay(
-    private val workEntryDao: WorkEntryDao
+    private val workEntryDao: WorkEntryDao,
+    private val reminderSettingsManager: ReminderSettingsManager
 ) {
     
     companion object {
@@ -34,16 +38,22 @@ class ConfirmOffDay(
     ): WorkEntry {
         val existingEntry = workEntryDao.getByDate(date)
         val now = System.currentTimeMillis()
+        val settings = reminderSettingsManager.settings.first()
+        val dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { "Leipzig" }
         
         val updatedEntry = existingEntry?.copy(
             dayType = DayType.OFF,
             confirmedWorkDay = true,
             confirmationAt = now,
             confirmationSource = source,
+            dayLocationLabel = existingEntry.dayLocationLabel.ifBlank { dayLocationLabel },
+            dayLocationSource = existingEntry.dayLocationSource,
             updatedAt = now
         ) ?: WorkEntry(
             date = date,
             dayType = DayType.OFF,
+            dayLocationLabel = dayLocationLabel,
+            dayLocationSource = DayLocationSource.FALLBACK,
             confirmedWorkDay = true,
             confirmationAt = now,
             confirmationSource = source,

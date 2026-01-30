@@ -40,6 +40,11 @@ class ReminderSettingsManager @Inject constructor(
                 ?: LocalTime.of(19, 0),
             breakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: 60,
             locationRadiusKm = preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] ?: 30,
+
+            // Standort
+            defaultDayLocationLabel = preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] ?: "Leipzig",
+            preferGpsLocation = preferences[ReminderSettingsKeys.PREFER_GPS_LOCATION] ?: true,
+            fallbackOnLowAccuracy = preferences[ReminderSettingsKeys.FALLBACK_ON_LOW_ACCURACY] ?: true,
             
             // Morning Window
             morningReminderEnabled = preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] ?: true,
@@ -88,6 +93,9 @@ class ReminderSettingsManager @Inject constructor(
         workEnd: LocalTime? = null,
         breakMinutes: Int? = null,
         locationRadiusKm: Int? = null,
+        defaultDayLocationLabel: String? = null,
+        preferGpsLocation: Boolean? = null,
+        fallbackOnLowAccuracy: Boolean? = null,
         morningReminderEnabled: Boolean? = null,
         morningWindowStart: LocalTime? = null,
         morningWindowEnd: LocalTime? = null,
@@ -113,6 +121,10 @@ class ReminderSettingsManager @Inject constructor(
             workEnd?.let { preferences[ReminderSettingsKeys.WORK_END] = it.toPrefString() }
             breakMinutes?.let { preferences[ReminderSettingsKeys.BREAK_MINUTES] = it }
             locationRadiusKm?.let { preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] = it }
+
+            defaultDayLocationLabel?.let { preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] = it }
+            preferGpsLocation?.let { preferences[ReminderSettingsKeys.PREFER_GPS_LOCATION] = it }
+            fallbackOnLowAccuracy?.let { preferences[ReminderSettingsKeys.FALLBACK_ON_LOW_ACCURACY] = it }
             
             morningReminderEnabled?.let { preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] = it }
             morningWindowStart?.let { preferences[ReminderSettingsKeys.MORNING_WINDOW_START] = it.toPrefString() }

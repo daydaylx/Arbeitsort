@@ -23,6 +23,7 @@ import de.montagezeit.app.domain.usecase.UpdateEntry
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ResolveReview
+import de.montagezeit.app.domain.usecase.SetDayLocation
 import javax.inject.Singleton
 
 @Module
@@ -121,8 +122,19 @@ object ApplicationModule {
     }
 
     @Provides
-    fun provideConfirmOffDay(workEntryDao: WorkEntryDao): ConfirmOffDay {
-        return ConfirmOffDay(workEntryDao)
+    fun provideConfirmOffDay(
+        workEntryDao: WorkEntryDao,
+        reminderSettingsManager: ReminderSettingsManager
+    ): ConfirmOffDay {
+        return ConfirmOffDay(workEntryDao, reminderSettingsManager)
+    }
+
+    @Provides
+    fun provideSetDayLocation(
+        workEntryDao: WorkEntryDao,
+        reminderSettingsManager: ReminderSettingsManager
+    ): SetDayLocation {
+        return SetDayLocation(workEntryDao, reminderSettingsManager)
     }
     
     @Provides

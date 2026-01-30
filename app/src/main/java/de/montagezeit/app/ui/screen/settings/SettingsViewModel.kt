@@ -64,6 +64,30 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateDefaultDayLocationLabel(label: String) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                defaultDayLocationLabel = label.trim().ifBlank { "Leipzig" }
+            )
+        }
+    }
+
+    fun updatePreferGpsLocation(enabled: Boolean) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                preferGpsLocation = enabled
+            )
+        }
+    }
+
+    fun updateFallbackOnLowAccuracy(enabled: Boolean) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                fallbackOnLowAccuracy = enabled
+            )
+        }
+    }
+
     fun updateMorningReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             reminderSettingsManager.updateSettings(morningReminderEnabled = enabled)
@@ -153,7 +177,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF für den aktuellen Monat
+     * Exportiert PDF fï¿½r den aktuellen Monat
      */
     fun exportPdfCurrentMonth() {
         viewModelScope.launch {
@@ -173,11 +197,11 @@ class SettingsViewModel @Inject constructor(
                 val startDate = now.withDayOfMonth(1)
                 val endDate = now.withDayOfMonth(now.lengthOfMonth())
                 
-                // Einträge laden
+                // Eintrï¿½ge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Einträge für diesen Monat gefunden.")
+                    _uiState.value = SettingsUiState.ExportError("Keine Eintrï¿½ge fï¿½r diesen Monat gefunden.")
                     return@launch
                 }
                 
@@ -206,7 +230,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF für die letzten 30 Tage
+     * Exportiert PDF fï¿½r die letzten 30 Tage
      */
     fun exportPdfLast30Days() {
         viewModelScope.launch {
@@ -225,11 +249,11 @@ class SettingsViewModel @Inject constructor(
                 val endDate = LocalDate.now()
                 val startDate = endDate.minusDays(30)
                 
-                // Einträge laden
+                // Eintrï¿½ge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Einträge für die letzten 30 Tage gefunden.")
+                    _uiState.value = SettingsUiState.ExportError("Keine Eintrï¿½ge fï¿½r die letzten 30 Tage gefunden.")
                     return@launch
                 }
                 
@@ -258,7 +282,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF für einen benutzerdefinierten Zeitraum
+     * Exportiert PDF fï¿½r einen benutzerdefinierten Zeitraum
      */
     fun exportPdfCustomRange(startDate: LocalDate, endDate: LocalDate) {
         viewModelScope.launch {
@@ -273,11 +297,11 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                // Einträge laden
+                // Eintrï¿½ge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Einträge für den gewählten Zeitraum gefunden.")
+                    _uiState.value = SettingsUiState.ExportError("Keine Eintrï¿½ge fï¿½r den gewï¿½hlten Zeitraum gefunden.")
                     return@launch
                 }
                 

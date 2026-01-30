@@ -16,6 +16,11 @@ data class ReminderSettings(
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
     val locationRadiusKm: Int = 30,
+
+    // Standort
+    val defaultDayLocationLabel: String = "Leipzig",
+    val preferGpsLocation: Boolean = true,
+    val fallbackOnLowAccuracy: Boolean = true,
     
     // Morning Window
     val morningReminderEnabled: Boolean = true,
@@ -58,6 +63,11 @@ object ReminderSettingsKeys {
     val WORK_END = stringPreferencesKey("work_end")
     val BREAK_MINUTES = intPreferencesKey("break_minutes")
     val LOCATION_RADIUS_KM = intPreferencesKey("location_radius_km")
+
+    // Standort
+    val DEFAULT_DAY_LOCATION_LABEL = stringPreferencesKey("default_day_location_label")
+    val PREFER_GPS_LOCATION = booleanPreferencesKey("prefer_gps_location")
+    val FALLBACK_ON_LOW_ACCURACY = booleanPreferencesKey("fallback_on_low_accuracy")
 
     // Morning Window
     val MORNING_REMINDER_ENABLED = booleanPreferencesKey("morning_reminder_enabled")

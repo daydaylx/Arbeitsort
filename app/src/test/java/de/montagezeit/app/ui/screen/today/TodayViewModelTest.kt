@@ -107,6 +107,7 @@ class TodayViewModelTest {
             fetchRouteDistance = mockk<FetchRouteDistance>(relaxed = true),
             calculateTravelCompensation = mockk<CalculateTravelCompensation>(relaxed = true),
             resolveReview = mockk<ResolveReview>(relaxed = true),
+            setDayLocation = mockk<de.montagezeit.app.domain.usecase.SetDayLocation>(relaxed = true),
             reminderSettingsManager = settingsManager
         )
     }

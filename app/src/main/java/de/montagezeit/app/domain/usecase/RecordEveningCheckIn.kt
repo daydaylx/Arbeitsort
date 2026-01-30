@@ -2,10 +2,13 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.location.LocationProvider
+import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.location.LocationCheckResult
 import de.montagezeit.app.domain.location.LocationCalculator
 import de.montagezeit.app.domain.model.LocationResult
 import kotlinx.coroutines.flow.first
@@ -26,7 +29,16 @@ class RecordEveningCheckIn(
     companion object {
         // Default Timeout für Location: 15 Sekunden
         private const val LOCATION_TIMEOUT_MS = 15000L
+        private const val DEFAULT_CITY_LABEL = "Leipzig"
     }
+
+    private data class DayLocationData(
+        val label: String,
+        val source: DayLocationSource,
+        val lat: Double?,
+        val lon: Double?,
+        val accuracyMeters: Float?
+    )
     
     /**
      * Führt den Abend-Check-in durch
@@ -45,7 +57,7 @@ class RecordEveningCheckIn(
         val settings = reminderSettingsManager.settings.first()
         val locationRadiusKm = settings.locationRadiusKm.toDouble()
         
-        val locationResult = if (forceWithoutLocation) {
+        val locationResult = if (forceWithoutLocation || !settings.preferGpsLocation) {
             LocationResult.Unavailable
         } else {
             locationProvider.getCurrentLocation(LOCATION_TIMEOUT_MS)
@@ -56,7 +68,8 @@ class RecordEveningCheckIn(
             existingEntry = existingEntry,
             locationResult = locationResult,
             isMorning = false, // Abend
-            radiusKm = locationRadiusKm
+            radiusKm = locationRadiusKm,
+            settings = settings
         )
         
         workEntryDao.upsert(updatedEntry)
@@ -71,10 +84,60 @@ class RecordEveningCheckIn(
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
         isMorning: Boolean,
-        radiusKm: Double
+        radiusKm: Double,
+        settings: ReminderSettings
     ): WorkEntry {
         val now = System.currentTimeMillis()
         val normalizedEntry = existingEntry?.copy(dayType = DayType.WORK)
+
+        fun resolveDayLocation(
+            locationCheck: LocationCheckResult? = null
+        ): DayLocationData {
+            val manual = normalizedEntry?.takeIf { it.dayLocationSource == DayLocationSource.MANUAL }
+            if (manual != null) {
+                return DayLocationData(
+                    label = manual.dayLocationLabel,
+                    source = manual.dayLocationSource,
+                    lat = manual.dayLocationLat,
+                    lon = manual.dayLocationLon,
+                    accuracyMeters = manual.dayLocationAccuracyMeters
+                )
+            }
+
+            val fallbackLabel = normalizedEntry?.dayLocationLabel?.takeIf { it.isNotBlank() }
+                ?: settings.defaultDayLocationLabel.ifBlank { DEFAULT_CITY_LABEL }
+
+            if (locationResult is LocationResult.LowAccuracy && !settings.fallbackOnLowAccuracy) {
+                val existing = normalizedEntry
+                if (existing != null) {
+                    return DayLocationData(
+                        label = existing.dayLocationLabel,
+                        source = existing.dayLocationSource,
+                        lat = existing.dayLocationLat,
+                        lon = existing.dayLocationLon,
+                        accuracyMeters = existing.dayLocationAccuracyMeters
+                    )
+                }
+            }
+
+            return if (locationResult is LocationResult.Success && locationCheck?.isInside == true) {
+                DayLocationData(
+                    label = DEFAULT_CITY_LABEL,
+                    source = DayLocationSource.GPS,
+                    lat = locationResult.lat,
+                    lon = locationResult.lon,
+                    accuracyMeters = locationResult.accuracyMeters
+                )
+            } else {
+                DayLocationData(
+                    label = fallbackLabel,
+                    source = DayLocationSource.FALLBACK,
+                    lat = null,
+                    lon = null,
+                    accuracyMeters = null
+                )
+            }
+        }
         
         return when (locationResult) {
             is LocationResult.Success -> {
@@ -91,8 +154,9 @@ class RecordEveningCheckIn(
                     null -> null // Unklar (Grenzzone)
                 }
                 
+                val dayLocationNeedsReview = locationCheck.isInside == false
                 val needsReview = (normalizedEntry?.needsReview ?: false) ||
-                                   locationCheck.confirmRequired
+                    locationCheck.confirmRequired || dayLocationNeedsReview
                 
                 val locationLabel = if (locationCheck.isInside == true) {
                     "Leipzig"
@@ -100,6 +164,8 @@ class RecordEveningCheckIn(
                     null // UI fragt nach Ortsname
                 }
                 
+                val dayLocation = resolveDayLocation(locationCheck)
+
                 if (isMorning) {
                     normalizedEntry?.copy(
                         morningCapturedAt = now,
@@ -109,6 +175,11 @@ class RecordEveningCheckIn(
                         morningLocationLabel = locationLabel,
                         outsideLeipzigMorning = outsideLeipzig,
                         morningLocationStatus = LocationStatus.OK,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -120,6 +191,11 @@ class RecordEveningCheckIn(
                         morningLocationLabel = locationLabel,
                         outsideLeipzigMorning = outsideLeipzig,
                         morningLocationStatus = LocationStatus.OK,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 } else {
@@ -131,6 +207,11 @@ class RecordEveningCheckIn(
                         eveningLocationLabel = locationLabel,
                         outsideLeipzigEvening = outsideLeipzig,
                         eveningLocationStatus = LocationStatus.OK,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -142,6 +223,11 @@ class RecordEveningCheckIn(
                         eveningLocationLabel = locationLabel,
                         outsideLeipzigEvening = outsideLeipzig,
                         eveningLocationStatus = LocationStatus.OK,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 }
@@ -151,12 +237,19 @@ class RecordEveningCheckIn(
                 // Accuracy zu niedrig
                 val needsReview = true // Immer needsReview bei niedriger Accuracy
                 
+                val dayLocation = resolveDayLocation()
+
                 if (isMorning) {
                     normalizedEntry?.copy(
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.LOW_ACCURACY,
                         morningAccuracyMeters = locationResult.accuracyMeters,
                         outsideLeipzigMorning = null, // Unbekannt
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -165,6 +258,11 @@ class RecordEveningCheckIn(
                         morningLocationStatus = LocationStatus.LOW_ACCURACY,
                         morningAccuracyMeters = locationResult.accuracyMeters,
                         outsideLeipzigMorning = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 } else {
@@ -173,6 +271,11 @@ class RecordEveningCheckIn(
                         eveningLocationStatus = LocationStatus.LOW_ACCURACY,
                         eveningAccuracyMeters = locationResult.accuracyMeters,
                         outsideLeipzigEvening = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -181,6 +284,11 @@ class RecordEveningCheckIn(
                         eveningLocationStatus = LocationStatus.LOW_ACCURACY,
                         eveningAccuracyMeters = locationResult.accuracyMeters,
                         outsideLeipzigEvening = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 }
@@ -190,11 +298,18 @@ class RecordEveningCheckIn(
                 // Location nicht verfügbar
                 val needsReview = true
                 
+                val dayLocation = resolveDayLocation()
+
                 if (isMorning) {
                     normalizedEntry?.copy(
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigMorning = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -202,6 +317,11 @@ class RecordEveningCheckIn(
                         morningCapturedAt = now,
                         morningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigMorning = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 } else {
@@ -209,6 +329,11 @@ class RecordEveningCheckIn(
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigEvening = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview,
                         updatedAt = now
                     ) ?: createDefaultEntry(
@@ -216,6 +341,11 @@ class RecordEveningCheckIn(
                         eveningCapturedAt = now,
                         eveningLocationStatus = LocationStatus.UNAVAILABLE,
                         outsideLeipzigEvening = null,
+                        dayLocationLabel = dayLocation.label,
+                        dayLocationSource = dayLocation.source,
+                        dayLocationLat = dayLocation.lat,
+                        dayLocationLon = dayLocation.lon,
+                        dayLocationAccuracyMeters = dayLocation.accuracyMeters,
                         needsReview = needsReview
                     )
                 }
@@ -235,6 +365,11 @@ class RecordEveningCheckIn(
         morningLocationLabel: String? = null,
         outsideLeipzigMorning: Boolean? = null,
         morningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
+        dayLocationLabel: String = DEFAULT_CITY_LABEL,
+        dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
+        dayLocationLat: Double? = null,
+        dayLocationLon: Double? = null,
+        dayLocationAccuracyMeters: Float? = null,
         eveningCapturedAt: Long? = null,
         eveningLat: Double? = null,
         eveningLon: Double? = null,
@@ -248,6 +383,11 @@ class RecordEveningCheckIn(
         return WorkEntry(
             date = date,
             dayType = DayType.WORK,
+            dayLocationLabel = dayLocationLabel,
+            dayLocationSource = dayLocationSource,
+            dayLocationLat = dayLocationLat,
+            dayLocationLon = dayLocationLon,
+            dayLocationAccuracyMeters = dayLocationAccuracyMeters,
             morningCapturedAt = morningCapturedAt,
             morningLat = morningLat,
             morningLon = morningLon,

@@ -1290,6 +1290,22 @@ fun LocationSummary(entry: WorkEntry) {
     val hasEvening = entry.eveningCapturedAt != null
     
     if (!hasMorning && !hasEvening) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "${stringResource(R.string.day_location_label)}: ${entry.dayLocationLabel}",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1
+            )
+        }
         Text(
             text = "Kein Check-in",
             style = MaterialTheme.typography.bodySmall,
@@ -1298,6 +1314,23 @@ fun LocationSummary(entry: WorkEntry) {
         return
     }
     
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = "${stringResource(R.string.day_location_label)}: ${entry.dayLocationLabel}",
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1
+        )
+    }
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1311,9 +1344,10 @@ fun LocationSummary(entry: WorkEntry) {
         }
         
         // Location labels (if available and different from default)
+        val defaultLabel = entry.dayLocationLabel
         val labels = listOfNotNull(
-            entry.morningLocationLabel?.takeIf { it != "Leipzig" },
-            entry.eveningLocationLabel?.takeIf { it != "Leipzig" }
+            entry.morningLocationLabel?.takeIf { it != defaultLabel },
+            entry.eveningLocationLabel?.takeIf { it != defaultLabel }
         )
         
         if (labels.isNotEmpty()) {

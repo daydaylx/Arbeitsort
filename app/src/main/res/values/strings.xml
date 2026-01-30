@@ -101,6 +101,15 @@
     <string name="day_type_off">Freier Tag</string>
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
+    <string name="day_location_label">Tagesort</string>
+    <string name="day_location_source_gps">GPS</string>
+    <string name="day_location_source_manual">Manuell</string>
+    <string name="day_location_source_fallback">Fallback</string>
+    <string name="action_change_location">Ort ändern</string>
+    <string name="day_location_dialog_title">Tagesort ändern</string>
+    <string name="day_location_dialog_label">Stadt</string>
+    <string name="day_location_dialog_placeholder">z.B. Leipzig</string>
+    <string name="day_location_dialog_support">Wird für diesen Tag gespeichert</string>
     <string name="travel_label_from_to">Von %1$s nach %2$s</string>
     <string name="travel_label_from">Von %1$s</string>
     <string name="travel_label_to">Nach %1$s</string>
@@ -126,4 +135,85 @@
     <string name="location_leipzig">Leipzig</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
+    <string name="action_dismiss">Schließen</string>
+    
+    <!-- New Accessibility Strings -->
+    <string name="loading">Laden...</string>
+    <string name="cd_completed">Abgeschlossen</string>
+    <string name="work_hours_title">Arbeitszeit</string>
+    <string name="total_paid_hours">Gesamt (bezahlt)</string>
+    <string name="work_time_breakdown">Arbeit: %1$s</string>
+    <string name="travel_time_breakdown">Reise: %1$s</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_setup_title">Einrichtung</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_location">Standort</string>
+    <string name="settings_battery_optimization">Akku-Optimierung</string>
+    <string name="settings_work_times">Arbeitszeiten</string>
+    <string name="settings_reminders">Erinnerungen</string>
+    <string name="settings_non_working_days">Freie Tage</string>
+    <string name="settings_export">Export</string>
+    
+    <!-- Status -->
+    <string name="status_active">Aktiv</string>
+    <string name="status_not_allowed">Nicht erlaubt</string>
+    <string name="status_excluded">Ausgenommen</string>
+    <string name="status_optimized">Optimiert</string>
+    
+    <!-- Actions -->
+    <string name="action_settings">Einstellungen</string>
+    <string name="action_allow">Erlauben</string>
+    <string name="action_disable_optimization">Optimierung deaktivieren</string>
+    <string name="action_test_notification">Test-Benachrichtigung</string>
+    <string name="action_add">Hinzufügen</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_close">Schließen</string>
+    
+    <!-- Labels -->
+    <string name="label_work_start">Arbeitsbeginn</string>
+    <string name="label_work_end">Arbeitsende</string>
+    <string name="label_break">Pause</string>
+    <string name="label_time_range">Zeitraum</string>
+    <string name="label_time">Uhrzeit</string>
+    <string name="label_default_city">Standard-Stadt</string>
+    <string name="label_prefer_gps">GPS bevorzugen</string>
+    <string name="label_fallback_low_accuracy">Fallback bei ungenauer GPS</string>
+    <string name="label_radius">Radius um Leipzig (%1$d km)</string>
+    <string name="label_auto_off_weekends">Wochenenden automatisch frei</string>
+    <string name="label_auto_off_holidays">Feiertage automatisch frei</string>
+    <string name="label_holidays">Feiertage</string>
+    <string name="placeholder_city">z.B. Leipzig</string>
+    
+    <!-- Reminders -->
+    <string name="reminder_morning">Morgen-Erinnerung</string>
+    <string name="reminder_evening">Abend-Erinnerung</string>
+    <string name="reminder_fallback">Fallback am Abend</string>
+    <string name="reminder_daily">Tägliche Erinnerung</string>
+    <string name="reminder_daily_description">Erinnert jeden Tag, auch wenn bereits erfasst</string>
+    
+    <!-- Descriptions -->
+    <string name="work_times_description">Wird für die automatische Berechnung verwendet</string>
+    <string name="default_city_description">Wird genutzt, wenn GPS nicht verfügbar ist</string>
+    <string name="prefer_gps_description">Standort wird beim Check-in automatisch ermittelt</string>
+    <string name="fallback_low_accuracy_description">Standard-Stadt nutzen, wenn Genauigkeit zu niedrig ist</string>
+    <string name="auto_off_weekends_description">Setzt Tagtyp auf Frei und pausiert Erinnerungen</string>
+    <string name="auto_off_holidays_description">Manuelle Feiertage werden als frei behandelt</string>
+    
+    <!-- Export -->
+    <string name="export_current_month">Dieser Monat</string>
+    <string name="export_30_days">30 Tage</string>
+    <string name="export_custom">Benutzerdef.</string>
+    <string name="exporting">Exportiere...</string>
+    <string name="export_success_title">Export erfolgreich!</string>
+    <string name="export_success_format">Format: %1$s</string>
+    <string name="share_export">Export teilen</string>
+    <string name="warning_name_missing">Name fehlt! Bitte zuerst in den Settings eingeben.</string>
+    <string name="cd_pdf_settings">PDF Einstellungen</string>
+    <string name="cd_remove_holiday">Feiertag entfernen</string>
+    <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
+    
+    <!-- Format -->
+    <string name="format_minutes">%1$d min</string>
 </resources>

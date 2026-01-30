@@ -16,7 +16,7 @@ import de.montagezeit.app.data.local.entity.RouteCacheEntry
 
 @Database(
     entities = [WorkEntry::class, RouteCacheEntry::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(
@@ -83,6 +83,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLabel TEXT NOT NULL DEFAULT 'Leipzig'")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationSource TEXT NOT NULL DEFAULT 'FALLBACK'")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLat REAL")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLon REAL")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationAccuracyMeters REAL")
+            }
+        }
+
+        val MIGRATIONS = arrayOf(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6
+        )
     }
 }

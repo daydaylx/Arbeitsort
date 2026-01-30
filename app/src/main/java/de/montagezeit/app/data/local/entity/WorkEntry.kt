@@ -24,6 +24,13 @@ data class WorkEntry(
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
     val dayType: DayType = DayType.WORK,
+
+    // Daily Location (Pflicht)
+    val dayLocationLabel: String = "Leipzig",
+    val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
+    val dayLocationLat: Double? = null,
+    val dayLocationLon: Double? = null,
+    val dayLocationAccuracyMeters: Float? = null,
     
     // Morning Snapshot
     val morningCapturedAt: Long? = null,
@@ -76,6 +83,12 @@ enum class LocationStatus {
     OK,
     UNAVAILABLE,
     LOW_ACCURACY
+}
+
+enum class DayLocationSource {
+    GPS,
+    MANUAL,
+    FALLBACK
 }
 
 enum class TravelSource {
