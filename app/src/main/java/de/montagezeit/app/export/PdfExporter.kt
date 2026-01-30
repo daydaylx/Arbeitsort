@@ -48,16 +48,15 @@ class PdfExporter @Inject constructor(
         private const val SIGNATURE_HEIGHT = 80
         
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
-        private const val COL_DATE = 55
-        private const val COL_START = 45
-        private const val COL_END = 45
-        private const val COL_BREAK = 40
-        private const val COL_WORK_TIME = 55
-        private const val COL_TRAVEL_WINDOW = 70
-        private const val COL_TRAVEL_TIME = 50
+        private const val COL_DATE = 60
+        private const val COL_START = 50
+        private const val COL_END = 50
+        private const val COL_BREAK = 45
+        private const val COL_WORK_TIME = 60
+        private const val COL_TRAVEL_WINDOW = 80
+        private const val COL_TRAVEL_TIME = 55
         private const val COL_TOTAL_TIME = 55
-        private const val COL_LOCATION = 50
-        private const val COL_NOTE = 50 // Rest
+        private const val COL_LOCATION = 60
     }
     
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
@@ -197,7 +196,7 @@ class PdfExporter @Inject constructor(
         var y = MARGIN.toFloat() + 20
         
         // Titel
-        canvas.drawText("Arbeitsnachweis", MARGIN.toFloat(), y, paintTitle)
+        canvas.drawText("Arbeitsnachweis – Monatsübersicht", MARGIN.toFloat(), y, paintTitle)
         y += SPACING * 2
         
         // Mitarbeiter-Info
@@ -284,9 +283,6 @@ class PdfExporter @Inject constructor(
         xPos += COL_TOTAL_TIME
 
         canvas.drawText("Ort", xPos, yPos + 20, paintTableHeader)
-        xPos += COL_LOCATION
-
-        canvas.drawText("Notiz", xPos, yPos + 20, paintTableHeader)
         
         // Trennlinie unter Tabellenkopf
         yPos += TABLE_HEADER_HEIGHT
@@ -371,12 +367,7 @@ class PdfExporter @Inject constructor(
 
             // Ort
             val location = PdfUtilities.getLocation(entry)
-            activeCanvas.drawText(location.take(8), xPos, y + 15, paintTableText) // Truncate zu 8 Zeichen
-            xPos += COL_LOCATION
-
-            // Notiz
-            val note = PdfUtilities.getNote(entry)
-            activeCanvas.drawText(note.take(10), xPos, y + 15, paintTableText) // Truncate zu 10 Zeichen
+            activeCanvas.drawText(location.take(10), xPos, y + 15, paintTableText)
             
             y += ROW_HEIGHT
         }
@@ -410,15 +401,7 @@ class PdfExporter @Inject constructor(
         yPos += 25
         
         canvas.drawText(
-            "Summe Arbeitszeit: ${PdfUtilities.formatWorkHours(totalWorkHours)} Stunden",
-            MARGIN.toFloat(),
-            yPos,
-            paintSummary
-        )
-        yPos += 25
-        
-        canvas.drawText(
-            "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} Stunden",
+            "Summe Arbeitszeit: ${PdfUtilities.formatWorkHours(totalWorkHours)} h",
             MARGIN.toFloat(),
             yPos,
             paintSummary
@@ -426,7 +409,15 @@ class PdfExporter @Inject constructor(
         yPos += 25
 
         canvas.drawText(
-            "Summe Gesamtzeit (bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} Stunden",
+            "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} h",
+            MARGIN.toFloat(),
+            yPos,
+            paintSummary
+        )
+        yPos += 25
+
+        canvas.drawText(
+            "Summe Gesamtzeit (bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} h",
             MARGIN.toFloat(),
             yPos,
             paintSummary
