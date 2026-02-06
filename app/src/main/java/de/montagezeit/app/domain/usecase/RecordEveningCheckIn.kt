@@ -67,6 +67,7 @@ class RecordEveningCheckIn(
             date = date,
             existingEntry = existingEntry,
             locationResult = locationResult,
+            date = date,
             isMorning = false, // Abend
             radiusKm = locationRadiusKm,
             settings = settings
@@ -83,6 +84,7 @@ class RecordEveningCheckIn(
         date: LocalDate,
         existingEntry: WorkEntry?,
         locationResult: LocationResult,
+        date: LocalDate,
         isMorning: Boolean,
         radiusKm: Double,
         settings: ReminderSettings
