@@ -1,6 +1,7 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -179,6 +180,77 @@ class ConfirmWorkDayTest {
         // Assert
         assertEquals(null, result.morningLocationLabel)
         assertEquals(true, result.outsideLeipzigMorning)
+        assertTrue(result.needsReview)
+    }
+
+    @Test
+    fun `manual day location bleibt bei erfolgreichem Standort erhalten`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Berlin",
+            dayLocationSource = DayLocationSource.MANUAL,
+            dayLocationLat = 52.52,
+            dayLocationLon = 13.40
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+
+        val locationResult = LocationResult.Success(
+            lat = 51.340632,
+            lon = 12.374729,
+            accuracyMeters = 10.0f
+        )
+        coEvery { locationProvider.getCurrentLocation(any()) } returns locationResult
+        coEvery { locationCalculator.checkLeipzigLocation(any(), any(), any()) } returns
+            LocationCheckResult(
+                isInside = true,
+                distanceKm = 0.0,
+                confirmRequired = false
+            )
+
+        val result = confirmWorkDay(date, source = "TEST")
+
+        assertEquals("Berlin", result.dayLocationLabel)
+        assertEquals(DayLocationSource.MANUAL, result.dayLocationSource)
+        assertEquals(52.52, result.dayLocationLat)
+        assertEquals(13.40, result.dayLocationLon)
+    }
+
+    @Test
+    fun `fallback label nutzt Leipzig wenn Setting leer ist`() = runTest {
+        val date = LocalDate.now()
+        every { reminderSettingsManager.settings } returns flowOf(
+            de.montagezeit.app.data.preferences.ReminderSettings(
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(19, 0),
+                breakMinutes = 60,
+                locationRadiusKm = 30,
+                defaultDayLocationLabel = ""
+            )
+        )
+        coEvery { locationProvider.getCurrentLocation(any()) } returns LocationResult.Unavailable
+
+        val result = confirmWorkDay(date, source = "TEST")
+
+        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
+        assertTrue(result.needsReview)
+    }
+
+    @Test
+    fun `force without location umgeht LocationProvider`() = runTest {
+        val date = LocalDate.now()
+        coEvery { locationProvider.getCurrentLocation(any()) } returns LocationResult.Success(
+            lat = 51.3,
+            lon = 12.3,
+            accuracyMeters = 5f
+        )
+
+        val result = confirmWorkDay(date, forceWithoutLocation = true, source = "TEST")
+
+        coVerify(exactly = 0) { locationProvider.getCurrentLocation(any()) }
+        assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
     }
 
     @Test
