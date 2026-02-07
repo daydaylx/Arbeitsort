@@ -86,28 +86,9 @@ class WindowCheckWorker @AssistedInject constructor(
                     // Daily ist periodic, kein self-reschedule
                 }
                 null -> {
-                    // Legacy: Check all windows (für alte Installations)
-                    if (settings.morningReminderEnabled &&
-                        ReminderWindowEvaluator.isInMorningWindow(currentTime, settings)
-                    ) {
-                        checkAndShowMorningReminder(today, settings, sharedPreferences)
-                    }
-
-                    if (settings.eveningReminderEnabled &&
-                        ReminderWindowEvaluator.isInEveningWindow(currentTime, settings)
-                    ) {
-                        checkAndShowEveningReminder(today, settings, sharedPreferences)
-                    }
-
-                    if (settings.fallbackEnabled &&
-                        ReminderWindowEvaluator.isAfterFallbackTime(currentTime, settings)
-                    ) {
-                        checkAndShowFallbackReminder(today, settings, sharedPreferences)
-                    }
-
-                    if (settings.dailyReminderEnabled) {
-                        checkAndShowDailyReminder(today, sharedPreferences)
-                    }
+                    // Legacy worker ohne reminder_type: no-op, um Doppeltrigger mit
+                    // den dedizierten Morning/Evening/Fallback/Daily Workern zu vermeiden.
+                    return Result.success()
                 }
             }
 

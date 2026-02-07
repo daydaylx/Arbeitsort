@@ -26,10 +26,12 @@ import de.montagezeit.app.work.ReminderLaterWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import de.montagezeit.app.work.ReminderType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
@@ -267,6 +269,7 @@ class CheckInActionService : Service() {
     
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel()
     }
     
     /**
@@ -332,8 +335,13 @@ class CheckInActionService : Service() {
             .setInitialDelay(hoursLater.toLong(), TimeUnit.HOURS)
             .setInputData(inputData)
             .build()
-        
-        WorkManager.getInstance(this).enqueue(workRequest)
+
+        val uniqueName = "reminder_later_${date}_${reminderType ?: "UNKNOWN"}"
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            uniqueName,
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
     }
 
     private fun markReminderFlags(date: LocalDate) {
@@ -370,6 +378,10 @@ class CheckInActionService : Service() {
             .setInputData(inputData)
             .build()
 
-        WorkManager.getInstance(this).enqueue(workRequest)
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "reminder_later_confirmation_$date",
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
     }
 }

@@ -5,7 +5,6 @@ import androidx.work.*
 import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
-import java.time.Duration
 import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -17,8 +16,8 @@ import de.montagezeit.app.data.preferences.ReminderSettings
  * Scheduler für Reminder-Worker
  *
  * Nutzt PeriodicWorkRequest für Window-Based Workers (morning, evening):
- * - Morning Worker: Startet am Anfang des Morning Windows (z.B. 06:00), dann alle 15 Min
- * - Evening Worker: Startet am Anfang des Evening Windows (z.B. 18:00), dann alle 15 Min
+ * - Morning Worker: Startet am Anfang des Morning Windows, dann im konfigurierten Intervall
+ * - Evening Worker: Startet am Anfang des Evening Windows, dann im konfigurierten Intervall
  * - Fallback Worker: Startet zur Fallback-Zeit (z.B. 22:30), periodic
  * - Daily Worker: Startet zur konfigurierten Zeit, periodic
  */
@@ -35,7 +34,6 @@ class ReminderScheduler @Inject constructor(
         private const val EVENING_WORK_NAME = "evening_reminder_work"
         private const val FALLBACK_WORK_NAME = "fallback_reminder_work"
         private const val DAILY_WORK_NAME = "daily_reminder_work"
-        private const val WINDOW_REPEAT_MINUTES = 15L
         private const val WINDOW_FLEX_MINUTES = 5L
     }
 
@@ -65,7 +63,7 @@ class ReminderScheduler @Inject constructor(
      *
      * Strategie:
      * - Startet am Anfang des Morning Windows (z.B. 06:00)
-     * - Periodic (alle 15 Minuten innerhalb des Systemschedules)
+     * - Periodic (im konfigurierten Intervall, mindestens 15 Minuten)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
     private suspend fun scheduleMorningWorker(settings: ReminderSettings) {
@@ -78,7 +76,10 @@ class ReminderScheduler @Inject constructor(
         val now = LocalTime.now()
         val morningWindowStart = settings.morningWindowStart
         val morningWindowEnd = settings.morningWindowEnd
-        val initialDelay = delayToWindowStart(now, morningWindowStart, morningWindowEnd)
+        val initialDelay = ReminderScheduleCalculator.delayToWindowStart(now, morningWindowStart, morningWindowEnd)
+        val repeatIntervalMinutes = ReminderScheduleCalculator.periodicIntervalMinutes(
+            settings.morningCheckIntervalMinutes
+        )
 
         // Keine Constraints - Reminders müssen zuverlässig funktionieren
         val constraints = Constraints.Builder()
@@ -86,7 +87,7 @@ class ReminderScheduler @Inject constructor(
             .build()
 
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = WINDOW_REPEAT_MINUTES,
+            repeatInterval = repeatIntervalMinutes,
             repeatIntervalTimeUnit = TimeUnit.MINUTES,
             flexTimeInterval = WINDOW_FLEX_MINUTES,
             flexTimeIntervalUnit = TimeUnit.MINUTES
@@ -109,7 +110,7 @@ class ReminderScheduler @Inject constructor(
      *
      * Strategie:
      * - Startet am Anfang des Evening Windows (z.B. 18:00)
-     * - Periodic (alle 15 Minuten innerhalb des Systemschedules)
+     * - Periodic (im konfigurierten Intervall, mindestens 15 Minuten)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
     private suspend fun scheduleEveningWorker(settings: ReminderSettings) {
@@ -122,7 +123,10 @@ class ReminderScheduler @Inject constructor(
         val now = LocalTime.now()
         val eveningWindowStart = settings.eveningWindowStart
         val eveningWindowEnd = settings.eveningWindowEnd
-        val initialDelay = delayToWindowStart(now, eveningWindowStart, eveningWindowEnd)
+        val initialDelay = ReminderScheduleCalculator.delayToWindowStart(now, eveningWindowStart, eveningWindowEnd)
+        val repeatIntervalMinutes = ReminderScheduleCalculator.periodicIntervalMinutes(
+            settings.eveningCheckIntervalMinutes
+        )
 
         // Keine Constraints - Reminders müssen zuverlässig funktionieren
         val constraints = Constraints.Builder()
@@ -130,7 +134,7 @@ class ReminderScheduler @Inject constructor(
             .build()
 
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = WINDOW_REPEAT_MINUTES,
+            repeatInterval = repeatIntervalMinutes,
             repeatIntervalTimeUnit = TimeUnit.MINUTES,
             flexTimeInterval = WINDOW_FLEX_MINUTES,
             flexTimeIntervalUnit = TimeUnit.MINUTES
@@ -165,7 +169,7 @@ class ReminderScheduler @Inject constructor(
         // Berechne Verzögerung bis Fallback-Zeit
         val now = LocalTime.now()
         val fallbackTime = settings.fallbackTime
-        val initialDelay = delayToTime(now, fallbackTime)
+        val initialDelay = ReminderScheduleCalculator.delayToTime(now, fallbackTime)
 
         // Keine Constraints - Reminders müssen zuverlässig funktionieren
         val constraints = Constraints.Builder()
@@ -204,7 +208,7 @@ class ReminderScheduler @Inject constructor(
 
         val now = LocalTime.now()
         val dailyTime = settings.dailyReminderTime
-        val initialDelay = delayToTime(now, dailyTime)
+        val initialDelay = ReminderScheduleCalculator.delayToTime(now, dailyTime)
 
         // Keine Constraints - Reminders müssen zuverlässig funktionieren
         val constraints = Constraints.Builder()
@@ -227,23 +231,4 @@ class ReminderScheduler @Inject constructor(
         )
     }
 
-    private fun delayToWindowStart(
-        now: LocalTime,
-        windowStart: LocalTime,
-        windowEnd: LocalTime
-    ): Duration {
-        return when {
-            now.isBefore(windowStart) -> Duration.between(now, windowStart)
-            now.isAfter(windowEnd) -> Duration.between(now, windowStart).plusDays(1)
-            else -> Duration.ZERO
-        }
-    }
-
-    private fun delayToTime(now: LocalTime, target: LocalTime): Duration {
-        return if (now.isBefore(target)) {
-            Duration.between(now, target)
-        } else {
-            Duration.between(now, target).plusDays(1)
-        }
-    }
 }

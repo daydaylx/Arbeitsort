@@ -95,11 +95,15 @@ class RingBufferLogger @Inject constructor(
         try {
             val lines = logFile.readLines()
             
-            // Behalte nur die ersten 50% der Zeilen
-            val keepLines = (lines.size * 0.5).toInt()
-            val newContent = lines.take(keepLines).joinToString("\n") + "\n"
-            
-            logFile.writeText(newContent)
+            // Behalte die neuesten 50% der Zeilen
+            val keepLines = (lines.size * 0.5).toInt().coerceAtLeast(1)
+            val newContent = lines.takeLast(keepLines).joinToString("\n")
+
+            if (newContent.isNotEmpty()) {
+                logFile.writeText("$newContent\n")
+            } else {
+                logFile.writeText("")
+            }
         } catch (e: Exception) {
             // Bei Fehler einfach komplett löschen
             logFile.delete()

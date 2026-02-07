@@ -2,13 +2,11 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.location.LocationProvider
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.location.LocationCheckResult
 import de.montagezeit.app.domain.location.LocationCalculator
 import de.montagezeit.app.domain.model.LocationResult
 import kotlinx.coroutines.flow.first
@@ -35,17 +33,7 @@ class ConfirmWorkDay(
         // Default Timeout für Location: 15 Sekunden
         private const val LOCATION_TIMEOUT_MS = 15000L
         private const val CONFIRMATION_SOURCE_NOTIFICATION = "NOTIFICATION"
-        private const val CONFIRMATION_SOURCE_UI = "UI"
-        private const val DEFAULT_CITY_LABEL = "Leipzig"
     }
-
-    private data class DayLocationData(
-        val label: String,
-        val source: DayLocationSource,
-        val lat: Double?,
-        val lon: Double?,
-        val accuracyMeters: Float?
-    )
     
     /**
      * Bestätigt, dass heute ein Arbeitstag ist
@@ -110,55 +98,6 @@ class ConfirmWorkDay(
         confirmationSource: String
     ): WorkEntry {
         val now = System.currentTimeMillis()
-
-        fun resolveDayLocation(
-            locationCheck: LocationCheckResult? = null
-        ): DayLocationData {
-            val manual = existingEntry?.takeIf { it.dayLocationSource == DayLocationSource.MANUAL }
-            if (manual != null) {
-                return DayLocationData(
-                    label = manual.dayLocationLabel,
-                    source = manual.dayLocationSource,
-                    lat = manual.dayLocationLat,
-                    lon = manual.dayLocationLon,
-                    accuracyMeters = manual.dayLocationAccuracyMeters
-                )
-            }
-
-            val fallbackLabel = existingEntry?.dayLocationLabel?.takeIf { it.isNotBlank() }
-                ?: settings.defaultDayLocationLabel.ifBlank { DEFAULT_CITY_LABEL }
-
-            if (locationResult is LocationResult.LowAccuracy && !settings.fallbackOnLowAccuracy) {
-                val existing = existingEntry
-                if (existing != null) {
-                    return DayLocationData(
-                        label = existing.dayLocationLabel,
-                        source = existing.dayLocationSource,
-                        lat = existing.dayLocationLat,
-                        lon = existing.dayLocationLon,
-                        accuracyMeters = existing.dayLocationAccuracyMeters
-                    )
-                }
-            }
-
-            return if (locationResult is LocationResult.Success && locationCheck?.isInside == true) {
-                DayLocationData(
-                    label = DEFAULT_CITY_LABEL,
-                    source = DayLocationSource.GPS,
-                    lat = locationResult.lat,
-                    lon = locationResult.lon,
-                    accuracyMeters = locationResult.accuracyMeters
-                )
-            } else {
-                DayLocationData(
-                    label = fallbackLabel,
-                    source = DayLocationSource.FALLBACK,
-                    lat = null,
-                    lon = null,
-                    accuracyMeters = null
-                )
-            }
-        }
         
         return when (locationResult) {
             is LocationResult.Success -> {
@@ -185,7 +124,12 @@ class ConfirmWorkDay(
                     null // UI fragt nach Ortsname
                 }
                 
-                val dayLocation = resolveDayLocation(locationCheck)
+                val dayLocation = DayLocationResolver.resolve(
+                    existingEntry = existingEntry,
+                    settings = settings,
+                    locationResult = locationResult,
+                    locationCheck = locationCheck
+                )
 
                 existingEntry?.copy(
                     dayType = DayType.WORK,
@@ -228,6 +172,7 @@ class ConfirmWorkDay(
                     confirmedWorkDay = true,
                     confirmationAt = confirmationAt,
                     confirmationSource = confirmationSource,
+                    needsReview = needsReview,
                     createdAt = now,
                     updatedAt = now
                 )
@@ -237,7 +182,11 @@ class ConfirmWorkDay(
                 // Accuracy zu niedrig
                 val needsReview = true // Immer needsReview bei niedriger Accuracy
                 
-                val dayLocation = resolveDayLocation()
+                val dayLocation = DayLocationResolver.resolve(
+                    existingEntry = existingEntry,
+                    settings = settings,
+                    locationResult = locationResult
+                )
 
                 existingEntry?.copy(
                     dayType = DayType.WORK,
@@ -284,7 +233,11 @@ class ConfirmWorkDay(
                 // Location nicht verfügbar
                 val needsReview = true
                 
-                val dayLocation = resolveDayLocation()
+                val dayLocation = DayLocationResolver.resolve(
+                    existingEntry = existingEntry,
+                    settings = settings,
+                    locationResult = locationResult
+                )
 
                 existingEntry?.copy(
                     dayType = DayType.WORK,
