@@ -30,12 +30,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
@@ -100,13 +102,13 @@ fun ExportPreviewBottomSheet(
                             onClick = { viewModel.createPdf() },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("PDF erstellen")
+                            Text(stringResource(R.string.export_preview_action_create_pdf))
                         }
                         SecondaryActionButton(
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Schließen")
+                            Text(stringResource(R.string.action_close))
                         }
                     }
                 }
@@ -118,7 +120,7 @@ fun ExportPreviewBottomSheet(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Schließen")
+                        Text(stringResource(R.string.action_close))
                     }
                 }
 
@@ -129,30 +131,33 @@ fun ExportPreviewBottomSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                        Text("Erstelle PDF...")
+                        Text(stringResource(R.string.export_preview_creating_pdf))
                     }
                 }
 
                 is PreviewState.PdfReady -> {
-                    Text("PDF erstellt", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.export_preview_pdf_ready_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     Text(state.fileName, style = MaterialTheme.typography.bodySmall)
                     PrimaryActionButton(
                         onClick = { openPdf(context, state.fileUri) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("PDF öffnen")
+                        Text(stringResource(R.string.export_preview_action_open_pdf))
                     }
                     SecondaryActionButton(
                         onClick = { sharePdf(context, state.fileUri) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Teilen")
+                        Text(stringResource(R.string.action_share))
                     }
                     TertiaryActionButton(
                         onClick = { viewModel.returnToPreview() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Zurück zur Vorschau")
+                        Text(stringResource(R.string.export_preview_action_back_to_preview))
                     }
                 }
 
@@ -167,14 +172,14 @@ fun ExportPreviewBottomSheet(
                                 onClick = { viewModel.returnToPreview() },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Zurück")
+                                Text(stringResource(R.string.export_preview_action_back))
                             }
                         }
                         TertiaryActionButton(
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Schließen")
+                            Text(stringResource(R.string.action_close))
                         }
                     }
                 }
@@ -205,21 +210,33 @@ private fun TotalsCard(totals: ExportPreviewTotals) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Summen", style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.export_preview_totals_title),
+                style = MaterialTheme.typography.titleMedium
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Arbeitszeit", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(R.string.export_preview_totals_work_time),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Text(totals.workHours, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Reisezeit", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(R.string.export_preview_totals_travel_time),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Text(totals.travelHours, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Gesamt bezahlt", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(R.string.export_preview_totals_paid_total),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Text(totals.paidHours, fontWeight = FontWeight.Bold)
                 }
             }
@@ -250,15 +267,15 @@ private fun ExportPreviewRowCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Pause: ${row.breakLabel}")
-                Text("Arbeit: ${row.workLabel}")
+                Text(stringResource(R.string.export_preview_row_break, row.breakLabel))
+                Text(stringResource(R.string.export_preview_row_work, row.workLabel))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Reise: ${row.travelLabel}")
-                Text("Gesamt: ${row.totalLabel}")
+                Text(stringResource(R.string.export_preview_row_travel, row.travelLabel))
+                Text(stringResource(R.string.export_preview_row_total, row.totalLabel))
             }
             row.locationNote?.let { note ->
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -294,7 +311,7 @@ private fun ErrorCard(message: String) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = "Fehler: $message",
+            text = stringResource(R.string.export_preview_error_message, message),
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onErrorContainer
         )
@@ -309,7 +326,11 @@ private fun openPdf(context: Context, fileUri: Uri) {
     if (intent.resolveActivity(context.packageManager) != null) {
         context.startActivity(intent)
     } else {
-        Toast.makeText(context, "Keine App zum Öffnen von PDFs gefunden.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.export_preview_no_pdf_app),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
 
@@ -320,8 +341,14 @@ private fun sharePdf(context: Context, fileUri: Uri) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     if (intent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(Intent.createChooser(intent, "PDF teilen"))
+        context.startActivity(
+            Intent.createChooser(intent, context.getString(R.string.export_preview_share_chooser_title))
+        )
     } else {
-        Toast.makeText(context, "Keine App zum Teilen von PDFs gefunden.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.export_preview_no_share_app),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }

@@ -35,6 +35,7 @@ import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
+import de.montagezeit.app.ui.util.asString
 import de.montagezeit.app.ui.util.getReviewReason
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
@@ -108,7 +109,7 @@ fun HistoryScreen(
                 
                 is HistoryUiState.Error -> {
                     ErrorContent(
-                        message = (uiState as HistoryUiState.Error).message,
+                        message = (uiState as HistoryUiState.Error).message.asString(context),
                         onRetry = { viewModel.loadHistory() },
                         modifier = Modifier.align(Alignment.Center)
                     )

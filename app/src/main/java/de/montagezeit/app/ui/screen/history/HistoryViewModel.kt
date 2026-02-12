@@ -3,12 +3,14 @@ package de.montagezeit.app.ui.screen.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +61,12 @@ class HistoryViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = HistoryUiState.Error(e.message ?: "Unbekannter Fehler")
+                    _uiState.value = HistoryUiState.Error(
+                        message = e.message
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let(UiText::DynamicString)
+                            ?: UiText.StringResource(R.string.history_error_unknown)
+                    )
                 }
             }
         }
@@ -287,5 +294,5 @@ sealed class HistoryUiState {
         val months: List<MonthGroup> = emptyList(),
         val entriesByDate: Map<LocalDate, WorkEntry> = emptyMap()
     ) : HistoryUiState()
-    data class Error(val message: String) : HistoryUiState()
+    data class Error(val message: UiText) : HistoryUiState()
 }

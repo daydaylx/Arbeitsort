@@ -219,6 +219,24 @@
     <string name="export_success_title">Export erfolgreich!</string>
     <string name="export_success_format">Format: %1$s</string>
     <string name="share_export">Export teilen</string>
+    <string name="export_preview_action_create_pdf">PDF erstellen</string>
+    <string name="export_preview_creating_pdf">Erstelle PDF...</string>
+    <string name="export_preview_pdf_ready_title">PDF erstellt</string>
+    <string name="export_preview_action_open_pdf">PDF öffnen</string>
+    <string name="export_preview_action_back_to_preview">Zurück zur Vorschau</string>
+    <string name="export_preview_action_back">Zurück</string>
+    <string name="export_preview_totals_title">Summen</string>
+    <string name="export_preview_totals_work_time">Arbeitszeit</string>
+    <string name="export_preview_totals_travel_time">Reisezeit</string>
+    <string name="export_preview_totals_paid_total">Gesamt bezahlt</string>
+    <string name="export_preview_row_break">Pause: %1$s</string>
+    <string name="export_preview_row_work">Arbeit: %1$s</string>
+    <string name="export_preview_row_travel">Reise: %1$s</string>
+    <string name="export_preview_row_total">Gesamt: %1$s</string>
+    <string name="export_preview_error_message">Fehler: %1$s</string>
+    <string name="export_preview_no_pdf_app">Keine App zum Öffnen von PDFs gefunden.</string>
+    <string name="export_preview_share_chooser_title">PDF teilen</string>
+    <string name="export_preview_no_share_app">Keine App zum Teilen von PDFs gefunden.</string>
     <string name="warning_name_missing">Name fehlt! Bitte zuerst in den Settings eingeben.</string>
     <string name="cd_pdf_settings">PDF Einstellungen</string>
     <string name="pdf_settings_title">PDF Einstellungen</string>
@@ -247,6 +265,7 @@
 
     <!-- History Screen -->
     <string name="history_title">Verlauf</string>
+    <string name="history_error_unknown">Unbekannter Fehler</string>
     <string name="history_toast_batch_updated">Bereich aktualisiert</string>
     <string name="history_toast_batch_failed">Bereichs-Update fehlgeschlagen</string>
     <string name="history_summary_calendar">Kalender</string>
