@@ -170,6 +170,7 @@
     <string name="action_add">Hinzufügen</string>
     <string name="action_share">Teilen</string>
     <string name="action_close">Schließen</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_preview">Vorschau</string>
     <string name="action_export">Exportieren</string>
@@ -232,6 +233,9 @@
     
     <!-- Format -->
     <string name="format_minutes">%1$d min</string>
+    <string name="time_picker_title">Zeit wählen</string>
+    <string name="time_picker_cd_switch_to_clock">Zu Uhr wechseln</string>
+    <string name="time_picker_cd_switch_to_keyboard">Zu Tastatur wechseln</string>
 
     <!-- History Screen -->
     <string name="history_title">Verlauf</string>

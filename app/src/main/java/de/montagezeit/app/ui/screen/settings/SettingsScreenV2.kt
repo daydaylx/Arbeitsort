@@ -44,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
@@ -1039,7 +1040,7 @@ fun NonWorkingDaysSectionV2(
     }
 
     if (showHolidayPicker) {
-        SettingsDatePickerDialog(
+        DatePickerDialog(
             initialDate = LocalDate.now(),
             onDateSelected = { date ->
                 onAddHolidayDate(date)

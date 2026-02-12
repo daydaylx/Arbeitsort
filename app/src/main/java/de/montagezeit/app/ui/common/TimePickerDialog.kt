@@ -28,19 +28,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import de.montagezeit.app.R
 import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(
-    title: String = "Zeit wählen",
+    title: String? = null,
     initialTime: LocalTime,
     onTimeSelected: (LocalTime) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val dialogTitle = title ?: stringResource(R.string.time_picker_title)
     val timePickerState = rememberTimePickerState(
         initialHour = initialTime.hour,
         initialMinute = initialTime.minute,
@@ -67,7 +70,7 @@ fun TimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = title,
+                    text = dialogTitle,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -90,7 +93,11 @@ fun TimePickerDialog(
                     IconButton(onClick = { showTimeInput = !showTimeInput }) {
                         Icon(
                             imageVector = if (showTimeInput) Icons.Default.Schedule else Icons.Default.Keyboard,
-                            contentDescription = if (showTimeInput) "Zu Uhr wechseln" else "Zu Tastatur wechseln"
+                            contentDescription = if (showTimeInput) {
+                                stringResource(R.string.time_picker_cd_switch_to_clock)
+                            } else {
+                                stringResource(R.string.time_picker_cd_switch_to_keyboard)
+                            }
                         )
                     }
 
@@ -98,12 +105,12 @@ fun TimePickerDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         TextButton(onClick = onDismiss) {
-                            Text("Abbrechen")
+                            Text(stringResource(R.string.action_cancel))
                         }
                         TextButton(onClick = {
                             onTimeSelected(LocalTime.of(timePickerState.hour, timePickerState.minute))
                         }) {
-                            Text("OK")
+                            Text(stringResource(R.string.action_ok))
                         }
                     }
                 }

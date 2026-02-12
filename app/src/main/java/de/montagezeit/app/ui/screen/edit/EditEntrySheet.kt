@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.common.DestructiveActionButton
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
@@ -375,33 +376,6 @@ fun EditEntrySheet(
             },
             onDismiss = { showNavigateDatePicker = false }
         )
-    }
-}
-
-@Composable
-fun DatePickerDialog(
-    initialDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var selectedDate by remember { mutableStateOf(initialDate) }
-    
-    LaunchedEffect(Unit) {
-        val datePickerDialog = android.app.DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
-                onDateSelected(selectedDate)
-            },
-            initialDate.year,
-            initialDate.monthValue - 1,
-            initialDate.dayOfMonth
-        )
-        datePickerDialog.setOnDismissListener {
-            onDismiss()
-        }
-        datePickerDialog.show()
     }
 }
 

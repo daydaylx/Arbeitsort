@@ -12,43 +12,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.common.DatePickerDialog
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-@Composable
-fun SettingsDatePickerDialog(
-    initialDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    var selectedDate by remember { mutableStateOf(initialDate) }
-
-    LaunchedEffect(Unit) {
-        val datePickerDialog = android.app.DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
-                onDateSelected(selectedDate)
-            },
-            initialDate.year,
-            initialDate.monthValue - 1,
-            initialDate.dayOfMonth
-        )
-        datePickerDialog.setOnDismissListener { onDismiss() }
-        datePickerDialog.show()
-    }
-}
 
 @Composable
 fun PdfSettingsDialog(
@@ -199,7 +173,7 @@ fun PdfCustomRangeDialog(
     )
 
     if (showStartDatePicker) {
-        SettingsDatePickerDialog(
+        DatePickerDialog(
             initialDate = startDate,
             onDateSelected = {
                 startDate = it
@@ -210,7 +184,7 @@ fun PdfCustomRangeDialog(
     }
 
     if (showEndDatePicker) {
-        SettingsDatePickerDialog(
+        DatePickerDialog(
             initialDate = endDate,
             onDateSelected = {
                 endDate = it

@@ -31,6 +31,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.getReviewReason
@@ -1861,32 +1862,5 @@ private fun formatWorkHours(hours: Double): String {
         stringResource(R.string.history_hours_only, h)
     } else {
         stringResource(R.string.history_hours_and_minutes, h, m)
-    }
-}
-
-@Composable
-fun DatePickerDialog(
-    initialDate: java.time.LocalDate,
-    onDateSelected: (java.time.LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    var selectedDate by remember { mutableStateOf(initialDate) }
-    
-    LaunchedEffect(Unit) {
-        val datePickerDialog = android.app.DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                selectedDate = java.time.LocalDate.of(year, month + 1, dayOfMonth)
-                onDateSelected(selectedDate)
-            },
-            initialDate.year,
-            initialDate.monthValue - 1,
-            initialDate.dayOfMonth
-        )
-        datePickerDialog.setOnDismissListener {
-            onDismiss()
-        }
-        datePickerDialog.show()
     }
 }
