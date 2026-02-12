@@ -5,11 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.CalculateTravelCompensation
-import de.montagezeit.app.domain.usecase.FetchRouteDistance
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
@@ -17,8 +14,6 @@ import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
-import de.montagezeit.app.ui.screen.travel.TravelStatus
-import de.montagezeit.app.ui.screen.travel.TravelUiState
 import de.montagezeit.app.work.ReminderWindowEvaluator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,8 +78,6 @@ class TodayViewModel @Inject constructor(
     private val recordEveningCheckIn: RecordEveningCheckIn,
     private val confirmWorkDay: ConfirmWorkDay,
     private val confirmOffDay: ConfirmOffDay,
-    private val fetchRouteDistance: FetchRouteDistance,
-    private val calculateTravelCompensation: CalculateTravelCompensation,
     private val resolveReview: ResolveReview,
     private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager
@@ -92,7 +85,6 @@ class TodayViewModel @Inject constructor(
     
     companion object {
         private const val LOCATION_TIMEOUT_MS = 15000L
-        private const val ROUNDING_STEP_MINUTES = 15
     }
     
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
@@ -105,9 +97,6 @@ class TodayViewModel @Inject constructor(
             initialValue = null
         )
 
-    private val _travelUiState = MutableStateFlow(TravelUiState())
-    val travelUiState: StateFlow<TravelUiState> = _travelUiState.asStateFlow()
-    
     private val _weekStats = MutableStateFlow<WeekStats?>(null)
     val weekStats: StateFlow<WeekStats?> = _weekStats.asStateFlow()
     
@@ -150,8 +139,7 @@ class TodayViewModel @Inject constructor(
 
     private fun observeEntryUpdates() {
         viewModelScope.launch {
-            todayEntry.collect { entry ->
-                _travelUiState.value = buildTravelUiState(entry)
+            todayEntry.collect {
                 // Statistiken neu laden, wenn sich Einträge ändern
                 loadStatistics()
             }
@@ -470,177 +458,12 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    fun updateTravelFromLabel(value: String) {
-        _travelUiState.value = _travelUiState.value.copy(
-            fromLabel = value
-        )
-    }
-
-    fun updateTravelToLabel(value: String) {
-        _travelUiState.value = _travelUiState.value.copy(
-            toLabel = value
-        )
-    }
-
-    fun updateManualDistance(value: String) {
-        _travelUiState.value = _travelUiState.value.copy(
-            manualDistanceKm = value
-        )
-    }
-
-    fun calculateRouteDistance() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val current = _travelUiState.value
-            if (current.fromLabel.isBlank() || current.toLabel.isBlank()) {
-                withContext(Dispatchers.Main) {
-                    _travelUiState.value = current.copy(
-                        status = TravelStatus.Error,
-                        errorMessage = "Bitte Start- und Zieladresse eingeben"
-                    )
-                }
-                return@launch
-            }
-
-            withContext(Dispatchers.Main) {
-                _travelUiState.value = current.copy(status = TravelStatus.Loading, errorMessage = null)
-            }
-
-            when (val result = fetchRouteDistance(current.fromLabel, current.toLabel)) {
-                is FetchRouteDistance.Result.Success -> {
-                    val compensation = calculateTravelCompensation(
-                        fromLabel = current.fromLabel,
-                        toLabel = current.toLabel,
-                        distanceKm = result.distanceKm,
-                        roundingStepMinutes = ROUNDING_STEP_MINUTES
-                    )
-                    val updatedEntry = upsertTravelEntry(
-                        fromLabel = current.fromLabel,
-                        toLabel = current.toLabel,
-                        distanceKm = result.distanceKm,
-                        paidMinutes = compensation.paidMinutes,
-                        source = TravelSource.ROUTED
-                    )
-                    withContext(Dispatchers.Main) {
-                        _travelUiState.value = buildTravelUiState(updatedEntry).copy(
-                            status = TravelStatus.Success
-                        )
-                    }
-                }
-                is FetchRouteDistance.Result.Error -> {
-                    val message = when (result.reason) {
-                        FetchRouteDistance.ErrorReason.NETWORK -> "Offline oder Netzwerkfehler"
-                        FetchRouteDistance.ErrorReason.GEOCODE_FAILED -> "Adresse nicht gefunden"
-                        FetchRouteDistance.ErrorReason.API_FAILED -> "Routing-Service nicht verfügbar"
-                    }
-                    withContext(Dispatchers.Main) {
-                        _travelUiState.value = current.copy(
-                            status = TravelStatus.Error,
-                            errorMessage = message
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    fun saveManualDistance() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val current = _travelUiState.value
-            val distanceKm = current.manualDistanceKm.replace(',', '.').toDoubleOrNull()
-            if (distanceKm == null || distanceKm <= 0.0) {
-                withContext(Dispatchers.Main) {
-                    _travelUiState.value = current.copy(
-                        status = TravelStatus.Error,
-                        errorMessage = "Bitte gültige Km eingeben"
-                    )
-                }
-                return@launch
-            }
-
-            val compensation = calculateTravelCompensation(
-                fromLabel = current.fromLabel,
-                toLabel = current.toLabel,
-                distanceKm = distanceKm,
-                roundingStepMinutes = ROUNDING_STEP_MINUTES
-            )
-            val updatedEntry = upsertTravelEntry(
-                fromLabel = current.fromLabel,
-                toLabel = current.toLabel,
-                distanceKm = distanceKm,
-                paidMinutes = compensation.paidMinutes,
-                source = TravelSource.MANUAL
-            )
-            withContext(Dispatchers.Main) {
-                _travelUiState.value = buildTravelUiState(updatedEntry).copy(
-                    status = TravelStatus.Success
-                )
-            }
-        }
-    }
-
-    private suspend fun upsertTravelEntry(
-        fromLabel: String,
-        toLabel: String,
-        distanceKm: Double,
-        paidMinutes: Int,
-        source: TravelSource
-    ): WorkEntry {
-        val now = System.currentTimeMillis()
-        val date = LocalDate.now()
-        val existing = workEntryDao.getByDate(date)
-        val updated = if (existing != null) {
-            existing.copy(
-                travelFromLabel = fromLabel.takeIf { it.isNotBlank() },
-                travelToLabel = toLabel.takeIf { it.isNotBlank() },
-                travelDistanceKm = distanceKm,
-                travelPaidMinutes = paidMinutes,
-                travelSource = source,
-                travelUpdatedAt = now,
-                updatedAt = now
-            )
-        } else {
-            WorkEntry(
-                date = date,
-                travelFromLabel = fromLabel.takeIf { it.isNotBlank() },
-                travelToLabel = toLabel.takeIf { it.isNotBlank() },
-                travelDistanceKm = distanceKm,
-                travelPaidMinutes = paidMinutes,
-                travelSource = source,
-                travelUpdatedAt = now,
-                createdAt = now,
-                updatedAt = now
-            )
-        }
-        workEntryDao.upsert(updated)
-        return updated
-    }
-
     private fun addLoadingAction(action: TodayAction) {
         _loadingActions.update { it + action }
     }
 
     private fun removeLoadingAction(action: TodayAction) {
         _loadingActions.update { it - action }
-    }
-
-    private fun buildTravelUiState(entry: WorkEntry?): TravelUiState {
-        if (entry == null) {
-            return TravelUiState()
-        }
-        val distanceKm = entry.travelDistanceKm
-        val paidMinutes = entry.travelPaidMinutes
-        val paidHoursDisplay = paidMinutes?.let { CalculateTravelCompensation.formatPaidHours(it) }
-        return TravelUiState(
-            fromLabel = entry.travelFromLabel.orEmpty(),
-            toLabel = entry.travelToLabel.orEmpty(),
-            manualDistanceKm = distanceKm?.let { String.format(Locale.GERMAN, "%.2f", it) } ?: "",
-            distanceKm = distanceKm,
-            paidMinutes = paidMinutes,
-            paidHoursDisplay = paidHoursDisplay,
-            source = entry.travelSource,
-            status = TravelStatus.Idle,
-            errorMessage = null
-        )
     }
 }
 
