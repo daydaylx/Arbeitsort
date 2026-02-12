@@ -421,6 +421,11 @@
     <string name="edit_confirm_title">Bestätigung erforderlich</string>
     <string name="edit_confirm_borderzone_text">Du befindest dich möglicherweise in der Grenzzone zu Leipzig. Bist du sicher, dass du speichern möchtest?</string>
     <string name="edit_confirm_yes_save">Ja, speichern</string>
+    <string name="edit_validation_missing_day_location">Tagesort ist erforderlich</string>
+    <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
+    <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
+    <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
+    <string name="edit_validation_travel_arrive_before_start">Ankunftszeit muss nach Abfahrtszeit liegen</string>
 
     <!-- Today Screen (additional) -->
     <string name="action_review">Prüfen</string>

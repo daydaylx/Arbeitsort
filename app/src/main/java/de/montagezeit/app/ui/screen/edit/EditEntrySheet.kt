@@ -215,7 +215,7 @@ fun EditEntrySheet(
 
                                     state.validationErrors.forEach { error ->
                                         Text(
-                                            text = "• ${error.message}",
+                                            text = "• ${stringResource(error.messageRes)}",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )
@@ -307,7 +307,7 @@ fun EditEntrySheet(
 
                                     state.validationErrors.forEach { error ->
                                         Text(
-                                            text = "• ${error.message}",
+                                            text = "• ${stringResource(error.messageRes)}",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )
@@ -764,7 +764,10 @@ fun WorkTimesSection(
         
         if (hasWorkTimeError) {
             Text(
-                text = stringResource(R.string.edit_error_prefix, ValidationError.WorkEndBeforeStart.message),
+                text = stringResource(
+                    R.string.edit_error_prefix,
+                    stringResource(ValidationError.WorkEndBeforeStart.messageRes)
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 4.dp)
@@ -812,7 +815,10 @@ fun WorkTimesSection(
                 }
                 breakError?.let {
                     Text(
-                        text = stringResource(R.string.edit_error_prefix, it.message),
+                        text = stringResource(
+                            R.string.edit_error_prefix,
+                            stringResource(it.messageRes)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(start = 4.dp)
@@ -937,7 +943,10 @@ fun TravelSection(
         
         if (hasTravelError) {
             Text(
-                text = stringResource(R.string.edit_error_prefix, ValidationError.TravelArriveBeforeStart.message),
+                text = stringResource(
+                    R.string.edit_error_prefix,
+                    stringResource(ValidationError.TravelArriveBeforeStart.messageRes)
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 4.dp)

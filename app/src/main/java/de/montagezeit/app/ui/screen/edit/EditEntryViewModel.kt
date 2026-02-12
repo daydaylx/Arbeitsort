@@ -1,9 +1,11 @@
 package de.montagezeit.app.ui.screen.edit
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.DayLocationSource
@@ -497,12 +499,12 @@ data class EditFormData(
 /**
  * Validation errors for EditFormData
  */
-sealed class ValidationError(val message: String) {
-    object MissingDayLocation : ValidationError("Tagesort ist erforderlich")
-    object WorkEndBeforeStart : ValidationError("Arbeitsende muss nach Arbeitsbeginn liegen")
-    object NegativeBreakMinutes : ValidationError("Pause kann nicht negativ sein")
-    object BreakLongerThanWorkTime : ValidationError("Pause kann nicht länger als die Arbeitszeit sein")
-    object TravelArriveBeforeStart : ValidationError("Ankunftszeit muss nach Abfahrtszeit liegen")
+sealed class ValidationError(@StringRes val messageRes: Int) {
+    object MissingDayLocation : ValidationError(R.string.edit_validation_missing_day_location)
+    object WorkEndBeforeStart : ValidationError(R.string.edit_validation_work_end_before_start)
+    object NegativeBreakMinutes : ValidationError(R.string.edit_validation_negative_break)
+    object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
+    object TravelArriveBeforeStart : ValidationError(R.string.edit_validation_travel_arrive_before_start)
 }
 
 sealed class EditUiState {
