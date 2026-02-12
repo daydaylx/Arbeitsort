@@ -238,6 +238,12 @@
     <string name="share_export">Export teilen</string>
     <string name="export_share_subject">MontageZeit Export</string>
     <string name="export_preview_action_create_pdf">PDF erstellen</string>
+    <string name="export_preview_loading">Lade Vorschau...</string>
+    <string name="export_preview_empty_range">Keine Einträge im Zeitraum</string>
+    <string name="export_preview_error_range_unavailable">Zeitraum konnte nicht geladen werden.</string>
+    <string name="export_preview_error_export_failed">Export fehlgeschlagen</string>
+    <string name="export_preview_error_name_missing_profile">Name fehlt. Bitte in den Einstellungen Profil ausfüllen.</string>
+    <string name="export_preview_error_pdf_create_failed">PDF konnte nicht erstellt werden. Prüfen Sie den verfügbaren Speicher und versuchen Sie es erneut.</string>
     <string name="export_preview_creating_pdf">Erstelle PDF...</string>
     <string name="export_preview_pdf_ready_title">PDF erstellt</string>
     <string name="export_preview_action_open_pdf">PDF öffnen</string>

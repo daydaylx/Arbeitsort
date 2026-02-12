@@ -41,6 +41,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
+import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,7 +116,7 @@ fun ExportPreviewBottomSheet(
 
                 is PreviewState.Empty -> {
                     PreviewHeader(state.header)
-                    EmptyCard(state.message)
+                    EmptyCard(state.message.asString(context))
                     SecondaryActionButton(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth()
@@ -162,7 +163,7 @@ fun ExportPreviewBottomSheet(
                 }
 
                 is PreviewState.Error -> {
-                    ErrorCard(state.message)
+                    ErrorCard(state.message.asString(context))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)

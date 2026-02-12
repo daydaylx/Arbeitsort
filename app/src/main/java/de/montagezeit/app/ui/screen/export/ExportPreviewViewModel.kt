@@ -4,12 +4,14 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.export.PdfUtilities
+import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,7 +68,7 @@ sealed class PreviewState {
 
     data class Empty(
         val header: String,
-        val message: String
+        val message: UiText
     ) : PreviewState()
 
     object CreatingPdf : PreviewState()
@@ -77,7 +79,7 @@ sealed class PreviewState {
     ) : PreviewState()
 
     data class Error(
-        val message: String,
+        val message: UiText,
         val canReturn: Boolean
     ) : PreviewState()
 }
@@ -90,7 +92,10 @@ class ExportPreviewViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PreviewState>(
-        PreviewState.Empty(header = "", message = "Lade Vorschau...")
+        PreviewState.Empty(
+            header = "",
+            message = UiText.StringResource(R.string.export_preview_loading)
+        )
     )
     val uiState: StateFlow<PreviewState> = _uiState.asStateFlow()
 
@@ -106,16 +111,31 @@ class ExportPreviewViewModel @Inject constructor(
         // Lokale Kopie erstellen, um Race Condition zu vermeiden
         val range = currentRange
         if (range == null) {
-            updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = false))
+            updateState(
+                PreviewState.Error(
+                    message = UiText.StringResource(R.string.export_preview_error_range_unavailable),
+                    canReturn = false
+                )
+            )
             return
         }
         val header = buildHeader(range)
-        updateState(PreviewState.Empty(header = header, message = "Lade Vorschau..."))
+        updateState(
+            PreviewState.Empty(
+                header = header,
+                message = UiText.StringResource(R.string.export_preview_loading)
+            )
+        )
         viewModelScope.launch {
             try {
                 val entries = workEntryDao.getByDateRange(range.start, range.end)
                 if (entries.isEmpty()) {
-                    updateState(PreviewState.Empty(header = header, message = "Keine Einträge im Zeitraum"))
+                    updateState(
+                        PreviewState.Empty(
+                            header = header,
+                            message = UiText.StringResource(R.string.export_preview_empty_range)
+                        )
+                    )
                 } else {
                     updateState(
                         PreviewState.List(
@@ -126,7 +146,12 @@ class ExportPreviewViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                updateState(PreviewState.Error(e.message ?: "Export fehlgeschlagen", canReturn = false))
+                updateState(
+                    PreviewState.Error(
+                        message = toUiText(e.message, R.string.export_preview_error_export_failed),
+                        canReturn = false
+                    )
+                )
             }
         }
     }
@@ -135,7 +160,12 @@ class ExportPreviewViewModel @Inject constructor(
         // Lokale Kopie erstellen, um Race Condition zu vermeiden
         val range = currentRange
         if (range == null) {
-            updateState(PreviewState.Error("Zeitraum konnte nicht geladen werden.", canReturn = true))
+            updateState(
+                PreviewState.Error(
+                    message = UiText.StringResource(R.string.export_preview_error_range_unavailable),
+                    canReturn = true
+                )
+            )
             return
         }
         viewModelScope.launch {
@@ -143,7 +173,7 @@ class ExportPreviewViewModel @Inject constructor(
             if (settings.pdfEmployeeName.isNullOrBlank()) {
                 updateState(
                     PreviewState.Error(
-                        "Name fehlt. Bitte in Einstellungen Profil ausfüllen.",
+                        message = UiText.StringResource(R.string.export_preview_error_name_missing_profile),
                         canReturn = true
                     )
                 )
@@ -153,7 +183,12 @@ class ExportPreviewViewModel @Inject constructor(
             try {
                 val entries = workEntryDao.getByDateRange(range.start, range.end)
                 if (entries.isEmpty()) {
-                    updateState(PreviewState.Error("Keine Einträge im Zeitraum", canReturn = true))
+                    updateState(
+                        PreviewState.Error(
+                            message = UiText.StringResource(R.string.export_preview_empty_range),
+                            canReturn = true
+                        )
+                    )
                     return@launch
                 }
                 val fileUri = pdfExporter.exportToPdf(
@@ -169,16 +204,20 @@ class ExportPreviewViewModel @Inject constructor(
                     val fileName = fileUri.lastPathSegment ?: "montagezeit_export.pdf"
                     updateState(PreviewState.PdfReady(fileUri = fileUri, fileName = fileName))
                 } else {
-                    // Spezifischere Error-Message basierend auf Kontext
                     updateState(
                         PreviewState.Error(
-                            "PDF konnte nicht erstellt werden. Prüfen Sie den verfügbaren Speicher und versuchen Sie es erneut.",
+                            message = UiText.StringResource(R.string.export_preview_error_pdf_create_failed),
                             canReturn = true
                         )
                     )
                 }
             } catch (e: Exception) {
-                updateState(PreviewState.Error(e.message ?: "Export fehlgeschlagen", canReturn = true))
+                updateState(
+                    PreviewState.Error(
+                        message = toUiText(e.message, R.string.export_preview_error_export_failed),
+                        canReturn = true
+                    )
+                )
             }
         }
     }
@@ -247,4 +286,11 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     private data class DateRange(val start: LocalDate, val end: LocalDate)
+}
+
+private fun toUiText(message: String?, fallbackRes: Int): UiText {
+    return message
+        ?.takeIf { it.isNotBlank() }
+        ?.let(UiText::DynamicString)
+        ?: UiText.StringResource(fallbackRes)
 }
