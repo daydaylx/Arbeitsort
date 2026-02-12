@@ -10,6 +10,7 @@ import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.UpdateEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,7 +99,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = settings.workStart,
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes,
-                        dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { "Leipzig" },
+                        dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL },
                         dayLocationSource = DayLocationSource.FALLBACK
                     )
                     val formData = EditFormData.fromEntry(defaultEntry)
@@ -269,7 +270,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
-                        dayLocationLabel = data.dayLocationLabel ?: "Leipzig",
+                        dayLocationLabel = data.dayLocationLabel ?: DEFAULT_DAY_LOCATION_LABEL,
                         dayLocationSource = data.dayLocationSource,
                         dayLocationLat = data.dayLocationLat,
                         dayLocationLon = data.dayLocationLon,
@@ -293,7 +294,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
-                        dayLocationLabel = data.dayLocationLabel ?: "Leipzig",
+                        dayLocationLabel = data.dayLocationLabel ?: DEFAULT_DAY_LOCATION_LABEL,
                         dayLocationSource = data.dayLocationSource,
                         dayLocationLat = data.dayLocationLat,
                         dayLocationLon = data.dayLocationLon,
@@ -402,7 +403,7 @@ data class EditFormData(
     val workStart: LocalTime = LocalTime.of(8, 0),
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
-    val dayLocationLabel: String? = "Leipzig",
+    val dayLocationLabel: String? = DEFAULT_DAY_LOCATION_LABEL,
     val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
     val dayLocationLat: Double? = null,
     val dayLocationLon: Double? = null,

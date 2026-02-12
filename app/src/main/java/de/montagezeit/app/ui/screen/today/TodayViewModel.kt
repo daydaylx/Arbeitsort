@@ -12,6 +12,7 @@ import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
@@ -304,7 +305,7 @@ class TodayViewModel @Inject constructor(
                     val isNonWorking = ReminderWindowEvaluator.isNonWorkingDay(today, settings)
                     val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
                     val now = System.currentTimeMillis()
-                    val defaultLocation = settings.defaultDayLocationLabel.ifBlank { "Leipzig" }
+                    val defaultLocation = settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL }
                     val entry = WorkEntry(
                         date = today,
                         dayType = dayType,
