@@ -46,6 +46,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
@@ -419,7 +422,7 @@ fun SetupSectionV2(
             if (hasNotificationPermission) {
                 Divider()
                 
-                MZSecondaryButton(
+                SecondaryActionButton(
                     onClick = onSendTestReminder,
                     icon = Icons.Default.Notifications,
                     content = { Text(stringResource(R.string.action_test_notification)) }
@@ -465,7 +468,7 @@ fun SetupRowV2(
                 )
             }
         }
-        MZTertiaryButton(onClick = onAction) {
+        TertiaryActionButton(onClick = onAction) {
             Text(actionLabel)
         }
     }
@@ -571,7 +574,7 @@ fun WorkTimesSectionV2(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                MZSecondaryButton(
+                SecondaryActionButton(
                     onClick = { showStartPicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -584,7 +587,7 @@ fun WorkTimesSectionV2(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                MZSecondaryButton(
+                SecondaryActionButton(
                     onClick = { showEndPicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -796,7 +799,7 @@ fun TimeRangePickerV2(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            MZSecondaryButton(
+            SecondaryActionButton(
                 onClick = { showStartPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
@@ -809,7 +812,7 @@ fun TimeRangePickerV2(
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
             
-            MZSecondaryButton(
+            SecondaryActionButton(
                 onClick = { showEndPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
@@ -1009,7 +1012,7 @@ fun NonWorkingDaysSectionV2(
                 text = stringResource(R.string.label_holidays),
                 style = MaterialTheme.typography.bodyMedium
             )
-            MZSecondaryButton(
+            SecondaryActionButton(
                 onClick = { showHolidayPicker = true },
                 enabled = autoOffHolidays
             ) {
@@ -1138,14 +1141,14 @@ fun ExportSectionV2(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                MZPrimaryButton(
+                PrimaryActionButton(
                     onClick = onExportPdfCurrentMonth,
                     modifier = Modifier.weight(1f),
                     enabled = employeeName.isNotBlank(),
                     content = { Text(stringResource(R.string.export_current_month)) }
                 )
 
-                MZPrimaryButton(
+                PrimaryActionButton(
                     onClick = onExportPdfLast30Days,
                     modifier = Modifier.weight(1f),
                     enabled = employeeName.isNotBlank(),
@@ -1153,7 +1156,7 @@ fun ExportSectionV2(
                 )
             }
 
-            MZSecondaryButton(
+            SecondaryActionButton(
                 onClick = { showPdfCustomRangeDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = employeeName.isNotBlank(),
@@ -1245,12 +1248,12 @@ fun ExportSuccessCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MZPrimaryButton(
+            PrimaryActionButton(
                 onClick = onShare,
                 modifier = Modifier.weight(1f),
                 content = { Text(stringResource(R.string.action_share)) }
             )
-            MZTertiaryButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_close))
             }
         }
@@ -1308,7 +1311,7 @@ fun SettingsTimeButtonRowV2(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        MZSecondaryButton(
+        SecondaryActionButton(
             onClick = onClick,
             enabled = enabled
         ) {

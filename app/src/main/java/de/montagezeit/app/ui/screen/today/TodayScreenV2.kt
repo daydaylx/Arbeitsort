@@ -33,6 +33,9 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.util.LocationPermissionHelper
 import de.montagezeit.app.ui.util.asString
@@ -353,7 +356,7 @@ private fun StickyTodayActionBarV2(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (showOffdayAction) {
-                MZSecondaryButton(
+                SecondaryActionButton(
                     onClick = onConfirmOffDay,
                     isLoading = isConfirmOffdayLoading,
                     modifier = Modifier.weight(1f)
@@ -362,7 +365,7 @@ private fun StickyTodayActionBarV2(
                 }
             }
 
-            MZPrimaryButton(
+            PrimaryActionButton(
                 onClick = primaryAction,
                 isLoading = primaryLoading,
                 modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
@@ -489,7 +492,7 @@ private fun ReviewBannerV2(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            MZSecondaryButton(
+            SecondaryActionButton(
                 onClick = onOpenReviewSheet
             ) {
                 Text(stringResource(R.string.action_review))
@@ -520,7 +523,7 @@ private fun LoadingLocationContentV2(onSkipLocation: () -> Unit) {
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            MZTertiaryButton(onClick = onSkipLocation) {
+            TertiaryActionButton(onClick = onSkipLocation) {
                 Text(stringResource(R.string.action_save_without_location))
             }
         }
@@ -557,14 +560,14 @@ private fun LocationErrorContentV2(
         Spacer(modifier = Modifier.height(16.dp))
         
         if (canRetry) {
-            MZPrimaryButton(
+            PrimaryActionButton(
                 onClick = onRetry,
                 content = { Text(stringResource(R.string.action_retry_location)) }
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
         
-        MZSecondaryButton(
+        SecondaryActionButton(
             onClick = onSkipLocation,
             content = { Text(stringResource(R.string.action_save_without_location)) }
         )
@@ -971,13 +974,13 @@ private fun TodayActionsCardV2(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    MZPrimaryButton(
+                    PrimaryActionButton(
                         onClick = onConfirmWorkDay,
                         isLoading = isConfirmWorkdayLoading,
                         modifier = Modifier.weight(1f),
                         content = { Text(stringResource(R.string.action_confirm_workday)) }
                     )
-                    MZSecondaryButton(
+                    SecondaryActionButton(
                         onClick = onConfirmOffDay,
                         isLoading = isConfirmOffdayLoading,
                         modifier = Modifier.weight(1f),
@@ -1047,13 +1050,13 @@ private fun ActionRowV2(
             )
         } else {
             if (isPrimary) {
-                MZPrimaryButton(
+                PrimaryActionButton(
                     onClick = onAction,
                     isLoading = isLoading,
                     content = { Text(actionLabel) }
                 )
             } else {
-                MZSecondaryButton(
+                SecondaryActionButton(
                     onClick = onAction,
                     isLoading = isLoading,
                     content = { Text(actionLabel) }
@@ -1092,14 +1095,14 @@ private fun DayLocationDialogV2(
             }
         },
         confirmButton = {
-            MZPrimaryButton(
+            PrimaryActionButton(
                 onClick = { onConfirm(input.trim()) },
                 enabled = input.trim().isNotEmpty(),
                 content = { Text(stringResource(R.string.action_apply)) }
             )
         },
         dismissButton = {
-            MZTertiaryButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         }

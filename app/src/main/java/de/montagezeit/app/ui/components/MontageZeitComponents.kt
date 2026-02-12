@@ -165,6 +165,10 @@ fun MZStatusCard(
 /**
  * Primärer Action-Button mit verbessertem Design und Accessibility
  */
+@Deprecated(
+    message = "Use PrimaryActionButton from ui.common directly.",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun MZPrimaryButton(
     onClick: () -> Unit,
@@ -197,6 +201,10 @@ fun MZPrimaryButton(
 /**
  * Sekundärer Action-Button
  */
+@Deprecated(
+    message = "Use SecondaryActionButton from ui.common directly.",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun MZSecondaryButton(
     onClick: () -> Unit,
@@ -223,6 +231,10 @@ fun MZSecondaryButton(
 /**
  * Tertiärer Action-Button
  */
+@Deprecated(
+    message = "Use TertiaryActionButton from ui.common directly.",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun MZTertiaryButton(
     onClick: () -> Unit,
