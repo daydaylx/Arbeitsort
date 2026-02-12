@@ -14,6 +14,7 @@ import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.UpdateEntry
+import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,7 +116,10 @@ class EditEntryViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _screenState.update {
-                    it.copy(uiState = EditUiState.Error(e.message ?: "Unbekannter Fehler"), isSaving = false)
+                    it.copy(
+                        uiState = EditUiState.Error(toUiText(e.message, R.string.edit_error_unknown)),
+                        isSaving = false
+                    )
                 }
             }
         }
@@ -324,7 +328,9 @@ class EditEntryViewModel @Inject constructor(
                 _screenState.update {
                     it.copy(
                         isSaving = false,
-                        uiState = EditUiState.Error(e.message ?: "Speichern fehlgeschlagen")
+                        uiState = EditUiState.Error(
+                            toUiText(e.message, R.string.edit_error_save_failed)
+                        )
                     )
                 }
             }
@@ -520,5 +526,12 @@ sealed class EditUiState {
     ) : EditUiState()
     object NotFound : EditUiState()
     object Saved : EditUiState()
-    data class Error(val message: String) : EditUiState()
+    data class Error(val message: UiText) : EditUiState()
+}
+
+private fun toUiText(message: String?, @StringRes fallbackRes: Int): UiText {
+    return message
+        ?.takeIf { it.isNotBlank() }
+        ?.let(UiText::DynamicString)
+        ?: UiText.StringResource(fallbackRes)
 }

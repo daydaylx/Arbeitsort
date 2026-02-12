@@ -379,6 +379,8 @@
 
     <!-- Edit Screen -->
     <string name="edit_not_found">Eintrag nicht gefunden</string>
+    <string name="edit_error_unknown">Unbekannter Fehler</string>
+    <string name="edit_error_save_failed">Speichern fehlgeschlagen</string>
     <string name="edit_toast_no_previous_entry">Kein Eintrag am Vortag</string>
     <string name="edit_validation_title">Eingabefehler</string>
     <string name="edit_action_ok">OK</string>

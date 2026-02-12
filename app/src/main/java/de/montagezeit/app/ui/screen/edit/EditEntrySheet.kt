@@ -26,6 +26,7 @@ import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
+import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.Duration
 import java.time.format.DateTimeFormatter
@@ -233,7 +234,7 @@ fun EditEntrySheet(
 
                     is EditUiState.Error -> {
                         Text(
-                            text = state.message,
+                            text = state.message.asString(context),
                             color = MaterialTheme.colorScheme.error
                         )
                     }
