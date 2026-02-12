@@ -175,6 +175,7 @@ class RecordEveningCheckInTest {
         
         // Assert
         assertEquals(LocationStatus.UNAVAILABLE, result.eveningLocationStatus)
+        assertFalse("Bewusst ohne Standort sollte kein Review erzwingen", result.needsReview)
         coVerify(exactly = 0) { locationProvider.getCurrentLocation(any()) }
         coVerify { workEntryDao.upsert(result) }
     }
@@ -280,4 +281,3 @@ class RecordEveningCheckInTest {
         coVerify { workEntryDao.upsert(result) }
     }
 }
-

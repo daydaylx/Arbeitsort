@@ -29,8 +29,8 @@
     <string name="notification_daily_text">Tag prüfen: Arbeit oder frei?</string>
     <string name="notification_daily_confirmation_title">Tagescheck</string>
     <string name="notification_daily_confirmation_text">War heute ein Arbeitstag?</string>
-    <string name="action_confirm_yes">Ja</string>
-    <string name="action_confirm_no">Nein</string>
+    <string name="action_confirm_yes">Arbeit</string>
+    <string name="action_confirm_no">Frei</string>
     <string name="action_confirm_later">Später</string>
     
     <!-- Success Messages -->
@@ -91,8 +91,8 @@
     <string name="today_checkin_morning">Check-in morgens</string>
     <string name="today_checkin_evening">Check-in abends</string>
     <string name="today_confirmation_title">Bestätigung</string>
-    <string name="action_confirm_workday">Ja</string>
-    <string name="action_confirm_offday">Nein</string>
+    <string name="action_confirm_workday">Arbeit</string>
+    <string name="action_confirm_offday">Frei</string>
     <string name="today_confirmation_done">Tag bestätigt</string>
     <string name="today_completed_at">Erfasst um %1$s</string>
     <string name="action_retry">Erneut versuchen</string>
@@ -170,6 +170,9 @@
     <string name="action_add">Hinzufügen</string>
     <string name="action_share">Teilen</string>
     <string name="action_close">Schließen</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_preview">Vorschau</string>
+    <string name="action_export">Exportieren</string>
     
     <!-- Labels -->
     <string name="label_work_start">Arbeitsbeginn</string>
@@ -211,6 +214,19 @@
     <string name="share_export">Export teilen</string>
     <string name="warning_name_missing">Name fehlt! Bitte zuerst in den Settings eingeben.</string>
     <string name="cd_pdf_settings">PDF Einstellungen</string>
+    <string name="pdf_settings_title">PDF Einstellungen</string>
+    <string name="pdf_settings_employee_name_label">Mitarbeiter-Name *</string>
+    <string name="pdf_settings_employee_name_placeholder">Max Mustermann</string>
+    <string name="pdf_settings_company_label">Firma</string>
+    <string name="pdf_settings_company_placeholder">Musterfirma GmbH</string>
+    <string name="pdf_settings_project_label">Projekt</string>
+    <string name="pdf_settings_project_placeholder">Projekt X</string>
+    <string name="pdf_settings_personnel_number_label">Personalnummer</string>
+    <string name="pdf_settings_personnel_number_placeholder">12345</string>
+    <string name="pdf_settings_required_field_note">* Pflichtfeld</string>
+    <string name="pdf_custom_range_title">Benutzerdefinierter Zeitraum</string>
+    <string name="pdf_range_from">Von</string>
+    <string name="pdf_range_to">Bis</string>
     <string name="cd_remove_holiday">Feiertag entfernen</string>
     <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
     

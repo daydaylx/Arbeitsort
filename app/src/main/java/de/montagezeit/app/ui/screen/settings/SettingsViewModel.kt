@@ -130,14 +130,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun updateLocationMode(mode: LocationMode) {
-        viewModelScope.launch {
-            // Location mode is not used in the new settings, so we ignore it
-            // or you could add it to ReminderSettings if needed
-        }
-    }
-
     fun updateAutoOffWeekends(enabled: Boolean) {
         viewModelScope.launch {
             reminderSettingsManager.updateSettings(autoOffWeekends = enabled)
@@ -347,11 +339,6 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
-}
-
-enum class LocationMode(val value: String, val displayName: String) {
-    CHECK_IN_ONLY("check_in_only", "Nur beim Check-in"),
-    BACKGROUND("background", "Hintergrund")
 }
 
 enum class ExportFormat {

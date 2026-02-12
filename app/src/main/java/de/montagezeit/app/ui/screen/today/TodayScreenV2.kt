@@ -1,7 +1,5 @@
 package de.montagezeit.app.ui.screen.today
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -17,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -29,7 +28,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
@@ -37,6 +35,7 @@ import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.*
+import de.montagezeit.app.ui.util.LocationPermissionHelper
 import de.montagezeit.app.ui.util.getReviewReason
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -44,7 +43,7 @@ import java.time.format.DateTimeFormatter
 /**
  * Verbesserter TodayScreen mit besserer Accessibility und visuellem Design
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun TodayScreenV2(
     viewModel: TodayViewModel = hiltViewModel(),
@@ -61,17 +60,14 @@ fun TodayScreenV2(
     val reviewScope by viewModel.reviewScope.collectAsState()
     val loadingActions by viewModel.loadingActions.collectAsState()
     
-    val locationPermission = Manifest.permission.ACCESS_COARSE_LOCATION
     var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, locationPermission) == 
-            PackageManager.PERMISSION_GRANTED
-        )
+        mutableStateOf(LocationPermissionHelper.hasAnyLocationPermission(context))
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        val isGranted = LocationPermissionHelper.isPermissionGranted(result)
         hasLocationPermission = isGranted
         if (isGranted) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -111,10 +107,10 @@ fun TodayScreenV2(
             )
         },
         floatingActionButton = {
-            if (uiState is TodayUiState.Success && 
-                (!needsReview && currentEntry?.confirmedWorkDay == false || currentEntry?.needsReview == true)) {
+            if (uiState is TodayUiState.Success &&
+                (currentEntry?.confirmedWorkDay == false || currentEntry?.needsReview == true)) {
                 ExtendedFloatingActionButton(
-                    onClick = { 
+                    onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onOpenEditSheet(LocalDate.now())
                     },
@@ -181,7 +177,7 @@ fun TodayScreenV2(
                             monthStats = monthStats,
                             hasLocationPermission = hasLocationPermission,
                             onRequestLocationPermission = {
-                                locationPermissionLauncher.launch(locationPermission)
+                                locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
                             },
                             onMorningCheckIn = { 
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -481,7 +477,7 @@ private fun StatusCardV2(
         }
 
         if (entry?.morningCapturedAt != null || entry?.eveningCapturedAt != null) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             LocationStatusSection(entry = entry)
         }
     }
@@ -526,14 +522,14 @@ private fun LocationStatusSection(entry: WorkEntry?) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         entry?.let { e ->
             if (e.morningCapturedAt != null) {
-                LocationRow(
+                LocationRowV2(
                     label = stringResource(R.string.today_location_morning),
                     locationStatus = e.morningLocationStatus,
                     locationLabel = e.morningLocationLabel
                 )
             }
             if (e.eveningCapturedAt != null) {
-                LocationRow(
+                LocationRowV2(
                     label = stringResource(R.string.today_location_evening),
                     locationStatus = e.eveningLocationStatus,
                     locationLabel = e.eveningLocationLabel
@@ -544,7 +540,7 @@ private fun LocationStatusSection(entry: WorkEntry?) {
 }
 
 @Composable
-private fun LocationRow(
+private fun LocationRowV2(
     label: String,
     locationStatus: LocationStatus,
     locationLabel: String?
@@ -615,8 +611,8 @@ private fun WorkHoursCardV2(entry: WorkEntry) {
             }
 
             if (travelMinutes > 0) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -643,22 +639,48 @@ private fun StatisticsDashboardV2(
     monthStats: MonthStats?,
     onOpenWeekView: () -> Unit
 ) {
-    val stats = weekStats ?: monthStats ?: return
-    val label = if (weekStats != null) {
-        stringResource(R.string.today_stats_week)
-    } else {
-        stringResource(R.string.today_stats_month)
+    when {
+        weekStats != null -> {
+            StatisticsDashboardCardV2(
+                label = stringResource(R.string.today_stats_week),
+                totalHours = weekStats.totalHours,
+                targetHours = weekStats.targetHours,
+                workDaysCount = weekStats.workDaysCount,
+                progress = weekStats.progress,
+                isOverTarget = weekStats.isOverTarget,
+                isUnderTarget = weekStats.isUnderTarget,
+                onOpenWeekView = onOpenWeekView
+            )
+        }
+        monthStats != null -> {
+            StatisticsDashboardCardV2(
+                label = stringResource(R.string.today_stats_month),
+                totalHours = monthStats.totalHours,
+                targetHours = monthStats.targetHours,
+                workDaysCount = monthStats.workDaysCount,
+                progress = monthStats.progress,
+                isOverTarget = monthStats.isOverTarget,
+                isUnderTarget = monthStats.isUnderTarget,
+                onOpenWeekView = onOpenWeekView
+            )
+        }
     }
+}
 
-    val progress = when (stats) {
-        is WeekStats -> stats.progress
-        is MonthStats -> stats.progress
-        else -> 0f
-    }
-
+@Composable
+private fun StatisticsDashboardCardV2(
+    label: String,
+    totalHours: Double,
+    targetHours: Double,
+    workDaysCount: Int,
+    progress: Float,
+    isOverTarget: Boolean,
+    isUnderTarget: Boolean,
+    onOpenWeekView: () -> Unit
+) {
     val status = when {
-        stats.isOverTarget -> StatusType.SUCCESS
-        stats.isUnderTarget -> StatusType.WARNING
+        isOverTarget -> StatusType.SUCCESS
+        isUnderTarget -> StatusType.WARNING
         else -> StatusType.INFO
     }
 
@@ -678,13 +700,13 @@ private fun StatisticsDashboardV2(
                     Text(
                         text = stringResource(
                             R.string.today_stats_hours,
-                            stats.totalHours,
-                            stats.targetHours
+                            totalHours,
+                            targetHours
                         ),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "$label · ${stats.workDaysCount} Tage",
+                        text = "$label · $workDaysCount Tage",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -771,7 +793,7 @@ private fun TodayActionsCardV2(
                 isLoading = isMorningLoading
             )
 
-            HorizontalDivider()
+            Divider()
 
             ActionRowV2(
                 title = stringResource(R.string.today_checkin_evening),
@@ -793,8 +815,8 @@ private fun TodayActionsCardV2(
             )
 
             if (needsConfirmation && (morningCompleted || eveningCompleted)) {
-                HorizontalDivider()
-                
+                Divider()
+
                 Text(
                     text = stringResource(R.string.today_confirmation_title),
                     style = MaterialTheme.typography.titleMedium
@@ -959,11 +981,3 @@ private fun formatMinutes(minutes: Int): String {
     val m = minutes % 60
     return if (m == 0) "${h}h" else "${h}h ${m}min"
 }
-
-fun Modifier.clickableWithAccessibility(
-    onClick: () -> Unit,
-    contentDescription: String
-): Modifier = this.clickable(
-    onClick = onClick,
-    onClickLabel = contentDescription
-)

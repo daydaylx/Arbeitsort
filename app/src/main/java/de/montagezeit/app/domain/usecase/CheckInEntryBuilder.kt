@@ -189,8 +189,12 @@ internal object CheckInEntryBuilder {
                 }
             }
 
-            LocationResult.Unavailable, LocationResult.Timeout -> {
-                val needsReview = true
+            LocationResult.Unavailable, LocationResult.Timeout, LocationResult.SkippedByUser -> {
+                val needsReview = if (locationResult == LocationResult.SkippedByUser) {
+                    normalizedEntry?.needsReview ?: false
+                } else {
+                    true
+                }
                 val dayLocation = DayLocationResolver.resolve(
                     existingEntry = normalizedEntry,
                     settings = settings,

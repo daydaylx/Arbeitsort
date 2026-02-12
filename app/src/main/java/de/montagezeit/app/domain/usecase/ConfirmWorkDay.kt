@@ -58,7 +58,7 @@ class ConfirmWorkDay(
         val locationRadiusKm = settings.locationRadiusKm.toDouble()
         
         val locationResult = if (forceWithoutLocation || !settings.preferGpsLocation) {
-            LocationResult.Unavailable
+            LocationResult.SkippedByUser
         } else {
             locationProvider.getCurrentLocation(LOCATION_TIMEOUT_MS)
         }
@@ -229,9 +229,13 @@ class ConfirmWorkDay(
                 )
             }
             
-            LocationResult.Unavailable, LocationResult.Timeout -> {
+            LocationResult.Unavailable, LocationResult.Timeout, LocationResult.SkippedByUser -> {
                 // Location nicht verfügbar
-                val needsReview = true
+                val needsReview = if (locationResult == LocationResult.SkippedByUser) {
+                    existingEntry?.needsReview ?: false
+                } else {
+                    true
+                }
                 
                 val dayLocation = DayLocationResolver.resolve(
                     existingEntry = existingEntry,

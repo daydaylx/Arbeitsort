@@ -13,9 +13,11 @@ import de.montagezeit.app.domain.model.LocationResult
 interface LocationProvider {
     
     /**
-     * Ermittelt den aktuellen Standort mit Best-Effort COARSE location
-     * 
-     * @param timeoutMs Timeout in Millisekunden (empfohlen: 10000-15000)
+     * Ermittelt den aktuellen Standort per Best-Effort Strategie.
+     *
+     * Darf intern mehrere Prioritäten/Versuche verwenden.
+     *
+     * @param timeoutMs Gesamt-Timeout in Millisekunden
      * @return LocationResult mit Status und Daten
      */
     suspend fun getCurrentLocation(timeoutMs: Long): LocationResult

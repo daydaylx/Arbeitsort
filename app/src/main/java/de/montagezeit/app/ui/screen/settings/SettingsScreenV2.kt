@@ -40,6 +40,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
+import de.montagezeit.app.ui.util.LocationPermissionHelper
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -63,7 +64,7 @@ fun SettingsScreenV2(
         mutableStateOf(checkNotificationPermission(context))
     }
     var hasLocationPermission by remember {
-        mutableStateOf(checkLocationPermission(context))
+        mutableStateOf(LocationPermissionHelper.hasAnyLocationPermission(context))
     }
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkBatteryOptimizations(context))
@@ -81,8 +82,9 @@ fun SettingsScreenV2(
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = LocationPermissionHelper.isPermissionGranted(permissions)
         hasLocationPermission = granted
         if (granted) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -93,7 +95,7 @@ fun SettingsScreenV2(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasNotificationPermission = checkNotificationPermission(context)
-                hasLocationPermission = checkLocationPermission(context)
+                hasLocationPermission = LocationPermissionHelper.hasAnyLocationPermission(context)
                 isIgnoringBatteryOptimizations = checkBatteryOptimizations(context)
             }
         }
@@ -127,7 +129,6 @@ fun SettingsScreenV2(
                 onUpdateDefaultDayLocationLabel = { viewModel.updateDefaultDayLocationLabel(it) },
                 onUpdatePreferGpsLocation = { viewModel.updatePreferGpsLocation(it) },
                 onUpdateFallbackOnLowAccuracy = { viewModel.updateFallbackOnLowAccuracy(it) },
-                onUpdateLocationMode = { viewModel.updateLocationMode(it) },
                 onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
                 onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
                 onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
@@ -158,7 +159,7 @@ fun SettingsScreenV2(
                     }
                 },
                 onRequestLocationPermission = {
-                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
                 },
                 onOpenNotificationSettings = { openNotificationSettings(context) },
                 onOpenAppSettings = { openAppSettings(context) },
@@ -194,7 +195,6 @@ fun SettingsContentV2(
     onUpdateDefaultDayLocationLabel: (String) -> Unit,
     onUpdatePreferGpsLocation: (Boolean) -> Unit,
     onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
-    onUpdateLocationMode: (LocationMode) -> Unit,
     onUpdateMorningEnabled: (Boolean) -> Unit,
     onUpdateEveningEnabled: (Boolean) -> Unit,
     onUpdateFallbackEnabled: (Boolean) -> Unit,
@@ -274,12 +274,10 @@ fun SettingsContentV2(
             defaultDayLocationLabel = settings.defaultDayLocationLabel,
             preferGpsLocation = settings.preferGpsLocation,
             fallbackOnLowAccuracy = settings.fallbackOnLowAccuracy,
-            locationMode = "check_in_only",
             onUpdateRadius = onUpdateRadius,
             onUpdateDefaultDayLocationLabel = onUpdateDefaultDayLocationLabel,
             onUpdatePreferGpsLocation = onUpdatePreferGpsLocation,
-            onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy,
-            onUpdateLocationMode = onUpdateLocationMode
+            onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy
         )
 
         // Non-working days section
@@ -696,12 +694,10 @@ fun LocationSettingsSectionV2(
     defaultDayLocationLabel: String,
     preferGpsLocation: Boolean,
     fallbackOnLowAccuracy: Boolean,
-    locationMode: String,
     onUpdateRadius: (Int) -> Unit,
     onUpdateDefaultDayLocationLabel: (String) -> Unit,
     onUpdatePreferGpsLocation: (Boolean) -> Unit,
-    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
-    onUpdateLocationMode: (LocationMode) -> Unit
+    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit
 ) {
     MZCard {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1120,13 +1116,6 @@ private fun checkNotificationPermission(context: Context): Boolean {
     } else {
         true
     }
-}
-
-private fun checkLocationPermission(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
 }
 
 private fun checkBatteryOptimizations(context: Context): Boolean {

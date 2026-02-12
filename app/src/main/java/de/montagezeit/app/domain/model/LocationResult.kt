@@ -19,6 +19,11 @@ sealed class LocationResult {
     object Unavailable : LocationResult()
 
     /**
+     * Standort wurde bewusst vom Nutzer übersprungen/deaktiviert.
+     */
+    object SkippedByUser : LocationResult()
+
+    /**
      * Timeout bei Standortabfrage
      */
     object Timeout : LocationResult()

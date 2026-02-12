@@ -45,7 +45,7 @@ class RecordMorningCheckIn(
         val locationRadiusKm = settings.locationRadiusKm.toDouble()
 
         val locationResult = if (forceWithoutLocation || !settings.preferGpsLocation) {
-            LocationResult.Unavailable
+            LocationResult.SkippedByUser
         } else {
             locationProvider.getCurrentLocation(LOCATION_TIMEOUT_MS)
         }

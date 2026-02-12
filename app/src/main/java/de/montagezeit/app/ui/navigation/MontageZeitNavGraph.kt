@@ -16,8 +16,8 @@ import androidx.navigation.compose.rememberNavController
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
-import de.montagezeit.app.ui.screen.settings.SettingsScreen
-import de.montagezeit.app.ui.screen.today.TodayScreen
+import de.montagezeit.app.ui.screen.settings.SettingsScreenV2
+import de.montagezeit.app.ui.screen.today.TodayScreenV2
 import java.time.LocalDate
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -82,7 +82,7 @@ fun MontageZeitNavGraph(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Today.route) {
-                TodayScreen(
+                TodayScreenV2(
                     onOpenEditSheet = { date ->
                         openEditSheet(date)
                     },
@@ -107,7 +107,7 @@ fun MontageZeitNavGraph(
             }
             
             composable(Screen.Settings.route) {
-                SettingsScreen(
+                SettingsScreenV2(
                     onOpenEditSheet = { date, onDismissed ->
                         openEditSheet(date, onDismissed)
                     }

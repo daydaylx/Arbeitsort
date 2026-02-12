@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -251,6 +252,7 @@ class ConfirmWorkDayTest {
 
         coVerify(exactly = 0) { locationProvider.getCurrentLocation(any()) }
         assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
+        assertFalse("Bewusst ohne Standort sollte kein Review erzwingen", result.needsReview)
     }
 
     @Test
