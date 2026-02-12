@@ -172,6 +172,12 @@
     <string name="settings_summary_weekends_off">Wochenenden aus</string>
     <string name="settings_summary_holidays_off">Feiertage aus</string>
     <string name="settings_export_name_missing">Name fehlt</string>
+    <string name="settings_error_name_missing">Name fehlt. Bitte zuerst in den Einstellungen eingeben.</string>
+    <string name="settings_error_no_entries_current_month">Keine Einträge für diesen Monat gefunden.</string>
+    <string name="settings_error_no_entries_last_30_days">Keine Einträge für die letzten 30 Tage gefunden.</string>
+    <string name="settings_error_no_entries_custom_range">Keine Einträge für den gewählten Zeitraum gefunden.</string>
+    <string name="settings_error_pdf_export_failed">PDF-Export fehlgeschlagen</string>
+    <string name="settings_error_export_failed">Export fehlgeschlagen</string>
     
     <!-- Status -->
     <string name="status_active">Aktiv</string>

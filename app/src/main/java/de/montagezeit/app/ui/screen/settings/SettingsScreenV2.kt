@@ -54,6 +54,7 @@ import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
 import de.montagezeit.app.ui.util.LocationPermissionHelper
+import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -1217,7 +1218,7 @@ fun ExportSectionV2(
 
             is SettingsUiState.ExportError -> {
                 MZStatusBadge(
-                    text = uiState.message,
+                    text = uiState.message.asString(context),
                     type = StatusType.ERROR,
                     modifier = Modifier.fillMaxWidth()
                 )

@@ -1,13 +1,17 @@
 package de.montagezeit.app.ui.screen.settings
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
+import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.work.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,7 +91,7 @@ class SettingsViewModel @Inject constructor(
     fun updateDefaultDayLocationLabel(label: String) {
         viewModelScope.launch {
             reminderSettingsManager.updateSettings(
-                defaultDayLocationLabel = label.trim().ifBlank { "Leipzig" }
+                defaultDayLocationLabel = label.trim().ifBlank { DEFAULT_DAY_LOCATION_LABEL }
             )
         }
     }
@@ -200,7 +204,9 @@ class SettingsViewModel @Inject constructor(
                 
                 // Name-Validierung
                 if (settings.pdfEmployeeName.isNullOrBlank()) {
-                    _uiState.value = SettingsUiState.ExportError("Name fehlt. Bitte zuerst in den Settings eingeben.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_name_missing)
+                    )
                     return@launch
                 }
                 
@@ -213,7 +219,9 @@ class SettingsViewModel @Inject constructor(
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Eintr�ge f�r diesen Monat gefunden.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_no_entries_current_month)
+                    )
                     return@launch
                 }
                 
@@ -233,10 +241,15 @@ class SettingsViewModel @Inject constructor(
                         format = ExportFormat.PDF
                     )
                 } else {
-                    _uiState.value = SettingsUiState.ExportError("PDF Export fehlgeschlagen")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
+                    )
                 }
             } catch (e: Exception) {
-                _uiState.value = SettingsUiState.ExportError(e.message ?: "Export fehlgeschlagen")
+                _uiState.value = buildExportError(
+                    message = e.message,
+                    fallbackRes = R.string.settings_error_export_failed
+                )
             }
         }
     }
@@ -253,7 +266,9 @@ class SettingsViewModel @Inject constructor(
                 
                 // Name-Validierung
                 if (settings.pdfEmployeeName.isNullOrBlank()) {
-                    _uiState.value = SettingsUiState.ExportError("Name fehlt. Bitte zuerst in den Settings eingeben.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_name_missing)
+                    )
                     return@launch
                 }
                 
@@ -265,7 +280,9 @@ class SettingsViewModel @Inject constructor(
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Eintr�ge f�r die letzten 30 Tage gefunden.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_no_entries_last_30_days)
+                    )
                     return@launch
                 }
                 
@@ -285,10 +302,15 @@ class SettingsViewModel @Inject constructor(
                         format = ExportFormat.PDF
                     )
                 } else {
-                    _uiState.value = SettingsUiState.ExportError("PDF Export fehlgeschlagen")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
+                    )
                 }
             } catch (e: Exception) {
-                _uiState.value = SettingsUiState.ExportError(e.message ?: "Export fehlgeschlagen")
+                _uiState.value = buildExportError(
+                    message = e.message,
+                    fallbackRes = R.string.settings_error_export_failed
+                )
             }
         }
     }
@@ -305,7 +327,9 @@ class SettingsViewModel @Inject constructor(
                 
                 // Name-Validierung
                 if (settings.pdfEmployeeName.isNullOrBlank()) {
-                    _uiState.value = SettingsUiState.ExportError("Name fehlt. Bitte zuerst in den Settings eingeben.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_name_missing)
+                    )
                     return@launch
                 }
                 
@@ -313,7 +337,9 @@ class SettingsViewModel @Inject constructor(
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError("Keine Eintr�ge f�r den gew�hlten Zeitraum gefunden.")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_no_entries_custom_range)
+                    )
                     return@launch
                 }
                 
@@ -333,10 +359,15 @@ class SettingsViewModel @Inject constructor(
                         format = ExportFormat.PDF
                     )
                 } else {
-                    _uiState.value = SettingsUiState.ExportError("PDF Export fehlgeschlagen")
+                    _uiState.value = SettingsUiState.ExportError(
+                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
+                    )
                 }
             } catch (e: Exception) {
-                _uiState.value = SettingsUiState.ExportError(e.message ?: "Export fehlgeschlagen")
+                _uiState.value = buildExportError(
+                    message = e.message,
+                    fallbackRes = R.string.settings_error_export_failed
+                )
             }
         }
     }
@@ -361,19 +392,24 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-enum class ExportFormat {
-    PDF
+private fun buildExportError(
+    message: String?,
+    @StringRes fallbackRes: Int
+): SettingsUiState.ExportError {
+    val normalizedMessage = message?.takeIf { it.isNotBlank() }
+    return SettingsUiState.ExportError(
+        normalizedMessage?.let(UiText::DynamicString)
+            ?: UiText.StringResource(fallbackRes)
+    )
 }
 
-enum class PdfExportRange(val displayName: String) {
-    CURRENT_MONTH("Dieser Monat"),
-    LAST_30_DAYS("Letzte 30 Tage"),
-    CUSTOM("Benutzerdefiniert")
+enum class ExportFormat {
+    PDF
 }
 
 sealed class SettingsUiState {
     object Initial : SettingsUiState()
     object Exporting : SettingsUiState()
     data class ExportSuccess(val fileUri: Uri, val format: ExportFormat) : SettingsUiState()
-    data class ExportError(val message: String) : SettingsUiState()
+    data class ExportError(val message: UiText) : SettingsUiState()
 }
