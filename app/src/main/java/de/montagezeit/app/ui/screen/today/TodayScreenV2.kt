@@ -38,6 +38,7 @@ import de.montagezeit.app.ui.util.LocationPermissionHelper
 import de.montagezeit.app.ui.util.getReviewReason
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Verbesserter TodayScreen mit besserer Accessibility und visuellem Design
@@ -1105,9 +1106,7 @@ private fun DayLocationDialogV2(
 }
 
 private fun getCurrentDateString(): String {
-    return LocalDate.now().format(
-        DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", java.util.Locale.GERMAN)
-    )
+    return LocalDate.now().format(todayCurrentDateFormatter)
 }
 
 private fun getCompletedTimeString(timestamp: Long): String {
@@ -1116,7 +1115,7 @@ private fun getCompletedTimeString(timestamp: Long): String {
         instant, 
         java.time.ZoneId.systemDefault()
     )
-    return localTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+    return localTime.format(todayCompletedTimeFormatter)
 }
 
 @Composable
@@ -1129,3 +1128,6 @@ private fun formatMinutes(minutes: Int): String {
         stringResource(R.string.format_hours_short_minutes, h, m)
     }
 }
+
+private val todayCurrentDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
+private val todayCompletedTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

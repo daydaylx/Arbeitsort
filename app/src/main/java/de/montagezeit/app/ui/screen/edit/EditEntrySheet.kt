@@ -29,6 +29,7 @@ import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalDate
 import java.time.Duration
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1112,21 +1113,21 @@ fun BorderzoneConfirmDialog(
 
 
 private fun formatDate(date: java.time.LocalDate): String {
-    return date.format(
-        DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", java.util.Locale.GERMAN)
-    )
+    return date.format(editFullDateFormatter)
 }
 
 private fun formatShortDate(date: java.time.LocalDate): String {
-    return date.format(
-        DateTimeFormatter.ofPattern("E, dd.MM.", java.util.Locale.GERMAN)
-    )
+    return date.format(editShortDateFormatter)
 }
 
 private fun formatTime(time: java.time.LocalTime): String {
-    return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+    return time.format(editTimeFormatter)
 }
 
 // Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
 
 // Removed: formatDuration - now using Formatters.formatDuration
+
+private val editFullDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
+private val editShortDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
+private val editTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

@@ -1827,26 +1827,21 @@ private fun buildCalendarDays(month: YearMonth): List<CalendarDay> {
 }
 
 private fun formatMonth(month: YearMonth): String {
-    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
-    return month.atDay(1).format(formatter)
+    return month.atDay(1).format(historyMonthFormatter)
 }
 
 private fun formatEntryDate(date: java.time.LocalDate): String {
-    return date.format(
-        DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
-    )
+    return date.format(historyEntryDateFormatter)
 }
 
 private fun formatShortDate(date: java.time.LocalDate): String {
-    return date.format(
-        DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
-    )
+    return date.format(historyShortDateFormatter)
 }
 
 private fun formatTime(timestamp: Long): String {
     val instant = java.time.Instant.ofEpochMilli(timestamp)
     val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-    return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+    return time.format(historyTimeFormatter)
 }
 
 // Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
@@ -1865,3 +1860,8 @@ private fun formatWorkHours(hours: Double): String {
         stringResource(R.string.history_hours_and_minutes, h, m)
     }
 }
+
+private val historyMonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
+private val historyEntryDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
+private val historyShortDateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
+private val historyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
