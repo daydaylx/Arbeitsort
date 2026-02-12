@@ -161,6 +161,17 @@
     <string name="settings_reminders">Erinnerungen</string>
     <string name="settings_non_working_days">Freie Tage</string>
     <string name="settings_export">Export</string>
+    <string name="settings_cd_collapse_section">Sektion einklappen</string>
+    <string name="settings_cd_expand_section">Sektion ausklappen</string>
+    <string name="settings_work_times_summary">%1$s – %2$s · %3$d Min Pause</string>
+    <string name="settings_break_minutes_value">%1$s: %2$d Min</string>
+    <string name="settings_reminders_summary">%1$d/4 aktiv</string>
+    <string name="settings_location_summary">%1$d km · %2$s</string>
+    <string name="settings_radius_km_value">%1$.0f km</string>
+    <string name="settings_summary_weekends_on">Wochenenden an</string>
+    <string name="settings_summary_weekends_off">Wochenenden aus</string>
+    <string name="settings_summary_holidays_off">Feiertage aus</string>
+    <string name="settings_export_name_missing">Name fehlt</string>
     
     <!-- Status -->
     <string name="status_active">Aktiv</string>
@@ -219,6 +230,7 @@
     <string name="export_success_title">Export erfolgreich!</string>
     <string name="export_success_format">Format: %1$s</string>
     <string name="share_export">Export teilen</string>
+    <string name="export_share_subject">MontageZeit Export</string>
     <string name="export_preview_action_create_pdf">PDF erstellen</string>
     <string name="export_preview_creating_pdf">Erstelle PDF...</string>
     <string name="export_preview_pdf_ready_title">PDF erstellt</string>
@@ -230,6 +242,7 @@
     <string name="export_preview_totals_travel_time">Reisezeit</string>
     <string name="export_preview_totals_paid_total">Gesamt bezahlt</string>
     <string name="export_preview_row_break">Pause: %1$s</string>
+    <string name="export_preview_row_time_range">%1$s – %2$s</string>
     <string name="export_preview_row_work">Arbeit: %1$s</string>
     <string name="export_preview_row_travel">Reise: %1$s</string>
     <string name="export_preview_row_total">Gesamt: %1$s</string>
@@ -254,6 +267,10 @@
     <string name="pdf_range_to">Bis</string>
     <string name="cd_remove_holiday">Feiertag entfernen</string>
     <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
+    <plurals name="settings_summary_holidays_count">
+        <item quantity="one">%d Feiertag</item>
+        <item quantity="other">%d Feiertage</item>
+    </plurals>
     
     <!-- Format -->
     <string name="format_minutes">%1$d min</string>
@@ -272,6 +289,7 @@
     <string name="history_summary_list">Liste</string>
     <string name="history_summary_month">Monat</string>
     <string name="history_summary_week">Woche</string>
+    <string name="history_week_label">KW %1$d</string>
     <string name="history_summary_months">Monate</string>
     <string name="history_summary_weeks">Wochen</string>
     <string name="history_summary_review">Review</string>

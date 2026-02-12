@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.Month
+import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
@@ -237,13 +239,7 @@ data class MonthGroup(
     val daysOutsideLeipzig: Int
 ) {
     val displayText: String
-        get() {
-            val monthNames = arrayOf(
-                "Januar", "Februar", "März", "April", "Mai", "Juni",
-                "Juli", "August", "September", "Oktober", "November", "Dezember"
-            )
-            return monthNames.getOrNull(month - 1) ?: "Monat $month"
-        }
+        get() = Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault())
 
     val yearText: String
         get() = if (year == LocalDate.now().year) "" else "$year"
@@ -261,9 +257,6 @@ data class WeekGroup(
     val entriesNeedingReview: Int,
     val daysOutsideLeipzig: Int
 ) {
-    val displayText: String
-        get() = "KW $week"
-
     val yearText: String
         get() = if (year == LocalDate.now().year) "" else "$year"
 }

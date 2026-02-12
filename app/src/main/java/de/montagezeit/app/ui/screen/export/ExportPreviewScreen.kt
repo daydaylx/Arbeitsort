@@ -252,7 +252,9 @@ private fun ExportPreviewRowCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "ExportPreviewRow-${row.date}" }
+            .semantics {
+                contentDescription = row.dateLabel
+            }
             .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -261,7 +263,7 @@ private fun ExportPreviewRowCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(row.dateLabel, fontWeight = FontWeight.Bold)
-                Text("${row.startLabel} – ${row.endLabel}")
+                Text(stringResource(R.string.export_preview_row_time_range, row.startLabel, row.endLabel))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),

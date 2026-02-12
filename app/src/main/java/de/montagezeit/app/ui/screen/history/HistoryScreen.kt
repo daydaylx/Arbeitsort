@@ -1070,7 +1070,7 @@ fun WeekGroupCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = week.displayText,
+                        text = stringResource(R.string.history_week_label, week.week),
                         style = MaterialTheme.typography.titleMedium
                     )
                     week.yearText.takeIf { it.isNotEmpty() }?.let { year ->

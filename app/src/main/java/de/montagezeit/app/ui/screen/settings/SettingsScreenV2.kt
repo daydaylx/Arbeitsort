@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.invisibleToUser
@@ -516,9 +517,9 @@ private fun CollapsibleSettingsCard(
                         Icons.Default.KeyboardArrowDown
                     },
                     contentDescription = if (expanded) {
-                        "Sektion einklappen"
+                        stringResource(R.string.settings_cd_collapse_section)
                     } else {
-                        "Sektion ausklappen"
+                        stringResource(R.string.settings_cd_expand_section)
                     }
                 )
             }
@@ -560,7 +561,12 @@ fun WorkTimesSectionV2(
 
     CollapsibleSettingsCard(
         title = stringResource(R.string.settings_work_times),
-        summary = "${formatTime(workStart)} – ${formatTime(workEnd)} · ${breakMinutes} Min Pause",
+        summary = stringResource(
+            R.string.settings_work_times_summary,
+            formatTime(workStart),
+            formatTime(workEnd),
+            breakMinutes
+        ),
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
@@ -597,7 +603,11 @@ fun WorkTimesSectionV2(
         }
 
         Text(
-            text = "${stringResource(R.string.label_break)}: ${breakMinutesDraft.roundToInt()} Min",
+            text = stringResource(
+                R.string.settings_break_minutes_value,
+                stringResource(R.string.label_break),
+                breakMinutesDraft.roundToInt()
+            ),
             style = MaterialTheme.typography.bodyMedium
         )
         Slider(
@@ -673,7 +683,7 @@ fun ReminderSettingsSectionV2(
 
     CollapsibleSettingsCard(
         title = stringResource(R.string.settings_reminders),
-        summary = "$activeCount/4 aktiv",
+        summary = stringResource(R.string.settings_reminders_summary, activeCount),
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
@@ -884,7 +894,11 @@ fun LocationSettingsSectionV2(
 
     CollapsibleSettingsCard(
         title = stringResource(R.string.settings_location),
-        summary = "${radiusMeters / 1000} km · ${defaultDayLocationLabel.ifBlank { "Leipzig" }}",
+        summary = stringResource(
+            R.string.settings_location_summary,
+            radiusMeters / 1000,
+            defaultDayLocationLabel.ifBlank { stringResource(R.string.location_leipzig) }
+        ),
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
@@ -948,7 +962,7 @@ fun LocationSettingsSectionV2(
         )
 
         Text(
-            text = "%.0f km".format(radiusKmDraft),
+            text = stringResource(R.string.settings_radius_km_value, radiusKmDraft),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
@@ -972,12 +986,24 @@ fun NonWorkingDaysSectionV2(
     var showHolidayPicker by remember { mutableStateOf(false) }
     val sortedHolidays = remember(holidayDates) { holidayDates.sorted() }
     val nonWorkingSummary = buildString {
-        append(if (autoOffWeekends) "Wochenenden an" else "Wochenenden aus")
+        append(
+            if (autoOffWeekends) {
+                stringResource(R.string.settings_summary_weekends_on)
+            } else {
+                stringResource(R.string.settings_summary_weekends_off)
+            }
+        )
         append(" · ")
         if (autoOffHolidays) {
-            append("${holidayDates.size} Feiertage")
+            append(
+                pluralStringResource(
+                    R.plurals.settings_summary_holidays_count,
+                    holidayDates.size,
+                    holidayDates.size
+                )
+            )
         } else {
-            append("Feiertage aus")
+            append(stringResource(R.string.settings_summary_holidays_off))
         }
     }
 
@@ -1104,7 +1130,7 @@ fun ExportSectionV2(
     val project = pdfProject.orEmpty()
     val personnelNumber = pdfPersonnelNumber.orEmpty()
     val exportSummary = if (employeeName.isBlank()) {
-        "Name fehlt"
+        stringResource(R.string.settings_export_name_missing)
     } else {
         employeeName
     }
@@ -1179,7 +1205,7 @@ fun ExportSectionV2(
                             type = "application/pdf"
                             putExtra(Intent.EXTRA_STREAM, uiState.fileUri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            putExtra(Intent.EXTRA_SUBJECT, "MontageZeit Export")
+                            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_subject))
                         }
                         context.startActivity(Intent.createChooser(shareIntent, 
                             context.getString(R.string.share_export)))
