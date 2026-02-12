@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,10 +26,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -48,6 +44,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.common.PrimaryActionButton
+import de.montagezeit.app.ui.common.SecondaryActionButton
+import de.montagezeit.app.ui.common.TertiaryActionButton
 
 /**
  * Accessibility-Konstanten für konsistente Touch-Targets
@@ -167,47 +166,23 @@ fun MZPrimaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
-        Modifier.semantics {
-            this.contentDescription = contentDescription
-        }
-    } else {
-        Modifier
-    }
-
-    Button(
+    PrimaryActionButton(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .then(semanticsModifier),
-        enabled = enabled && !isLoading,
+        modifier = modifier,
+        enabled = enabled,
+        isLoading = isLoading,
+        icon = icon,
+        contentDescription = contentDescription,
+        minHeight = AccessibilityDefaults.ButtonHeight,
         shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        )
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .size(20.dp)
-                    .padding(end = 8.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        } else {
-            icon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-        }
-        content()
-    }
+        ),
+        content = content
+    )
 }
 
 /**
@@ -223,40 +198,17 @@ fun MZSecondaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
-        Modifier.semantics {
-            this.contentDescription = contentDescription
-        }
-    } else {
-        Modifier
-    }
-
-    OutlinedButton(
+    SecondaryActionButton(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .then(semanticsModifier),
-        enabled = enabled && !isLoading,
-        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .size(20.dp)
-                    .padding(end = 8.dp),
-                strokeWidth = 2.dp
-            )
-        } else {
-            icon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-        }
-        content()
-    }
+        modifier = modifier,
+        enabled = enabled,
+        isLoading = isLoading,
+        icon = icon,
+        contentDescription = contentDescription,
+        minHeight = AccessibilityDefaults.ButtonHeight,
+        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
+        content = content
+    )
 }
 
 /**
@@ -270,23 +222,15 @@ fun MZTertiaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
-        Modifier.semantics {
-            this.contentDescription = contentDescription
-        }
-    } else {
-        Modifier
-    }
-
-    TextButton(
+    TertiaryActionButton(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .then(semanticsModifier),
-        enabled = enabled
-    ) {
-        content()
-    }
+        modifier = modifier,
+        enabled = enabled,
+        contentDescription = contentDescription,
+        minHeight = AccessibilityDefaults.ButtonHeight,
+        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
+        content = content
+    )
 }
 
 /**
