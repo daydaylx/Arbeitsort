@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.PrimaryActionButton
-import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 
 /**
@@ -160,98 +157,6 @@ fun MZStatusCard(
             }
         }
     }
-}
-
-/**
- * Primärer Action-Button mit verbessertem Design und Accessibility
- */
-@Deprecated(
-    message = "Use PrimaryActionButton from ui.common directly.",
-    level = DeprecationLevel.WARNING
-)
-@Composable
-fun MZPrimaryButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    isLoading: Boolean = false,
-    icon: ImageVector? = null,
-    contentDescription: String? = null,
-    content: @Composable RowScope.() -> Unit
-) {
-    PrimaryActionButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        isLoading = isLoading,
-        icon = icon,
-        contentDescription = contentDescription,
-        minHeight = AccessibilityDefaults.ButtonHeight,
-        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        ),
-        content = content
-    )
-}
-
-/**
- * Sekundärer Action-Button
- */
-@Deprecated(
-    message = "Use SecondaryActionButton from ui.common directly.",
-    level = DeprecationLevel.WARNING
-)
-@Composable
-fun MZSecondaryButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    isLoading: Boolean = false,
-    icon: ImageVector? = null,
-    contentDescription: String? = null,
-    content: @Composable RowScope.() -> Unit
-) {
-    SecondaryActionButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        isLoading = isLoading,
-        icon = icon,
-        contentDescription = contentDescription,
-        minHeight = AccessibilityDefaults.ButtonHeight,
-        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
-        content = content
-    )
-}
-
-/**
- * Tertiärer Action-Button
- */
-@Deprecated(
-    message = "Use TertiaryActionButton from ui.common directly.",
-    level = DeprecationLevel.WARNING
-)
-@Composable
-fun MZTertiaryButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    contentDescription: String? = null,
-    content: @Composable RowScope.() -> Unit
-) {
-    TertiaryActionButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        contentDescription = contentDescription,
-        minHeight = AccessibilityDefaults.ButtonHeight,
-        shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
-        content = content
-    )
 }
 
 /**
