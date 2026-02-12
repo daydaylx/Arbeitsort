@@ -354,7 +354,7 @@ fun MZLoadingState(
         )
 
         onCancel?.let {
-            MZTertiaryButton(onClick = it) {
+            TertiaryActionButton(onClick = it) {
                 Text(stringResource(R.string.action_cancel))
             }
         }
@@ -392,7 +392,7 @@ fun MZErrorState(
             color = MaterialTheme.colorScheme.error
         )
 
-        MZPrimaryButton(
+        PrimaryActionButton(
             onClick = onRetry,
             content = { Text(stringResource(R.string.action_retry)) }
         )
