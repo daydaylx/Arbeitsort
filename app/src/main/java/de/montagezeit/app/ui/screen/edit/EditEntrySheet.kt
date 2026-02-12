@@ -13,8 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.DestructiveActionButton
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
@@ -64,271 +66,285 @@ fun EditEntrySheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(date, onNavigateDate) {
-                    val navigate = onNavigateDate ?: return@pointerInput
-                    var dragAccum = 0f
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                        onDragEnd = {
-                            if (dragAccum > swipeThresholdPx) {
-                                navigate(date.minusDays(1))
-                            } else if (dragAccum < -swipeThresholdPx) {
-                                navigate(date.plusDays(1))
-                            }
-                            dragAccum = 0f
-                        },
-                        onDragCancel = { dragAccum = 0f }
+        val showStickySaveBar = uiState is EditUiState.NewEntry || uiState is EditUiState.Success
+
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface,
+            bottomBar = {
+                if (showStickySaveBar) {
+                    EditStickySaveBar(
+                        isSaving = isSaving,
+                        isNewEntry = uiState is EditUiState.NewEntry,
+                        onSave = { viewModel.save() }
                     )
                 }
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (onNavigateDate != null) {
-                DateNavigationRow(
-                    date = date,
-                    onPrevious = { onNavigateDate(date.minusDays(1)) },
-                    onNext = { onNavigateDate(date.plusDays(1)) },
-                    onToday = { onNavigateDate(LocalDate.now()) },
-                    onPickDate = { showNavigateDatePicker = true }
-                )
-                Divider()
             }
-
-            when (val state = uiState) {
-                is EditUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(32.dp)
-                    )
-                }
-                
-                is EditUiState.NotFound -> {
-                    Text(
-                        text = "Eintrag nicht gefunden",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                }
-                
-                is EditUiState.NewEntry -> {
-                    // Erstelle Dummy-Entry für UI (wird nicht gespeichert)
-                    val dummyEntry = de.montagezeit.app.data.local.entity.WorkEntry(
-                        date = state.date,
-                        dayType = formData.dayType,
-                        workStart = formData.workStart,
-                        workEnd = formData.workEnd,
-                        breakMinutes = formData.breakMinutes,
-                        dayLocationLabel = formData.dayLocationLabel ?: "Leipzig",
-                        dayLocationSource = formData.dayLocationSource,
-                        dayLocationLat = formData.dayLocationLat,
-                        dayLocationLon = formData.dayLocationLon,
-                        dayLocationAccuracyMeters = formData.dayLocationAccuracyMeters,
-                        morningLocationLabel = formData.morningLocationLabel,
-                        eveningLocationLabel = formData.eveningLocationLabel,
-                        note = formData.note,
-                        needsReview = formData.needsReview
-                    )
-                    EditFormContent(
-                        entry = dummyEntry,
-                        formData = formData,
-                        validationErrors = state.validationErrors,
-                        onDayTypeChange = { viewModel.updateDayType(it) },
-                        onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
-                        onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
-                        onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
-                        onTravelStartChange = { viewModel.updateTravelStart(it) },
-                        onTravelArriveChange = { viewModel.updateTravelArrive(it) },
-                        onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
-                        onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
-                        onTravelClear = { viewModel.clearTravel() },
-                        onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
-                        onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
-                        onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
-                        onNoteChange = { viewModel.updateNote(it) },
-                        onResetReview = { viewModel.resetNeedsReview() },
-                        onSave = { viewModel.save() },
-                        onCopyPrevious = {
-                            viewModel.copyFromPreviousDay { success ->
-                                if (!success) {
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        "Kein Eintrag am Vortag",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        },
-                        onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
-                        isSaving = isSaving,
-                        isNewEntry = true
-                    )
-
-                    // Display validation errors
-                    if (state.validationErrors.isNotEmpty()) {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    Text(
-                                        text = "Eingabefehler",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-
-                                state.validationErrors.forEach { error ->
-                                    Text(
-                                        text = "• ${error.message}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-
-                                TertiaryActionButton(
-                                    onClick = { viewModel.clearValidationErrors() }
-                                ) {
-                                    Text("OK")
-                                }
-                            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (onNavigateDate != null) {
+                    DateNavigationRow(
+                        date = date,
+                        onPrevious = { onNavigateDate(date.minusDays(1)) },
+                        onNext = { onNavigateDate(date.plusDays(1)) },
+                        onToday = { onNavigateDate(LocalDate.now()) },
+                        onPickDate = { showNavigateDatePicker = true },
+                        modifier = Modifier.pointerInput(date, onNavigateDate) {
+                            var dragAccum = 0f
+                            detectHorizontalDragGestures(
+                                onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                                onDragEnd = {
+                                    if (dragAccum > swipeThresholdPx) {
+                                        onNavigateDate(date.minusDays(1))
+                                    } else if (dragAccum < -swipeThresholdPx) {
+                                        onNavigateDate(date.plusDays(1))
+                                    }
+                                    dragAccum = 0f
+                                },
+                                onDragCancel = { dragAccum = 0f }
+                            )
                         }
-                    }
-                }
-                
-                is EditUiState.Error -> {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error
                     )
+                    Divider()
                 }
-                
-                is EditUiState.Success -> {
-                    val entry = state.entry
-                    EditFormContent(
-                        entry = entry,
-                        formData = formData,
-                        validationErrors = state.validationErrors,
-                        onDayTypeChange = { viewModel.updateDayType(it) },
-                        onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
-                        onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
-                        onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
-                        onTravelStartChange = { viewModel.updateTravelStart(it) },
-                        onTravelArriveChange = { viewModel.updateTravelArrive(it) },
-                        onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
-                        onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
-                        onTravelClear = { viewModel.clearTravel() },
-                        onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
-                        onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
-                        onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
-                        onNoteChange = { viewModel.updateNote(it) },
-                        onResetReview = { viewModel.resetNeedsReview() },
-                        onSave = { viewModel.save() },
-                        onCopyPrevious = {
-                            viewModel.copyFromPreviousDay { success ->
-                                if (!success) {
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        "Kein Eintrag am Vortag",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        },
-                        onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
-                        isSaving = isSaving,
-                        onCopy = if (onCopyToNewDate != null) {
-                            { showCopyDatePicker = true }
-                        } else null
-                    )
 
-                    // Display validation errors
-                    if (state.validationErrors.isNotEmpty()) {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    Text(
-                                        text = "Eingabefehler",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-
-                                state.validationErrors.forEach { error ->
-                                    Text(
-                                        text = "• ${error.message}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-
-                                TertiaryActionButton(
-                                    onClick = { viewModel.clearValidationErrors() }
-                                ) {
-                                    Text("OK")
-                                }
-                            }
-                        }
-                    }
-
-                    if (state.showConfirmDialog) {
-                        BorderzoneConfirmDialog(
-                            onConfirm = { viewModel.confirmAndSave() },
-                            onDismiss = { viewModel.dismissConfirmDialog() }
+                when (val state = uiState) {
+                    is EditUiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(32.dp)
                         )
                     }
-                }
-                
-                is EditUiState.Saved -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(64.dp)
-                        )
+
+                    is EditUiState.NotFound -> {
                         Text(
-                            text = "Gespeichert!",
+                            text = stringResource(R.string.edit_not_found),
                             style = MaterialTheme.typography.headlineSmall
                         )
-                        PrimaryActionButton(onClick = onDismiss) {
-                            Text("Schließen")
+                    }
+
+                    is EditUiState.NewEntry -> {
+                        val dummyEntry = de.montagezeit.app.data.local.entity.WorkEntry(
+                            date = state.date,
+                            dayType = formData.dayType,
+                            workStart = formData.workStart,
+                            workEnd = formData.workEnd,
+                            breakMinutes = formData.breakMinutes,
+                            dayLocationLabel = formData.dayLocationLabel ?: stringResource(R.string.location_leipzig),
+                            dayLocationSource = formData.dayLocationSource,
+                            dayLocationLat = formData.dayLocationLat,
+                            dayLocationLon = formData.dayLocationLon,
+                            dayLocationAccuracyMeters = formData.dayLocationAccuracyMeters,
+                            morningLocationLabel = formData.morningLocationLabel,
+                            eveningLocationLabel = formData.eveningLocationLabel,
+                            note = formData.note,
+                            needsReview = formData.needsReview
+                        )
+                        EditFormContent(
+                            entry = dummyEntry,
+                            formData = formData,
+                            validationErrors = state.validationErrors,
+                            onDayTypeChange = { viewModel.updateDayType(it) },
+                            onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
+                            onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
+                            onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
+                            onTravelStartChange = { viewModel.updateTravelStart(it) },
+                            onTravelArriveChange = { viewModel.updateTravelArrive(it) },
+                            onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
+                            onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
+                            onTravelClear = { viewModel.clearTravel() },
+                            onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
+                            onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
+                            onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                            onNoteChange = { viewModel.updateNote(it) },
+                            onResetReview = { viewModel.resetNeedsReview() },
+                            onSave = { viewModel.save() },
+                            onCopyPrevious = {
+                                viewModel.copyFromPreviousDay { success ->
+                                    if (!success) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(R.string.edit_toast_no_previous_entry),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
+                            isSaving = isSaving,
+                            isNewEntry = true,
+                            showPrimarySaveButton = false
+                        )
+
+                        if (state.validationErrors.isNotEmpty()) {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.edit_validation_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+
+                                    state.validationErrors.forEach { error ->
+                                        Text(
+                                            text = "• ${error.message}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+
+                                    TertiaryActionButton(
+                                        onClick = { viewModel.clearValidationErrors() }
+                                    ) {
+                                        Text(stringResource(R.string.edit_action_ok))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    is EditUiState.Error -> {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    is EditUiState.Success -> {
+                        val entry = state.entry
+                        EditFormContent(
+                            entry = entry,
+                            formData = formData,
+                            validationErrors = state.validationErrors,
+                            onDayTypeChange = { viewModel.updateDayType(it) },
+                            onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
+                            onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
+                            onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
+                            onTravelStartChange = { viewModel.updateTravelStart(it) },
+                            onTravelArriveChange = { viewModel.updateTravelArrive(it) },
+                            onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
+                            onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
+                            onTravelClear = { viewModel.clearTravel() },
+                            onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
+                            onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
+                            onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                            onNoteChange = { viewModel.updateNote(it) },
+                            onResetReview = { viewModel.resetNeedsReview() },
+                            onSave = { viewModel.save() },
+                            onCopyPrevious = {
+                                viewModel.copyFromPreviousDay { success ->
+                                    if (!success) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(R.string.edit_toast_no_previous_entry),
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
+                            isSaving = isSaving,
+                            onCopy = if (onCopyToNewDate != null) {
+                                { showCopyDatePicker = true }
+                            } else null,
+                            showPrimarySaveButton = false
+                        )
+
+                        if (state.validationErrors.isNotEmpty()) {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.edit_validation_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+
+                                    state.validationErrors.forEach { error ->
+                                        Text(
+                                            text = "• ${error.message}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+
+                                    TertiaryActionButton(
+                                        onClick = { viewModel.clearValidationErrors() }
+                                    ) {
+                                        Text(stringResource(R.string.edit_action_ok))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (state.showConfirmDialog) {
+                            BorderzoneConfirmDialog(
+                                onConfirm = { viewModel.confirmAndSave() },
+                                onDismiss = { viewModel.dismissConfirmDialog() }
+                            )
+                        }
+                    }
+
+                    is EditUiState.Saved -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.edit_saved),
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            PrimaryActionButton(onClick = onDismiss) {
+                                Text(stringResource(R.string.action_close))
+                            }
                         }
                     }
                 }
@@ -395,16 +411,17 @@ fun DateNavigationRow(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
-    onPickDate: () -> Unit
+    onPickDate: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPrevious) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Vortag"
+                contentDescription = stringResource(R.string.edit_cd_prev_day)
             )
         }
         TextButton(onClick = onPickDate) {
@@ -413,13 +430,78 @@ fun DateNavigationRow(
         IconButton(onClick = onNext) {
             Icon(
                 imageVector = Icons.Default.ArrowForward,
-                contentDescription = "Naechster Tag"
+                contentDescription = stringResource(R.string.edit_cd_next_day)
             )
         }
         Spacer(modifier = Modifier.weight(1f))
         TextButton(onClick = onToday) {
-            Text("Heute")
+            Text(stringResource(R.string.edit_action_today))
         }
+    }
+}
+
+@Composable
+private fun EditStickySaveBar(
+    isSaving: Boolean,
+    isNewEntry: Boolean,
+    onSave: () -> Unit
+) {
+    Surface(shadowElevation = 4.dp, tonalElevation = 2.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            PrimaryActionButton(
+                onClick = onSave,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 8.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.Save,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    if (isNewEntry) {
+                        stringResource(R.string.action_create)
+                    } else {
+                        stringResource(R.string.action_save)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditFormSectionCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
     }
 }
 
@@ -447,73 +529,67 @@ fun EditFormContent(
     onSave: () -> Unit,
     isSaving: Boolean = false,
     isNewEntry: Boolean = false,
-    onCopy: (() -> Unit)? = null
+    onCopy: (() -> Unit)? = null,
+    showPrimarySaveButton: Boolean = true
 ) {
-    // Header
     Text(
         text = formatDate(entry.date),
         style = MaterialTheme.typography.headlineSmall
     )
-    
-    Divider()
 
-    // Day Type
-    DayTypeSelector(
-        selectedType = formData.dayType,
-        onTypeChange = onDayTypeChange
-    )
+    EditFormSectionCard {
+        DayTypeSelector(
+            selectedType = formData.dayType,
+            onTypeChange = onDayTypeChange
+        )
+    }
 
-    Divider()
+    EditFormSectionCard {
+        WorkTimesSection(
+            workStart = formData.workStart,
+            workEnd = formData.workEnd,
+            breakMinutes = formData.breakMinutes,
+            validationErrors = validationErrors,
+            onStartChange = onWorkStartChange,
+            onEndChange = onWorkEndChange,
+            onBreakChange = onBreakMinutesChange,
+            onApplyDefaults = onApplyDefaultTimes
+        )
+    }
 
-    // Work Times
-    WorkTimesSection(
-        workStart = formData.workStart,
-        workEnd = formData.workEnd,
-        breakMinutes = formData.breakMinutes,
-        validationErrors = validationErrors,
-        onStartChange = onWorkStartChange,
-        onEndChange = onWorkEndChange,
-        onBreakChange = onBreakMinutesChange,
-        onApplyDefaults = onApplyDefaultTimes
-    )
+    EditFormSectionCard {
+        TravelSection(
+            travelStartTime = formData.travelStartTime,
+            travelArriveTime = formData.travelArriveTime,
+            travelLabelStart = formData.travelLabelStart,
+            travelLabelEnd = formData.travelLabelEnd,
+            validationErrors = validationErrors,
+            onTravelStartChange = onTravelStartChange,
+            onTravelArriveChange = onTravelArriveChange,
+            onTravelLabelStartChange = onTravelLabelStartChange,
+            onTravelLabelEndChange = onTravelLabelEndChange,
+            onClearTravel = onTravelClear
+        )
+    }
 
-    Divider()
+    EditFormSectionCard {
+        LocationLabelsSection(
+            entry = entry,
+            dayLocationLabel = formData.dayLocationLabel,
+            onDayLocationChange = onDayLocationChange,
+            morningLabel = formData.morningLocationLabel,
+            eveningLabel = formData.eveningLocationLabel,
+            onMorningLabelChange = onMorningLabelChange,
+            onEveningLabelChange = onEveningLabelChange
+        )
+    }
 
-    TravelSection(
-        travelStartTime = formData.travelStartTime,
-        travelArriveTime = formData.travelArriveTime,
-        travelLabelStart = formData.travelLabelStart,
-        travelLabelEnd = formData.travelLabelEnd,
-        validationErrors = validationErrors,
-        onTravelStartChange = onTravelStartChange,
-        onTravelArriveChange = onTravelArriveChange,
-        onTravelLabelStartChange = onTravelLabelStartChange,
-        onTravelLabelEndChange = onTravelLabelEndChange,
-        onClearTravel = onTravelClear
-    )
-
-    Divider()
-
-    // Location Labels
-    LocationLabelsSection(
-        entry = entry,
-        dayLocationLabel = formData.dayLocationLabel,
-        onDayLocationChange = onDayLocationChange,
-        morningLabel = formData.morningLocationLabel,
-        eveningLabel = formData.eveningLocationLabel,
-        onMorningLabelChange = onMorningLabelChange,
-        onEveningLabelChange = onEveningLabelChange
-    )
-
-    Divider()
-
-    // Note
-    NoteSection(
-        note = formData.note,
-        onNoteChange = onNoteChange
-    )
-
-    Divider()
+    EditFormSectionCard {
+        NoteSection(
+            note = formData.note,
+            onNoteChange = onNoteChange
+        )
+    }
 
     val showSecondaryActions = (formData.needsReview || entry.needsReview) ||
         onCopyPrevious != null ||
@@ -530,7 +606,7 @@ fun EditFormContent(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Überprüfungsflag zurücksetzen")
+                Text(stringResource(R.string.edit_action_reset_review_flag))
             }
         }
 
@@ -544,7 +620,7 @@ fun EditFormContent(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Vortag kopieren")
+                Text(stringResource(R.string.edit_action_copy_previous))
             }
         }
         
@@ -558,35 +634,43 @@ fun EditFormContent(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Eintrag kopieren")
+                Text(stringResource(R.string.edit_action_copy_entry))
             }
         }
 
-        if (showSecondaryActions) {
+        if (showSecondaryActions && showPrimarySaveButton) {
             Divider()
         }
-        
-        PrimaryActionButton(
-            onClick = onSave,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            enabled = !isSaving
-        ) {
-            if (isSaving) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .padding(end = 8.dp),
-                    strokeWidth = 2.dp
+
+        if (showPrimarySaveButton) {
+            PrimaryActionButton(
+                onClick = onSave,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 8.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.Save,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    if (isNewEntry) {
+                        stringResource(R.string.action_create)
+                    } else {
+                        stringResource(R.string.action_save)
+                    }
                 )
             }
-            Icon(
-                imageVector = Icons.Default.Save,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(if (isNewEntry) "Erstellen" else "Speichern")
         }
     }
 }
@@ -599,7 +683,7 @@ fun DayTypeSelector(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Tagtyp",
+            text = stringResource(R.string.edit_section_day_type),
             style = MaterialTheme.typography.titleMedium
         )
         
@@ -614,8 +698,8 @@ fun DayTypeSelector(
                     label = { 
                         Text(
                             when (type) {
-                                de.montagezeit.app.data.local.entity.DayType.WORK -> "Arbeitstag"
-                                de.montagezeit.app.data.local.entity.DayType.OFF -> "Frei"
+                                de.montagezeit.app.data.local.entity.DayType.WORK -> stringResource(R.string.edit_day_type_workday)
+                                de.montagezeit.app.data.local.entity.DayType.OFF -> stringResource(R.string.edit_day_type_off)
                             }
                         )
                     },
@@ -647,7 +731,7 @@ fun WorkTimesSection(
     
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Arbeitszeiten",
+            text = stringResource(R.string.edit_section_work_times),
             style = MaterialTheme.typography.titleMedium
         )
         
@@ -668,7 +752,7 @@ fun WorkTimesSection(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Beginn",
+                        text = stringResource(R.string.edit_label_start),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
@@ -691,7 +775,7 @@ fun WorkTimesSection(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Ende",
+                        text = stringResource(R.string.edit_label_end),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
@@ -704,7 +788,7 @@ fun WorkTimesSection(
         
         if (hasWorkTimeError) {
             Text(
-                text = "⚠ ${ValidationError.WorkEndBeforeStart.message}",
+                text = stringResource(R.string.edit_error_prefix, ValidationError.WorkEndBeforeStart.message),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 4.dp)
@@ -719,12 +803,12 @@ fun WorkTimesSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Pause (Minuten)",
+                    text = stringResource(R.string.edit_label_break_minutes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "$breakMinutes min",
+                    text = stringResource(R.string.edit_break_minutes_value, breakMinutes),
                     style = MaterialTheme.typography.titleMedium,
                     color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
@@ -752,7 +836,7 @@ fun WorkTimesSection(
                 }
                 breakError?.let {
                     Text(
-                        text = "⚠ ${it.message}",
+                        text = stringResource(R.string.edit_error_prefix, it.message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(start = 4.dp)
@@ -771,7 +855,7 @@ fun WorkTimesSection(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 6.dp)
                 )
-                Text("Standardzeiten anwenden")
+                Text(stringResource(R.string.edit_action_apply_default_times))
             }
         }
     }
@@ -820,7 +904,7 @@ fun TravelSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Reise / Fahrzeit",
+            text = stringResource(R.string.edit_section_travel),
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -841,11 +925,11 @@ fun TravelSection(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Start",
+                        text = stringResource(R.string.edit_label_travel_start),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        text = travelStartTime?.let { formatTime(it) } ?: "Zeit wählen",
+                        text = travelStartTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -864,11 +948,11 @@ fun TravelSection(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Ankunft",
+                        text = stringResource(R.string.edit_label_travel_arrival),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        text = travelArriveTime?.let { formatTime(it) } ?: "Zeit wählen",
+                        text = travelArriveTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -877,7 +961,7 @@ fun TravelSection(
         
         if (hasTravelError) {
             Text(
-                text = "⚠ ${ValidationError.TravelArriveBeforeStart.message}",
+                text = stringResource(R.string.edit_error_prefix, ValidationError.TravelArriveBeforeStart.message),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 4.dp)
@@ -895,7 +979,7 @@ fun TravelSection(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Fahrzeit: $it",
+                    text = stringResource(R.string.edit_travel_duration, it),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -904,8 +988,8 @@ fun TravelSection(
         OutlinedTextField(
             value = travelLabelStart ?: "",
             onValueChange = onTravelLabelStartChange,
-            label = { Text("Von (Optional)") },
-            placeholder = { Text("Startort") },
+            label = { Text(stringResource(R.string.edit_label_from_optional)) },
+            placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -913,8 +997,8 @@ fun TravelSection(
         OutlinedTextField(
             value = travelLabelEnd ?: "",
             onValueChange = onTravelLabelEndChange,
-            label = { Text("Nach (Optional)") },
-            placeholder = { Text("Zielort") },
+            label = { Text(stringResource(R.string.edit_label_to_optional)) },
+            placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -929,7 +1013,7 @@ fun TravelSection(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 6.dp)
                 )
-                Text("Reisedaten löschen")
+                Text(stringResource(R.string.edit_action_clear_travel_data))
             }
         }
     }
@@ -963,15 +1047,15 @@ fun LocationLabelsSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Standort",
+            text = stringResource(R.string.edit_section_location),
             style = MaterialTheme.typography.titleMedium
         )
 
         OutlinedTextField(
             value = dayLocationLabel ?: "",
             onValueChange = onDayLocationChange,
-            label = { Text("Tagesort (Pflicht)") },
-            placeholder = { Text("z.B. Leipzig") },
+            label = { Text(stringResource(R.string.edit_label_day_location_required)) },
+            placeholder = { Text(stringResource(R.string.edit_placeholder_city_leipzig)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -980,8 +1064,8 @@ fun LocationLabelsSection(
             OutlinedTextField(
                 value = morningLabel ?: "",
                 onValueChange = onMorningLabelChange,
-                label = { Text("Morgens (Optional)") },
-                placeholder = { Text("z.B. Berlin") },
+                label = { Text(stringResource(R.string.edit_label_morning_optional)) },
+                placeholder = { Text(stringResource(R.string.edit_placeholder_city_berlin)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -991,8 +1075,8 @@ fun LocationLabelsSection(
             OutlinedTextField(
                 value = eveningLabel ?: "",
                 onValueChange = onEveningLabelChange,
-                label = { Text("Abends (Optional)") },
-                placeholder = { Text("z.B. Berlin") },
+                label = { Text(stringResource(R.string.edit_label_evening_optional)) },
+                placeholder = { Text(stringResource(R.string.edit_placeholder_city_berlin)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -1007,14 +1091,14 @@ fun NoteSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Notiz (Optional)",
+            text = stringResource(R.string.edit_section_note_optional),
             style = MaterialTheme.typography.titleMedium
         )
         
         OutlinedTextField(
             value = note ?: "",
             onValueChange = onNoteChange,
-            placeholder = { Text("Zusätzliche Informationen...") },
+            placeholder = { Text(stringResource(R.string.edit_placeholder_note)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(100.dp),
@@ -1030,21 +1114,21 @@ fun BorderzoneConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Bestätigung erforderlich") },
+        title = { Text(stringResource(R.string.edit_confirm_title)) },
         text = {
             Text(
-                "Du befindest dich möglicherweise in der Grenzzone zu Leipzig. Bist du sicher, dass du speichern möchtest?",
+                stringResource(R.string.edit_confirm_borderzone_text),
                 style = MaterialTheme.typography.bodyMedium
             )
         },
         confirmButton = {
             PrimaryActionButton(onClick = onConfirm) {
-                Text("Ja, speichern")
+                Text(stringResource(R.string.edit_confirm_yes_save))
             }
         },
         dismissButton = {
             TertiaryActionButton(onClick = onDismiss) {
-                Text("Abbrechen")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

@@ -56,6 +56,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateWorkStart(time: LocalTime) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(workStart = time)
+        }
+    }
+
+    fun updateWorkEnd(time: LocalTime) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(workEnd = time)
+        }
+    }
+
+    fun updateBreakMinutes(minutes: Int) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                breakMinutes = minutes.coerceIn(0, 180)
+            )
+        }
+    }
+
     fun updateRadiusMeters(meters: Int) {
         viewModelScope.launch {
             reminderSettingsManager.updateSettings(

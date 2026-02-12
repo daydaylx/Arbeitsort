@@ -78,7 +78,10 @@ fun ExportPreviewBottomSheet(
                             .heightIn(max = 420.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(state.rows) { row ->
+                        items(
+                            items = state.rows,
+                            key = { row -> row.date.toEpochDay() }
+                        ) { row ->
                             ExportPreviewRowCard(
                                 row = row,
                                 onClick = {

@@ -5,8 +5,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -81,7 +79,7 @@ fun TodayScreenV2(
 
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
     val needsReview = currentEntry?.needsReview == true
-    var isReviewBannerVisible by rememberSaveable { mutableStateOf(true) }
+    val reviewReason = getReviewReason(currentEntry)
     var showDayLocationDialog by rememberSaveable { mutableStateOf(false) }
     var dayLocationInput by rememberSaveable { mutableStateOf("") }
 
@@ -91,8 +89,24 @@ fun TodayScreenV2(
     val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
     val isReviewResolving = loadingActions.contains(TodayAction.RESOLVE_REVIEW)
 
-    LaunchedEffect(needsReview) {
-        if (!needsReview) isReviewBannerVisible = true
+    val onRequestLocationPermissionAction = {
+        locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
+    }
+    val onMorningCheckInAction = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.onMorningCheckIn()
+    }
+    val onEveningCheckInAction = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.onEveningCheckIn()
+    }
+    val onConfirmWorkDayAction = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.onConfirmWorkDay()
+    }
+    val onConfirmOffDayAction = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.onConfirmOffDay()
     }
     
     Scaffold(
@@ -124,6 +138,24 @@ fun TodayScreenV2(
                     text = { Text(stringResource(R.string.action_edit_entry_manual)) }
                 )
             }
+        },
+        bottomBar = {
+            StickyTodayActionBarV2(
+                entry = currentEntry,
+                hasLocationPermission = hasLocationPermission,
+                needsReview = needsReview,
+                isMorningLoading = isMorningLoading,
+                isEveningLoading = isEveningLoading,
+                isConfirmWorkdayLoading = isConfirmWorkdayLoading,
+                isConfirmOffdayLoading = isConfirmOffdayLoading,
+                isReviewResolving = isReviewResolving,
+                onRequestLocationPermission = onRequestLocationPermissionAction,
+                onMorningCheckIn = onMorningCheckInAction,
+                onEveningCheckIn = onEveningCheckInAction,
+                onConfirmWorkDay = onConfirmWorkDayAction,
+                onConfirmOffDay = onConfirmOffDayAction,
+                onOpenReviewSheet = { viewModel.onOpenReviewSheet() }
+            )
         }
     ) { paddingValues ->
         Box(
@@ -176,32 +208,18 @@ fun TodayScreenV2(
                             weekStats = weekStats,
                             monthStats = monthStats,
                             hasLocationPermission = hasLocationPermission,
-                            onRequestLocationPermission = {
-                                locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
-                            },
-                            onMorningCheckIn = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.onMorningCheckIn()
-                            },
-                            onEveningCheckIn = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.onEveningCheckIn()
-                            },
-                            onConfirmWorkDay = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.onConfirmWorkDay()
-                            },
-                            onConfirmOffDay = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.onConfirmOffDay()
-                            },
+                            onRequestLocationPermission = onRequestLocationPermissionAction,
+                            onMorningCheckIn = onMorningCheckInAction,
+                            onEveningCheckIn = onEveningCheckInAction,
+                            onConfirmWorkDay = onConfirmWorkDayAction,
+                            onConfirmOffDay = onConfirmOffDayAction,
                             onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
                             onEditDayLocation = {
                                 dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
                                 showDayLocationDialog = true
                             },
-                            showReviewBanner = needsReview && isReviewBannerVisible,
-                            onDismissReviewBanner = { isReviewBannerVisible = false },
+                            needsReview = needsReview,
+                            reviewReason = reviewReason,
                             onEditToday = {
                                 viewModel.ensureTodayEntryThen {
                                     onOpenEditSheet(LocalDate.now())
@@ -226,7 +244,7 @@ fun TodayScreenV2(
                         isVisible = showReviewSheet,
                         onDismissRequest = { viewModel.onDismissReviewSheet() },
                         scope = currentScope,
-                        reviewReason = getReviewReason(currentEntry),
+                        reviewReason = reviewReason,
                         isResolving = isReviewResolving,
                         onResolve = { label, isLeipzig -> 
                             viewModel.onResolveReview(label, isLeipzig)
@@ -250,6 +268,109 @@ fun TodayScreenV2(
 }
 
 @Composable
+private fun StickyTodayActionBarV2(
+    entry: WorkEntry?,
+    hasLocationPermission: Boolean,
+    needsReview: Boolean,
+    isMorningLoading: Boolean,
+    isEveningLoading: Boolean,
+    isConfirmWorkdayLoading: Boolean,
+    isConfirmOffdayLoading: Boolean,
+    isReviewResolving: Boolean,
+    onRequestLocationPermission: () -> Unit,
+    onMorningCheckIn: () -> Unit,
+    onEveningCheckIn: () -> Unit,
+    onConfirmWorkDay: () -> Unit,
+    onConfirmOffDay: () -> Unit,
+    onOpenReviewSheet: () -> Unit
+) {
+    val morningCompleted = entry?.morningCapturedAt != null
+    val eveningCompleted = entry?.eveningCapturedAt != null
+    val needsConfirmation = entry?.confirmedWorkDay != true
+    val canConfirm = needsConfirmation && (morningCompleted || eveningCompleted)
+
+    if (morningCompleted && eveningCompleted && !needsReview && !canConfirm) {
+        return
+    }
+
+    val primaryLabel: String
+    val primaryLoading: Boolean
+    val primaryAction: () -> Unit
+    var showOffdayAction = false
+
+    when {
+        !morningCompleted -> {
+            if (hasLocationPermission) {
+                primaryLabel = stringResource(R.string.action_check_in_morning)
+                primaryLoading = isMorningLoading
+                primaryAction = onMorningCheckIn
+            } else {
+                primaryLabel = stringResource(R.string.action_allow_location)
+                primaryLoading = false
+                primaryAction = onRequestLocationPermission
+            }
+        }
+
+        !eveningCompleted -> {
+            if (hasLocationPermission) {
+                primaryLabel = stringResource(R.string.action_check_in_evening)
+                primaryLoading = isEveningLoading
+                primaryAction = onEveningCheckIn
+            } else {
+                primaryLabel = stringResource(R.string.action_allow_location)
+                primaryLoading = false
+                primaryAction = onRequestLocationPermission
+            }
+        }
+
+        needsReview -> {
+            primaryLabel = stringResource(R.string.today_needs_review)
+            primaryLoading = isReviewResolving
+            primaryAction = onOpenReviewSheet
+        }
+
+        canConfirm -> {
+            primaryLabel = stringResource(R.string.action_confirm_workday)
+            primaryLoading = isConfirmWorkdayLoading
+            primaryAction = onConfirmWorkDay
+            showOffdayAction = true
+        }
+
+        else -> return
+    }
+
+    Surface(
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (showOffdayAction) {
+                MZSecondaryButton(
+                    onClick = onConfirmOffDay,
+                    isLoading = isConfirmOffdayLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.action_confirm_offday))
+                }
+            }
+
+            MZPrimaryButton(
+                onClick = primaryAction,
+                isLoading = primaryLoading,
+                modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+            ) {
+                Text(primaryLabel)
+            }
+        }
+    }
+}
+
+@Composable
 private fun TodayContentV2(
     entry: WorkEntry?,
     weekStats: WeekStats?,
@@ -262,8 +383,8 @@ private fun TodayContentV2(
     onConfirmOffDay: () -> Unit,
     onOpenReviewSheet: () -> Unit,
     onEditDayLocation: () -> Unit,
-    showReviewBanner: Boolean,
-    onDismissReviewBanner: () -> Unit,
+    needsReview: Boolean,
+    reviewReason: String,
     onEditToday: () -> Unit,
     onOpenWeekView: () -> Unit,
     showLocationLoading: Boolean,
@@ -281,14 +402,13 @@ private fun TodayContentV2(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         AnimatedVisibility(
-            visible = showReviewBanner,
+            visible = needsReview,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             ReviewBannerV2(
-                entry = entry,
-                onOpenReviewSheet = onOpenReviewSheet,
-                onDismiss = onDismissReviewBanner
+                reviewReason = reviewReason,
+                onOpenReviewSheet = onOpenReviewSheet
             )
         }
 
@@ -332,29 +452,44 @@ private fun TodayContentV2(
 
 @Composable
 private fun ReviewBannerV2(
-    entry: WorkEntry?,
-    onOpenReviewSheet: () -> Unit,
-    onDismiss: () -> Unit
+    reviewReason: String,
+    onOpenReviewSheet: () -> Unit
 ) {
-    MZStatusCard(
-        title = stringResource(R.string.today_needs_review),
-        status = StatusType.WARNING,
-        onClick = onOpenReviewSheet
-    ) {
-        Text(
-            text = getReviewReason(entry),
-            style = MaterialTheme.typography.bodyMedium
+    MZCard(
+        modifier = Modifier.clickableWithAccessibility(
+            onClick = onOpenReviewSheet,
+            contentDescription = stringResource(R.string.today_needs_review)
         )
-        
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MZTertiaryButton(
-                onClick = onDismiss,
-                contentDescription = stringResource(R.string.cd_dismiss_review_banner)
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(stringResource(R.string.action_dismiss))
+                Text(
+                    text = stringResource(R.string.today_needs_review),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = reviewReason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            MZSecondaryButton(
+                onClick = onOpenReviewSheet
+            ) {
+                Text(stringResource(R.string.action_review))
             }
         }
     }
@@ -582,9 +717,13 @@ private fun LocationRowV2(
 
 @Composable
 private fun WorkHoursCardV2(entry: WorkEntry) {
-    val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
-    val totalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+    val (workMinutes, travelMinutes, totalMinutes) = remember(entry) {
+        Triple(
+            TimeCalculator.calculateWorkMinutes(entry),
+            TimeCalculator.calculateTravelMinutes(entry),
+            TimeCalculator.calculatePaidTotalMinutes(entry)
+        )
+    }
 
     MZCard {
         Column {
@@ -687,7 +826,7 @@ private fun StatisticsDashboardCardV2(
     MZCard(
         modifier = Modifier.clickableWithAccessibility(
             onClick = onOpenWeekView,
-            contentDescription = "Statistiken anzeigen"
+            contentDescription = stringResource(R.string.cd_open_statistics)
         )
     ) {
         Column {
@@ -706,7 +845,7 @@ private fun StatisticsDashboardCardV2(
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "$label · $workDaysCount Tage",
+                        text = stringResource(R.string.today_stats_label_days, label, workDaysCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

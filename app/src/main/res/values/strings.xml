@@ -232,4 +232,137 @@
     
     <!-- Format -->
     <string name="format_minutes">%1$d min</string>
+
+    <!-- History Screen -->
+    <string name="history_title">Verlauf</string>
+    <string name="history_toast_batch_updated">Bereich aktualisiert</string>
+    <string name="history_toast_batch_failed">Bereichs-Update fehlgeschlagen</string>
+    <string name="history_summary_calendar">Kalender</string>
+    <string name="history_summary_list">Liste</string>
+    <string name="history_summary_month">Monat</string>
+    <string name="history_summary_week">Woche</string>
+    <string name="history_summary_months">Monate</string>
+    <string name="history_summary_weeks">Wochen</string>
+    <string name="history_summary_review">Review</string>
+    <string name="history_empty_review_title">Keine Review-Einträge</string>
+    <string name="history_empty_title">Keine Einträge vorhanden</string>
+    <string name="history_empty_review_subtitle">Filter deaktivieren, um alle Einträge zu sehen.</string>
+    <string name="history_empty_subtitle">Check-in-Einträge erscheinen hier</string>
+    <string name="history_chip_review_short">Review</string>
+    <string name="history_chip_review_only">Nur mit Review</string>
+    <string name="history_chip_options">Optionen</string>
+    <string name="history_options_title">Ansicht &amp; Filter</string>
+    <string name="history_action_pick_date">Datum wählen</string>
+    <string name="history_section_view">Ansicht</string>
+    <string name="history_section_filter">Filter</string>
+    <string name="history_cd_open_options">Optionen öffnen</string>
+    <string name="history_cd_prev_month">Vorheriger Monat</string>
+    <string name="history_cd_next_month">Nächster Monat</string>
+    <string name="history_cd_prev_week">Vorherige Woche</string>
+    <string name="history_cd_next_week">Nächste Woche</string>
+    <string name="history_week_header">KW %1$d · %2$s – %3$s</string>
+    <string name="history_cd_expand_week">Woche ausklappen</string>
+    <string name="history_cd_collapse_week">Woche einklappen</string>
+    <string name="history_cd_expand_month">Monat ausklappen</string>
+    <string name="history_cd_collapse_month">Monat einklappen</string>
+    <string name="history_cd_review_required">Überprüfung erforderlich</string>
+    <string name="history_action_repeat">Wiederholen</string>
+    <string name="history_weekday_mo">Mo</string>
+    <string name="history_weekday_tu">Di</string>
+    <string name="history_weekday_we">Mi</string>
+    <string name="history_weekday_th">Do</string>
+    <string name="history_weekday_fr">Fr</string>
+    <string name="history_weekday_sa">Sa</string>
+    <string name="history_weekday_su">So</string>
+    <string name="history_day_type_off">Frei</string>
+    <string name="history_hours_decimal">%1$.1f Std.</string>
+    <string name="history_summary_workdays">%1$d Arbeitstage</string>
+    <string name="history_summary_review_count">%1$d Review</string>
+    <string name="history_stat_total">Gesamt:</string>
+    <string name="history_stat_paid">Bezahlt:</string>
+    <string name="history_stat_average">Durchschnitt:</string>
+    <string name="history_stat_days">Tage:</string>
+    <string name="history_average_hours_per_day">Ø %1$.1f Std./Tag</string>
+    <string name="history_days_breakdown_work_only">%1$d Arbeit</string>
+    <string name="history_days_breakdown_work_with_off">%1$d Arbeit, %2$d frei</string>
+    <string name="history_entry_total_paid">Gesamt: %1$s</string>
+    <string name="history_day_location_summary">%1$s: %2$s</string>
+    <string name="history_travel_duration_inline">Fahrzeit %1$s</string>
+    <string name="history_hours_only">%1$d Std.</string>
+    <string name="history_hours_and_minutes">%1$dh %2$dmin</string>
+    <string name="history_action_add_past_day">Vergangenen Tag hinzufügen</string>
+    <string name="history_label_no_checkin">Kein Check-in</string>
+    <string name="history_batch_title">Bereich bearbeiten</string>
+    <string name="history_batch_period">Zeitraum</string>
+    <string name="history_batch_invalid_range">Das Enddatum muss nach dem Startdatum liegen.</string>
+    <string name="history_batch_daytype_set">Tagtyp setzen</string>
+    <string name="history_batch_workday">Arbeitstag</string>
+    <string name="history_batch_offday">Frei</string>
+    <string name="history_batch_set_defaults">Standardzeiten setzen</string>
+    <string name="history_batch_set_note">Notiz setzen</string>
+    <string name="history_batch_note_placeholder">Notiz (leer = loeschen)</string>
+    <string name="history_batch_select_action">Bitte mindestens eine Aktion waehlen.</string>
+    <string name="history_batch_apply">Anwenden</string>
+    <plurals name="history_entries_need_review">
+        <item quantity="one">%d Eintrag benötigt Überprüfung</item>
+        <item quantity="other">%d Einträge benötigen Überprüfung</item>
+    </plurals>
+    <plurals name="history_days_outside_leipzig">
+        <item quantity="one">%d Tag außerhalb Leipzig</item>
+        <item quantity="other">%d Tage außerhalb Leipzig</item>
+    </plurals>
+    <plurals name="history_remaining_days">
+        <item quantity="one">%d weiterer Tag</item>
+        <item quantity="other">%d weitere Tage</item>
+    </plurals>
+
+    <!-- Edit Screen -->
+    <string name="edit_not_found">Eintrag nicht gefunden</string>
+    <string name="edit_toast_no_previous_entry">Kein Eintrag am Vortag</string>
+    <string name="edit_validation_title">Eingabefehler</string>
+    <string name="edit_action_ok">OK</string>
+    <string name="edit_saved">Gespeichert!</string>
+    <string name="edit_cd_prev_day">Vortag</string>
+    <string name="edit_cd_next_day">Nächster Tag</string>
+    <string name="edit_action_today">Heute</string>
+    <string name="action_create">Erstellen</string>
+    <string name="edit_action_reset_review_flag">Überprüfungsflag zurücksetzen</string>
+    <string name="edit_action_copy_previous">Vortag kopieren</string>
+    <string name="edit_action_copy_entry">Eintrag kopieren</string>
+    <string name="edit_section_day_type">Tagtyp</string>
+    <string name="edit_day_type_workday">Arbeitstag</string>
+    <string name="edit_day_type_off">Frei</string>
+    <string name="edit_section_work_times">Arbeitszeiten</string>
+    <string name="edit_label_start">Beginn</string>
+    <string name="edit_label_end">Ende</string>
+    <string name="edit_error_prefix">⚠ %1$s</string>
+    <string name="edit_label_break_minutes">Pause (Minuten)</string>
+    <string name="edit_break_minutes_value">%1$d min</string>
+    <string name="edit_action_apply_default_times">Standardzeiten anwenden</string>
+    <string name="edit_section_travel">Reise / Fahrzeit</string>
+    <string name="edit_label_travel_start">Start</string>
+    <string name="edit_label_travel_arrival">Ankunft</string>
+    <string name="edit_time_pick">Zeit wählen</string>
+    <string name="edit_travel_duration">Fahrzeit: %1$s</string>
+    <string name="edit_label_from_optional">Von (Optional)</string>
+    <string name="edit_placeholder_start_location">Startort</string>
+    <string name="edit_label_to_optional">Nach (Optional)</string>
+    <string name="edit_placeholder_destination">Zielort</string>
+    <string name="edit_action_clear_travel_data">Reisedaten löschen</string>
+    <string name="edit_section_location">Standort</string>
+    <string name="edit_label_day_location_required">Tagesort (Pflicht)</string>
+    <string name="edit_placeholder_city_leipzig">z.B. Leipzig</string>
+    <string name="edit_label_morning_optional">Morgens (Optional)</string>
+    <string name="edit_label_evening_optional">Abends (Optional)</string>
+    <string name="edit_placeholder_city_berlin">z.B. Berlin</string>
+    <string name="edit_section_note_optional">Notiz (Optional)</string>
+    <string name="edit_placeholder_note">Zusätzliche Informationen...</string>
+    <string name="edit_confirm_title">Bestätigung erforderlich</string>
+    <string name="edit_confirm_borderzone_text">Du befindest dich möglicherweise in der Grenzzone zu Leipzig. Bist du sicher, dass du speichern möchtest?</string>
+    <string name="edit_confirm_yes_save">Ja, speichern</string>
+
+    <!-- Today Screen (additional) -->
+    <string name="action_review">Prüfen</string>
+    <string name="cd_open_statistics">Statistiken anzeigen</string>
+    <string name="today_stats_label_days">%1$s · %2$d Tage</string>
 </resources>

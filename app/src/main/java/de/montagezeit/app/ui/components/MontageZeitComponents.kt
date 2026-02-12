@@ -167,14 +167,19 @@ fun MZPrimaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics {
+            this.contentDescription = contentDescription
+        }
+    } else {
+        Modifier
+    }
+
     Button(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
             .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .semantics {
-                this.contentDescription = contentDescription ?: ""
-            },
+            .then(semanticsModifier),
         enabled = enabled && !isLoading,
         shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
         colors = ButtonDefaults.buttonColors(
@@ -218,13 +223,19 @@ fun MZSecondaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics {
+            this.contentDescription = contentDescription
+        }
+    } else {
+        Modifier
+    }
+
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
             .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .semantics {
-                this.contentDescription = contentDescription ?: ""
-            },
+            .then(semanticsModifier),
         enabled = enabled && !isLoading,
         shape = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
     ) {
@@ -259,13 +270,19 @@ fun MZTertiaryButton(
     contentDescription: String? = null,
     content: @Composable RowScope.() -> Unit
 ) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics {
+            this.contentDescription = contentDescription
+        }
+    } else {
+        Modifier
+    }
+
     TextButton(
         onClick = onClick,
         modifier = modifier
             .heightIn(min = AccessibilityDefaults.ButtonHeight)
-            .semantics {
-                this.contentDescription = contentDescription ?: ""
-            },
+            .then(semanticsModifier),
         enabled = enabled
     ) {
         content()

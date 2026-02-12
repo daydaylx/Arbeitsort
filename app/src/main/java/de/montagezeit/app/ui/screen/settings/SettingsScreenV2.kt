@@ -12,17 +12,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -30,6 +36,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -44,6 +51,7 @@ import de.montagezeit.app.ui.util.LocationPermissionHelper
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * Verbesserter SettingsScreen mit besserer Accessibility und neuen Komponenten
@@ -125,6 +133,9 @@ fun SettingsScreenV2(
                 onUpdateEveningWindow = { startH, startM, endH, endM ->
                     viewModel.updateEveningWindow(startH, startM, endH, endM)
                 },
+                onUpdateWorkStart = { viewModel.updateWorkStart(it) },
+                onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
+                onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
                 onUpdateRadius = { viewModel.updateRadiusMeters(it) },
                 onUpdateDefaultDayLocationLabel = { viewModel.updateDefaultDayLocationLabel(it) },
                 onUpdatePreferGpsLocation = { viewModel.updatePreferGpsLocation(it) },
@@ -172,6 +183,15 @@ fun SettingsScreenV2(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                MZLoadingState(message = stringResource(R.string.loading))
+            }
         }
     }
 
@@ -191,6 +211,9 @@ fun SettingsContentV2(
     uiState: SettingsUiState,
     onUpdateMorningWindow: (Int, Int, Int, Int) -> Unit,
     onUpdateEveningWindow: (Int, Int, Int, Int) -> Unit,
+    onUpdateWorkStart: (LocalTime) -> Unit,
+    onUpdateWorkEnd: (LocalTime) -> Unit,
+    onUpdateBreakMinutes: (Int) -> Unit,
     onUpdateRadius: (Int) -> Unit,
     onUpdateDefaultDayLocationLabel: (String) -> Unit,
     onUpdatePreferGpsLocation: (Boolean) -> Unit,
@@ -222,6 +245,12 @@ fun SettingsContentV2(
     onSendTestReminder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var workTimesExpanded by rememberSaveable { mutableStateOf(false) }
+    var remindersExpanded by rememberSaveable { mutableStateOf(false) }
+    var locationExpanded by rememberSaveable { mutableStateOf(false) }
+    var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
+    var exportExpanded by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -243,7 +272,12 @@ fun SettingsContentV2(
         WorkTimesSectionV2(
             workStart = settings.workStart,
             workEnd = settings.workEnd,
-            breakMinutes = settings.breakMinutes
+            breakMinutes = settings.breakMinutes,
+            expanded = workTimesExpanded,
+            onExpandedChange = { workTimesExpanded = it },
+            onUpdateWorkStart = onUpdateWorkStart,
+            onUpdateWorkEnd = onUpdateWorkEnd,
+            onUpdateBreakMinutes = onUpdateBreakMinutes
         )
 
         // Reminder Settings Section
@@ -265,7 +299,9 @@ fun SettingsContentV2(
             onUpdateFallbackEnabled = onUpdateFallbackEnabled,
             onUpdateFallbackTime = onUpdateFallbackTime,
             onUpdateDailyEnabled = onUpdateDailyEnabled,
-            onUpdateDailyTime = onUpdateDailyTime
+            onUpdateDailyTime = onUpdateDailyTime,
+            expanded = remindersExpanded,
+            onExpandedChange = { remindersExpanded = it }
         )
 
         // Location Settings Section
@@ -277,7 +313,9 @@ fun SettingsContentV2(
             onUpdateRadius = onUpdateRadius,
             onUpdateDefaultDayLocationLabel = onUpdateDefaultDayLocationLabel,
             onUpdatePreferGpsLocation = onUpdatePreferGpsLocation,
-            onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy
+            onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy,
+            expanded = locationExpanded,
+            onExpandedChange = { locationExpanded = it }
         )
 
         // Non-working days section
@@ -288,7 +326,9 @@ fun SettingsContentV2(
             onUpdateAutoOffWeekends = onUpdateAutoOffWeekends,
             onUpdateAutoOffHolidays = onUpdateAutoOffHolidays,
             onAddHolidayDate = onAddHolidayDate,
-            onRemoveHolidayDate = onRemoveHolidayDate
+            onRemoveHolidayDate = onRemoveHolidayDate,
+            expanded = nonWorkingExpanded,
+            onExpandedChange = { nonWorkingExpanded = it }
         )
 
         // Export Section
@@ -303,7 +343,9 @@ fun SettingsContentV2(
             pdfProject = settings.pdfProject,
             pdfPersonnelNumber = settings.pdfPersonnelNumber,
             onUpdatePdfSettings = onUpdatePdfSettings,
-            onResetState = onResetExportState
+            onResetState = onResetExportState,
+            expanded = exportExpanded,
+            onExpandedChange = { exportExpanded = it }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -428,66 +470,166 @@ fun SetupRowV2(
 }
 
 @Composable
-fun WorkTimesSectionV2(
-    workStart: LocalTime,
-    workEnd: LocalTime,
-    breakMinutes: Int
+private fun CollapsibleSettingsCard(
+    title: String,
+    summary: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            MZSectionHeader(title = stringResource(R.string.settings_work_times))
-
+    MZCard(
+        modifier = modifier.animateContentSize()
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TimeDisplay(
-                    label = stringResource(R.string.label_work_start),
-                    time = formatTime(workStart)
-                )
-                TimeDisplay(
-                    label = stringResource(R.string.label_work_end),
-                    time = formatTime(workEnd)
-                )
-            }
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandedChange(!expanded) },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.label_break),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = stringResource(R.string.format_minutes, breakMinutes),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                action?.invoke()
+
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.KeyboardArrowUp
+                    } else {
+                        Icons.Default.KeyboardArrowDown
+                    },
+                    contentDescription = if (expanded) {
+                        "Sektion einklappen"
+                    } else {
+                        "Sektion ausklappen"
+                    }
                 )
             }
-            
-            Text(
-                text = stringResource(R.string.work_times_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            AnimatedVisibility(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Divider()
+                    content()
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun TimeDisplay(label: String, time: String) {
-    Column {
+fun WorkTimesSectionV2(
+    workStart: LocalTime,
+    workEnd: LocalTime,
+    breakMinutes: Int,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onUpdateWorkStart: (LocalTime) -> Unit,
+    onUpdateWorkEnd: (LocalTime) -> Unit,
+    onUpdateBreakMinutes: (Int) -> Unit
+) {
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    var breakMinutesDraft by rememberSaveable(breakMinutes) {
+        mutableStateOf(breakMinutes.toFloat())
+    }
+
+    fun commitBreakMinutes() {
+        val snappedMinutes = ((breakMinutesDraft / 5f).roundToInt() * 5).coerceIn(0, 180)
+        breakMinutesDraft = snappedMinutes.toFloat()
+        if (snappedMinutes != breakMinutes) {
+            onUpdateBreakMinutes(snappedMinutes)
+        }
+    }
+
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_work_times),
+        summary = "${formatTime(workStart)} – ${formatTime(workEnd)} · ${breakMinutes} Min Pause",
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.label_work_start),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                MZSecondaryButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(formatTime(workStart))
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.label_work_end),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                MZSecondaryButton(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(formatTime(workEnd))
+                }
+            }
+        }
+
         Text(
-            text = label,
+            text = "${stringResource(R.string.label_break)}: ${breakMinutesDraft.roundToInt()} Min",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Slider(
+            value = breakMinutesDraft,
+            onValueChange = { breakMinutesDraft = it },
+            onValueChangeFinished = { commitBreakMinutes() },
+            valueRange = 0f..180f,
+            steps = 35,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            text = stringResource(R.string.work_times_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = time,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold
+    }
+
+    if (showStartPicker) {
+        TimePickerDialog(
+            initialTime = workStart,
+            onTimeSelected = {
+                onUpdateWorkStart(it)
+                showStartPicker = false
+            },
+            onDismiss = { showStartPicker = false }
+        )
+    }
+
+    if (showEndPicker) {
+        TimePickerDialog(
+            initialTime = workEnd,
+            onTimeSelected = {
+                onUpdateWorkEnd(it)
+                showEndPicker = false
+            },
+            onDismiss = { showEndPicker = false }
         )
     }
 }
@@ -511,88 +653,97 @@ fun ReminderSettingsSectionV2(
     onUpdateFallbackEnabled: (Boolean) -> Unit,
     onUpdateFallbackTime: (LocalTime) -> Unit,
     onUpdateDailyEnabled: (Boolean) -> Unit,
-    onUpdateDailyTime: (LocalTime) -> Unit
+    onUpdateDailyTime: (LocalTime) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     var showFallbackPicker by remember { mutableStateOf(false) }
     var showDailyPicker by remember { mutableStateOf(false) }
+    val activeCount = listOf(
+        morningReminderEnabled,
+        eveningReminderEnabled,
+        fallbackEnabled,
+        dailyReminderEnabled
+    ).count { it }
 
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            MZSectionHeader(title = stringResource(R.string.settings_reminders))
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_reminders),
+        summary = "$activeCount/4 aktiv",
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        // Morning Window
+        SettingsToggleRowV2(
+            title = stringResource(R.string.reminder_morning),
+            checked = morningReminderEnabled,
+            onCheckedChange = onUpdateMorningEnabled
+        )
 
-            // Morning Window
-            SettingsToggleRowV2(
-                title = stringResource(R.string.reminder_morning),
-                checked = morningReminderEnabled,
-                onCheckedChange = onUpdateMorningEnabled
-            )
-            
-            AnimatedVisibility(visible = morningReminderEnabled) {
-                TimeRangePickerV2(
-                    label = stringResource(R.string.label_time_range),
-                    startTime = morningWindowStart,
-                    endTime = morningWindowEnd,
-                    onTimeRangeChanged = { start, end ->
-                        onUpdateMorningWindow(start.hour, start.minute, end.hour, end.minute)
-                    },
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
-            
-            Divider()
-            
-            // Evening Window
-            SettingsToggleRowV2(
-                title = stringResource(R.string.reminder_evening),
-                checked = eveningReminderEnabled,
-                onCheckedChange = onUpdateEveningEnabled
-            )
-            
-            AnimatedVisibility(visible = eveningReminderEnabled) {
-                TimeRangePickerV2(
-                    label = stringResource(R.string.label_time_range),
-                    startTime = eveningWindowStart,
-                    endTime = eveningWindowEnd,
-                    onTimeRangeChanged = { start, end ->
-                        onUpdateEveningWindow(start.hour, start.minute, end.hour, end.minute)
-                    },
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
-
-            Divider()
-
-            // Fallback Reminder
-            SettingsToggleRowV2(
-                title = stringResource(R.string.reminder_fallback),
-                checked = fallbackEnabled,
-                onCheckedChange = onUpdateFallbackEnabled
-            )
-            SettingsTimeButtonRowV2(
-                label = stringResource(R.string.label_time),
-                time = fallbackTime,
-                enabled = fallbackEnabled,
-                onClick = { showFallbackPicker = true },
-                modifier = Modifier.padding(start = 12.dp)
-            )
-
-            Divider()
-
-            // Daily Reminder
-            SettingsToggleRowV2(
-                title = stringResource(R.string.reminder_daily),
-                supportingText = stringResource(R.string.reminder_daily_description),
-                checked = dailyReminderEnabled,
-                onCheckedChange = onUpdateDailyEnabled
-            )
-            SettingsTimeButtonRowV2(
-                label = stringResource(R.string.label_time),
-                time = dailyReminderTime,
-                enabled = dailyReminderEnabled,
-                onClick = { showDailyPicker = true },
+        AnimatedVisibility(visible = morningReminderEnabled) {
+            TimeRangePickerV2(
+                label = stringResource(R.string.label_time_range),
+                startTime = morningWindowStart,
+                endTime = morningWindowEnd,
+                onTimeRangeChanged = { start, end ->
+                    onUpdateMorningWindow(start.hour, start.minute, end.hour, end.minute)
+                },
                 modifier = Modifier.padding(start = 12.dp)
             )
         }
+
+        Divider()
+
+        // Evening Window
+        SettingsToggleRowV2(
+            title = stringResource(R.string.reminder_evening),
+            checked = eveningReminderEnabled,
+            onCheckedChange = onUpdateEveningEnabled
+        )
+
+        AnimatedVisibility(visible = eveningReminderEnabled) {
+            TimeRangePickerV2(
+                label = stringResource(R.string.label_time_range),
+                startTime = eveningWindowStart,
+                endTime = eveningWindowEnd,
+                onTimeRangeChanged = { start, end ->
+                    onUpdateEveningWindow(start.hour, start.minute, end.hour, end.minute)
+                },
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
+
+        Divider()
+
+        // Fallback Reminder
+        SettingsToggleRowV2(
+            title = stringResource(R.string.reminder_fallback),
+            checked = fallbackEnabled,
+            onCheckedChange = onUpdateFallbackEnabled
+        )
+        SettingsTimeButtonRowV2(
+            label = stringResource(R.string.label_time),
+            time = fallbackTime,
+            enabled = fallbackEnabled,
+            onClick = { showFallbackPicker = true },
+            modifier = Modifier.padding(start = 12.dp)
+        )
+
+        Divider()
+
+        // Daily Reminder
+        SettingsToggleRowV2(
+            title = stringResource(R.string.reminder_daily),
+            supportingText = stringResource(R.string.reminder_daily_description),
+            checked = dailyReminderEnabled,
+            onCheckedChange = onUpdateDailyEnabled
+        )
+        SettingsTimeButtonRowV2(
+            label = stringResource(R.string.label_time),
+            time = dailyReminderTime,
+            enabled = dailyReminderEnabled,
+            onClick = { showDailyPicker = true },
+            modifier = Modifier.padding(start = 12.dp)
+        )
     }
 
     if (showFallbackPicker) {
@@ -697,65 +848,107 @@ fun LocationSettingsSectionV2(
     onUpdateRadius: (Int) -> Unit,
     onUpdateDefaultDayLocationLabel: (String) -> Unit,
     onUpdatePreferGpsLocation: (Boolean) -> Unit,
-    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit
+    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            MZSectionHeader(title = stringResource(R.string.settings_location))
+    val focusManager = LocalFocusManager.current
+    var cityLabelDraft by rememberSaveable(defaultDayLocationLabel) {
+        mutableStateOf(defaultDayLocationLabel)
+    }
+    var radiusKmDraft by rememberSaveable(radiusMeters) {
+        mutableStateOf(radiusMeters / 1000f)
+    }
 
-            OutlinedTextField(
-                value = defaultDayLocationLabel,
-                onValueChange = onUpdateDefaultDayLocationLabel,
-                label = { Text(stringResource(R.string.label_default_city)) },
-                placeholder = { Text(stringResource(R.string.placeholder_city)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Text(
-                text = stringResource(R.string.default_city_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            SettingsToggleRowV2(
-                title = stringResource(R.string.label_prefer_gps),
-                supportingText = stringResource(R.string.prefer_gps_description),
-                checked = preferGpsLocation,
-                onCheckedChange = onUpdatePreferGpsLocation
-            )
-
-            SettingsToggleRowV2(
-                title = stringResource(R.string.label_fallback_low_accuracy),
-                supportingText = stringResource(R.string.fallback_low_accuracy_description),
-                checked = fallbackOnLowAccuracy,
-                onCheckedChange = onUpdateFallbackOnLowAccuracy
-            )
-
-            Divider()
-
-            // Radius
-            Text(
-                text = stringResource(R.string.label_radius, radiusMeters / 1000),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            
-            Slider(
-                value = (radiusMeters / 1000f),
-                onValueChange = { onUpdateRadius((it * 1000).toInt()) },
-                valueRange = 1f..50f,
-                steps = 49,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Text(
-                text = "%.0f km".format(radiusMeters / 1000f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+    fun commitCityLabel() {
+        val normalizedCity = cityLabelDraft.trim()
+        if (normalizedCity != cityLabelDraft) {
+            cityLabelDraft = normalizedCity
         }
+        if (normalizedCity != defaultDayLocationLabel) {
+            onUpdateDefaultDayLocationLabel(normalizedCity)
+        }
+    }
+
+    fun commitRadius() {
+        val newRadiusMeters = (radiusKmDraft * 1000f).roundToInt().coerceIn(1000, 50000)
+        if (newRadiusMeters != radiusMeters) {
+            onUpdateRadius(newRadiusMeters)
+        }
+    }
+
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_location),
+        summary = "${radiusMeters / 1000} km · ${defaultDayLocationLabel.ifBlank { "Leipzig" }}",
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        OutlinedTextField(
+            value = cityLabelDraft,
+            onValueChange = { cityLabelDraft = it },
+            label = { Text(stringResource(R.string.label_default_city)) },
+            placeholder = { Text(stringResource(R.string.placeholder_city)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) {
+                        commitCityLabel()
+                    }
+                },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    commitCityLabel()
+                    focusManager.clearFocus()
+                }
+            )
+        )
+
+        Text(
+            text = stringResource(R.string.default_city_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        SettingsToggleRowV2(
+            title = stringResource(R.string.label_prefer_gps),
+            supportingText = stringResource(R.string.prefer_gps_description),
+            checked = preferGpsLocation,
+            onCheckedChange = onUpdatePreferGpsLocation
+        )
+
+        SettingsToggleRowV2(
+            title = stringResource(R.string.label_fallback_low_accuracy),
+            supportingText = stringResource(R.string.fallback_low_accuracy_description),
+            checked = fallbackOnLowAccuracy,
+            onCheckedChange = onUpdateFallbackOnLowAccuracy
+        )
+
+        Divider()
+
+        // Radius
+        Text(
+            text = stringResource(R.string.label_radius, radiusKmDraft.roundToInt()),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Slider(
+            value = radiusKmDraft,
+            onValueChange = { radiusKmDraft = it },
+            onValueChangeFinished = { commitRadius() },
+            valueRange = 1f..50f,
+            steps = 49,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            text = "%.0f km".format(radiusKmDraft),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -767,67 +960,79 @@ fun NonWorkingDaysSectionV2(
     onUpdateAutoOffWeekends: (Boolean) -> Unit,
     onUpdateAutoOffHolidays: (Boolean) -> Unit,
     onAddHolidayDate: (LocalDate) -> Unit,
-    onRemoveHolidayDate: (LocalDate) -> Unit
+    onRemoveHolidayDate: (LocalDate) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     var showHolidayPicker by remember { mutableStateOf(false) }
     val sortedHolidays = remember(holidayDates) { holidayDates.sorted() }
+    val nonWorkingSummary = buildString {
+        append(if (autoOffWeekends) "Wochenenden an" else "Wochenenden aus")
+        append(" · ")
+        if (autoOffHolidays) {
+            append("${holidayDates.size} Feiertage")
+        } else {
+            append("Feiertage aus")
+        }
+    }
 
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            MZSectionHeader(title = stringResource(R.string.settings_non_working_days))
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_non_working_days),
+        summary = nonWorkingSummary,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        SettingsToggleRowV2(
+            title = stringResource(R.string.label_auto_off_weekends),
+            supportingText = stringResource(R.string.auto_off_weekends_description),
+            checked = autoOffWeekends,
+            onCheckedChange = onUpdateAutoOffWeekends
+        )
 
-            SettingsToggleRowV2(
-                title = stringResource(R.string.label_auto_off_weekends),
-                supportingText = stringResource(R.string.auto_off_weekends_description),
-                checked = autoOffWeekends,
-                onCheckedChange = onUpdateAutoOffWeekends
+        Divider()
+
+        SettingsToggleRowV2(
+            title = stringResource(R.string.label_auto_off_holidays),
+            supportingText = stringResource(R.string.auto_off_holidays_description),
+            checked = autoOffHolidays,
+            onCheckedChange = onUpdateAutoOffHolidays
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.label_holidays),
+                style = MaterialTheme.typography.bodyMedium
             )
-
-            Divider()
-
-            SettingsToggleRowV2(
-                title = stringResource(R.string.label_auto_off_holidays),
-                supportingText = stringResource(R.string.auto_off_holidays_description),
-                checked = autoOffHolidays,
-                onCheckedChange = onUpdateAutoOffHolidays
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            MZSecondaryButton(
+                onClick = { showHolidayPicker = true },
+                enabled = autoOffHolidays
             ) {
-                Text(
-                    text = stringResource(R.string.label_holidays),
-                    style = MaterialTheme.typography.bodyMedium
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
                 )
-                MZSecondaryButton(
-                    onClick = { showHolidayPicker = true },
-                    enabled = autoOffHolidays
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-                    Text(stringResource(R.string.action_add))
-                }
+                Text(stringResource(R.string.action_add))
             }
+        }
 
-            if (sortedHolidays.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.no_holidays_added),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    sortedHolidays.forEach { date ->
-                        HolidayRow(
-                            date = date,
-                            onRemove = { onRemoveHolidayDate(date) }
-                        )
-                    }
+        if (sortedHolidays.isEmpty()) {
+            Text(
+                text = stringResource(R.string.no_holidays_added),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                sortedHolidays.forEach { date ->
+                    HolidayRow(
+                        date = date,
+                        onRemove = { onRemoveHolidayDate(date) }
+                    )
                 }
             }
         }
@@ -880,7 +1085,9 @@ fun ExportSectionV2(
     pdfProject: String?,
     pdfPersonnelNumber: String?,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
-    onResetState: () -> Unit
+    onResetState: () -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     
@@ -891,37 +1098,40 @@ fun ExportSectionV2(
     val company = pdfCompany.orEmpty()
     val project = pdfProject.orEmpty()
     val personnelNumber = pdfPersonnelNumber.orEmpty()
+    val exportSummary = if (employeeName.isBlank()) {
+        "Name fehlt"
+    } else {
+        employeeName
+    }
 
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_export),
+        summary = exportSummary,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        action = {
+            IconButton(onClick = { showPdfSettingsDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.cd_pdf_settings)
+                )
+            }
+        }
+    ) {
+        // Name validation warning
+        if (employeeName.isBlank()) {
+            MZStatusBadge(
+                text = stringResource(R.string.warning_name_missing),
+                type = StatusType.ERROR,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MZSectionHeader(
-                    title = stringResource(R.string.settings_export),
-                    action = {
-                        IconButton(onClick = { showPdfSettingsDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.cd_pdf_settings)
-                            )
-                        }
-                    }
-                )
-            }
-            
-            // Name validation warning
-            if (employeeName.isBlank()) {
-                MZStatusBadge(
-                    text = stringResource(R.string.warning_name_missing),
-                    type = StatusType.ERROR,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            // Export Buttons
+            )
+        }
+
+        // Export Buttons
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -932,54 +1142,54 @@ fun ExportSectionV2(
                     enabled = employeeName.isNotBlank(),
                     content = { Text(stringResource(R.string.export_current_month)) }
                 )
-                
+
                 MZPrimaryButton(
                     onClick = onExportPdfLast30Days,
                     modifier = Modifier.weight(1f),
                     enabled = employeeName.isNotBlank(),
                     content = { Text(stringResource(R.string.export_30_days)) }
                 )
-                
-                MZSecondaryButton(
-                    onClick = { showPdfCustomRangeDialog = true },
-                    modifier = Modifier.weight(1f),
-                    enabled = employeeName.isNotBlank(),
-                    content = { Text(stringResource(R.string.export_custom)) }
+            }
+
+            MZSecondaryButton(
+                onClick = { showPdfCustomRangeDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = employeeName.isNotBlank(),
+                content = { Text(stringResource(R.string.export_custom)) }
+            )
+        }
+
+        // Export Status
+        when (uiState) {
+            is SettingsUiState.Initial -> Unit
+            is SettingsUiState.Exporting -> {
+                MZLoadingState(message = stringResource(R.string.exporting))
+            }
+
+            is SettingsUiState.ExportSuccess -> {
+                ExportSuccessCard(
+                    format = uiState.format,
+                    onShare = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/pdf"
+                            putExtra(Intent.EXTRA_STREAM, uiState.fileUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            putExtra(Intent.EXTRA_SUBJECT, "MontageZeit Export")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, 
+                            context.getString(R.string.share_export)))
+                        onResetState()
+                    },
+                    onDismiss = onResetState
                 )
             }
-            
-            // Export Status
-            when (uiState) {
-                is SettingsUiState.Initial -> Unit
-                is SettingsUiState.Exporting -> {
-                    MZLoadingState(message = stringResource(R.string.exporting))
-                }
 
-                is SettingsUiState.ExportSuccess -> {
-                    ExportSuccessCard(
-                        format = uiState.format,
-                        onShare = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/pdf"
-                                putExtra(Intent.EXTRA_STREAM, uiState.fileUri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                putExtra(Intent.EXTRA_SUBJECT, "MontageZeit Export")
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, 
-                                context.getString(R.string.share_export)))
-                            onResetState()
-                        },
-                        onDismiss = onResetState
-                    )
-                }
-
-                is SettingsUiState.ExportError -> {
-                    MZStatusBadge(
-                        text = uiState.message,
-                        type = StatusType.ERROR,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            is SettingsUiState.ExportError -> {
+                MZStatusBadge(
+                    text = uiState.message,
+                    type = StatusType.ERROR,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
