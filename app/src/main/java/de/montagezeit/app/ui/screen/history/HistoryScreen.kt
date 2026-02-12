@@ -566,6 +566,7 @@ fun CalendarView(
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit
 ) {
+    val today = LocalDate.now()
     val days = remember(month) { buildCalendarDays(month) }
     val weeks = remember(days) { days.chunked(7) }
 
@@ -605,6 +606,7 @@ fun CalendarView(
                         CalendarDayCell(
                             day = day,
                             entry = entriesByDate[day.date],
+                            isToday = day.date == today,
                             onClick = { if (day.inMonth) onDayClick(day.date) },
                             modifier = Modifier.weight(1f)
                         )
@@ -623,6 +625,7 @@ fun WeekCalendarView(
     onNextWeek: () -> Unit,
     onDayClick: (LocalDate) -> Unit
 ) {
+    val today = LocalDate.now()
     val weekFields = WeekFields.of(Locale.GERMAN)
     val weekStart = selectedDate.with(weekFields.dayOfWeek(), 1)
     val weekEnd = selectedDate.with(weekFields.dayOfWeek(), 7)
@@ -672,6 +675,7 @@ fun WeekCalendarView(
                 CalendarDayCell(
                     day = day,
                     entry = entriesByDate[day.date],
+                    isToday = day.date == today,
                     onClick = { onDayClick(day.date) },
                     modifier = Modifier.weight(1f)
                 )
@@ -708,10 +712,10 @@ fun WeekdayHeader() {
 fun CalendarDayCell(
     day: CalendarDay,
     entry: WorkEntry?,
+    isToday: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isToday = day.date == LocalDate.now()
     val shape = RoundedCornerShape(8.dp)
     val containerColor = when {
         !day.inMonth -> MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
