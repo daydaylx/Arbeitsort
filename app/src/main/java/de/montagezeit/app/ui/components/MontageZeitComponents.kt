@@ -111,7 +111,16 @@ fun MZStatusCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickableWithAccessibility(onClick, "Bearbeiten") else Modifier),
+            .then(
+                if (onClick != null) {
+                    Modifier.clickableWithAccessibility(
+                        onClick,
+                        stringResource(R.string.action_edit_entry_manual)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = containerColor
         ),

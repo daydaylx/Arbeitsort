@@ -852,7 +852,10 @@ private fun StatisticsDashboardCardV2(
                 }
 
                 MZStatusBadge(
-                    text = "${(progress * 100).toInt()}%",
+                    text = stringResource(
+                        R.string.today_stats_percent,
+                        (progress * 100).toInt()
+                    ),
                     type = status
                 )
             }
@@ -1115,8 +1118,13 @@ private fun getCompletedTimeString(timestamp: Long): String {
     return localTime.format(DateTimeFormatter.ofPattern("HH:mm"))
 }
 
+@Composable
 private fun formatMinutes(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
-    return if (m == 0) "${h}h" else "${h}h ${m}min"
+    return if (m == 0) {
+        stringResource(R.string.format_hours_short, h)
+    } else {
+        stringResource(R.string.format_hours_short_minutes, h, m)
+    }
 }

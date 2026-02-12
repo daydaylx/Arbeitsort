@@ -233,6 +233,8 @@
     
     <!-- Format -->
     <string name="format_minutes">%1$d min</string>
+    <string name="format_hours_short">%1$dh</string>
+    <string name="format_hours_short_minutes">%1$dh %2$dmin</string>
     <string name="time_picker_title">Zeit wählen</string>
     <string name="time_picker_cd_switch_to_clock">Zu Uhr wechseln</string>
     <string name="time_picker_cd_switch_to_keyboard">Zu Tastatur wechseln</string>
@@ -369,4 +371,5 @@
     <string name="action_review">Prüfen</string>
     <string name="cd_open_statistics">Statistiken anzeigen</string>
     <string name="today_stats_label_days">%1$s · %2$d Tage</string>
+    <string name="today_stats_percent">%1$d%%</string>
 </resources>
