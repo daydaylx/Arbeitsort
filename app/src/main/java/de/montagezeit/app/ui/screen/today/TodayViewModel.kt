@@ -3,6 +3,7 @@ package de.montagezeit.app.ui.screen.today
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -14,6 +15,7 @@ import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.work.ReminderWindowEvaluator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,7 +133,9 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(e.message ?: "Unbekannter Fehler")
+                    _uiState.value = TodayUiState.Error(
+                        e.toUiText(R.string.today_error_unknown)
+                    )
                 }
             }
         }
@@ -221,13 +225,13 @@ class TodayViewModel @Inject constructor(
                     when (e) {
                         is SecurityException -> {
                             _uiState.value = TodayUiState.LocationError(
-                                "Standortberechtigung fehlt",
+                                UiText.StringResource(R.string.today_error_location_permission_missing),
                                 canRetry = false
                             )
                         }
                         else -> {
                             _uiState.value = TodayUiState.LocationError(
-                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                e.toUiText(R.string.today_error_location_unavailable),
                                 canRetry = true
                             )
                         }
@@ -256,13 +260,13 @@ class TodayViewModel @Inject constructor(
                     when (e) {
                         is SecurityException -> {
                             _uiState.value = TodayUiState.LocationError(
-                                "Standortberechtigung fehlt",
+                                UiText.StringResource(R.string.today_error_location_permission_missing),
                                 canRetry = false
                             )
                         }
                         else -> {
                             _uiState.value = TodayUiState.LocationError(
-                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                e.toUiText(R.string.today_error_location_unavailable),
                                 canRetry = true
                             )
                         }
@@ -345,13 +349,13 @@ class TodayViewModel @Inject constructor(
                     when (e) {
                         is SecurityException -> {
                             _uiState.value = TodayUiState.LocationError(
-                                "Standortberechtigung fehlt",
+                                UiText.StringResource(R.string.today_error_location_permission_missing),
                                 canRetry = false
                             )
                         }
                         else -> {
                             _uiState.value = TodayUiState.LocationError(
-                                e.message ?: "Standort konnte nicht ermittelt werden",
+                                e.toUiText(R.string.today_error_location_unavailable),
                                 canRetry = true
                             )
                         }
@@ -377,7 +381,9 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(e.message ?: "Konnte Tag nicht bestätigen")
+                    _uiState.value = TodayUiState.Error(
+                        e.toUiText(R.string.today_error_confirm_day_failed)
+                    )
                 }
             } finally {
                 removeLoadingAction(TodayAction.CONFIRM_OFFDAY)
@@ -423,7 +429,9 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(e.message ?: "Prüfung konnte nicht gespeichert werden")
+                    _uiState.value = TodayUiState.Error(
+                        e.toUiText(R.string.today_error_review_save_failed)
+                    )
                 }
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
@@ -450,7 +458,9 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(e.message ?: "Ort konnte nicht gespeichert werden")
+                    _uiState.value = TodayUiState.Error(
+                        e.toUiText(R.string.today_error_day_location_save_failed)
+                    )
                 }
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
@@ -471,6 +481,15 @@ sealed class TodayUiState {
     object Loading : TodayUiState()
     object LoadingLocation : TodayUiState()
     data class Success(val entry: WorkEntry?) : TodayUiState()
-    data class Error(val message: String) : TodayUiState()
-    data class LocationError(val message: String, val canRetry: Boolean) : TodayUiState()
+    data class Error(val message: UiText) : TodayUiState()
+    data class LocationError(val message: UiText, val canRetry: Boolean) : TodayUiState()
+}
+
+private fun Throwable.toUiText(@androidx.annotation.StringRes fallbackRes: Int): UiText {
+    val messageValue = message?.trim().orEmpty()
+    return if (messageValue.isNotEmpty()) {
+        UiText.DynamicString(messageValue)
+    } else {
+        UiText.StringResource(fallbackRes)
+    }
 }

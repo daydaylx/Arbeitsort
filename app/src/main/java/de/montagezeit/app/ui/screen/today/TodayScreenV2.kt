@@ -35,6 +35,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.util.LocationPermissionHelper
+import de.montagezeit.app.ui.util.asString
 import de.montagezeit.app.ui.util.getReviewReason
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -174,7 +175,7 @@ fun TodayScreenV2(
             when (uiState) {
                 is TodayUiState.Error -> {
                     MZErrorState(
-                        message = (uiState as TodayUiState.Error).message,
+                        message = (uiState as TodayUiState.Error).message.asString(context),
                         onRetry = { viewModel.onResetError() },
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -183,7 +184,7 @@ fun TodayScreenV2(
                 is TodayUiState.LocationError -> {
                     val errorState = uiState as TodayUiState.LocationError
                     LocationErrorContentV2(
-                        message = errorState.message,
+                        message = errorState.message.asString(context),
                         canRetry = errorState.canRetry,
                         onRetry = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)

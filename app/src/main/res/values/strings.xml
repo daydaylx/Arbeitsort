@@ -72,6 +72,12 @@
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
     <string name="today_needs_review">Standort prüfen</string>
+    <string name="today_error_unknown">Unbekannter Fehler</string>
+    <string name="today_error_location_permission_missing">Standortberechtigung fehlt</string>
+    <string name="today_error_location_unavailable">Standort konnte nicht ermittelt werden</string>
+    <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
+    <string name="today_error_review_save_failed">Prüfung konnte nicht gespeichert werden</string>
+    <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
     <string name="review_reason_low_accuracy_morning">GPS-Genauigkeit niedrig (morgens)</string>
     <string name="review_reason_low_accuracy_evening">GPS-Genauigkeit niedrig (abends)</string>
     <string name="review_reason_low_accuracy_both">GPS-Genauigkeit niedrig</string>
