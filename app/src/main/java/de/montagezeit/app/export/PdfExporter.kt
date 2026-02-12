@@ -134,47 +134,48 @@ class PdfExporter @Inject constructor(
             if (employeeName.isBlank()) {
                 throw IllegalArgumentException("Name fehlt")
             }
-            
+
             val pdfDocument = PdfDocument()
-            var currentPage = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create())
-            var canvas = currentPage.canvas
-            
-            // Header zeichnen
-            var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate)
-            
-            // Tabellenkopf zeichnen
-            yPosition = drawTableHeader(canvas, yPosition)
-            
-            // Tabelle zeichnen (Multi-Pag)
-            val tableResult = drawTable(canvas, pdfDocument, currentPage, entries, yPosition)
-            currentPage = tableResult.page
-            canvas = currentPage.canvas
-            yPosition = tableResult.yPosition
-            
-            // Neue Seite für Summen und Unterschriften
-            if (yPosition > PAGE_HEIGHT - MARGIN) {
-                pdfDocument.finishPage(currentPage)
-                val nextPageNumber = tableResult.pageNumber + 1
-                currentPage = pdfDocument.startPage(
-                    PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, nextPageNumber).create()
-                )
+            try {
+                var currentPage = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create())
+                var canvas = currentPage.canvas
+
+                // Header zeichnen
+                var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate)
+
+                // Tabellenkopf zeichnen
+                yPosition = drawTableHeader(canvas, yPosition)
+
+                // Tabelle zeichnen (Multi-Pag)
+                val tableResult = drawTable(canvas, pdfDocument, currentPage, entries, yPosition)
+                currentPage = tableResult.page
                 canvas = currentPage.canvas
-                yPosition = MARGIN.toFloat()
+                yPosition = tableResult.yPosition
+
+                // Neue Seite für Summen und Unterschriften
+                if (yPosition > PAGE_HEIGHT - MARGIN) {
+                    pdfDocument.finishPage(currentPage)
+                    val nextPageNumber = tableResult.pageNumber + 1
+                    currentPage = pdfDocument.startPage(
+                        PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, nextPageNumber).create()
+                    )
+                    canvas = currentPage.canvas
+                    yPosition = MARGIN.toFloat()
+                }
+
+                // Summenblock zeichnen
+                yPosition = drawSummary(canvas, entries, yPosition)
+
+                // Unterschriften zeichnen
+                drawSignatures(canvas, yPosition)
+
+                pdfDocument.finishPage(currentPage)
+
+                // PDF schreiben
+                writePdfFile(pdfDocument, startDate, endDate)
+            } finally {
+                pdfDocument.close()
             }
-            
-            // Summenblock zeichnen
-            yPosition = drawSummary(canvas, entries, yPosition)
-            
-            // Unterschriften zeichnen
-            drawSignatures(canvas, yPosition)
-            
-            pdfDocument.finishPage(currentPage)
-            
-            // PDF schreiben
-            val fileUri = writePdfFile(pdfDocument, startDate, endDate)
-            
-            pdfDocument.close()
-            fileUri
         } catch (e: Exception) {
             e.printStackTrace()
             null
