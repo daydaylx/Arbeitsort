@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
@@ -52,7 +53,7 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel(),
     onOpenEditSheet: (java.time.LocalDate) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showBatchEditDialog by remember { mutableStateOf(false) }
     var isBatchEditing by remember { mutableStateOf(false) }

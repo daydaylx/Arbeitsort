@@ -43,6 +43,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.common.TimePickerDialog
@@ -65,8 +66,8 @@ fun SettingsScreenV2(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val uiState by viewModel.uiState.collectAsState()
-    val settings by viewModel.reminderSettings.collectAsState(initial = null)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val settings by viewModel.reminderSettings.collectAsStateWithLifecycle(initialValue = null)
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var hasNotificationPermission by remember {

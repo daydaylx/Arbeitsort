@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.common.DestructiveActionButton
@@ -39,7 +40,7 @@ fun EditEntrySheet(
     onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)? = null,
     onNavigateDate: ((LocalDate) -> Unit)? = null
 ) {
-    val screenState by viewModel.screenState.collectAsState()
+    val screenState by viewModel.screenState.collectAsStateWithLifecycle()
     val uiState = screenState.uiState
     val formData = screenState.formData
     val isSaving = screenState.isSaving

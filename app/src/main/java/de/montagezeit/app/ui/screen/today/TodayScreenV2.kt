@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
@@ -50,13 +51,13 @@ fun TodayScreenV2(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val uiState by viewModel.uiState.collectAsState()
-    val todayEntry by viewModel.todayEntry.collectAsState()
-    val weekStats by viewModel.weekStats.collectAsState()
-    val monthStats by viewModel.monthStats.collectAsState()
-    val showReviewSheet by viewModel.showReviewSheet.collectAsState()
-    val reviewScope by viewModel.reviewScope.collectAsState()
-    val loadingActions by viewModel.loadingActions.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val todayEntry by viewModel.todayEntry.collectAsStateWithLifecycle()
+    val weekStats by viewModel.weekStats.collectAsStateWithLifecycle()
+    val monthStats by viewModel.monthStats.collectAsStateWithLifecycle()
+    val showReviewSheet by viewModel.showReviewSheet.collectAsStateWithLifecycle()
+    val reviewScope by viewModel.reviewScope.collectAsStateWithLifecycle()
+    val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
     
     var hasLocationPermission by remember {
         mutableStateOf(LocationPermissionHelper.hasAnyLocationPermission(context))
