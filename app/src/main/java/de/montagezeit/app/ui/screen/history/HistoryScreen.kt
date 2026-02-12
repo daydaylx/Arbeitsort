@@ -193,7 +193,7 @@ fun HistoryContent(
         } else {
             weeks.mapNotNull { week ->
                 val filteredEntries = week.entries.filter { it.needsReview }
-                if (filteredEntries.isEmpty()) null else week.copy(entries = filteredEntries)
+                if (filteredEntries.isEmpty()) null else week.copyWithEntries(filteredEntries)
             }
         }
     }
@@ -204,7 +204,7 @@ fun HistoryContent(
         } else {
             months.mapNotNull { month ->
                 val filteredEntries = month.entries.filter { it.needsReview }
-                if (filteredEntries.isEmpty()) null else month.copy(entries = filteredEntries)
+                if (filteredEntries.isEmpty()) null else month.copyWithEntries(filteredEntries)
             }
         }
     }
@@ -1796,6 +1796,40 @@ fun ErrorContent(
             Text(stringResource(R.string.history_action_repeat))
         }
     }
+}
+
+private fun WeekGroup.copyWithEntries(entries: List<WorkEntry>): WeekGroup {
+    val workDaysCount = entries.count { it.dayType == DayType.WORK }
+    val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
+    return copy(
+        entries = entries,
+        workDaysCount = workDaysCount,
+        offDaysCount = entries.count { it.dayType == DayType.OFF },
+        totalHours = totalHours,
+        totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
+        averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
+        entriesNeedingReview = entries.count { it.needsReview },
+        daysOutsideLeipzig = entries.count { entry ->
+            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
+        }
+    )
+}
+
+private fun MonthGroup.copyWithEntries(entries: List<WorkEntry>): MonthGroup {
+    val workDaysCount = entries.count { it.dayType == DayType.WORK }
+    val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
+    return copy(
+        entries = entries,
+        workDaysCount = workDaysCount,
+        offDaysCount = entries.count { it.dayType == DayType.OFF },
+        totalHours = totalHours,
+        totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
+        averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
+        entriesNeedingReview = entries.count { it.needsReview },
+        daysOutsideLeipzig = entries.count { entry ->
+            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
+        }
+    )
 }
 
 data class CalendarDay(

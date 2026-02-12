@@ -132,10 +132,19 @@ class HistoryViewModel @Inject constructor(
                 Pair(year, week)
             }
             .map { (yearWeek, weekEntries) ->
+                val sortedEntries = weekEntries.sortedByDescending { it.date }
+                val stats = calculateGroupStats(sortedEntries)
                 WeekGroup(
                     year = yearWeek.first,
                     week = yearWeek.second,
-                    entries = weekEntries.sortedByDescending { it.date }
+                    entries = sortedEntries,
+                    workDaysCount = stats.workDaysCount,
+                    offDaysCount = stats.offDaysCount,
+                    totalHours = stats.totalHours,
+                    totalPaidHours = stats.totalPaidHours,
+                    averageHoursPerDay = stats.averageHoursPerDay,
+                    entriesNeedingReview = stats.entriesNeedingReview,
+                    daysOutsideLeipzig = stats.daysOutsideLeipzig
                 )
             }
             .sortedByDescending { it.year * 100 + it.week }
@@ -147,13 +156,44 @@ class HistoryViewModel @Inject constructor(
                 Pair(entry.date.year, entry.date.monthValue)
             }
             .map { (yearMonth, monthEntries) ->
+                val sortedEntries = monthEntries.sortedByDescending { it.date }
+                val stats = calculateGroupStats(sortedEntries)
                 MonthGroup(
                     year = yearMonth.first,
                     month = yearMonth.second,
-                    entries = monthEntries.sortedByDescending { it.date }
+                    entries = sortedEntries,
+                    workDaysCount = stats.workDaysCount,
+                    offDaysCount = stats.offDaysCount,
+                    totalHours = stats.totalHours,
+                    totalPaidHours = stats.totalPaidHours,
+                    averageHoursPerDay = stats.averageHoursPerDay,
+                    entriesNeedingReview = stats.entriesNeedingReview,
+                    daysOutsideLeipzig = stats.daysOutsideLeipzig
                 )
             }
             .sortedByDescending { it.year * 100 + it.month }
+    }
+
+    private fun calculateGroupStats(entries: List<WorkEntry>): HistoryGroupStats {
+        val workDaysCount = entries.count { it.dayType == DayType.WORK }
+        val offDaysCount = entries.count { it.dayType == DayType.OFF }
+        val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+        val entriesNeedingReview = entries.count { it.needsReview }
+        val daysOutsideLeipzig = entries.count { entry ->
+            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
+        }
+        val averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
+
+        return HistoryGroupStats(
+            workDaysCount = workDaysCount,
+            offDaysCount = offDaysCount,
+            totalHours = totalHours,
+            totalPaidHours = totalPaidHours,
+            averageHoursPerDay = averageHoursPerDay,
+            entriesNeedingReview = entriesNeedingReview,
+            daysOutsideLeipzig = daysOutsideLeipzig
+        )
     }
 
     private fun buildDateRange(start: LocalDate, end: LocalDate): List<LocalDate> {
@@ -180,7 +220,14 @@ class HistoryViewModel @Inject constructor(
 data class MonthGroup(
     val year: Int,
     val month: Int,
-    val entries: List<WorkEntry>
+    val entries: List<WorkEntry>,
+    val workDaysCount: Int,
+    val offDaysCount: Int,
+    val totalHours: Double,
+    val totalPaidHours: Double,
+    val averageHoursPerDay: Double,
+    val entriesNeedingReview: Int,
+    val daysOutsideLeipzig: Int
 ) {
     val displayText: String
         get() {
@@ -193,71 +240,36 @@ data class MonthGroup(
 
     val yearText: String
         get() = if (year == LocalDate.now().year) "" else "$year"
-
-    // Statistics
-    val workDaysCount: Int
-        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-
-    val offDaysCount: Int
-        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.OFF }
-
-    val totalHours: Double
-        get() = entries
-            .sumOf { TimeCalculator.calculateWorkHours(it) }
-
-    val totalPaidHours: Double
-        get() = entries
-            .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-
-    val averageHoursPerDay: Double
-        get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
-
-    val entriesNeedingReview: Int
-        get() = entries.count { it.needsReview }
-
-    val daysOutsideLeipzig: Int
-        get() = entries.count { entry ->
-            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
-        }
 }
 
 data class WeekGroup(
     val year: Int,
     val week: Int,
-    val entries: List<WorkEntry>
+    val entries: List<WorkEntry>,
+    val workDaysCount: Int,
+    val offDaysCount: Int,
+    val totalHours: Double,
+    val totalPaidHours: Double,
+    val averageHoursPerDay: Double,
+    val entriesNeedingReview: Int,
+    val daysOutsideLeipzig: Int
 ) {
     val displayText: String
         get() = "KW $week"
 
     val yearText: String
         get() = if (year == LocalDate.now().year) "" else "$year"
-
-    // Statistics
-    val workDaysCount: Int
-        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
-
-    val offDaysCount: Int
-        get() = entries.count { it.dayType == de.montagezeit.app.data.local.entity.DayType.OFF }
-
-    val totalHours: Double
-        get() = entries
-            .sumOf { TimeCalculator.calculateWorkHours(it) }
-
-    val totalPaidHours: Double
-        get() = entries
-            .sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-
-    val averageHoursPerDay: Double
-        get() = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
-
-    val entriesNeedingReview: Int
-        get() = entries.count { it.needsReview }
-
-    val daysOutsideLeipzig: Int
-        get() = entries.count { entry ->
-            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
-        }
 }
+
+private data class HistoryGroupStats(
+    val workDaysCount: Int,
+    val offDaysCount: Int,
+    val totalHours: Double,
+    val totalPaidHours: Double,
+    val averageHoursPerDay: Double,
+    val entriesNeedingReview: Int,
+    val daysOutsideLeipzig: Int
+)
 
 data class BatchEditRequest(
     val startDate: LocalDate,
