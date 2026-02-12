@@ -5,6 +5,7 @@
     <!-- Reminder Notifications -->
     <string name="notification_channel_reminders">Check-in Erinnerungen</string>
     <string name="notification_channel_description">Erinnerungen für morgendlichen und abendlichen Check-in</string>
+    <string name="notification_group_summary_text">Tägliche Check-in Erinnerungen</string>
     
     <!-- Morning Reminder -->
     <string name="notification_morning_title">Guten Morgen</string>
@@ -32,6 +33,7 @@
     <string name="action_confirm_yes">Arbeit</string>
     <string name="action_confirm_no">Frei</string>
     <string name="action_confirm_later">Später</string>
+    <string name="action_remind_later_hours">Später (%1$dh)</string>
     
     <!-- Success Messages -->
     <string name="toast_check_in_success">Erfolgreich protokolliert</string>
@@ -262,6 +264,32 @@
     <string name="export_preview_no_pdf_app">Keine App zum Öffnen von PDFs gefunden.</string>
     <string name="export_preview_share_chooser_title">PDF teilen</string>
     <string name="export_preview_no_share_app">Keine App zum Teilen von PDFs gefunden.</string>
+    <string name="pdf_export_error_name_missing">Name fehlt</string>
+    <string name="pdf_export_error_not_enough_storage_mb">Nicht genug Speicherplatz verfügbar (benötigt: %1$d MB)</string>
+    <string name="pdf_export_title">Arbeitsnachweis – Monatsübersicht</string>
+    <string name="pdf_export_header_employee">Mitarbeiter: %1$s</string>
+    <string name="pdf_export_header_company">Firma: %1$s</string>
+    <string name="pdf_export_header_project">Projekt: %1$s</string>
+    <string name="pdf_export_header_personnel_number">Personalnummer: %1$s</string>
+    <string name="pdf_export_header_range">Zeitraum: %1$s</string>
+    <string name="pdf_export_header_created_at">Erstellt am: %1$s</string>
+    <string name="pdf_export_column_date">Datum</string>
+    <string name="pdf_export_column_start">Start</string>
+    <string name="pdf_export_column_end">Ende</string>
+    <string name="pdf_export_column_break">Pause</string>
+    <string name="pdf_export_column_work">Arbeit</string>
+    <string name="pdf_export_column_travel_window">Reise (von–bis)</string>
+    <string name="pdf_export_column_travel_time">Reisezeit</string>
+    <string name="pdf_export_column_total">Gesamt</string>
+    <string name="pdf_export_column_location">Ort</string>
+    <string name="pdf_export_value_hours">%1$s h</string>
+    <string name="pdf_export_placeholder_dash">–</string>
+    <string name="pdf_export_summary_work_days">Arbeitstage: %1$d</string>
+    <string name="pdf_export_summary_work_time">Summe Arbeitszeit: %1$s h</string>
+    <string name="pdf_export_summary_travel_time">Summe Reisezeit: %1$s h</string>
+    <string name="pdf_export_summary_total_paid_time">Summe Gesamtzeit (bezahlt): %1$s h</string>
+    <string name="pdf_export_signature_employee">Mitarbeiter</string>
+    <string name="pdf_export_signature_supervisor">Vorgesetzter</string>
     <string name="warning_name_missing">Name fehlt! Bitte zuerst in den Settings eingeben.</string>
     <string name="cd_pdf_settings">PDF Einstellungen</string>
     <string name="pdf_settings_title">PDF Einstellungen</string>

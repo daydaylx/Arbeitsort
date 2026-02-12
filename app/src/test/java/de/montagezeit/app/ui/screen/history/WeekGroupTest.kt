@@ -1,8 +1,8 @@
 package de.montagezeit.app.ui.screen.history
 
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
@@ -29,11 +29,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // 8 + 9 = 17 hours total
         assertEquals(17.0, weekGroup.totalHours, 0.1)
@@ -58,11 +54,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // Only 8 hours from work day
         assertEquals(8.0, weekGroup.totalHours, 0.1)
@@ -87,11 +79,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // (8 + 10) / 2 = 9.0
         assertEquals(9.0, weekGroup.averageHoursPerDay, 0.1)
@@ -109,11 +97,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         assertEquals(0.0, weekGroup.averageHoursPerDay, 0.1)
     }
@@ -138,11 +122,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         assertEquals(2, weekGroup.workDaysCount)
     }
@@ -167,11 +147,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         assertEquals(2, weekGroup.offDaysCount)
     }
@@ -196,11 +172,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         assertEquals(2, weekGroup.entriesNeedingReview)
     }
@@ -238,11 +210,7 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // Days 1, 2, 3 have at least one outside Leipzig
         assertEquals(3, weekGroup.daysOutsideLeipzig)
@@ -267,35 +235,23 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // Only day 2 has outside Leipzig
         assertEquals(1, weekGroup.daysOutsideLeipzig)
     }
 
     @Test
-    fun `displayText should show week number`() {
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 42,
-            entries = emptyList()
-        )
+    fun `week should keep assigned value`() {
+        val weekGroup = createWeekGroup(year = 2026, week = 42, entries = emptyList())
 
-        assertEquals("KW 42", weekGroup.displayText)
+        assertEquals(42, weekGroup.week)
     }
 
     @Test
     fun `yearText should be empty for current year`() {
         val currentYear = LocalDate.now().year
-        val weekGroup = WeekGroup(
-            year = currentYear,
-            week = 1,
-            entries = emptyList()
-        )
+        val weekGroup = createWeekGroup(year = currentYear, week = 1, entries = emptyList())
 
         assertEquals("", weekGroup.yearText)
     }
@@ -303,11 +259,7 @@ class WeekGroupTest {
     @Test
     fun `yearText should show year for non-current year`() {
         val currentYear = LocalDate.now().year
-        val weekGroup = WeekGroup(
-            year = currentYear - 1,
-            week = 1,
-            entries = emptyList()
-        )
+        val weekGroup = createWeekGroup(year = currentYear - 1, week = 1, entries = emptyList())
 
         assertEquals("${currentYear - 1}", weekGroup.yearText)
     }
@@ -324,13 +276,35 @@ class WeekGroupTest {
             )
         )
 
-        val weekGroup = WeekGroup(
-            year = 2026,
-            week = 1,
-            entries = entries
-        )
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
         // 4.5 - 0.5 = 4.0 hours
         assertEquals(4.0, weekGroup.totalHours, 0.1)
+    }
+
+    private fun createWeekGroup(year: Int, week: Int, entries: List<WorkEntry>): WeekGroup {
+        val workEntries = entries.filter { it.dayType == DayType.WORK }
+        val workDaysCount = workEntries.size
+        val offDaysCount = entries.count { it.dayType == DayType.OFF }
+        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+        val averageHoursPerDay = if (workDaysCount == 0) 0.0 else totalHours / workDaysCount
+        val entriesNeedingReview = entries.count { it.needsReview }
+        val daysOutsideLeipzig = entries.count {
+            it.outsideLeipzigMorning == true || it.outsideLeipzigEvening == true
+        }
+
+        return WeekGroup(
+            year = year,
+            week = week,
+            entries = entries,
+            workDaysCount = workDaysCount,
+            offDaysCount = offDaysCount,
+            totalHours = totalHours,
+            totalPaidHours = totalPaidHours,
+            averageHoursPerDay = averageHoursPerDay,
+            entriesNeedingReview = entriesNeedingReview,
+            daysOutsideLeipzig = daysOutsideLeipzig
+        )
     }
 }

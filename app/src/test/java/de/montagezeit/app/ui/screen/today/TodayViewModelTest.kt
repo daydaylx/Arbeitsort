@@ -4,10 +4,8 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.CalculateTravelCompensation
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
-import de.montagezeit.app.domain.usecase.FetchRouteDistance
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ResolveReview
@@ -15,7 +13,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -104,8 +101,6 @@ class TodayViewModelTest {
             recordEveningCheckIn = mockk<RecordEveningCheckIn>(relaxed = true),
             confirmWorkDay = mockk<ConfirmWorkDay>(relaxed = true),
             confirmOffDay = mockk<ConfirmOffDay>(relaxed = true),
-            fetchRouteDistance = mockk<FetchRouteDistance>(relaxed = true),
-            calculateTravelCompensation = mockk<CalculateTravelCompensation>(relaxed = true),
             resolveReview = mockk<ResolveReview>(relaxed = true),
             setDayLocation = mockk<de.montagezeit.app.domain.usecase.SetDayLocation>(relaxed = true),
             reminderSettingsManager = settingsManager

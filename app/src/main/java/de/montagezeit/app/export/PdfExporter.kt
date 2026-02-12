@@ -6,9 +6,11 @@ import android.net.Uri
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.StatFs
 import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
@@ -19,7 +21,6 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import android.os.StatFs
 
 /**
  * PDF Exporter für MontageZeit
@@ -107,6 +108,10 @@ class PdfExporter @Inject constructor(
         strokeWidth = 1f
         style = Paint.Style.STROKE
     }
+
+    private fun string(resId: Int, vararg args: Any): String {
+        return context.getString(resId, *args)
+    }
     
     /**
      * Exportiert WorkEntries in eine PDF-Datei
@@ -132,7 +137,7 @@ class PdfExporter @Inject constructor(
         return try {
             // Pflichtfeld-Validierung
             if (employeeName.isBlank()) {
-                throw IllegalArgumentException("Name fehlt")
+                throw IllegalArgumentException(string(R.string.pdf_export_error_name_missing))
             }
 
             val pdfDocument = PdfDocument()
@@ -197,25 +202,35 @@ class PdfExporter @Inject constructor(
         var y = MARGIN.toFloat() + 20
         
         // Titel
-        canvas.drawText("Arbeitsnachweis – Monatsübersicht", MARGIN.toFloat(), y, paintTitle)
+        canvas.drawText(string(R.string.pdf_export_title), MARGIN.toFloat(), y, paintTitle)
         y += SPACING * 2
         
         // Mitarbeiter-Info
-        canvas.drawText("Mitarbeiter: $employeeName", MARGIN.toFloat(), y, paintHeader)
+        canvas.drawText(
+            string(R.string.pdf_export_header_employee, employeeName),
+            MARGIN.toFloat(),
+            y,
+            paintHeader
+        )
         y += 20
         
         company?.let {
-            canvas.drawText("Firma: $it", MARGIN.toFloat(), y, paintHeader)
+            canvas.drawText(string(R.string.pdf_export_header_company, it), MARGIN.toFloat(), y, paintHeader)
             y += 20
         }
         
         project?.let {
-            canvas.drawText("Projekt: $it", MARGIN.toFloat(), y, paintHeader)
+            canvas.drawText(string(R.string.pdf_export_header_project, it), MARGIN.toFloat(), y, paintHeader)
             y += 20
         }
         
         personnelNumber?.let {
-            canvas.drawText("Personalnummer: $it", MARGIN.toFloat(), y, paintHeader)
+            canvas.drawText(
+                string(R.string.pdf_export_header_personnel_number, it),
+                MARGIN.toFloat(),
+                y,
+                paintHeader
+            )
             y += 20
         }
         
@@ -225,11 +240,16 @@ class PdfExporter @Inject constructor(
         } else {
             "${dateFormat.format(java.sql.Date.valueOf(startDate.toString()))} - ${dateFormat.format(java.sql.Date.valueOf(endDate.toString()))}"
         }
-        canvas.drawText("Zeitraum: $dateRange", MARGIN.toFloat(), y, paintHeader)
+        canvas.drawText(string(R.string.pdf_export_header_range, dateRange), MARGIN.toFloat(), y, paintHeader)
         y += 20
         
         // Erstelldatum
-        canvas.drawText("Erstellt am: ${timestampFormat.format(Date())}", MARGIN.toFloat(), y, paintHeader)
+        canvas.drawText(
+            string(R.string.pdf_export_header_created_at, timestampFormat.format(Date())),
+            MARGIN.toFloat(),
+            y,
+            paintHeader
+        )
         y += SPACING
         
         // Trennlinie
@@ -259,31 +279,31 @@ class PdfExporter @Inject constructor(
         
         // Spaltenüberschriften
         var xPos = MARGIN.toFloat() + 5
-        canvas.drawText("Datum", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_date), xPos, yPos + 20, paintTableHeader)
         xPos += COL_DATE
         
-        canvas.drawText("Start", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_start), xPos, yPos + 20, paintTableHeader)
         xPos += COL_START
         
-        canvas.drawText("Ende", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_end), xPos, yPos + 20, paintTableHeader)
         xPos += COL_END
         
-        canvas.drawText("Pause", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_break), xPos, yPos + 20, paintTableHeader)
         xPos += COL_BREAK
         
-        canvas.drawText("Arbeit", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_work), xPos, yPos + 20, paintTableHeader)
         xPos += COL_WORK_TIME
 
-        canvas.drawText("Reise (von–bis)", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_travel_window), xPos, yPos + 20, paintTableHeader)
         xPos += COL_TRAVEL_WINDOW
 
-        canvas.drawText("Reisezeit", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_travel_time), xPos, yPos + 20, paintTableHeader)
         xPos += COL_TRAVEL_TIME
 
-        canvas.drawText("Gesamt", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_total), xPos, yPos + 20, paintTableHeader)
         xPos += COL_TOTAL_TIME
 
-        canvas.drawText("Ort", xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_location), xPos, yPos + 20, paintTableHeader)
         
         // Trennlinie unter Tabellenkopf
         yPos += TABLE_HEADER_HEIGHT
@@ -337,7 +357,12 @@ class PdfExporter @Inject constructor(
             xPos += COL_END
             
             // Pause
-            activeCanvas.drawText("${entry.breakMinutes} min", xPos, y + 15, paintTableText)
+            activeCanvas.drawText(
+                string(R.string.format_minutes, entry.breakMinutes),
+                xPos,
+                y + 15,
+                paintTableText
+            )
             xPos += COL_BREAK
             
             // Arbeitszeit
@@ -345,24 +370,32 @@ class PdfExporter @Inject constructor(
             val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
             val travelHours = travelMinutes / 60.0
             val totalHours = workHours + travelHours
-            val workText = "${PdfUtilities.formatWorkHours(workHours)} h"
+            val workText = string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours))
             activeCanvas.drawText(workText, xPos, y + 15, paintTableText)
             xPos += COL_WORK_TIME
 
             // Reise (von–bis)
             val travelWindow = PdfUtilities.formatTravelWindow(entry.travelStartAt, entry.travelArriveAt)
-            val travelWindowText = if (travelWindow.isNotBlank()) travelWindow else "–"
+            val travelWindowText = if (travelWindow.isNotBlank()) {
+                travelWindow
+            } else {
+                string(R.string.pdf_export_placeholder_dash)
+            }
             activeCanvas.drawText(travelWindowText, xPos, y + 15, paintTableText)
             xPos += COL_TRAVEL_WINDOW
 
             // Reisezeit
             val travelTime = PdfUtilities.formatTravelTime(travelMinutes)
-            val travelTimeText = if (travelMinutes > 0) "$travelTime h" else "–"
+            val travelTimeText = if (travelMinutes > 0) {
+                string(R.string.pdf_export_value_hours, travelTime)
+            } else {
+                string(R.string.pdf_export_placeholder_dash)
+            }
             activeCanvas.drawText(travelTimeText, xPos, y + 15, paintTableText)
             xPos += COL_TRAVEL_TIME
 
             // Gesamtzeit
-            val totalText = "${PdfUtilities.formatWorkHours(totalHours)} h"
+            val totalText = string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(totalHours))
             activeCanvas.drawText(totalText, xPos, y + 15, paintTableText)
             xPos += COL_TOTAL_TIME
 
@@ -398,11 +431,11 @@ class PdfExporter @Inject constructor(
         val totalTravelHours = totalTravelMinutes / 60.0
         val totalPaidHours = totalWorkHours + totalTravelHours
         
-        canvas.drawText("Arbeitstage: $workDays", MARGIN.toFloat(), yPos, paintSummary)
+        canvas.drawText(string(R.string.pdf_export_summary_work_days, workDays), MARGIN.toFloat(), yPos, paintSummary)
         yPos += 25
         
         canvas.drawText(
-            "Summe Arbeitszeit: ${PdfUtilities.formatWorkHours(totalWorkHours)} h",
+            string(R.string.pdf_export_summary_work_time, PdfUtilities.formatWorkHours(totalWorkHours)),
             MARGIN.toFloat(),
             yPos,
             paintSummary
@@ -410,7 +443,7 @@ class PdfExporter @Inject constructor(
         yPos += 25
 
         canvas.drawText(
-            "Summe Reisezeit: ${PdfUtilities.formatWorkHours(totalTravelHours)} h",
+            string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelHours)),
             MARGIN.toFloat(),
             yPos,
             paintSummary
@@ -418,7 +451,7 @@ class PdfExporter @Inject constructor(
         yPos += 25
 
         canvas.drawText(
-            "Summe Gesamtzeit (bezahlt): ${PdfUtilities.formatWorkHours(totalPaidHours)} h",
+            string(R.string.pdf_export_summary_total_paid_time, PdfUtilities.formatWorkHours(totalPaidHours)),
             MARGIN.toFloat(),
             yPos,
             paintSummary
@@ -439,7 +472,7 @@ class PdfExporter @Inject constructor(
         var yPos = y
         
         // Mitarbeiter-Unterschrift
-        canvas.drawText("Mitarbeiter", MARGIN.toFloat(), yPos, paintSignature)
+        canvas.drawText(string(R.string.pdf_export_signature_employee), MARGIN.toFloat(), yPos, paintSignature)
         yPos += 15
         canvas.drawLine(
             MARGIN.toFloat(),
@@ -451,7 +484,7 @@ class PdfExporter @Inject constructor(
         yPos += 20
         
         // Vorgesetzter-Unterschrift
-        canvas.drawText("Vorgesetzter", MARGIN.toFloat(), yPos, paintSignature)
+        canvas.drawText(string(R.string.pdf_export_signature_supervisor), MARGIN.toFloat(), yPos, paintSignature)
         yPos += 15
         canvas.drawLine(
             MARGIN.toFloat(),
@@ -484,7 +517,7 @@ class PdfExporter @Inject constructor(
             val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
             val minRequiredBytes = 5 * 1024 * 1024L  // 5MB Reserve
             if (availableBytes < minRequiredBytes) {
-                throw IOException("Nicht genug Speicherplatz verfügbar (benötigt: 5 MB)")
+                throw IOException(string(R.string.pdf_export_error_not_enough_storage_mb, 5))
             }
 
             // Dateiname mit Zeitraum
@@ -530,8 +563,8 @@ class PdfExporter @Inject constructor(
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, fileUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            putExtra(Intent.EXTRA_SUBJECT, "MontageZeit PDF Export")
+            putExtra(Intent.EXTRA_SUBJECT, string(R.string.export_share_subject))
         }
-        return Intent.createChooser(intent, "MontageZeit PDF Export teilen")
+        return Intent.createChooser(intent, string(R.string.export_preview_share_chooser_title))
     }
 }

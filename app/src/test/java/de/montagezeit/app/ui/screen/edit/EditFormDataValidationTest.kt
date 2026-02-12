@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.screen.edit
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.R
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalTime
@@ -235,22 +236,22 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `ValidationError messages should be in German`() {
+    fun `ValidationError should map to expected string resources`() {
         assertEquals(
-            "Arbeitsende muss nach Arbeitsbeginn liegen",
-            ValidationError.WorkEndBeforeStart.message
+            R.string.edit_validation_work_end_before_start,
+            ValidationError.WorkEndBeforeStart.messageRes
         )
         assertEquals(
-            "Pause kann nicht negativ sein",
-            ValidationError.NegativeBreakMinutes.message
+            R.string.edit_validation_negative_break,
+            ValidationError.NegativeBreakMinutes.messageRes
         )
         assertEquals(
-            "Pause kann nicht länger als die Arbeitszeit sein",
-            ValidationError.BreakLongerThanWorkTime.message
+            R.string.edit_validation_break_longer_than_work,
+            ValidationError.BreakLongerThanWorkTime.messageRes
         )
         assertEquals(
-            "Ankunftszeit muss nach Abfahrtszeit liegen",
-            ValidationError.TravelArriveBeforeStart.message
+            R.string.edit_validation_travel_arrive_before_start,
+            ValidationError.TravelArriveBeforeStart.messageRes
         )
     }
 }
