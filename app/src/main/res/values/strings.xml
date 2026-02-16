@@ -45,17 +45,6 @@
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
-    <string name="cd_calendar">Kalender</string>
-    <string name="cd_status_completed">Status: Abgeschlossen</string>
-    <string name="cd_status_pending">Status: Ausstehend</string>
-    <string name="cd_status_warning">Status: Prüfung erforderlich</string>
-    <string name="cd_status_info">Information</string>
-    <string name="cd_action_chevron">Aktion öffnen</string>
-    <string name="cd_dismiss_review_banner">Review-Banner schließen</string>
-    <string name="cd_location_icon">Standort-Icon</string>
-    <string name="cd_time_icon">Zeit-Icon</string>
-    <string name="cd_work_icon">Arbeitszeit-Icon</string>
-    <string name="cd_travel_icon">Reise-Icon</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
     <string name="today_label">Arbeitszeit heute</string>
     <string name="today_stats_title">Statistik</string>
@@ -318,7 +307,8 @@
     <string name="history_week_label">KW %1$d</string>
     <string name="history_summary_months">Monate</string>
     <string name="history_summary_weeks">Wochen</string>
-    <string name="history_summary_review">Review</string>
+    <string name="history_day_overview_title">Tagesübersicht</string>
+    <string name="history_day_overview_no_entry">Für diesen Tag gibt es noch keinen Eintrag.</string>
     <string name="history_empty_review_title">Keine Review-Einträge</string>
     <string name="history_empty_title">Keine Einträge vorhanden</string>
     <string name="history_empty_review_subtitle">Filter deaktivieren, um alle Einträge zu sehen.</string>

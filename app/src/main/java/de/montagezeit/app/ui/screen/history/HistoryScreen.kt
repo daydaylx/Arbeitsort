@@ -184,6 +184,7 @@ fun HistoryContent(
             entriesByDate.filterValues { it.needsReview }
         }
     }
+    val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
 
     Column(
         modifier = modifier.padding(16.dp),
@@ -200,6 +201,13 @@ fun HistoryContent(
             onShowMonthsChange = { showMonths = it },
             onShowNeedsReviewOnlyChange = { showNeedsReviewOnly = it },
             onPickDate = { showDatePicker = true }
+        )
+
+        HistoryDayOverviewCard(
+            date = selectedDate,
+            entry = selectedEntry,
+            onPickDate = { showDatePicker = true },
+            onOpenEntry = { onEntryClick(selectedDate) }
         )
 
         when {
@@ -374,6 +382,152 @@ private fun HistoryMiniFilterBar(
                     )
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun HistoryDayOverviewCard(
+    date: LocalDate,
+    entry: WorkEntry?,
+    onPickDate: () -> Unit,
+    onOpenEntry: () -> Unit
+) {
+    val workHours = remember(entry) { entry?.let(TimeCalculator::calculateWorkHours) ?: 0.0 }
+    val totalPaidHours = remember(entry) { entry?.let(TimeCalculator::calculatePaidTotalHours) ?: 0.0 }
+    val travelMinutes = remember(entry) { entry?.let(TimeCalculator::calculateTravelMinutes) ?: 0 }
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.history_day_overview_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = formatOverviewDate(date),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AssistChip(
+                    onClick = onPickDate,
+                    label = { Text(stringResource(R.string.history_action_pick_date)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
+
+            if (entry == null) {
+                Text(
+                    text = stringResource(R.string.history_day_overview_no_entry),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                PrimaryActionButton(
+                    onClick = onOpenEntry,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(stringResource(R.string.history_action_add_past_day))
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DayTypeIndicator(dayType = entry.dayType)
+                    Text(
+                        text = when (entry.dayType) {
+                            DayType.WORK -> stringResource(R.string.day_type_work)
+                            DayType.OFF -> stringResource(R.string.day_type_off)
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (entry.needsReview) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.history_chip_review_short),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "${stringResource(R.string.history_stat_total)} ${formatWorkHours(workHours)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                        Text(
+                            text = "${stringResource(R.string.history_stat_paid)} ${formatWorkHours(totalPaidHours)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (travelMinutes > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.history_travel_duration_inline,
+                                formatMinutesAsHoursMinutes(travelMinutes)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(
+                        R.string.history_day_location_summary,
+                        stringResource(R.string.day_location_label),
+                        entry.dayLocationLabel.orEmpty()
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                FilledTonalButton(
+                    onClick = onOpenEntry,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(stringResource(R.string.action_edit_entry))
+                }
+            }
         }
     }
 }
@@ -1696,6 +1850,10 @@ private fun formatShortDate(date: java.time.LocalDate): String {
     return date.format(historyShortDateFormatter)
 }
 
+private fun formatOverviewDate(date: java.time.LocalDate): String {
+    return date.format(historyOverviewDateFormatter)
+}
+
 private fun formatTime(timestamp: Long): String {
     val instant = java.time.Instant.ofEpochMilli(timestamp)
     val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
@@ -1719,7 +1877,19 @@ private fun formatWorkHours(hours: Double): String {
     }
 }
 
+@Composable
+private fun formatMinutesAsHoursMinutes(totalMinutes: Int): String {
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+    return if (m == 0) {
+        stringResource(R.string.history_hours_only, h)
+    } else {
+        stringResource(R.string.history_hours_and_minutes, h, m)
+    }
+}
+
 private val historyMonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
 private val historyEntryDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
 private val historyShortDateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
+private val historyOverviewDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale.GERMAN)
 private val historyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
