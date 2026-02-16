@@ -45,7 +45,8 @@ class RecordDailyManualCheckInTest {
 
         useCase = RecordDailyManualCheckIn(
             workEntryDao = workEntryDao,
-            reminderSettingsManager = reminderSettingsManager
+            reminderSettingsManager = reminderSettingsManager,
+            resolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao, reminderSettingsManager)
         )
     }
 

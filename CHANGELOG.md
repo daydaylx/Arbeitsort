@@ -11,6 +11,10 @@ All notable changes to this project will be documented in this file.
   - Added summary totals for travel time and paid time.
   - Added explicit storage space check (min 5MB) before generating PDF to prevent partial file corruption.
   - Improved error handling during file writing.
+- **Today Daily Check-in**:
+  - Added automatic location prefill from the most recent stored `dayLocationLabel` (prefer `WORK`, fallback any day, then settings default).
+  - Added explicit test coverage for "today entry missing -> prefill from last location".
+  - Added `ResolveDayLocationPrefill` as a shared resolver to avoid duplicated prefill logic between UI and use case.
 
 ### Fixed
 - **PDF Export**:
@@ -22,3 +26,7 @@ All notable changes to this project will be documented in this file.
 - **UI**:
   - Improved `ExportPreviewViewModel` error messaging.
   - Updated `TodayScreen` status card layout to include an edit icon for better discoverability.
+  - Simplified Today flow to one primary daily action path and removed legacy morning/evening confirm branches from `TodayViewModel`.
+  - Removed unused legacy action card and location-error full-screen branch from `TodayScreenV2`.
+  - Removed unused advanced history options sheet and stale string resources.
+  - Added worker decision tests to verify completed manual daily entries do not re-trigger reminder logic.

@@ -8,12 +8,10 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
-import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
-import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
+import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
@@ -69,9 +67,6 @@ data class MonthStats(
 
 enum class TodayAction {
     DAILY_MANUAL_CHECK_IN,
-    MORNING_CHECK_IN,
-    EVENING_CHECK_IN,
-    CONFIRM_WORKDAY,
     CONFIRM_OFFDAY,
     RESOLVE_REVIEW
 }
@@ -79,10 +74,8 @@ enum class TodayAction {
 @HiltViewModel
 class TodayViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
-    private val recordMorningCheckIn: RecordMorningCheckIn,
-    private val recordEveningCheckIn: RecordEveningCheckIn,
     private val recordDailyManualCheckIn: RecordDailyManualCheckIn,
-    private val confirmWorkDay: ConfirmWorkDay,
+    private val resolveDayLocationPrefill: ResolveDayLocationPrefill,
     private val confirmOffDay: ConfirmOffDay,
     private val resolveReview: ResolveReview,
     private val setDayLocation: SetDayLocation,
@@ -221,7 +214,7 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val existingEntry = todayEntry.value ?: workEntryDao.getByDate(LocalDate.now())
-                val prefill = resolveDailyCheckInPrefill(existingEntry)
+                val prefill = resolveDayLocationPrefill(existingEntry)
                 withContext(Dispatchers.Main) {
                     _dailyCheckInLocationInput.value = prefill
                     _showDailyCheckInDialog.value = true
@@ -263,107 +256,6 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private suspend fun resolveDailyCheckInPrefill(existingEntry: WorkEntry?): String {
-        val todayLabel = existingEntry?.dayLocationLabel?.trim().orEmpty()
-        if (todayLabel.isNotEmpty()) {
-            return todayLabel
-        }
-
-        val latestWorkLabel = workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK)?.trim().orEmpty()
-        if (latestWorkLabel.isNotEmpty()) {
-            return latestWorkLabel
-        }
-
-        val latestAnyLabel = workEntryDao.getLatestDayLocationLabel()?.trim().orEmpty()
-        if (latestAnyLabel.isNotEmpty()) {
-            return latestAnyLabel
-        }
-
-        val settings = reminderSettingsManager.settings.first()
-        return settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL }
-    }
-    
-    fun onMorningCheckIn(forceWithoutLocation: Boolean = false) {
-        viewModelScope.launch(Dispatchers.IO) {
-            addLoadingAction(TodayAction.MORNING_CHECK_IN)
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.LoadingLocation
-            }
-
-            try {
-                val entry = recordMorningCheckIn(LocalDate.now(), forceWithoutLocation)
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    when (e) {
-                        is SecurityException -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                UiText.StringResource(R.string.today_error_location_permission_missing),
-                                canRetry = false
-                            )
-                        }
-                        else -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                e.toUiText(R.string.today_error_location_unavailable),
-                                canRetry = true
-                            )
-                        }
-                    }
-                }
-            } finally {
-                removeLoadingAction(TodayAction.MORNING_CHECK_IN)
-            }
-        }
-    }
-    
-    fun onEveningCheckIn(forceWithoutLocation: Boolean = false) {
-        viewModelScope.launch(Dispatchers.IO) {
-            addLoadingAction(TodayAction.EVENING_CHECK_IN)
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.LoadingLocation
-            }
-
-            try {
-                val entry = recordEveningCheckIn(LocalDate.now(), forceWithoutLocation)
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    when (e) {
-                        is SecurityException -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                UiText.StringResource(R.string.today_error_location_permission_missing),
-                                canRetry = false
-                            )
-                        }
-                        else -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                e.toUiText(R.string.today_error_location_unavailable),
-                                canRetry = true
-                            )
-                        }
-                    }
-                }
-            } finally {
-                removeLoadingAction(TodayAction.EVENING_CHECK_IN)
-            }
-        }
-    }
-    
-    fun onSkipLocation() {
-        // Wird beim Location-Error verwendet, um ohne Location zu speichern
-        val entry = todayEntry.value
-        // Prüfen welcher Check-In fehlt
-        if (entry == null || entry.morningCapturedAt == null) {
-            onMorningCheckIn(forceWithoutLocation = true)
-        } else if (entry.eveningCapturedAt == null) {
-            onEveningCheckIn(forceWithoutLocation = true)
-        }
-    }
-    
     fun onResetError() {
         val currentEntry = todayEntry.value
         _uiState.value = TodayUiState.Success(currentEntry)
@@ -401,47 +293,6 @@ class TodayViewModel @Inject constructor(
         }
     }
     
-    @Suppress("UNUSED_PARAMETER")
-    fun openEditSheet(date: LocalDate) {
-        // Wird von UI verwendet, um EditSheet zu öffnen
-        // Implementierung in Navigation
-    }
-
-    fun onConfirmWorkDay() {
-        viewModelScope.launch(Dispatchers.IO) {
-            addLoadingAction(TodayAction.CONFIRM_WORKDAY)
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.LoadingLocation
-            }
-
-            try {
-                val entry = confirmWorkDay(LocalDate.now(), source = "UI")
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    when (e) {
-                        is SecurityException -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                UiText.StringResource(R.string.today_error_location_permission_missing),
-                                canRetry = false
-                            )
-                        }
-                        else -> {
-                            _uiState.value = TodayUiState.LocationError(
-                                e.toUiText(R.string.today_error_location_unavailable),
-                                canRetry = true
-                            )
-                        }
-                    }
-                }
-            } finally {
-                removeLoadingAction(TodayAction.CONFIRM_WORKDAY)
-            }
-        }
-    }
-
     fun onConfirmOffDay() {
         viewModelScope.launch(Dispatchers.IO) {
             addLoadingAction(TodayAction.CONFIRM_OFFDAY)
@@ -546,10 +397,8 @@ class TodayViewModel @Inject constructor(
 
 sealed class TodayUiState {
     object Loading : TodayUiState()
-    object LoadingLocation : TodayUiState()
     data class Success(val entry: WorkEntry?) : TodayUiState()
     data class Error(val message: UiText) : TodayUiState()
-    data class LocationError(val message: UiText, val canRetry: Boolean) : TodayUiState()
 }
 
 private fun Throwable.toUiText(@androidx.annotation.StringRes fallbackRes: Int): UiText {

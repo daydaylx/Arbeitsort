@@ -9,6 +9,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.notification.ReminderNotificationManager
@@ -125,8 +126,7 @@ class WindowCheckWorker @AssistedInject constructor(
             }
 
             // Prüfe ob Reminder nötig ist
-            val needsReminder = entry == null ||
-                    (entry.dayType == DayType.WORK && entry.morningCapturedAt == null)
+            val needsReminder = shouldShowMorningReminder(entry)
 
             if (needsReminder) {
                 notificationManager.showMorningReminder(date)
@@ -166,8 +166,7 @@ class WindowCheckWorker @AssistedInject constructor(
             }
 
             // Prüfe ob Reminder nötig ist
-            val needsReminder = entry == null ||
-                    (entry.dayType == DayType.WORK && entry.eveningCapturedAt == null)
+            val needsReminder = shouldShowEveningReminder(entry)
 
             if (needsReminder) {
                 notificationManager.showEveningReminder(date)
@@ -207,9 +206,7 @@ class WindowCheckWorker @AssistedInject constructor(
             }
 
             // Prüfe ob Tag unvollständig ist
-            val isIncomplete = entry == null ||
-                    (entry.dayType == DayType.WORK &&
-                            (entry.morningCapturedAt == null || entry.eveningCapturedAt == null))
+            val isIncomplete = shouldShowFallbackReminder(entry)
 
             if (isIncomplete) {
                 notificationManager.showFallbackReminder(date)
@@ -243,7 +240,7 @@ class WindowCheckWorker @AssistedInject constructor(
             val entry = workEntryDao.getByDate(date)
 
             // Prüfe ob Tag bereits bestätigt wurde
-            if (entry?.confirmedWorkDay == true) {
+            if (!shouldShowDailyReminder(entry)) {
                 // Tag bereits bestätigt - keine Notification nötig
                 sharedPreferences.edit()
                     .putBoolean("daily_reminded_$date", true)
@@ -266,5 +263,24 @@ class WindowCheckWorker @AssistedInject constructor(
 
     companion object {
         const val KEY_REMINDER_TYPE = "reminder_type"
+
+        internal fun shouldShowMorningReminder(entry: WorkEntry?): Boolean {
+            return entry == null || (entry.dayType == DayType.WORK && entry.morningCapturedAt == null)
+        }
+
+        internal fun shouldShowEveningReminder(entry: WorkEntry?): Boolean {
+            return entry == null || (entry.dayType == DayType.WORK && entry.eveningCapturedAt == null)
+        }
+
+        internal fun shouldShowFallbackReminder(entry: WorkEntry?): Boolean {
+            return entry == null || (
+                entry.dayType == DayType.WORK &&
+                    (entry.morningCapturedAt == null || entry.eveningCapturedAt == null)
+                )
+        }
+
+        internal fun shouldShowDailyReminder(entry: WorkEntry?): Boolean {
+            return entry?.confirmedWorkDay != true
+        }
     }
 }

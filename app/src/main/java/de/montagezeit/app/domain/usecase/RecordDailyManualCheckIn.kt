@@ -14,7 +14,8 @@ import java.time.LocalDate
  */
 class RecordDailyManualCheckIn(
     private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager
+    private val reminderSettingsManager: ReminderSettingsManager,
+    private val resolveDayLocationPrefill: ResolveDayLocationPrefill
 ) {
 
     companion object {
@@ -28,8 +29,7 @@ class RecordDailyManualCheckIn(
 
         val resolvedLabel = resolveDayLocationLabel(
             submittedLabel = dayLocationLabel,
-            existingEntry = existingEntry,
-            settingsDefault = settings.defaultDayLocationLabel
+            existingEntry = existingEntry
         )
 
         val updatedEntry = if (existingEntry != null) {
@@ -114,29 +114,13 @@ class RecordDailyManualCheckIn(
 
     private suspend fun resolveDayLocationLabel(
         submittedLabel: String,
-        existingEntry: WorkEntry?,
-        settingsDefault: String
+        existingEntry: WorkEntry?
     ): String {
         val trimmedSubmitted = submittedLabel.trim()
         if (trimmedSubmitted.isNotEmpty()) {
             return trimmedSubmitted
         }
 
-        val todayLabel = existingEntry?.dayLocationLabel?.trim().orEmpty()
-        if (todayLabel.isNotEmpty()) {
-            return todayLabel
-        }
-
-        val lastWorkLabel = workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK)?.trim().orEmpty()
-        if (lastWorkLabel.isNotEmpty()) {
-            return lastWorkLabel
-        }
-
-        val lastAnyLabel = workEntryDao.getLatestDayLocationLabel()?.trim().orEmpty()
-        if (lastAnyLabel.isNotEmpty()) {
-            return lastAnyLabel
-        }
-
-        return settingsDefault.ifBlank { DEFAULT_DAY_LOCATION_LABEL }
+        return resolveDayLocationPrefill(existingEntry)
     }
 }

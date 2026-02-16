@@ -1,7 +1,7 @@
 # Architektur - MontageZeit
 
 **Status:** Aktiv / verbindlich  
-**Letzte Aktualisierung:** 2026-02-07
+**Letzte Aktualisierung:** 2026-02-16
 
 ## Dokumentstatus
 
@@ -41,24 +41,24 @@ Strategie:
 - Tagesflags in SharedPreferences (`reminder_flags`) verhindern Mehrfach-Notifies
 - Legacy-Worker ohne `reminder_type` laufen als no-op zur Spam-Vermeidung
 
-### 2.3 Confirmation
+### 2.3 Daily Flow (Today UI)
 
-- `ConfirmWorkDay`: markiert Arbeitstag + Location-Entscheidung + `needsReview` bei Unsicherheit
-- `ConfirmOffDay`: markiert freien Tag + setzt Confirmation-Felder + löscht Travel-Details
-- Quelle (`confirmationSource`) wird mitgeführt (z. B. Notification/UI)
+- Primärpfad im Today-Screen: `RecordDailyManualCheckIn`
+- Setzt einen Arbeitstag in einem Schritt auf abgeschlossen:
+  - `dayType = WORK`
+  - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
+  - `confirmedWorkDay = true` + `confirmation*`
+  - Morning/Evening-Snapshots werden als erfasst markiert, damit keine weiteren Today-Schritte offen bleiben
+- Optionale Nebenaktion: `ConfirmOffDay`
+- Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
 
-### 2.4 Check-in UseCases
+### 2.4 Reminder Action UseCases
 
 - `RecordMorningCheckIn`
 - `RecordEveningCheckIn`
+- `ConfirmWorkDay`
 
-Gemeinsame Logik liegt in:
-- `domain/usecase/CheckInEntryBuilder.kt`
-- `domain/usecase/DayLocationResolver.kt`
-
-Ziel:
-- keine divergierende Morning/Evening-Implementierung
-- konsistente `needsReview`/DayLocation-Regeln
+Diese Pfade bleiben für Notification-Actions/Worker relevant.
 
 ## 3. Datenmodell (WorkEntry)
 

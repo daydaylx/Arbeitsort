@@ -6,11 +6,10 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
-import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
-import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
-import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.ResolveReview
+import de.montagezeit.app.domain.usecase.SetDayLocation
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -173,6 +172,37 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun `openDailyCheckInDialog uses latest work label when today entry is missing`() {
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
+        coEvery { workEntryDao.getLatestDayLocationLabel() } returns "Irgendein Ort"
+        every { settingsManager.settings } returns flowOf(ReminderSettings(defaultDayLocationLabel = "Standard-Ort"))
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val shownLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.showDailyCheckInDialog.collect { shown ->
+                if (shown) {
+                    shownLatch.countDown()
+                }
+            }
+        }
+
+        viewModel.openDailyCheckInDialog()
+
+        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
+        assertEquals("Letzte Baustelle", viewModel.dailyCheckInLocationInput.value)
+        coVerify(exactly = 1) { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) }
+        coVerify(exactly = 0) { workEntryDao.getLatestDayLocationLabel() }
+        collectJob.cancel()
+    }
+
+    @Test
     fun `openDailyCheckInDialog falls back to any label`() {
         val today = LocalDate.now()
         val existing = WorkEntry(
@@ -287,20 +317,55 @@ class TodayViewModelTest {
         collectJob.cancel()
     }
 
+    @Test
+    fun `submitDailyManualCheckIn surfaces security errors as snackbar without location flow`() {
+        val today = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+        val recordDailyManualCheckIn = mockk<RecordDailyManualCheckIn>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { recordDailyManualCheckIn(any(), any()) } throws SecurityException("Location permission missing")
+
+        val viewModel = createViewModel(
+            workEntryDao = workEntryDao,
+            settingsManager = settingsManager,
+            recordDailyManualCheckIn = recordDailyManualCheckIn
+        )
+        val snackbarLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.snackbarMessage.collect { message ->
+                if (message != null) {
+                    snackbarLatch.countDown()
+                }
+            }
+        }
+
+        viewModel.onDailyCheckInLocationChanged("Baustelle B")
+        viewModel.submitDailyManualCheckIn()
+
+        coVerify(exactly = 1) { recordDailyManualCheckIn(today, "Baustelle B") }
+        assertTrue(snackbarLatch.await(2, TimeUnit.SECONDS))
+        assertTrue(viewModel.uiState.value !is TodayUiState.Error)
+        collectJob.cancel()
+    }
+
     private fun createViewModel(
         workEntryDao: WorkEntryDao,
         settingsManager: ReminderSettingsManager,
-        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true)
+        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
+        resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao, settingsManager)
     ): TodayViewModel {
         return TodayViewModel(
             workEntryDao = workEntryDao,
-            recordMorningCheckIn = mockk<RecordMorningCheckIn>(relaxed = true),
-            recordEveningCheckIn = mockk<RecordEveningCheckIn>(relaxed = true),
             recordDailyManualCheckIn = recordDailyManualCheckIn,
-            confirmWorkDay = mockk<ConfirmWorkDay>(relaxed = true),
+            resolveDayLocationPrefill = resolveDayLocationPrefill,
             confirmOffDay = mockk<ConfirmOffDay>(relaxed = true),
             resolveReview = mockk<ResolveReview>(relaxed = true),
-            setDayLocation = mockk<de.montagezeit.app.domain.usecase.SetDayLocation>(relaxed = true),
+            setDayLocation = mockk<SetDayLocation>(relaxed = true),
             reminderSettingsManager = settingsManager
         )
     }

@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +41,7 @@ import java.util.Locale
 /**
  * Verbesserter TodayScreen mit besserer Accessibility und visuellem Design
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreenV2(
     viewModel: TodayViewModel = hiltViewModel(),
@@ -119,22 +118,13 @@ fun TodayScreenV2(
                 .padding(paddingValues)
         ) {
             val errorState = uiState as? TodayUiState.Error
-            val locationErrorState = uiState as? TodayUiState.LocationError
             val showInitialLoading = uiState is TodayUiState.Loading && currentEntry == null
-            val showFullscreenError = (errorState != null || locationErrorState != null) && currentEntry == null
+            val showFullscreenError = errorState != null && currentEntry == null
 
             when {
                 showFullscreenError && errorState != null -> {
                     MZErrorState(
                         message = errorState.message.asString(context),
-                        onRetry = { viewModel.onResetError() },
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
-                showFullscreenError && locationErrorState != null -> {
-                    MZErrorState(
-                        message = locationErrorState.message.asString(context),
                         onRetry = { viewModel.onResetError() },
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -685,58 +675,6 @@ private fun StatisticsDashboardCardV2(
 }
 
 @Composable
-private fun TodayActionsCardV2(
-    entry: WorkEntry?,
-    onOpenDailyCheckInDialog: () -> Unit,
-    onConfirmOffDay: () -> Unit,
-    isDailyCheckInLoading: Boolean = false,
-    isConfirmOffdayLoading: Boolean = false
-) {
-    val allDone = entry?.confirmedWorkDay == true
-
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.today_actions_title),
-                    style = MaterialTheme.typography.titleLarge
-                )
-                if (allDone) {
-                    MZStatusBadge(
-                        text = stringResource(R.string.today_actions_done),
-                        type = StatusType.SUCCESS
-                    )
-                }
-            }
-
-            if (!allDone) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    PrimaryActionButton(
-                        onClick = onOpenDailyCheckInDialog,
-                        isLoading = isDailyCheckInLoading,
-                        modifier = Modifier.weight(1f),
-                        content = { Text(stringResource(R.string.action_daily_manual_check_in)) }
-                    )
-                    SecondaryActionButton(
-                        onClick = onConfirmOffDay,
-                        isLoading = isConfirmOffdayLoading,
-                        modifier = Modifier.weight(1f),
-                        content = { Text(stringResource(R.string.action_confirm_offday)) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun DailyManualCheckInDialogV2(
     input: String,
     isLoading: Boolean,
@@ -826,15 +764,6 @@ private fun getCurrentDateString(): String {
     return LocalDate.now().format(todayCurrentDateFormatter)
 }
 
-private fun getCompletedTimeString(timestamp: Long): String {
-    val instant = java.time.Instant.ofEpochMilli(timestamp)
-    val localTime = java.time.LocalDateTime.ofInstant(
-        instant, 
-        java.time.ZoneId.systemDefault()
-    )
-    return localTime.format(todayCompletedTimeFormatter)
-}
-
 @Composable
 private fun formatMinutes(minutes: Int): String {
     val h = minutes / 60
@@ -847,4 +776,3 @@ private fun formatMinutes(minutes: Int): String {
 }
 
 private val todayCurrentDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
-private val todayCompletedTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

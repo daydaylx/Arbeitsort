@@ -1,6 +1,6 @@
 # MontageZeit (de.montagezeit.app)
 
-Offline-first Android App für tägliche Check-ins (Morgen/Abend), Tagesbestätigung, Travel-Zeiten und Export.
+Offline-first Android App für tägliche Erfassung von Arbeitstagen mit manuellem Tagesort, optionalen Reminder-Aktionen, Travel-Zeiten und Export.
 
 ## Source of Truth
 
@@ -41,6 +41,17 @@ cd Arbeitsort
 ./gradlew assembleRelease
 ```
 
+## Today-Workflow (aktuell)
+
+- Primäre Aktion auf dem Heute-Screen: `Einchecken (Arbeit)`.
+- Der Orts-Dialog wird automatisch vorbefüllt:
+  1. heutiger `dayLocationLabel`
+  2. letzter gespeicherter `dayLocationLabel` aus Work-Tagen
+  3. letzter gespeicherter `dayLocationLabel` aus beliebigen Tagen
+  4. `defaultDayLocationLabel` aus Settings
+- Der tägliche manuelle Check-in setzt den Tag direkt als abgeschlossen (`confirmedWorkDay = true`) und markiert Morning/Evening-Snapshots als erfasst, damit keine zusätzlichen Today-Schritte erforderlich sind.
+- Optionale Nebenaktion: `Heute frei`.
+
 ## Tests
 
 ```bash
@@ -59,8 +70,8 @@ cd Arbeitsort
 - Reminder Scheduling: `app/src/main/java/de/montagezeit/app/work/ReminderScheduler.kt`
 - Reminder Worker: `app/src/main/java/de/montagezeit/app/work/WindowCheckWorker.kt`
 - Notification Actions: `app/src/main/java/de/montagezeit/app/handler/CheckInActionService.kt`
-- Check-in UseCases: `app/src/main/java/de/montagezeit/app/domain/usecase/RecordMorningCheckIn.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/RecordEveningCheckIn.kt`
-- Confirmation UseCases: `app/src/main/java/de/montagezeit/app/domain/usecase/ConfirmWorkDay.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/ConfirmOffDay.kt`
+- Daily Check-in UseCases: `app/src/main/java/de/montagezeit/app/domain/usecase/RecordDailyManualCheckIn.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/ResolveDayLocationPrefill.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/ConfirmOffDay.kt`
+- Reminder Action UseCases: `app/src/main/java/de/montagezeit/app/domain/usecase/RecordMorningCheckIn.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/RecordEveningCheckIn.kt`, `app/src/main/java/de/montagezeit/app/domain/usecase/ConfirmWorkDay.kt`
 - DB + Migrationen: `app/src/main/java/de/montagezeit/app/data/local/database/AppDatabase.kt`
 
 ## Reminder-Verhalten (aktuell)

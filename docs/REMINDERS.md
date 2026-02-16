@@ -2,7 +2,9 @@
 
 ## Übersicht
 
-Das Reminder & Notification System implementiert fensterbasierte Erinnerungen für morgendlichen und abendlichen Check-in mit Notification Actions. Das System nutzt WorkManager für zuverlässiges, deferrable Scheduling und ist reboot-resilient.
+Das Reminder & Notification System implementiert fensterbasierte Erinnerungen mit Notification Actions. Das System nutzt WorkManager für zuverlässiges, deferrable Scheduling und ist reboot-resilient.
+
+Wichtig: Der primäre Tagesablauf in der UI ist ein manueller Daily-Check-in (`Einchecken (Arbeit)` mit Orts-Textfeld), ohne GPS-Pflicht.
 
 ## Architektur
 
@@ -48,7 +50,8 @@ Plant WindowCheckWorker mit UniqueWork:
 Erstellt Notifications mit Actions:
 - **Morning Actions**: "Mit Standort check-in", "Ohne Standort speichern"
 - **Evening Actions**: Analog
-- **Fallback Action**: "Eintrag bearbeiten"
+- **Fallback Actions**: "Später", "Heute frei"
+- **Daily Confirmation Actions**: "Arbeit", "Frei", "Später"
 
 **Notification Channel:**
 - ID: `reminder_notifications`
@@ -79,6 +82,16 @@ Reboot-Resilienz:
 - Buttons zu Battery Optimization / App Details
 
 ## Funktionsweise
+
+### Today Daily Flow (UI)
+
+1. User öffnet den Heute-Screen und tippt `Einchecken (Arbeit)`.
+2. Der Ortswert wird vorbefüllt (heute -> letzter WORK-Ort -> letzter Ort -> Settings-Default).
+3. Speichern via `RecordDailyManualCheckIn`:
+   - `dayType = WORK`
+   - `confirmedWorkDay = true`
+   - Morning/Evening-Snapshots werden gesetzt
+4. Ergebnis: Tag gilt als abgeschlossen; Worker/Reminder behandeln den Tag als erledigt.
 
 ### Morning Reminder Flow
 
@@ -111,7 +124,7 @@ Analog zu Morning, aber:
    - Tag unvollständig? Ja
    - Schon erinnert? Nein
 3. **Action**: Zeige Fallback-Notification
-4. **User Klick**: Öffnet Edit Screen (TODO)
+4. **User Klick**: Öffnet Bearbeitungsansicht oder markiert den Tag als frei
 
 ## Bekannte Limits & Edge Cases
 
@@ -134,15 +147,15 @@ Analog zu Morning, aber:
 
 **GPS indoors:**
 - GPS kann indoors nicht verfügbar sein
-- **Lösung**: "Ohne Standort speichern" Action → needsReview=true
+- **Lösung**: "Ohne Standort speichern" Action → needsReview=true (betrifft Notification-Actions)
 
 **Low Accuracy:**
 - Accuracy zu niedrig (< 50m)
-- **Lösung**: LocationStatus.LOW_ACCURACY → needsReview=true
+- **Lösung**: LocationStatus.LOW_ACCURACY → needsReview=true (betrifft Notification-Actions)
 
 **Timeout:**
 - Location-Request timeout nach 15s
-- **Lösung**: LocationStatus.UNAVAILABLE → needsReview=true
+- **Lösung**: LocationStatus.UNAVAILABLE → needsReview=true (betrifft Notification-Actions)
 
 ### User Experience
 
@@ -155,8 +168,8 @@ Analog zu Morning, aber:
 - **Lösung**: Worker prüft entry.dayType == WORK
 
 **Weekend/Feiertage:**
-- Derzeit nicht implementiert
-- **TODO**: Settings für Weekend/Feiertage hinzufügen
+- Über `autoOffWeekends` / `autoOffHolidays` konfigurierbar.
+- Manuelle DayType-Einträge überschreiben automatische Regeln.
 
 ## Scheduling-Strategie
 
@@ -219,7 +232,6 @@ PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
 ```xml
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 ```
@@ -269,12 +281,9 @@ lifecycleScope.launch {
 
 ## TODOs
 
-- [ ] TimePickerDialog implementieren (aktuell Placeholder)
-- [ ] Edit Action öffnet MainActivity mit Edit-Route
-- [ ] Weekend/Feiertage Settings
 - [ ] Reminder History Screen
 - [ ] Snooze Action (erinnere in 10 Minuten)
-- [ ] Custom Reminder Times (pro Tag)
+- [ ] Erweiterte, benutzerdefinierte Reminder-Slots
 
 ## Referenzen
 
