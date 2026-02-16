@@ -18,6 +18,7 @@ import de.montagezeit.app.domain.usecase.SetTravelEvent
 import de.montagezeit.app.domain.usecase.UpdateEntry
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import javax.inject.Singleton
@@ -118,6 +119,14 @@ object ApplicationModule {
         reminderSettingsManager: ReminderSettingsManager
     ): SetDayLocation {
         return SetDayLocation(workEntryDao, reminderSettingsManager)
+    }
+
+    @Provides
+    fun provideRecordDailyManualCheckIn(
+        workEntryDao: WorkEntryDao,
+        reminderSettingsManager: ReminderSettingsManager
+    ): RecordDailyManualCheckIn {
+        return RecordDailyManualCheckIn(workEntryDao, reminderSettingsManager)
     }
     
     @Provides

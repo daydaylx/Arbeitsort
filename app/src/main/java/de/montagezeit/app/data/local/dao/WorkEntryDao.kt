@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,20 @@ interface WorkEntryDao {
 
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
     suspend fun getAll(): List<WorkEntry>
+
+    @Query(
+        "SELECT dayLocationLabel FROM work_entries " +
+            "WHERE dayType = :dayType AND LENGTH(TRIM(dayLocationLabel)) > 0 " +
+            "ORDER BY date DESC LIMIT 1"
+    )
+    suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String?
+
+    @Query(
+        "SELECT dayLocationLabel FROM work_entries " +
+            "WHERE LENGTH(TRIM(dayLocationLabel)) > 0 " +
+            "ORDER BY date DESC LIMIT 1"
+    )
+    suspend fun getLatestDayLocationLabel(): String?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: WorkEntry): Long

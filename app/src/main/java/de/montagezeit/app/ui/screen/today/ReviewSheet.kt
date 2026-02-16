@@ -31,7 +31,7 @@ private enum class LocationOption {
 fun ReviewSheet(
     isVisible: Boolean,
     onDismissRequest: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") scope: ReviewScope,
+    scope: ReviewScope,
     reviewReason: String? = null,
     isResolving: Boolean = false,
     onResolve: (label: String, isLeipzig: Boolean) -> Unit
@@ -42,6 +42,11 @@ fun ReviewSheet(
     
     var selectedOption by remember { mutableStateOf<LocationOption>(LocationOption.LEIPZIG) }
     var customLocation by remember { mutableStateOf("") }
+    val scopeExplanation = when (scope) {
+        ReviewScope.MORNING -> stringResource(R.string.review_explanation_morning)
+        ReviewScope.EVENING -> stringResource(R.string.review_explanation_evening)
+        ReviewScope.BOTH -> stringResource(R.string.review_explanation_both)
+    }
     
     if (isVisible) {
         ModalBottomSheet(
@@ -101,6 +106,11 @@ fun ReviewSheet(
                 Text(
                     text = stringResource(R.string.review_location_question),
                     style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = scopeExplanation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))

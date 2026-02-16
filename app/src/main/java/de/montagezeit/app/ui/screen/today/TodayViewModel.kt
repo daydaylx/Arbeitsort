@@ -13,6 +13,7 @@ import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
+import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
@@ -67,6 +68,7 @@ data class MonthStats(
 }
 
 enum class TodayAction {
+    DAILY_MANUAL_CHECK_IN,
     MORNING_CHECK_IN,
     EVENING_CHECK_IN,
     CONFIRM_WORKDAY,
@@ -79,16 +81,13 @@ class TodayViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
     private val recordMorningCheckIn: RecordMorningCheckIn,
     private val recordEveningCheckIn: RecordEveningCheckIn,
+    private val recordDailyManualCheckIn: RecordDailyManualCheckIn,
     private val confirmWorkDay: ConfirmWorkDay,
     private val confirmOffDay: ConfirmOffDay,
     private val resolveReview: ResolveReview,
     private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
-    
-    companion object {
-        private const val LOCATION_TIMEOUT_MS = 15000L
-    }
     
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
@@ -112,8 +111,17 @@ class TodayViewModel @Inject constructor(
     private val _reviewScope = MutableStateFlow<ReviewScope?>(null)
     val reviewScope: StateFlow<ReviewScope?> = _reviewScope.asStateFlow()
 
+    private val _showDailyCheckInDialog = MutableStateFlow(false)
+    val showDailyCheckInDialog: StateFlow<Boolean> = _showDailyCheckInDialog.asStateFlow()
+
+    private val _dailyCheckInLocationInput = MutableStateFlow("")
+    val dailyCheckInLocationInput: StateFlow<String> = _dailyCheckInLocationInput.asStateFlow()
+
     private val _loadingActions = MutableStateFlow<Set<TodayAction>>(emptySet())
     val loadingActions: StateFlow<Set<TodayAction>> = _loadingActions.asStateFlow()
+
+    private val _snackbarMessage = MutableStateFlow<UiText?>(null)
+    val snackbarMessage: StateFlow<UiText?> = _snackbarMessage.asStateFlow()
     
     init {
         loadTodayEntry()
@@ -207,6 +215,72 @@ class TodayViewModel @Inject constructor(
             workDaysCount = workDaysCount,
             targetHours = targetHours
         )
+    }
+
+    fun openDailyCheckInDialog() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val existingEntry = todayEntry.value ?: workEntryDao.getByDate(LocalDate.now())
+                val prefill = resolveDailyCheckInPrefill(existingEntry)
+                withContext(Dispatchers.Main) {
+                    _dailyCheckInLocationInput.value = prefill
+                    _showDailyCheckInDialog.value = true
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
+                }
+            }
+        }
+    }
+
+    fun onDailyCheckInLocationChanged(label: String) {
+        _dailyCheckInLocationInput.value = label
+    }
+
+    fun onDismissDailyCheckInDialog() {
+        _showDailyCheckInDialog.value = false
+    }
+
+    fun submitDailyManualCheckIn(label: String = _dailyCheckInLocationInput.value) {
+        viewModelScope.launch(Dispatchers.IO) {
+            addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
+
+            try {
+                val entry = recordDailyManualCheckIn(LocalDate.now(), label)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = TodayUiState.Success(entry)
+                    _dailyCheckInLocationInput.value = entry.dayLocationLabel
+                    _showDailyCheckInDialog.value = false
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
+                }
+            } finally {
+                removeLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
+            }
+        }
+    }
+
+    private suspend fun resolveDailyCheckInPrefill(existingEntry: WorkEntry?): String {
+        val todayLabel = existingEntry?.dayLocationLabel?.trim().orEmpty()
+        if (todayLabel.isNotEmpty()) {
+            return todayLabel
+        }
+
+        val latestWorkLabel = workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK)?.trim().orEmpty()
+        if (latestWorkLabel.isNotEmpty()) {
+            return latestWorkLabel
+        }
+
+        val latestAnyLabel = workEntryDao.getLatestDayLocationLabel()?.trim().orEmpty()
+        if (latestAnyLabel.isNotEmpty()) {
+            return latestAnyLabel
+        }
+
+        val settings = reminderSettingsManager.settings.first()
+        return settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL }
     }
     
     fun onMorningCheckIn(forceWithoutLocation: Boolean = false) {
@@ -371,20 +445,16 @@ class TodayViewModel @Inject constructor(
     fun onConfirmOffDay() {
         viewModelScope.launch(Dispatchers.IO) {
             addLoadingAction(TodayAction.CONFIRM_OFFDAY)
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.Loading
-            }
 
             try {
                 val entry = confirmOffDay(LocalDate.now(), source = "UI")
                 withContext(Dispatchers.Main) {
                     _uiState.value = TodayUiState.Success(entry)
+                    _showDailyCheckInDialog.value = false
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(
-                        e.toUiText(R.string.today_error_confirm_day_failed)
-                    )
+                    _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
                 }
             } finally {
                 removeLoadingAction(TodayAction.CONFIRM_OFFDAY)
@@ -411,11 +481,7 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val scope = _reviewScope.value ?: return@launch
             addLoadingAction(TodayAction.RESOLVE_REVIEW)
-            
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.Loading
-            }
-            
+
             try {
                 val entry = resolveReview(
                     date = LocalDate.now(),
@@ -430,9 +496,7 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(
-                        e.toUiText(R.string.today_error_review_save_failed)
-                    )
+                    _snackbarMessage.value = e.toUiText(R.string.today_error_review_save_failed)
                 }
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
@@ -459,14 +523,16 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(
-                        e.toUiText(R.string.today_error_day_location_save_failed)
-                    )
+                    _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
                 }
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
             }
         }
+    }
+
+    fun onSnackbarShown() {
+        _snackbarMessage.value = null
     }
 
     private fun addLoadingAction(action: TodayAction) {

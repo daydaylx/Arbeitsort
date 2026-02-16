@@ -64,6 +64,12 @@ fun EditEntrySheet(
             viewModel.setFormData(initialFormData)
         }
     }
+
+    LaunchedEffect(uiState) {
+        if (uiState is EditUiState.Saved) {
+            onDismiss()
+        }
+    }
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -332,23 +338,15 @@ fun EditEntrySheet(
                     }
 
                     is EditUiState.Saved -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.edit_saved),
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            PrimaryActionButton(onClick = onDismiss) {
-                                Text(stringResource(R.string.action_close))
-                            }
+                            CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                            Text(text = stringResource(R.string.edit_saved))
                         }
                     }
                 }

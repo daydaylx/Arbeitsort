@@ -154,39 +154,6 @@ fun HistoryContent(
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var showNeedsReviewOnly by rememberSaveable { mutableStateOf(false) }
-    var showAdvancedOptionsSheet by rememberSaveable { mutableStateOf(false) }
-
-    val optionsSummary = buildString {
-        if (showCalendar) {
-            append(stringResource(R.string.history_summary_calendar))
-            append(" · ")
-            append(
-                stringResource(
-                    if (calendarMode == CalendarMode.MONTH) {
-                        R.string.history_summary_month
-                    } else {
-                        R.string.history_summary_week
-                    }
-                )
-            )
-        } else {
-            append(stringResource(R.string.history_summary_list))
-            append(" · ")
-            append(
-                stringResource(
-                    if (showMonths) {
-                        R.string.history_summary_months
-                    } else {
-                        R.string.history_summary_weeks
-                    }
-                )
-            )
-        }
-        if (showNeedsReviewOnly) {
-            append(" · ")
-            append(stringResource(R.string.history_summary_review))
-        }
-    }
 
     val filteredWeeks = remember(weeks, showNeedsReviewOnly) {
         if (!showNeedsReviewOnly) {
@@ -232,7 +199,7 @@ fun HistoryContent(
             onCalendarModeChange = { calendarMode = it },
             onShowMonthsChange = { showMonths = it },
             onShowNeedsReviewOnlyChange = { showNeedsReviewOnly = it },
-            onOpenAdvancedOptions = { showAdvancedOptionsSheet = true }
+            onPickDate = { showDatePicker = true }
         )
 
         when {
@@ -267,7 +234,7 @@ fun HistoryContent(
                 EmptyContent(
                     modifier = Modifier.fillMaxWidth(),
                     onAddPastDay = { showDatePicker = true },
-                    showAddButton = false,
+                    showAddButton = true,
                     title = if (showNeedsReviewOnly) {
                         stringResource(R.string.history_empty_review_title)
                     } else {
@@ -326,26 +293,6 @@ fun HistoryContent(
             onDismiss = { showDatePicker = false }
         )
     }
-
-    if (showAdvancedOptionsSheet) {
-        HistoryAdvancedOptionsSheet(
-            showCalendar = showCalendar,
-            calendarMode = calendarMode,
-            showMonths = showMonths,
-            canToggleMonths = months.isNotEmpty(),
-            showNeedsReviewOnly = showNeedsReviewOnly,
-            optionsSummary = optionsSummary,
-            onShowCalendarChange = { showCalendar = it },
-            onCalendarModeChange = { calendarMode = it },
-            onShowMonthsChange = { showMonths = it },
-            onShowNeedsReviewOnlyChange = { showNeedsReviewOnly = it },
-            onPickDate = {
-                showAdvancedOptionsSheet = false
-                showDatePicker = true
-            },
-            onDismiss = { showAdvancedOptionsSheet = false }
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -360,7 +307,7 @@ private fun HistoryMiniFilterBar(
     onCalendarModeChange: (CalendarMode) -> Unit,
     onShowMonthsChange: (Boolean) -> Unit,
     onShowNeedsReviewOnlyChange: (Boolean) -> Unit,
-    onOpenAdvancedOptions: () -> Unit
+    onPickDate: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -418,12 +365,12 @@ private fun HistoryMiniFilterBar(
             )
 
             AssistChip(
-                onClick = onOpenAdvancedOptions,
-                label = { Text(stringResource(R.string.history_chip_options)) },
+                onClick = onPickDate,
+                label = { Text(stringResource(R.string.history_action_pick_date)) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = stringResource(R.string.history_cd_open_options)
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = stringResource(R.string.history_action_pick_date)
                     )
                 }
             )

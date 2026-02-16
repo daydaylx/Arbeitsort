@@ -100,7 +100,12 @@
     <string name="today_checkin_evening">Check-in abends</string>
     <string name="today_confirmation_title">Bestätigung</string>
     <string name="action_confirm_workday">Arbeit</string>
-    <string name="action_confirm_offday">Frei</string>
+    <string name="action_confirm_offday">Heute frei</string>
+    <string name="action_daily_manual_check_in">Einchecken (Arbeit)</string>
+    <string name="daily_check_in_dialog_title">Einchecken (Arbeit)</string>
+    <string name="daily_check_in_dialog_label">Arbeitsort</string>
+    <string name="daily_check_in_dialog_placeholder">z.B. Baustelle XY</string>
+    <string name="daily_check_in_dialog_support">Wird für heute gespeichert</string>
     <string name="today_confirmation_done">Tag bestätigt</string>
     <string name="today_completed_at">Erfasst um %1$s</string>
     <string name="action_retry">Erneut versuchen</string>

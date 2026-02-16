@@ -1,7 +1,5 @@
 package de.montagezeit.app.ui.screen.today
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,10 +19,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,7 +33,6 @@ import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
-import de.montagezeit.app.ui.util.LocationPermissionHelper
 import de.montagezeit.app.ui.util.asString
 import de.montagezeit.app.ui.util.getReviewReason
 import java.time.LocalDate
@@ -62,57 +57,35 @@ fun TodayScreenV2(
     val monthStats by viewModel.monthStats.collectAsStateWithLifecycle()
     val showReviewSheet by viewModel.showReviewSheet.collectAsStateWithLifecycle()
     val reviewScope by viewModel.reviewScope.collectAsStateWithLifecycle()
+    val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
+    val dailyCheckInLocationInput by viewModel.dailyCheckInLocationInput.collectAsStateWithLifecycle()
     val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
-    
-    var hasLocationPermission by remember {
-        mutableStateOf(LocationPermissionHelper.hasAnyLocationPermission(context))
-    }
-
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        val isGranted = LocationPermissionHelper.isPermissionGranted(result)
-        hasLocationPermission = isGranted
-        if (isGranted) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            if (todayEntry?.morningCapturedAt == null) {
-                viewModel.onMorningCheckIn()
-            } else if (todayEntry?.eveningCapturedAt == null) {
-                viewModel.onEveningCheckIn()
-            }
-        }
-    }
+    val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
 
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
     val needsReview = currentEntry?.needsReview == true
     val reviewReason = getReviewReason(currentEntry)
+    val snackbarHostState = remember { SnackbarHostState() }
     var showDayLocationDialog by rememberSaveable { mutableStateOf(false) }
     var dayLocationInput by rememberSaveable { mutableStateOf("") }
 
-    val isMorningLoading = loadingActions.contains(TodayAction.MORNING_CHECK_IN)
-    val isEveningLoading = loadingActions.contains(TodayAction.EVENING_CHECK_IN)
-    val isConfirmWorkdayLoading = loadingActions.contains(TodayAction.CONFIRM_WORKDAY)
+    val isDailyCheckInLoading = loadingActions.contains(TodayAction.DAILY_MANUAL_CHECK_IN)
     val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
     val isReviewResolving = loadingActions.contains(TodayAction.RESOLVE_REVIEW)
 
-    val onRequestLocationPermissionAction = {
-        locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
-    }
-    val onMorningCheckInAction = {
+    val onOpenDailyCheckInDialogAction = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.onMorningCheckIn()
-    }
-    val onEveningCheckInAction = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.onEveningCheckIn()
-    }
-    val onConfirmWorkDayAction = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.onConfirmWorkDay()
+        viewModel.openDailyCheckInDialog()
     }
     val onConfirmOffDayAction = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         viewModel.onConfirmOffDay()
+    }
+
+    LaunchedEffect(snackbarMessage) {
+        val message = snackbarMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message.asString(context))
+        viewModel.onSnackbarShown()
     }
     
     Scaffold(
@@ -126,39 +99,15 @@ fun TodayScreenV2(
                 }
             )
         },
-        floatingActionButton = {
-            if (uiState is TodayUiState.Success &&
-                (currentEntry?.confirmedWorkDay == false || currentEntry?.needsReview == true)) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onOpenEditSheet(LocalDate.now())
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.semantics { invisibleToUser() }
-                        )
-                    },
-                    text = { Text(stringResource(R.string.action_edit_entry_manual)) }
-                )
-            }
-        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             StickyTodayActionBarV2(
                 entry = currentEntry,
-                hasLocationPermission = hasLocationPermission,
                 needsReview = needsReview,
-                isMorningLoading = isMorningLoading,
-                isEveningLoading = isEveningLoading,
-                isConfirmWorkdayLoading = isConfirmWorkdayLoading,
+                isDailyCheckInLoading = isDailyCheckInLoading,
                 isConfirmOffdayLoading = isConfirmOffdayLoading,
                 isReviewResolving = isReviewResolving,
-                onRequestLocationPermission = onRequestLocationPermissionAction,
-                onMorningCheckIn = onMorningCheckInAction,
-                onEveningCheckIn = onEveningCheckInAction,
-                onConfirmWorkDay = onConfirmWorkDayAction,
+                onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
                 onConfirmOffDay = onConfirmOffDayAction,
                 onOpenReviewSheet = { viewModel.onOpenReviewSheet() }
             )
@@ -169,77 +118,54 @@ fun TodayScreenV2(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            val isLoadingLocation = uiState is TodayUiState.LoadingLocation
-            val isLoading = uiState is TodayUiState.Loading
-            val canShowContent = uiState is TodayUiState.Success ||
-                isLoadingLocation ||
-                (isLoading && currentEntry != null)
+            val errorState = uiState as? TodayUiState.Error
+            val locationErrorState = uiState as? TodayUiState.LocationError
+            val showInitialLoading = uiState is TodayUiState.Loading && currentEntry == null
+            val showFullscreenError = (errorState != null || locationErrorState != null) && currentEntry == null
 
-            when (uiState) {
-                is TodayUiState.Error -> {
+            when {
+                showFullscreenError && errorState != null -> {
                     MZErrorState(
-                        message = (uiState as TodayUiState.Error).message.asString(context),
+                        message = errorState.message.asString(context),
                         onRetry = { viewModel.onResetError() },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
 
-                is TodayUiState.LocationError -> {
-                    val errorState = uiState as TodayUiState.LocationError
-                    LocationErrorContentV2(
-                        message = errorState.message.asString(context),
-                        canRetry = errorState.canRetry,
-                        onRetry = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (todayEntry?.morningCapturedAt == null) {
-                                viewModel.onMorningCheckIn()
-                            } else {
-                                viewModel.onEveningCheckIn()
-                            }
-                        },
-                        onSkipLocation = { viewModel.onSkipLocation() },
+                showFullscreenError && locationErrorState != null -> {
+                    MZErrorState(
+                        message = locationErrorState.message.asString(context),
+                        onRetry = { viewModel.onResetError() },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                showInitialLoading -> {
+                    MZLoadingState(
+                        message = stringResource(R.string.loading),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
 
                 else -> {
-                    if (!canShowContent) {
-                        MZLoadingState(
-                            message = stringResource(R.string.loading),
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    } else {
-                        TodayContentV2(
-                            entry = currentEntry,
-                            weekStats = weekStats,
-                            monthStats = monthStats,
-                            hasLocationPermission = hasLocationPermission,
-                            onRequestLocationPermission = onRequestLocationPermissionAction,
-                            onMorningCheckIn = onMorningCheckInAction,
-                            onEveningCheckIn = onEveningCheckInAction,
-                            onConfirmWorkDay = onConfirmWorkDayAction,
-                            onConfirmOffDay = onConfirmOffDayAction,
-                            onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
-                            onEditDayLocation = {
-                                dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
-                                showDayLocationDialog = true
-                            },
-                            needsReview = needsReview,
-                            reviewReason = reviewReason,
-                            onEditToday = {
-                                viewModel.ensureTodayEntryThen {
-                                    onOpenEditSheet(LocalDate.now())
-                                }
-                            },
-                            onOpenWeekView = onOpenWeekView,
-                            showLocationLoading = isLoadingLocation,
-                            onSkipLocation = { viewModel.onSkipLocation() },
-                            isMorningLoading = isMorningLoading,
-                            isEveningLoading = isEveningLoading,
-                            isConfirmWorkdayLoading = isConfirmWorkdayLoading,
-                            isConfirmOffdayLoading = isConfirmOffdayLoading
-                        )
-                    }
+                    TodayContentV2(
+                        entry = currentEntry,
+                        weekStats = weekStats,
+                        monthStats = monthStats,
+                        onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
+                        onEditDayLocation = {
+                            dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
+                            showDayLocationDialog = true
+                        },
+                        needsReview = needsReview,
+                        reviewReason = reviewReason,
+                        onEditToday = {
+                            viewModel.ensureTodayEntryThen {
+                                onOpenEditSheet(LocalDate.now())
+                            }
+                        },
+                        onOpenWeekView = onOpenWeekView
+                    )
                 }
             }
             
@@ -269,6 +195,16 @@ fun TodayScreenV2(
                     }
                 )
             }
+
+            if (showDailyCheckInDialog) {
+                DailyManualCheckInDialogV2(
+                    input = dailyCheckInLocationInput,
+                    isLoading = isDailyCheckInLoading,
+                    onInputChange = { viewModel.onDailyCheckInLocationChanged(it) },
+                    onDismiss = { viewModel.onDismissDailyCheckInDialog() },
+                    onConfirm = { viewModel.submitDailyManualCheckIn() }
+                )
+            }
         }
     }
 }
@@ -276,69 +212,36 @@ fun TodayScreenV2(
 @Composable
 private fun StickyTodayActionBarV2(
     entry: WorkEntry?,
-    hasLocationPermission: Boolean,
     needsReview: Boolean,
-    isMorningLoading: Boolean,
-    isEveningLoading: Boolean,
-    isConfirmWorkdayLoading: Boolean,
+    isDailyCheckInLoading: Boolean,
     isConfirmOffdayLoading: Boolean,
     isReviewResolving: Boolean,
-    onRequestLocationPermission: () -> Unit,
-    onMorningCheckIn: () -> Unit,
-    onEveningCheckIn: () -> Unit,
-    onConfirmWorkDay: () -> Unit,
+    onOpenDailyCheckInDialog: () -> Unit,
     onConfirmOffDay: () -> Unit,
     onOpenReviewSheet: () -> Unit
 ) {
-    val morningCompleted = entry?.morningCapturedAt != null
-    val eveningCompleted = entry?.eveningCapturedAt != null
-    val needsConfirmation = entry?.confirmedWorkDay != true
-    val canConfirm = needsConfirmation && (morningCompleted || eveningCompleted)
-
-    if (morningCompleted && eveningCompleted && !needsReview && !canConfirm) {
+    val isCompleted = entry?.confirmedWorkDay == true
+    if (isCompleted && !needsReview) {
         return
     }
 
     val primaryLabel: String
     val primaryLoading: Boolean
     val primaryAction: () -> Unit
-    var showOffdayAction = false
+    val showOffdayAction: Boolean
 
     when {
-        !morningCompleted -> {
-            if (hasLocationPermission) {
-                primaryLabel = stringResource(R.string.action_check_in_morning)
-                primaryLoading = isMorningLoading
-                primaryAction = onMorningCheckIn
-            } else {
-                primaryLabel = stringResource(R.string.action_allow_location)
-                primaryLoading = false
-                primaryAction = onRequestLocationPermission
-            }
-        }
-
-        !eveningCompleted -> {
-            if (hasLocationPermission) {
-                primaryLabel = stringResource(R.string.action_check_in_evening)
-                primaryLoading = isEveningLoading
-                primaryAction = onEveningCheckIn
-            } else {
-                primaryLabel = stringResource(R.string.action_allow_location)
-                primaryLoading = false
-                primaryAction = onRequestLocationPermission
-            }
-        }
-
         needsReview -> {
             primaryLabel = stringResource(R.string.today_needs_review)
             primaryLoading = isReviewResolving
             primaryAction = onOpenReviewSheet
+            showOffdayAction = false
         }
 
-        canConfirm -> {
-            primaryLabel = stringResource(R.string.action_confirm_workday)
-            primaryLoading = isConfirmWorkdayLoading
-            primaryAction = onConfirmWorkDay
+        !isCompleted -> {
+            primaryLabel = stringResource(R.string.action_daily_manual_check_in)
+            primaryLoading = isDailyCheckInLoading
+            primaryAction = onOpenDailyCheckInDialog
             showOffdayAction = true
         }
 
@@ -381,24 +284,12 @@ private fun TodayContentV2(
     entry: WorkEntry?,
     weekStats: WeekStats?,
     monthStats: MonthStats?,
-    hasLocationPermission: Boolean,
-    onRequestLocationPermission: () -> Unit,
-    onMorningCheckIn: () -> Unit,
-    onEveningCheckIn: () -> Unit,
-    onConfirmWorkDay: () -> Unit,
-    onConfirmOffDay: () -> Unit,
     onOpenReviewSheet: () -> Unit,
     onEditDayLocation: () -> Unit,
     needsReview: Boolean,
     reviewReason: String,
     onEditToday: () -> Unit,
-    onOpenWeekView: () -> Unit,
-    showLocationLoading: Boolean,
-    onSkipLocation: () -> Unit,
-    isMorningLoading: Boolean = false,
-    isEveningLoading: Boolean = false,
-    isConfirmWorkdayLoading: Boolean = false,
-    isConfirmOffdayLoading: Boolean = false
+    onOpenWeekView: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -418,10 +309,6 @@ private fun TodayContentV2(
             )
         }
 
-        if (showLocationLoading) {
-            LoadingLocationContentV2(onSkipLocation = onSkipLocation)
-        }
-
         StatusCardV2(
             entry = entry,
             onEditToday = onEditToday,
@@ -439,20 +326,6 @@ private fun TodayContentV2(
                 onOpenWeekView = onOpenWeekView
             )
         }
-
-        TodayActionsCardV2(
-            entry = entry,
-            hasLocationPermission = hasLocationPermission,
-            onRequestLocationPermission = onRequestLocationPermission,
-            onMorningCheckIn = onMorningCheckIn,
-            onEveningCheckIn = onEveningCheckIn,
-            onConfirmWorkDay = onConfirmWorkDay,
-            onConfirmOffDay = onConfirmOffDay,
-            isMorningLoading = isMorningLoading,
-            isEveningLoading = isEveningLoading,
-            isConfirmWorkdayLoading = isConfirmWorkdayLoading,
-            isConfirmOffdayLoading = isConfirmOffdayLoading
-        )
     }
 }
 
@@ -498,79 +371,6 @@ private fun ReviewBannerV2(
                 Text(stringResource(R.string.action_review))
             }
         }
-    }
-}
-
-@Composable
-private fun LoadingLocationContentV2(onSkipLocation: () -> Unit) {
-    MZCard {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                strokeWidth = 4.dp
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = stringResource(R.string.today_location_loading),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            TertiaryActionButton(onClick = onSkipLocation) {
-                Text(stringResource(R.string.action_save_without_location))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocationErrorContentV2(
-    message: String,
-    canRetry: Boolean,
-    onRetry: () -> Unit,
-    onSkipLocation: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.LocationOff,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(64.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (canRetry) {
-            PrimaryActionButton(
-                onClick = onRetry,
-                content = { Text(stringResource(R.string.action_retry_location)) }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        
-        SecondaryActionButton(
-            onClick = onSkipLocation,
-            content = { Text(stringResource(R.string.action_save_without_location)) }
-        )
     }
 }
 
@@ -887,21 +687,12 @@ private fun StatisticsDashboardCardV2(
 @Composable
 private fun TodayActionsCardV2(
     entry: WorkEntry?,
-    hasLocationPermission: Boolean,
-    onRequestLocationPermission: () -> Unit,
-    onMorningCheckIn: () -> Unit,
-    onEveningCheckIn: () -> Unit,
-    onConfirmWorkDay: () -> Unit,
+    onOpenDailyCheckInDialog: () -> Unit,
     onConfirmOffDay: () -> Unit,
-    isMorningLoading: Boolean = false,
-    isEveningLoading: Boolean = false,
-    isConfirmWorkdayLoading: Boolean = false,
+    isDailyCheckInLoading: Boolean = false,
     isConfirmOffdayLoading: Boolean = false
 ) {
-    val morningCompleted = entry?.morningCapturedAt != null
-    val eveningCompleted = entry?.eveningCapturedAt != null
-    val needsConfirmation = entry?.confirmedWorkDay != true
-    val allDone = morningCompleted && eveningCompleted && !needsConfirmation
+    val allDone = entry?.confirmedWorkDay == true
 
     MZCard {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -922,63 +713,16 @@ private fun TodayActionsCardV2(
                 }
             }
 
-            ActionRowV2(
-                title = stringResource(R.string.today_checkin_morning),
-                supportingText = if (hasLocationPermission) {
-                    stringResource(R.string.today_morning_support)
-                } else {
-                    stringResource(R.string.today_location_required)
-                },
-                completedAt = entry?.morningCapturedAt,
-                icon = Icons.Default.WbSunny,
-                actionLabel = if (hasLocationPermission) {
-                    stringResource(R.string.action_check_in_morning)
-                } else {
-                    stringResource(R.string.action_allow_location)
-                },
-                onAction = if (hasLocationPermission) onMorningCheckIn else onRequestLocationPermission,
-                isPrimary = !morningCompleted,
-                isLoading = isMorningLoading
-            )
-
-            Divider()
-
-            ActionRowV2(
-                title = stringResource(R.string.today_checkin_evening),
-                supportingText = if (hasLocationPermission) {
-                    stringResource(R.string.today_evening_support)
-                } else {
-                    stringResource(R.string.today_location_required)
-                },
-                completedAt = entry?.eveningCapturedAt,
-                icon = Icons.Default.Nightlight,
-                actionLabel = if (hasLocationPermission) {
-                    stringResource(R.string.action_check_in_evening)
-                } else {
-                    stringResource(R.string.action_allow_location)
-                },
-                onAction = if (hasLocationPermission) onEveningCheckIn else onRequestLocationPermission,
-                isPrimary = morningCompleted && !eveningCompleted,
-                isLoading = isEveningLoading
-            )
-
-            if (needsConfirmation && (morningCompleted || eveningCompleted)) {
-                Divider()
-
-                Text(
-                    text = stringResource(R.string.today_confirmation_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-
+            if (!allDone) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     PrimaryActionButton(
-                        onClick = onConfirmWorkDay,
-                        isLoading = isConfirmWorkdayLoading,
+                        onClick = onOpenDailyCheckInDialog,
+                        isLoading = isDailyCheckInLoading,
                         modifier = Modifier.weight(1f),
-                        content = { Text(stringResource(R.string.action_confirm_workday)) }
+                        content = { Text(stringResource(R.string.action_daily_manual_check_in)) }
                     )
                     SecondaryActionButton(
                         onClick = onConfirmOffDay,
@@ -993,77 +737,46 @@ private fun TodayActionsCardV2(
 }
 
 @Composable
-private fun ActionRowV2(
-    title: String,
-    supportingText: String,
-    completedAt: Long?,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    actionLabel: String,
-    onAction: () -> Unit,
-    isPrimary: Boolean,
-    isLoading: Boolean = false
+private fun DailyManualCheckInDialogV2(
+    input: String,
+    isLoading: Boolean,
+    onInputChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
 ) {
-    val isCompleted = completedAt != null
-    val completedText = completedAt?.let {
-        stringResource(R.string.today_completed_at, getCompletedTimeString(it))
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = if (isCompleted) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        )
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.daily_check_in_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = onInputChange,
+                    label = { Text(stringResource(R.string.daily_check_in_dialog_label)) },
+                    placeholder = { Text(stringResource(R.string.daily_check_in_dialog_placeholder)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-            )
-            Text(
-                text = completedText ?: supportingText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (isCompleted) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = stringResource(R.string.cd_completed),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-        } else {
-            if (isPrimary) {
-                PrimaryActionButton(
-                    onClick = onAction,
-                    isLoading = isLoading,
-                    content = { Text(actionLabel) }
-                )
-            } else {
-                SecondaryActionButton(
-                    onClick = onAction,
-                    isLoading = isLoading,
-                    content = { Text(actionLabel) }
+                Text(
+                    text = stringResource(R.string.daily_check_in_dialog_support),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        },
+        confirmButton = {
+            PrimaryActionButton(
+                onClick = onConfirm,
+                isLoading = isLoading,
+                content = { Text(stringResource(R.string.action_daily_manual_check_in)) }
+            )
+        },
+        dismissButton = {
+            TertiaryActionButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
         }
-    }
+    )
 }
 
 @Composable
@@ -1072,7 +785,7 @@ private fun DayLocationDialogV2(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var input by remember { mutableStateOf(currentLabel) }
+    var input by remember(currentLabel) { mutableStateOf(currentLabel) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
