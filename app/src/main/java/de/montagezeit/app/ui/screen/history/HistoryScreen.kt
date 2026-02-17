@@ -1,6 +1,5 @@
 package de.montagezeit.app.ui.screen.history
 
-import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
@@ -58,8 +58,13 @@ fun HistoryScreen(
     val context = LocalContext.current
     var showBatchEditDialog by remember { mutableStateOf(false) }
     var isBatchEditing by remember { mutableStateOf(false) }
-    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val msgUpdated = stringResource(R.string.history_toast_batch_updated)
+    val msgFailed = stringResource(R.string.history_toast_batch_failed)
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.history_title)) },
@@ -128,9 +133,9 @@ fun HistoryScreen(
                     isBatchEditing = false
                     if (success) {
                         showBatchEditDialog = false
-                        Toast.makeText(context, context.getString(R.string.history_toast_batch_updated), Toast.LENGTH_SHORT).show()
+                        scope.launch { snackbarHostState.showSnackbar(msgUpdated) }
                     } else {
-                        Toast.makeText(context, context.getString(R.string.history_toast_batch_failed), Toast.LENGTH_SHORT).show()
+                        scope.launch { snackbarHostState.showSnackbar(msgFailed) }
                     }
                 }
             }
