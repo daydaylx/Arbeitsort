@@ -123,22 +123,13 @@ class TodayViewModel @Inject constructor(
     }
     
     private fun loadTodayEntry() {
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) {
-                _uiState.value = TodayUiState.Loading
-            }
-
+        viewModelScope.launch {
+            _uiState.value = TodayUiState.Loading
             try {
-                val entry = workEntryDao.getByDate(LocalDate.now())
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
+                val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(LocalDate.now()) }
+                _uiState.value = TodayUiState.Success(entry)
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Error(
-                        e.toUiText(R.string.today_error_unknown)
-                    )
-                }
+                _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
             }
         }
     }
@@ -153,27 +144,22 @@ class TodayViewModel @Inject constructor(
     }
     
     private fun loadStatistics() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 val now = LocalDate.now()
-
-                // Aktuelle Woche berechnen
                 val weekFields = java.time.temporal.WeekFields.of(Locale.GERMAN)
-                val weekStart = now.with(weekFields.dayOfWeek(), 1) // Montag
-                val weekEnd = now.with(weekFields.dayOfWeek(), 7) // Sonntag
-                val weekEntries = workEntryDao.getByDateRange(weekStart, weekEnd)
-                val weekStats = calculateWeekStats(weekEntries)
-
-                // Aktueller Monat berechnen
+                val weekStart = now.with(weekFields.dayOfWeek(), 1)
+                val weekEnd = now.with(weekFields.dayOfWeek(), 7)
                 val monthStart = now.withDayOfMonth(1)
                 val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
-                val monthEntries = workEntryDao.getByDateRange(monthStart, monthEnd)
-                val monthStats = calculateMonthStats(monthEntries)
-
-                withContext(Dispatchers.Main) {
-                    _weekStats.value = weekStats
-                    _monthStats.value = monthStats
+                val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
+                    Pair(
+                        workEntryDao.getByDateRange(weekStart, weekEnd),
+                        workEntryDao.getByDateRange(monthStart, monthEnd)
+                    )
                 }
+                _weekStats.value = calculateWeekStats(weekEntries)
+                _monthStats.value = calculateMonthStats(monthEntries)
             } catch (e: Exception) {
                 android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
             }
@@ -211,18 +197,14 @@ class TodayViewModel @Inject constructor(
     }
 
     fun openDailyCheckInDialog() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 val existingEntry = todayEntry.value ?: workEntryDao.getByDate(LocalDate.now())
                 val prefill = resolveDayLocationPrefill(existingEntry)
-                withContext(Dispatchers.Main) {
-                    _dailyCheckInLocationInput.value = prefill
-                    _showDailyCheckInDialog.value = true
-                }
+                _dailyCheckInLocationInput.value = prefill
+                _showDailyCheckInDialog.value = true
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
-                }
+                _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
             }
         }
     }
@@ -236,20 +218,15 @@ class TodayViewModel @Inject constructor(
     }
 
     fun submitDailyManualCheckIn(label: String = _dailyCheckInLocationInput.value) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
-
             try {
                 val entry = recordDailyManualCheckIn(LocalDate.now(), label)
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                    _dailyCheckInLocationInput.value = entry.dayLocationLabel
-                    _showDailyCheckInDialog.value = false
-                }
+                _uiState.value = TodayUiState.Success(entry)
+                _dailyCheckInLocationInput.value = entry.dayLocationLabel
+                _showDailyCheckInDialog.value = false
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
-                }
+                _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
             } finally {
                 removeLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
             }
@@ -262,7 +239,7 @@ class TodayViewModel @Inject constructor(
     }
 
     fun ensureTodayEntryThen(onDone: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val today = LocalDate.now()
             try {
                 val existing = workEntryDao.getByDate(today)
@@ -286,27 +263,20 @@ class TodayViewModel @Inject constructor(
                     workEntryDao.upsert(entry)
                 }
             } finally {
-                withContext(Dispatchers.Main) {
-                    onDone()
-                }
+                onDone()
             }
         }
     }
     
     fun onConfirmOffDay() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             addLoadingAction(TodayAction.CONFIRM_OFFDAY)
-
             try {
                 val entry = confirmOffDay(LocalDate.now(), source = "UI")
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                    _showDailyCheckInDialog.value = false
-                }
+                _uiState.value = TodayUiState.Success(entry)
+                _showDailyCheckInDialog.value = false
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
-                }
+                _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
             } finally {
                 removeLoadingAction(TodayAction.CONFIRM_OFFDAY)
             }
@@ -329,10 +299,9 @@ class TodayViewModel @Inject constructor(
     }
     
     fun onResolveReview(label: String, isLeipzig: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val scope = _reviewScope.value ?: return@launch
             addLoadingAction(TodayAction.RESOLVE_REVIEW)
-
             try {
                 val entry = resolveReview(
                     date = LocalDate.now(),
@@ -340,42 +309,32 @@ class TodayViewModel @Inject constructor(
                     resolvedLabel = label,
                     isLeipzig = isLeipzig
                 )
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                    _showReviewSheet.value = false
-                    _reviewScope.value = null
-                }
+                _uiState.value = TodayUiState.Success(entry)
+                _showReviewSheet.value = false
+                _reviewScope.value = null
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _snackbarMessage.value = e.toUiText(R.string.today_error_review_save_failed)
-                }
+                _snackbarMessage.value = e.toUiText(R.string.today_error_review_save_failed)
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
             }
         }
     }
-    
+
     fun onDismissReviewSheet() {
         _showReviewSheet.value = false
         _reviewScope.value = null
     }
 
     fun onUpdateDayLocation(label: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val trimmed = label.trim()
-            if (trimmed.isBlank()) {
-                return@launch
-            }
+            if (trimmed.isBlank()) return@launch
             addLoadingAction(TodayAction.RESOLVE_REVIEW)
             try {
                 val entry = setDayLocation(LocalDate.now(), trimmed)
-                withContext(Dispatchers.Main) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
+                _uiState.value = TodayUiState.Success(entry)
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
-                }
+                _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
             } finally {
                 removeLoadingAction(TodayAction.RESOLVE_REVIEW)
             }

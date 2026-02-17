@@ -48,6 +48,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
 
+private const val MONTH_PREVIEW_COUNT = 5
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
@@ -1455,7 +1457,7 @@ fun MonthGroupCard(
                 Divider()
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val entriesToShow = month.entries.take(5)
+                    val entriesToShow = month.entries.take(MONTH_PREVIEW_COUNT)
                     val remainingCount = month.entries.size - entriesToShow.size
 
                     entriesToShow.forEach { entry ->

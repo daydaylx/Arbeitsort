@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Coroutines**: `CancellationException` in `LocationProviderImpl.requestLocation()` wird jetzt
+  korrekt re-thrown statt zu `LocationResult.Timeout` konvertiert zu werden. Zuvor war die
+  strukturierte Nebenläufigkeit gebrochen – der Parent-Scope konnte hängen bleiben, wenn er
+  gecancelt wurde.
+- **Service**: Race Condition in `CheckInActionService` bei `ACTION_REMIND_LATER` behoben.
+  `stopSelf()` wurde außerhalb des Coroutine-Blocks aufgerufen und beendete den Service (und
+  damit den `serviceScope`) bevor WorkManager den Reminder einreihen konnte. Der Reminder ging
+  auf langsamen Geräten oder unter Last verloren.
+
+### Changed
+- **Repo-Hygiene**: `.gitignore` erweitert um `debug_artifacts/`, `*.db`, `*.sqlite`,
+  `app/exports/`. Bereits getrackte Dateien (`debug_artifacts/`, `app/exports/`,
+  `logs/*.log`, 4 macOS-Ghost-Pfade `>/Users/...`) aus dem Git-Index entfernt.
+
 ### Added
 - **PDF Export**:
   - Implemented correct travel time calculation using `travelPaidMinutes` field.

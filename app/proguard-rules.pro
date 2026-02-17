@@ -74,13 +74,8 @@
 -keepnames class kotlinx.coroutines.** { *; }
 
 # ============================================================================
-# GSON / MOSHI SERIALIZATION
+# MOSHI SERIALIZATION
 # ============================================================================
-# Keep classes with @SerializedName annotations
--keepclassmembers,allowobfuscation class * {
-    @com.google.gson.annotations.SerializedName <fields>;
-}
-
 # Keep Moshi adapters
 -keep class com.squareup.moshi.** { *; }
 -keep interface com.squareup.moshi.** { *; }
