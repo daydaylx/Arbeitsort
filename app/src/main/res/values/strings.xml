@@ -2,6 +2,14 @@
 <resources>
     <string name="app_name">MontageZeit</string>
     
+    <!-- Processing / ForegroundService Notifications (CheckInActionService) -->
+    <string name="notification_channel_check_in_actions">Check-In Aktionen</string>
+    <string name="notification_channel_check_in_actions_description">Benachrichtigung für laufende Check-In Aktionen</string>
+    <string name="notification_processing_morning">Morgendlicher Check-in…</string>
+    <string name="notification_processing_evening">Abendlicher Check-in…</string>
+    <string name="notification_processing_confirm_day">Tag wird bestätigt…</string>
+    <string name="notification_processing_mark_day_off">Tag als frei markieren…</string>
+
     <!-- Reminder Notifications -->
     <string name="notification_channel_reminders">Check-in Erinnerungen</string>
     <string name="notification_channel_description">Erinnerungen für morgendlichen und abendlichen Check-in</string>

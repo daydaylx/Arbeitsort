@@ -74,7 +74,6 @@ class CheckInActionService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 3000
         private const val CHANNEL_ID = "check_in_action_service"
-        private const val CHANNEL_NAME = "Check-In Aktionen"
         private const val CONFIRMATION_REMINDER_PREFS = "confirmation_reminder_count"
         private const val CONFIRMATION_REMINDER_MAX = 2
         private const val CONFIRMATION_REMIND_LATER_MINUTES = 60
@@ -93,7 +92,7 @@ class CheckInActionService : Service() {
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
                 val forceWithoutLocation = intent.action == ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION
                 
-                startForeground(NOTIFICATION_ID, createProcessingNotification("Morgendlicher Check-in..."))
+                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
                 
                 serviceScope.launch {
                     try {
@@ -114,7 +113,7 @@ class CheckInActionService : Service() {
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
                 val forceWithoutLocation = intent.action == ReminderActions.ACTION_EVENING_CHECK_IN_WITHOUT_LOCATION
                 
-                startForeground(NOTIFICATION_ID, createProcessingNotification("Abendlicher Check-in..."))
+                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))
                 
                 serviceScope.launch {
                     try {
@@ -179,7 +178,7 @@ class CheckInActionService : Service() {
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag wird bestätigt..."))
+                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
 
                 serviceScope.launch {
                     try {
@@ -201,7 +200,7 @@ class CheckInActionService : Service() {
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag wird bestätigt..."))
+                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
 
                 serviceScope.launch {
                     try {
@@ -249,7 +248,7 @@ class CheckInActionService : Service() {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification("Tag als frei markieren..."))
+                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_mark_day_off)))
 
                 serviceScope.launch {
                     try {
@@ -286,10 +285,10 @@ class CheckInActionService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                getString(R.string.notification_channel_check_in_actions),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notification für Check-In Aktionen"
+                description = getString(R.string.notification_channel_check_in_actions_description)
             }
             
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -302,7 +301,7 @@ class CheckInActionService : Service() {
      */
     private fun createProcessingNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MontageZeit")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
