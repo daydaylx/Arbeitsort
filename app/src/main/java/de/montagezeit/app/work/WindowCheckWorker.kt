@@ -1,7 +1,6 @@
 package de.montagezeit.app.work
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -10,6 +9,7 @@ import dagger.assisted.AssistedInject
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.notification.ReminderNotificationManager
@@ -34,7 +34,8 @@ class WindowCheckWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val workEntryDao: WorkEntryDao,
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val notificationManager: ReminderNotificationManager
+    private val notificationManager: ReminderNotificationManager,
+    private val reminderFlagsStore: ReminderFlagsStore
 ) : CoroutineWorker(context, workerParams) {
 
     // Mutex für atomare Operations (SharedPreferences + DB + Notification)
@@ -44,7 +45,6 @@ class WindowCheckWorker @AssistedInject constructor(
         val today = LocalDate.now()
         val currentTime = LocalTime.now()
         val settings = reminderSettingsManager.settings.first()
-        val sharedPreferences = applicationContext.getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
         val reminderType = reminderTypeOrNull()
 
         try {
@@ -57,7 +57,7 @@ class WindowCheckWorker @AssistedInject constructor(
                     if (!inWindow) {
                         return Result.success()
                     }
-                    checkAndShowMorningReminder(today, settings, sharedPreferences)
+                    checkAndShowMorningReminder(today, settings)
                 }
                 ReminderType.EVENING -> {
                     if (!settings.eveningReminderEnabled) {
@@ -67,7 +67,7 @@ class WindowCheckWorker @AssistedInject constructor(
                     if (!inWindow) {
                         return Result.success()
                     }
-                    checkAndShowEveningReminder(today, settings, sharedPreferences)
+                    checkAndShowEveningReminder(today, settings)
                 }
                 ReminderType.FALLBACK -> {
                     if (!settings.fallbackEnabled) {
@@ -76,14 +76,14 @@ class WindowCheckWorker @AssistedInject constructor(
                     if (!ReminderWindowEvaluator.isAfterFallbackTime(currentTime, settings)) {
                         return Result.success()
                     }
-                    checkAndShowFallbackReminder(today, settings, sharedPreferences)
+                    checkAndShowFallbackReminder(today, settings)
                     // Fallback ist periodic, kein self-reschedule
                 }
                 ReminderType.DAILY -> {
                     if (!settings.dailyReminderEnabled) {
                         return Result.success()
                     }
-                    checkAndShowDailyReminder(today, sharedPreferences)
+                    checkAndShowDailyReminder(today)
                     // Daily ist periodic, kein self-reschedule
                 }
                 null -> {
@@ -106,37 +106,18 @@ class WindowCheckWorker @AssistedInject constructor(
      */
     private suspend fun checkAndShowMorningReminder(
         date: LocalDate,
-        settings: ReminderSettings,
-        sharedPreferences: SharedPreferences
+        settings: ReminderSettings
     ) {
         // Atomic Operation: Read flag + DB query + Show notification + Write flag
         operationMutex.withLock {
-            // Prüfe ob schon heute erinnert wurde
-            val alreadyReminded = sharedPreferences.getBoolean("morning_reminded_$date", false)
-            if (alreadyReminded) {
-                return
-            }
-
-            // Hole heutigen WorkEntry
+            if (reminderFlagsStore.isMorningReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-
-            // Prüfe ob Nicht-Arbeitstag (mit workEntryDao für manuelle Overrides)
-            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) {
-                return
-            }
-
-            // Prüfe ob Reminder nötig ist
-            val needsReminder = shouldShowMorningReminder(entry)
-
-            if (needsReminder) {
+            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) return
+            if (shouldShowMorningReminder(entry)) {
                 notificationManager.showMorningReminder(date)
-
-                // Setze Flag dass erinnert wurde
-                sharedPreferences.edit()
-                    .putBoolean("morning_reminded_$date", true)
-                    .apply()
+                reminderFlagsStore.setMorningReminded(date)
             }
-        } // Ende Mutex withLock
+        }
     }
 
     /**
@@ -146,37 +127,17 @@ class WindowCheckWorker @AssistedInject constructor(
      */
     private suspend fun checkAndShowEveningReminder(
         date: LocalDate,
-        settings: ReminderSettings,
-        sharedPreferences: SharedPreferences
+        settings: ReminderSettings
     ) {
-        // Atomic Operation: Read flag + DB query + Show notification + Write flag
         operationMutex.withLock {
-            // Prüfe ob schon heute erinnert wurde
-            val alreadyReminded = sharedPreferences.getBoolean("evening_reminded_$date", false)
-            if (alreadyReminded) {
-                return
-            }
-
-            // Hole heutigen WorkEntry
+            if (reminderFlagsStore.isEveningReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-
-            // Prüfe ob Nicht-Arbeitstag (mit workEntryDao für manuelle Overrides)
-            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) {
-                return
-            }
-
-            // Prüfe ob Reminder nötig ist
-            val needsReminder = shouldShowEveningReminder(entry)
-
-            if (needsReminder) {
+            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) return
+            if (shouldShowEveningReminder(entry)) {
                 notificationManager.showEveningReminder(date)
-
-                // Setze Flag dass erinnert wurde
-                sharedPreferences.edit()
-                    .putBoolean("evening_reminded_$date", true)
-                    .apply()
+                reminderFlagsStore.setEveningReminded(date)
             }
-        } // Ende Mutex withLock
+        }
     }
 
     /**
@@ -186,37 +147,17 @@ class WindowCheckWorker @AssistedInject constructor(
      */
     private suspend fun checkAndShowFallbackReminder(
         date: LocalDate,
-        settings: ReminderSettings,
-        sharedPreferences: SharedPreferences
+        settings: ReminderSettings
     ) {
-        // Atomic Operation: Read flag + DB query + Show notification + Write flag
         operationMutex.withLock {
-            // Prüfe ob schon heute Fallback erinnert wurde
-            val alreadyReminded = sharedPreferences.getBoolean("fallback_reminded_$date", false)
-            if (alreadyReminded) {
-                return
-            }
-
-            // Hole heutigen WorkEntry
+            if (reminderFlagsStore.isFallbackReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-
-            // Prüfe ob Nicht-Arbeitstag (mit workEntryDao für manuelle Overrides)
-            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) {
-                return
-            }
-
-            // Prüfe ob Tag unvollständig ist
-            val isIncomplete = shouldShowFallbackReminder(entry)
-
-            if (isIncomplete) {
+            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) return
+            if (shouldShowFallbackReminder(entry)) {
                 notificationManager.showFallbackReminder(date)
-
-                // Setze Flag dass erinnert wurde
-                sharedPreferences.edit()
-                    .putBoolean("fallback_reminded_$date", true)
-                    .apply()
+                reminderFlagsStore.setFallbackReminded(date)
             }
-        } // Ende Mutex withLock
+        }
     }
 
     /**
@@ -224,36 +165,15 @@ class WindowCheckWorker @AssistedInject constructor(
      *
      * ATOMIC: Mutex schützt gesamte Operation (read + DB query + notification + write)
      */
-    private suspend fun checkAndShowDailyReminder(
-        date: LocalDate,
-        sharedPreferences: SharedPreferences
-    ) {
-        // Atomic Operation: Read flag + DB query + Show notification + Write flag
+    private suspend fun checkAndShowDailyReminder(date: LocalDate) {
         operationMutex.withLock {
-            // Prüfe ob schon heute erinnert wurde
-            val alreadyReminded = sharedPreferences.getBoolean("daily_reminded_$date", false)
-            if (alreadyReminded) {
-                return
-            }
-
-            // Hole heutigen WorkEntry
+            if (reminderFlagsStore.isDailyReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-
-            // Prüfe ob Tag bereits bestätigt wurde
-            if (!shouldShowDailyReminder(entry)) {
-                // Tag bereits bestätigt - keine Notification nötig
-                sharedPreferences.edit()
-                    .putBoolean("daily_reminded_$date", true)
-                    .apply()
-                return
+            reminderFlagsStore.setDailyReminded(date)
+            if (shouldShowDailyReminder(entry)) {
+                notificationManager.showDailyConfirmationNotification(date)
             }
-
-            // Zeige Daily Confirmation Notification
-            notificationManager.showDailyConfirmationNotification(date)
-            sharedPreferences.edit()
-                .putBoolean("daily_reminded_$date", true)
-                .apply()
-        } // Ende Mutex withLock
+        }
     }
 
     private fun reminderTypeOrNull(): ReminderType? {

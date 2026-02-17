@@ -18,6 +18,7 @@ import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
+import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.notification.ConfirmationReminderLimiter
 import de.montagezeit.app.notification.ReminderActions
@@ -64,6 +65,9 @@ class CheckInActionService : Service() {
 
     @Inject
     lateinit var confirmOffDay: ConfirmOffDay
+
+    @Inject
+    lateinit var reminderFlagsStore: ReminderFlagsStore
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
@@ -345,20 +349,11 @@ class CheckInActionService : Service() {
     }
 
     private fun markReminderFlags(date: LocalDate) {
-        val prefs = getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("morning_reminded_$date", true)
-            .putBoolean("evening_reminded_$date", true)
-            .putBoolean("fallback_reminded_$date", true)
-            .putBoolean("daily_reminded_$date", true)
-            .apply()
+        reminderFlagsStore.setAllReminded(date)
     }
 
-    private fun markConfirmationReminderFlag(date: LocalDate) {
-        val prefs = getSharedPreferences("reminder_flags", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("confirmation_reminded_$date", true)
-            .apply()
+    private fun markConfirmationReminderFlag(@Suppress("UNUSED_PARAMETER") date: LocalDate) {
+        // Confirmation flag tracking removed; limiter manages its own counter
     }
 
     private fun confirmationLimiter(): ConfirmationReminderLimiter {
