@@ -26,6 +26,10 @@ test_output.log
 .gemini/
 tmp/
 
+# Ghost-Paths vom macOS-Entwicklersystem (Verzeichnisse mit Sonderzeichen)
+>/
+>
+
 # Debug Artifacts (lokale Debug-Snapshots, gehören nicht ins Repo)
 debug_artifacts/
 
