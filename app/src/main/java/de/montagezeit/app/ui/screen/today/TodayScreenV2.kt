@@ -25,7 +25,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.PrimaryActionButton
@@ -407,10 +406,6 @@ private fun StatusCardV2(
             )
         }
 
-        if (entry?.morningCapturedAt != null || entry?.eveningCapturedAt != null) {
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
-            LocationStatusSection(entry = entry)
-        }
     }
 }
 
@@ -445,69 +440,6 @@ private fun DayTypeRow(dayType: DayType) {
             color = color,
             fontWeight = FontWeight.Medium
         )
-    }
-}
-
-@Composable
-private fun LocationStatusSection(entry: WorkEntry?) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        entry?.let { e ->
-            if (e.morningCapturedAt != null) {
-                LocationRowV2(
-                    label = stringResource(R.string.today_location_morning),
-                    locationStatus = e.morningLocationStatus,
-                    locationLabel = e.morningLocationLabel
-                )
-            }
-            if (e.eveningCapturedAt != null) {
-                LocationRowV2(
-                    label = stringResource(R.string.today_location_evening),
-                    locationStatus = e.eveningLocationStatus,
-                    locationLabel = e.eveningLocationLabel
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocationRowV2(
-    label: String,
-    locationStatus: LocationStatus,
-    locationLabel: String?
-) {
-    val (icon, tint) = when (locationStatus) {
-        LocationStatus.OK -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
-        LocationStatus.LOW_ACCURACY -> Icons.Default.Warning to MaterialTheme.colorScheme.error
-        LocationStatus.UNAVAILABLE -> Icons.Default.LocationOff to MaterialTheme.colorScheme.error
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Icon(
-            imageVector = icon,
-            contentDescription = when (locationStatus) {
-                LocationStatus.OK -> stringResource(R.string.location_status_ok)
-                LocationStatus.LOW_ACCURACY -> stringResource(R.string.location_status_low_accuracy)
-                LocationStatus.UNAVAILABLE -> stringResource(R.string.location_status_unavailable)
-            },
-            modifier = Modifier.size(16.dp),
-            tint = tint
-        )
-        locationLabel?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 

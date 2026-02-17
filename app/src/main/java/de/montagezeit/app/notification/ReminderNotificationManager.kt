@@ -90,6 +90,7 @@ class ReminderNotificationManager @Inject constructor(
         private const val REQUEST_CODE_DAILY_EDIT = 2012
         private const val REQUEST_CODE_REMIND_LATER_DAILY_1H = 2013
         private const val REQUEST_CODE_REMIND_LATER_DAILY_2H = 2014
+        private const val REQUEST_CODE_OPEN_APP = 2100
     }
     
     init {
@@ -144,6 +145,7 @@ class ReminderNotificationManager @Inject constructor(
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_morning_title))
             .setContentText(context.getString(R.string.notification_morning_text))
+            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -159,11 +161,10 @@ class ReminderNotificationManager @Inject constructor(
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
-                context.getString(R.string.action_morning_check_in_no_location),
-                createCheckInPendingIntent(
+                context.getString(R.string.action_mark_day_off),
+                createMarkDayOffPendingIntent(
                     date,
-                    ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION,
-                    REQUEST_CODE_MORNING_WITHOUT_LOCATION
+                    REQUEST_CODE_MARK_DAY_OFF_MORNING
                 )
             )
             .addAction(
@@ -188,10 +189,11 @@ class ReminderNotificationManager @Inject constructor(
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
-                context.getString(R.string.action_mark_day_off),
-                createMarkDayOffPendingIntent(
+                context.getString(R.string.action_morning_check_in_no_location),
+                createCheckInPendingIntent(
                     date,
-                    REQUEST_CODE_MARK_DAY_OFF_MORNING
+                    ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION,
+                    REQUEST_CODE_MORNING_WITHOUT_LOCATION
                 )
             )
             .build()
@@ -213,6 +215,7 @@ class ReminderNotificationManager @Inject constructor(
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_evening_title))
             .setContentText(context.getString(R.string.notification_evening_text))
+            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -282,6 +285,7 @@ class ReminderNotificationManager @Inject constructor(
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_fallback_title))
             .setContentText(context.getString(R.string.notification_fallback_text))
+            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -334,6 +338,7 @@ class ReminderNotificationManager @Inject constructor(
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_daily_confirmation_title))
             .setContentText(context.getString(R.string.notification_daily_confirmation_text))
+            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .setAutoCancel(false)
@@ -436,6 +441,24 @@ class ReminderNotificationManager @Inject constructor(
         return PendingIntent.getActivity(
             context,
             requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun createOpenAppPendingIntent(date: LocalDate): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+        }
+
+        return PendingIntent.getActivity(
+            context,
+            REQUEST_CODE_OPEN_APP,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
