@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.domain.util.AppDefaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -34,15 +35,15 @@ class ReminderSettingsManager @Inject constructor(
     val settings: Flow<ReminderSettings> = dataStore.data.map { preferences ->
         ReminderSettings(
             // Arbeitszeit Defaults
-            workStart = preferences[ReminderSettingsKeys.WORK_START]?.toLocalTime() 
-                ?: LocalTime.of(8, 0),
-            workEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime() 
-                ?: LocalTime.of(19, 0),
-            breakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: 60,
-            locationRadiusKm = preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] ?: 30,
+            workStart = preferences[ReminderSettingsKeys.WORK_START]?.toLocalTime()
+                ?: AppDefaults.WORK_START,
+            workEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime()
+                ?: AppDefaults.WORK_END,
+            breakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: AppDefaults.BREAK_MINUTES,
+            locationRadiusKm = preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] ?: AppDefaults.LOCATION_RADIUS_KM,
 
             // Standort
-            defaultDayLocationLabel = preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] ?: "Leipzig",
+            defaultDayLocationLabel = preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] ?: AppDefaults.DEFAULT_CITY,
             preferGpsLocation = preferences[ReminderSettingsKeys.PREFER_GPS_LOCATION] ?: true,
             fallbackOnLowAccuracy = preferences[ReminderSettingsKeys.FALLBACK_ON_LOW_ACCURACY] ?: true,
             

@@ -32,17 +32,12 @@ object TimeCalculator {
      * Andernfalls wird die Differenz zwischen travelStartAt und travelArriveAt berechnet.
      */
     fun calculateTravelMinutes(entry: WorkEntry): Int {
-        if (entry.travelPaidMinutes != null) {
-            return entry.travelPaidMinutes
-        }
-        if (entry.travelStartAt != null && entry.travelArriveAt != null) {
-            val diff = entry.travelArriveAt - entry.travelStartAt
-            // Negative Differenz (z.B. über Mitternacht) müsste speziell behandelt werden,
-            // aber hier nehmen wir erstmal die einfache Differenz an, da WorkEntry tagesbasiert ist.
-            // Falls Ankunft < Start, geben wir 0 zurück.
-            return if (diff > 0) (diff / 60000).toInt() else 0
-        }
-        return 0
+        if (entry.travelPaidMinutes != null) return entry.travelPaidMinutes
+        val start = entry.travelStartAt ?: return 0
+        val arrive = entry.travelArriveAt ?: return 0
+        var diffMs = arrive - start
+        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L // overnight crossing: both timestamps use entry date
+        return (diffMs / 60_000L).toInt().coerceAtLeast(0)
     }
 
     /**

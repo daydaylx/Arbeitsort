@@ -5,8 +5,9 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.domain.location.LocationCheckResult
 import de.montagezeit.app.domain.model.LocationResult
+import de.montagezeit.app.domain.util.AppDefaults
 
-internal const val DEFAULT_DAY_LOCATION_LABEL = "Leipzig"
+internal const val DEFAULT_DAY_LOCATION_LABEL = AppDefaults.DEFAULT_CITY
 
 internal data class DayLocationData(
     val label: String,
