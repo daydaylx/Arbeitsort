@@ -47,7 +47,7 @@ class RingBufferLogger @Inject constructor(
     suspend fun log(level: Level, tag: String, message: String, throwable: Throwable? = null) {
         withContext(Dispatchers.IO) {
             try {
-                val timestamp = timestampFormat.get()!!.format(Date())
+                val timestamp = timestampFormat.get()?.format(Date()) ?: "unknown"
                 val stackTrace = throwable?.let { "\n${it.stackTraceToString()}" } ?: ""
                 
                 val logLine = "$timestamp [${level.name}] [$tag] $message$stackTrace\n"

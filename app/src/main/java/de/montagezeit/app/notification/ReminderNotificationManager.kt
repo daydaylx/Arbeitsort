@@ -472,24 +472,6 @@ class ReminderNotificationManager @Inject constructor(
         )
     }
 
-    private fun createOpenAppPendingIntent(date: LocalDate): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra(ReminderActions.EXTRA_DATE, date.toString())
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-            )
-        }
-
-        return PendingIntent.getActivity(
-            context,
-            REQUEST_CODE_OPEN_APP,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
-    
     /**
      * Erstellt einen PendingIntent für "Später erinnern" Action
      */

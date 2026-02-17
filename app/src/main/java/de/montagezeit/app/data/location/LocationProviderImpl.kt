@@ -137,8 +137,10 @@ class LocationProviderImpl(
             }
         } catch (e: SecurityException) {
             LocationResult.Unavailable
-        } catch (e: Exception) {
+        } catch (e: kotlinx.coroutines.CancellationException) {
             LocationResult.Timeout
+        } catch (e: Exception) {
+            LocationResult.Unavailable
         } finally {
             cancellationTokenSource.cancel()
         }

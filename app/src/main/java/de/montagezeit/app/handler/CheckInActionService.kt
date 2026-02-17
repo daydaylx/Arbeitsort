@@ -30,7 +30,7 @@ import androidx.work.ExistingWorkPolicy
 import de.montagezeit.app.work.ReminderType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -65,7 +65,7 @@ class CheckInActionService : Service() {
     @Inject
     lateinit var confirmOffDay: ConfirmOffDay
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     companion object {
         private const val NOTIFICATION_ID = 3000
@@ -177,12 +177,12 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     try {
                         confirmWorkDay(date, source = source)
-                        showToast("Arbeitstag bestätigt")
+                        showToast(R.string.toast_work_day_confirmed)
                         markConfirmationReminderFlag(date)
                         confirmationLimiter().reset(date)
                         notificationManager.cancelDailyReminder()
                     } catch (e: Exception) {
-                        showToast("Konnte Tag nicht bestätigen")
+                        showToast(R.string.toast_confirm_day_failed)
                     } finally {
                         stopSelf()
                     }
@@ -199,12 +199,12 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     try {
                         confirmOffDay(date, source = source)
-                        showToast("Freier Tag bestätigt")
+                        showToast(R.string.toast_off_day_confirmed)
                         markConfirmationReminderFlag(date)
                         confirmationLimiter().reset(date)
                         notificationManager.cancelDailyReminder()
                     } catch (e: Exception) {
-                        showToast("Konnte Tag nicht bestätigen")
+                        showToast(R.string.toast_confirm_day_failed)
                     } finally {
                         stopSelf()
                     }
@@ -218,7 +218,7 @@ class CheckInActionService : Service() {
 
                 // Prüfe Reminder Counter (max 2x pro Tag)
                 if (!limiter.canSchedule(date)) {
-                    showToast("Maximale Anzahl an Erinnerungen erreicht")
+                    showToast(R.string.toast_reminder_limit_reached)
                     notificationManager.cancelDailyReminder()
                     stopSelf()
                     return START_NOT_STICKY
@@ -233,7 +233,7 @@ class CheckInActionService : Service() {
                 // Plane neue Notification in +60 Minuten
                 serviceScope.launch {
                     scheduleConfirmationReminderLater(date, CONFIRMATION_REMIND_LATER_MINUTES)
-                    showToast("Erinnerung in 60 Minuten")
+                    showToast(R.string.toast_reminder_set_later)
                     stopSelf()
                 }
             }
@@ -247,14 +247,14 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     try {
                         setDayType(date, DayType.OFF)
-                        showToast("Tag als frei markiert")
+                        showToast(R.string.toast_day_marked_off)
                         markReminderFlags(date)
                         notificationManager.cancelMorningReminder()
                         notificationManager.cancelEveningReminder()
                         notificationManager.cancelFallbackReminder()
                         notificationManager.cancelDailyReminder()
                     } catch (e: Exception) {
-                        showToast("Konnte Tag nicht als frei markieren")
+                        showToast(R.string.toast_mark_day_off_failed)
                     } finally {
                         stopSelf()
                     }

@@ -175,7 +175,7 @@ class TodayViewModel @Inject constructor(
                     _monthStats.value = monthStats
                 }
             } catch (e: Exception) {
-                // Fehler ignorieren, Statistiken bleiben null
+                android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
             }
         }
     }

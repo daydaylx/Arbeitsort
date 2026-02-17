@@ -46,7 +46,11 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != ReminderActions.ACTION_EDIT_ENTRY) {
             return
         }
-        val date = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-        editRequestDate.value = date ?: LocalDate.now().toString()
+        val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
+        editRequestDate.value = try {
+            if (dateStr != null) LocalDate.parse(dateStr).toString() else LocalDate.now().toString()
+        } catch (e: Exception) {
+            LocalDate.now().toString()
+        }
     }
 }

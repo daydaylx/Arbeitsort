@@ -39,6 +39,13 @@
     <string name="toast_check_in_success">Erfolgreich protokolliert</string>
     <string name="toast_check_in_error">Speichern fehlgeschlagen</string>
     <string name="toast_location_timeout">Kein GPS-Signal. Ohne Standort gespeichert.</string>
+    <string name="toast_work_day_confirmed">Arbeitstag bestätigt</string>
+    <string name="toast_confirm_day_failed">Konnte Tag nicht bestätigen</string>
+    <string name="toast_off_day_confirmed">Freier Tag bestätigt</string>
+    <string name="toast_day_marked_off">Tag als frei markiert</string>
+    <string name="toast_mark_day_off_failed">Konnte Tag nicht als frei markieren</string>
+    <string name="toast_reminder_set_later">Erinnerung in 60 Minuten</string>
+    <string name="toast_reminder_limit_reached">Maximale Anzahl an Erinnerungen erreicht</string>
 
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
