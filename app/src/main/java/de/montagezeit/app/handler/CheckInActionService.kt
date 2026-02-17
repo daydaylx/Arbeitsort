@@ -350,7 +350,7 @@ class CheckInActionService : Service() {
         )
     }
 
-    private fun markReminderFlags(date: LocalDate) {
+    private suspend fun markReminderFlags(date: LocalDate) {
         reminderFlagsStore.setAllReminded(date)
     }
 
