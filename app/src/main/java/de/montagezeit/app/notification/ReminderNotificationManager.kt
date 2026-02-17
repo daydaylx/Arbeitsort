@@ -150,6 +150,8 @@ class ReminderNotificationManager @Inject constructor(
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
             .setGroup(NOTIFICATION_GROUP)
+            .setContentIntent(createOpenAppPendingIntent(date))
+            // Erste 3 Actions in collapsed view: Arbeit / Frei / Später (1h)
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_morning_check_in),
@@ -177,6 +179,16 @@ class ReminderNotificationManager @Inject constructor(
                     REQUEST_CODE_REMIND_LATER_1H_MORNING
                 )
             )
+            // Weitere Actions (nur in expanded view sichtbar)
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                context.getString(R.string.action_morning_check_in_no_location),
+                createCheckInPendingIntent(
+                    date,
+                    ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION,
+                    REQUEST_CODE_MORNING_WITHOUT_LOCATION
+                )
+            )
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 remindLaterActionLabel(2),
@@ -185,15 +197,6 @@ class ReminderNotificationManager @Inject constructor(
                     2,
                     ReminderType.MORNING,
                     REQUEST_CODE_REMIND_LATER_2H_MORNING
-                )
-            )
-            .addAction(
-                R.drawable.ic_launcher_foreground,
-                context.getString(R.string.action_morning_check_in_no_location),
-                createCheckInPendingIntent(
-                    date,
-                    ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION,
-                    REQUEST_CODE_MORNING_WITHOUT_LOCATION
                 )
             )
             .build()
@@ -220,6 +223,7 @@ class ReminderNotificationManager @Inject constructor(
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
             .setGroup(NOTIFICATION_GROUP)
+            .setContentIntent(createOpenAppPendingIntent(date))
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_evening_check_in),
@@ -290,6 +294,7 @@ class ReminderNotificationManager @Inject constructor(
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
             .setGroup(NOTIFICATION_GROUP)
+            .setContentIntent(createOpenAppPendingIntent(date))
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_edit_entry),
@@ -343,6 +348,7 @@ class ReminderNotificationManager @Inject constructor(
             .setOngoing(true)
             .setAutoCancel(false)
             .setGroup(NOTIFICATION_GROUP)
+            .setContentIntent(createOpenAppPendingIntent(date))
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_confirm_yes),
@@ -398,6 +404,26 @@ class ReminderNotificationManager @Inject constructor(
         notificationManager.cancel(ReminderNotificationIds.DAILY_REMINDER)
     }
     
+    /**
+     * Erstellt einen PendingIntent, der beim Tippen auf die Notification die App öffnet
+     */
+    private fun createOpenAppPendingIntent(date: LocalDate): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+        }
+        return PendingIntent.getActivity(
+            context,
+            REQUEST_CODE_OPEN_APP,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     /**
      * Erstellt einen PendingIntent für Check-In Actions
      */
