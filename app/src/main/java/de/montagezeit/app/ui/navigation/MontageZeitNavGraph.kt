@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import de.montagezeit.app.R
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -20,10 +23,10 @@ import de.montagezeit.app.ui.screen.settings.SettingsScreenV2
 import de.montagezeit.app.ui.screen.today.TodayScreenV2
 import java.time.LocalDate
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Today : Screen("today", "Heute", Icons.Default.Today)
-    object History : Screen("history", "Verlauf", Icons.Default.History)
-    object Settings : Screen("settings", "Einstellungen", Icons.Default.Settings)
+sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+    object Today : Screen("today", R.string.today_title, Icons.Default.Today)
+    object History : Screen("history", R.string.history_title, Icons.Default.History)
+    object Settings : Screen("settings", R.string.settings_title, Icons.Default.Settings)
 }
 
 @Composable
@@ -60,7 +63,7 @@ fun MontageZeitNavGraph(
                 listOf(Screen.Today, Screen.History, Screen.Settings).forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(screen.label) },
+                        label = { Text(stringResource(screen.labelRes)) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
