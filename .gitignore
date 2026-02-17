@@ -25,3 +25,13 @@ test_output.log
 .clineignore
 .gemini/
 tmp/
+
+# Debug Artifacts (lokale Debug-Snapshots, gehören nicht ins Repo)
+debug_artifacts/
+
+# SQLite Datenbanken (z.B. MCP-Server-Experimente)
+*.db
+*.sqlite
+
+# Export-Dateien (generiert, nicht versionieren)
+app/exports/

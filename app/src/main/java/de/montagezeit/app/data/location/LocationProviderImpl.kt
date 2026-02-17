@@ -138,7 +138,10 @@ class LocationProviderImpl(
         } catch (e: SecurityException) {
             LocationResult.Unavailable
         } catch (e: kotlinx.coroutines.CancellationException) {
-            LocationResult.Timeout
+            // CancellationException MUSS re-thrown werden, damit strukturierte
+            // Nebenläufigkeit korrekt funktioniert. Andernfalls hängt der Parent-Scope.
+            cancellationTokenSource.cancel()
+            throw e
         } catch (e: Exception) {
             LocationResult.Unavailable
         } finally {

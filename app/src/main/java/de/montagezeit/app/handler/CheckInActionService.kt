@@ -159,16 +159,19 @@ class CheckInActionService : Service() {
                 notificationManager.cancelFallbackReminder()
                 notificationManager.cancelDailyReminder()
                 
-                // Plane neue Notification für später
+                // Plane neue Notification für später.
+                // WICHTIG: stopSelf() muss INNERHALB des Coroutine-Blocks stehen,
+                // da der serviceScope bei onDestroy() gecancelt wird. Würde stopSelf()
+                // außerhalb stehen, könnte der Job abgebrochen werden, bevor
+                // WorkManager den Reminder einreihen konnte.
                 serviceScope.launch {
                     scheduleReminderLater(
                         date = date,
                         hoursLater = hoursLater,
                         reminderType = reminderTypeRaw
                     )
+                    stopSelf()
                 }
-                
-                stopSelf()
             }
 
             ReminderActions.ACTION_CONFIRM_WORK_DAY -> {

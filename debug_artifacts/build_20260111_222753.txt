@@ -1,2 +1,0 @@
-BUILD SUCCESSFUL in 11s
-Installed on 1 device: SM-S931B - 16
