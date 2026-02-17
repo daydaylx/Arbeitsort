@@ -9,11 +9,11 @@
     
     <!-- Morning Reminder -->
     <string name="notification_morning_title">Guten Morgen</string>
-    <string name="notification_morning_text">Morgen: Check-in?</string>
-    <string name="action_morning_check_in">Mit Standort</string>
-    <string name="action_morning_check_in_no_location">Ohne Standort</string>
+    <string name="notification_morning_text">Heute: Arbeit oder frei?</string>
+    <string name="action_morning_check_in">Arbeit (mit Standort)</string>
+    <string name="action_morning_check_in_no_location">Arbeit (ohne Standort)</string>
     <string name="action_edit_entry">Eintrag bearbeiten</string>
-    <string name="action_mark_day_off">Heute frei</string>
+    <string name="action_mark_day_off">Frei</string>
     
     <!-- Evening Reminder -->
     <string name="notification_evening_title">Guten Abend</string>
