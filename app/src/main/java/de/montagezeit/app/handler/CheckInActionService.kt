@@ -86,17 +86,15 @@ class CheckInActionService : Service() {
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ReminderActions.ACTION_MORNING_CHECK_IN_WITH_LOCATION,
-            ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION -> {
+            ReminderActions.ACTION_MORNING_CHECK_IN_WITH_LOCATION -> {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
-                val forceWithoutLocation = intent.action == ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION
-                
+
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
-                
+
                 serviceScope.launch {
                     try {
-                        recordMorningCheckIn(date, forceWithoutLocation)
+                        recordMorningCheckIn(date)
                         showToast(R.string.toast_check_in_success)
                         notificationManager.cancelMorningReminder()
                     } catch (e: Exception) {
@@ -106,18 +104,16 @@ class CheckInActionService : Service() {
                     }
                 }
             }
-            
-            ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION,
-            ReminderActions.ACTION_EVENING_CHECK_IN_WITHOUT_LOCATION -> {
+
+            ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION -> {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
-                val forceWithoutLocation = intent.action == ReminderActions.ACTION_EVENING_CHECK_IN_WITHOUT_LOCATION
-                
+
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))
-                
+
                 serviceScope.launch {
                     try {
-                        recordEveningCheckIn(date, forceWithoutLocation)
+                        recordEveningCheckIn(date)
                         showToast(R.string.toast_check_in_success)
                         notificationManager.cancelEveningReminder()
                     } catch (e: Exception) {

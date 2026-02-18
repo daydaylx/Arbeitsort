@@ -23,11 +23,9 @@ import javax.inject.Singleton
 object ReminderActions {
     // Morning Actions
     const val ACTION_MORNING_CHECK_IN_WITH_LOCATION = "action_morning_check_in_with_location"
-    const val ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION = "action_morning_check_in_without_location"
-    
+
     // Evening Actions
     const val ACTION_EVENING_CHECK_IN_WITH_LOCATION = "action_evening_check_in_with_location"
-    const val ACTION_EVENING_CHECK_IN_WITHOUT_LOCATION = "action_evening_check_in_without_location"
     
     // Daily Confirmation Actions
     const val ACTION_CONFIRM_WORK_DAY = "action_confirm_work_day"
@@ -73,9 +71,7 @@ class ReminderNotificationManager @Inject constructor(
         
         // Request Codes für PendingIntents (müssen einzigartig sein)
         private const val REQUEST_CODE_MORNING_WITH_LOCATION = 2001
-        private const val REQUEST_CODE_MORNING_WITHOUT_LOCATION = 2002
         private const val REQUEST_CODE_EVENING_WITH_LOCATION = 2003
-        private const val REQUEST_CODE_EVENING_WITHOUT_LOCATION = 2004
         private const val REQUEST_CODE_EDIT = 2005
         private const val REQUEST_CODE_REMIND_LATER_1H_MORNING = 2006
         private const val REQUEST_CODE_REMIND_LATER_2H_MORNING = 2007
@@ -179,16 +175,6 @@ class ReminderNotificationManager @Inject constructor(
                     REQUEST_CODE_REMIND_LATER_1H_MORNING
                 )
             )
-            // Weitere Actions (nur in expanded view sichtbar)
-            .addAction(
-                R.drawable.ic_launcher_foreground,
-                context.getString(R.string.action_morning_check_in_no_location),
-                createCheckInPendingIntent(
-                    date,
-                    ReminderActions.ACTION_MORNING_CHECK_IN_WITHOUT_LOCATION,
-                    REQUEST_CODE_MORNING_WITHOUT_LOCATION
-                )
-            )
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 remindLaterActionLabel(2),
@@ -231,15 +217,6 @@ class ReminderNotificationManager @Inject constructor(
                     date,
                     ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION,
                     REQUEST_CODE_EVENING_WITH_LOCATION
-                )
-            )
-            .addAction(
-                R.drawable.ic_launcher_foreground,
-                context.getString(R.string.action_evening_check_in_no_location),
-                createCheckInPendingIntent(
-                    date,
-                    ReminderActions.ACTION_EVENING_CHECK_IN_WITHOUT_LOCATION,
-                    REQUEST_CODE_EVENING_WITHOUT_LOCATION
                 )
             )
             .addAction(

@@ -102,7 +102,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = settings.workStart,
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes,
-                        dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL },
+                        dayLocationLabel = DEFAULT_DAY_LOCATION_LABEL,
                         dayLocationSource = DayLocationSource.FALLBACK
                     )
                     val formData = EditFormData.fromEntry(defaultEntry)

@@ -8,7 +8,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
@@ -76,38 +75,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             reminderSettingsManager.updateSettings(
                 breakMinutes = minutes.coerceIn(0, 180)
-            )
-        }
-    }
-
-    fun updateRadiusMeters(meters: Int) {
-        viewModelScope.launch {
-            reminderSettingsManager.updateSettings(
-                locationRadiusKm = meters / 1000
-            )
-        }
-    }
-
-    fun updateDefaultDayLocationLabel(label: String) {
-        viewModelScope.launch {
-            reminderSettingsManager.updateSettings(
-                defaultDayLocationLabel = label.trim().ifBlank { DEFAULT_DAY_LOCATION_LABEL }
-            )
-        }
-    }
-
-    fun updatePreferGpsLocation(enabled: Boolean) {
-        viewModelScope.launch {
-            reminderSettingsManager.updateSettings(
-                preferGpsLocation = enabled
-            )
-        }
-    }
-
-    fun updateFallbackOnLowAccuracy(enabled: Boolean) {
-        viewModelScope.launch {
-            reminderSettingsManager.updateSettings(
-                fallbackOnLowAccuracy = enabled
             )
         }
     }

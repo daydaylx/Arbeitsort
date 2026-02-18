@@ -15,8 +15,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,11 +22,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.pluralStringResource
@@ -37,8 +33,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,7 +47,6 @@ import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
-import de.montagezeit.app.ui.util.LocationPermissionHelper
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
@@ -78,9 +71,6 @@ fun SettingsScreenV2(
     var hasNotificationPermission by remember {
         mutableStateOf(checkNotificationPermission(context))
     }
-    var hasLocationPermission by remember {
-        mutableStateOf(LocationPermissionHelper.hasAnyLocationPermission(context))
-    }
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkBatteryOptimizations(context))
     }
@@ -96,32 +86,21 @@ fun SettingsScreenV2(
         }
     }
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = LocationPermissionHelper.isPermissionGranted(permissions)
-        hasLocationPermission = granted
-        if (granted) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-    }
-
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasNotificationPermission = checkNotificationPermission(context)
-                hasLocationPermission = LocationPermissionHelper.hasAnyLocationPermission(context)
                 isIgnoringBatteryOptimizations = checkBatteryOptimizations(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         text = stringResource(R.string.settings_title),
                         modifier = Modifier.semantics { heading() }
@@ -143,10 +122,6 @@ fun SettingsScreenV2(
                 onUpdateWorkStart = { viewModel.updateWorkStart(it) },
                 onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
                 onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
-                onUpdateRadius = { viewModel.updateRadiusMeters(it) },
-                onUpdateDefaultDayLocationLabel = { viewModel.updateDefaultDayLocationLabel(it) },
-                onUpdatePreferGpsLocation = { viewModel.updatePreferGpsLocation(it) },
-                onUpdateFallbackOnLowAccuracy = { viewModel.updateFallbackOnLowAccuracy(it) },
                 onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
                 onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
                 onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
@@ -164,27 +139,22 @@ fun SettingsScreenV2(
                     previewRange = start to end
                     showPreviewSheet = true
                 },
-                onUpdatePdfSettings = { name, company, project, personnel -> 
-                    viewModel.updatePdfSettings(name, company, project, personnel) 
+                onUpdatePdfSettings = { name, company, project, personnel ->
+                    viewModel.updatePdfSettings(name, company, project, personnel)
                 },
                 onResetExportState = { viewModel.resetExportState() },
                 hasNotificationPermission = hasNotificationPermission,
-                hasLocationPermission = hasLocationPermission,
                 isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
                 onRequestNotificationPermission = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 },
-                onRequestLocationPermission = {
-                    locationPermissionLauncher.launch(LocationPermissionHelper.locationPermissions)
-                },
                 onOpenNotificationSettings = { openNotificationSettings(context) },
-                onOpenAppSettings = { openAppSettings(context) },
                 onOpenBatterySettings = { openBatterySettings(context) },
-                onSendTestReminder = { 
+                onSendTestReminder = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    viewModel.sendTestReminder() 
+                    viewModel.sendTestReminder()
                 },
                 modifier = Modifier
                     .padding(paddingValues)
@@ -221,10 +191,6 @@ fun SettingsContentV2(
     onUpdateWorkStart: (LocalTime) -> Unit,
     onUpdateWorkEnd: (LocalTime) -> Unit,
     onUpdateBreakMinutes: (Int) -> Unit,
-    onUpdateRadius: (Int) -> Unit,
-    onUpdateDefaultDayLocationLabel: (String) -> Unit,
-    onUpdatePreferGpsLocation: (Boolean) -> Unit,
-    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
     onUpdateMorningEnabled: (Boolean) -> Unit,
     onUpdateEveningEnabled: (Boolean) -> Unit,
     onUpdateFallbackEnabled: (Boolean) -> Unit,
@@ -242,19 +208,15 @@ fun SettingsContentV2(
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
-    hasLocationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
     onRequestNotificationPermission: () -> Unit,
-    onRequestLocationPermission: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    onOpenAppSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onSendTestReminder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var workTimesExpanded by rememberSaveable { mutableStateOf(false) }
     var remindersExpanded by rememberSaveable { mutableStateOf(false) }
-    var locationExpanded by rememberSaveable { mutableStateOf(false) }
     var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
     var exportExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -265,12 +227,9 @@ fun SettingsContentV2(
         // Setup Section
         SetupSectionV2(
             hasNotificationPermission = hasNotificationPermission,
-            hasLocationPermission = hasLocationPermission,
             isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
             onRequestNotificationPermission = onRequestNotificationPermission,
-            onRequestLocationPermission = onRequestLocationPermission,
             onOpenNotificationSettings = onOpenNotificationSettings,
-            onOpenAppSettings = onOpenAppSettings,
             onOpenBatterySettings = onOpenBatterySettings,
             onSendTestReminder = onSendTestReminder
         )
@@ -311,20 +270,6 @@ fun SettingsContentV2(
             onExpandedChange = { remindersExpanded = it }
         )
 
-        // Location Settings Section
-        LocationSettingsSectionV2(
-            radiusMeters = (settings.locationRadiusKm * 1000),
-            defaultDayLocationLabel = settings.defaultDayLocationLabel,
-            preferGpsLocation = settings.preferGpsLocation,
-            fallbackOnLowAccuracy = settings.fallbackOnLowAccuracy,
-            onUpdateRadius = onUpdateRadius,
-            onUpdateDefaultDayLocationLabel = onUpdateDefaultDayLocationLabel,
-            onUpdatePreferGpsLocation = onUpdatePreferGpsLocation,
-            onUpdateFallbackOnLowAccuracy = onUpdateFallbackOnLowAccuracy,
-            expanded = locationExpanded,
-            onExpandedChange = { locationExpanded = it }
-        )
-
         // Non-working days section
         NonWorkingDaysSectionV2(
             autoOffWeekends = settings.autoOffWeekends,
@@ -362,17 +307,14 @@ fun SettingsContentV2(
 @Composable
 fun SetupSectionV2(
     hasNotificationPermission: Boolean,
-    hasLocationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
     onRequestNotificationPermission: () -> Unit,
-    onRequestLocationPermission: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    onOpenAppSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onSendTestReminder: () -> Unit
 ) {
-    val allPermissionsGranted = hasNotificationPermission && hasLocationPermission
-    
+    val allPermissionsGranted = hasNotificationPermission
+
     MZStatusCard(
         title = stringResource(R.string.settings_setup_title),
         status = if (allPermissionsGranted) StatusType.SUCCESS else StatusType.WARNING
@@ -380,13 +322,13 @@ fun SetupSectionV2(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SetupRowV2(
                 title = stringResource(R.string.settings_notifications),
-                status = if (hasNotificationPermission) 
-                    stringResource(R.string.status_active) 
-                else 
+                status = if (hasNotificationPermission)
+                    stringResource(R.string.status_active)
+                else
                     stringResource(R.string.status_not_allowed),
-                actionLabel = if (hasNotificationPermission) 
-                    stringResource(R.string.action_settings) 
-                else 
+                actionLabel = if (hasNotificationPermission)
+                    stringResource(R.string.action_settings)
+                else
                     stringResource(R.string.action_allow),
                 onAction = if (hasNotificationPermission) onOpenNotificationSettings else onRequestNotificationPermission,
                 isOk = hasNotificationPermission
@@ -395,26 +337,10 @@ fun SetupSectionV2(
             Divider()
 
             SetupRowV2(
-                title = stringResource(R.string.settings_location),
-                status = if (hasLocationPermission) 
-                    stringResource(R.string.status_active) 
-                else 
-                    stringResource(R.string.status_not_allowed),
-                actionLabel = if (hasLocationPermission) 
-                    stringResource(R.string.action_settings) 
-                else 
-                    stringResource(R.string.action_allow),
-                onAction = if (hasLocationPermission) onOpenAppSettings else onRequestLocationPermission,
-                isOk = hasLocationPermission
-            )
-
-            Divider()
-
-            SetupRowV2(
                 title = stringResource(R.string.settings_battery_optimization),
-                status = if (isIgnoringBatteryOptimizations) 
-                    stringResource(R.string.status_excluded) 
-                else 
+                status = if (isIgnoringBatteryOptimizations)
+                    stringResource(R.string.status_excluded)
+                else
                     stringResource(R.string.status_optimized),
                 actionLabel = stringResource(R.string.action_disable_optimization),
                 onAction = onOpenBatterySettings,
@@ -423,7 +349,7 @@ fun SetupSectionV2(
 
             if (hasNotificationPermission) {
                 Divider()
-                
+
                 SecondaryActionButton(
                     onClick = onSendTestReminder,
                     icon = Icons.Default.Notifications,
@@ -449,7 +375,7 @@ fun SetupRowV2(
     ) {
         Column {
             Text(
-                text = title, 
+                text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -795,7 +721,7 @@ fun TimeRangePickerV2(
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
-    
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -805,7 +731,7 @@ fun TimeRangePickerV2(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -816,13 +742,13 @@ fun TimeRangePickerV2(
             ) {
                 Text(formatTime(startTime))
             }
-            
+
             Text(
                 text = "–",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
-            
+
             SecondaryActionButton(
                 onClick = { showEndPicker = true },
                 modifier = Modifier.weight(1f)
@@ -831,7 +757,7 @@ fun TimeRangePickerV2(
             }
         }
     }
-    
+
     if (showStartPicker) {
         TimePickerDialog(
             initialTime = startTime,
@@ -842,7 +768,7 @@ fun TimeRangePickerV2(
             onDismiss = { showStartPicker = false }
         )
     }
-    
+
     if (showEndPicker) {
         TimePickerDialog(
             initialTime = endTime,
@@ -851,123 +777,6 @@ fun TimeRangePickerV2(
                 showEndPicker = false
             },
             onDismiss = { showEndPicker = false }
-        )
-    }
-}
-
-@Composable
-fun LocationSettingsSectionV2(
-    radiusMeters: Int,
-    defaultDayLocationLabel: String,
-    preferGpsLocation: Boolean,
-    fallbackOnLowAccuracy: Boolean,
-    onUpdateRadius: (Int) -> Unit,
-    onUpdateDefaultDayLocationLabel: (String) -> Unit,
-    onUpdatePreferGpsLocation: (Boolean) -> Unit,
-    onUpdateFallbackOnLowAccuracy: (Boolean) -> Unit,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit
-) {
-    val focusManager = LocalFocusManager.current
-    var cityLabelDraft by rememberSaveable(defaultDayLocationLabel) {
-        mutableStateOf(defaultDayLocationLabel)
-    }
-    var radiusKmDraft by rememberSaveable(radiusMeters) {
-        mutableStateOf(radiusMeters / 1000f)
-    }
-
-    fun commitCityLabel() {
-        val normalizedCity = cityLabelDraft.trim()
-        if (normalizedCity != cityLabelDraft) {
-            cityLabelDraft = normalizedCity
-        }
-        if (normalizedCity != defaultDayLocationLabel) {
-            onUpdateDefaultDayLocationLabel(normalizedCity)
-        }
-    }
-
-    fun commitRadius() {
-        val newRadiusMeters = (radiusKmDraft * 1000f).roundToInt().coerceIn(1000, 50000)
-        if (newRadiusMeters != radiusMeters) {
-            onUpdateRadius(newRadiusMeters)
-        }
-    }
-
-    CollapsibleSettingsCard(
-        title = stringResource(R.string.settings_location),
-        summary = stringResource(
-            R.string.settings_location_summary,
-            radiusMeters / 1000,
-            defaultDayLocationLabel.ifBlank { stringResource(R.string.location_leipzig) }
-        ),
-        expanded = expanded,
-        onExpandedChange = onExpandedChange
-    ) {
-        OutlinedTextField(
-            value = cityLabelDraft,
-            onValueChange = { cityLabelDraft = it },
-            label = { Text(stringResource(R.string.label_default_city)) },
-            placeholder = { Text(stringResource(R.string.placeholder_city)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    if (!focusState.isFocused) {
-                        commitCityLabel()
-                    }
-                },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    commitCityLabel()
-                    focusManager.clearFocus()
-                }
-            )
-        )
-
-        Text(
-            text = stringResource(R.string.default_city_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        SettingsToggleRowV2(
-            title = stringResource(R.string.label_prefer_gps),
-            supportingText = stringResource(R.string.prefer_gps_description),
-            checked = preferGpsLocation,
-            onCheckedChange = onUpdatePreferGpsLocation
-        )
-
-        SettingsToggleRowV2(
-            title = stringResource(R.string.label_fallback_low_accuracy),
-            supportingText = stringResource(R.string.fallback_low_accuracy_description),
-            checked = fallbackOnLowAccuracy,
-            onCheckedChange = onUpdateFallbackOnLowAccuracy
-        )
-
-        Divider()
-
-        // Radius
-        Text(
-            text = stringResource(R.string.label_radius, radiusKmDraft.roundToInt()),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Slider(
-            value = radiusKmDraft,
-            onValueChange = { radiusKmDraft = it },
-            onValueChangeFinished = { commitRadius() },
-            valueRange = 1f..50f,
-            steps = 49,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Text(
-            text = stringResource(R.string.settings_radius_km_value, radiusKmDraft),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
         )
     }
 }
@@ -1122,10 +931,10 @@ fun ExportSectionV2(
     onExpandedChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    
+
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
     var showPdfCustomRangeDialog by remember { mutableStateOf(false) }
-    
+
     val employeeName = pdfEmployeeName.orEmpty()
     val company = pdfCompany.orEmpty()
     val project = pdfProject.orEmpty()
@@ -1208,7 +1017,7 @@ fun ExportSectionV2(
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_subject))
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, 
+                        context.startActivity(Intent.createChooser(shareIntent,
                             context.getString(R.string.share_export)))
                         onResetState()
                     },
@@ -1225,7 +1034,7 @@ fun ExportSectionV2(
             }
         }
     }
-    
+
     // Dialogs
     if (showPdfSettingsDialog) {
         PdfSettingsDialog(
@@ -1240,7 +1049,7 @@ fun ExportSectionV2(
             onDismiss = { showPdfSettingsDialog = false }
         )
     }
-    
+
     if (showPdfCustomRangeDialog) {
         PdfCustomRangeDialog(
             onDateRangeSelected = { start, end ->
@@ -1270,7 +1079,7 @@ fun ExportSuccessCard(
             text = stringResource(R.string.export_success_format, format.name),
             style = MaterialTheme.typography.bodyMedium
         )
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)

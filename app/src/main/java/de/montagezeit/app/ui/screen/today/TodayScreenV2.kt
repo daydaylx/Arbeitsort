@@ -51,6 +51,8 @@ fun TodayScreenV2(
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val todayEntry by viewModel.todayEntry.collectAsStateWithLifecycle()
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val weekDaysUi by viewModel.weekDaysUi.collectAsStateWithLifecycle()
     val weekStats by viewModel.weekStats.collectAsStateWithLifecycle()
     val monthStats by viewModel.monthStats.collectAsStateWithLifecycle()
     val showReviewSheet by viewModel.showReviewSheet.collectAsStateWithLifecycle()
@@ -61,6 +63,7 @@ fun TodayScreenV2(
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
 
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
+    val isViewingPastDay = selectedDate != LocalDate.now()
     val needsReview = currentEntry?.needsReview == true
     val reviewReason = getReviewReason(currentEntry)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -89,11 +92,18 @@ fun TodayScreenV2(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         text = stringResource(R.string.today_title),
                         modifier = Modifier.semantics { heading() }
                     )
+                },
+                actions = {
+                    if (isViewingPastDay) {
+                        TextButton(onClick = { viewModel.selectDate(LocalDate.now()) }) {
+                            Text(stringResource(R.string.week_back_to_today))
+                        }
+                    }
                 }
             )
         },
@@ -139,8 +149,11 @@ fun TodayScreenV2(
                 else -> {
                     TodayContentV2(
                         entry = currentEntry,
+                        selectedDate = selectedDate,
+                        weekDaysUi = weekDaysUi,
                         weekStats = weekStats,
                         monthStats = monthStats,
+                        onSelectDay = { viewModel.selectDate(it) },
                         onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
                         onEditDayLocation = {
                             dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
@@ -150,7 +163,7 @@ fun TodayScreenV2(
                         reviewReason = reviewReason,
                         onEditToday = {
                             viewModel.ensureTodayEntryThen {
-                                onOpenEditSheet(LocalDate.now())
+                                onOpenEditSheet(selectedDate)
                             }
                         },
                         onOpenWeekView = onOpenWeekView
@@ -271,8 +284,11 @@ private fun StickyTodayActionBarV2(
 @Composable
 private fun TodayContentV2(
     entry: WorkEntry?,
+    selectedDate: LocalDate,
+    weekDaysUi: List<WeekDayUi>,
     weekStats: WeekStats?,
     monthStats: MonthStats?,
+    onSelectDay: (LocalDate) -> Unit,
     onOpenReviewSheet: () -> Unit,
     onEditDayLocation: () -> Unit,
     needsReview: Boolean,
@@ -283,10 +299,23 @@ private fun TodayContentV2(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        if (weekDaysUi.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            WeekOverviewRow(
+                weekDays = weekDaysUi,
+                onSelectDay = onSelectDay,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
         AnimatedVisibility(
             visible = needsReview,
             enter = fadeIn(),
@@ -300,6 +329,7 @@ private fun TodayContentV2(
 
         StatusCardV2(
             entry = entry,
+            date = selectedDate,
             onEditToday = onEditToday,
             onEditDayLocation = onEditDayLocation
         )
@@ -307,7 +337,7 @@ private fun TodayContentV2(
         if (entry != null && entry.dayType == DayType.WORK) {
             WorkHoursCardV2(entry = entry)
         }
-        
+
         if (weekStats != null || monthStats != null) {
             StatisticsDashboardV2(
                 weekStats = weekStats,
@@ -315,6 +345,8 @@ private fun TodayContentV2(
                 onOpenWeekView = onOpenWeekView
             )
         }
+
+        } // end inner Column
     }
 }
 
@@ -366,6 +398,7 @@ private fun ReviewBannerV2(
 @Composable
 private fun StatusCardV2(
     entry: WorkEntry?,
+    date: LocalDate,
     onEditToday: () -> Unit,
     onEditDayLocation: () -> Unit
 ) {
@@ -376,7 +409,7 @@ private fun StatusCardV2(
     }
 
     MZStatusCard(
-        title = getCurrentDateString(),
+        title = remember(date) { date.format(todayCurrentDateFormatter) },
         status = status,
         onClick = onEditToday
     ) {

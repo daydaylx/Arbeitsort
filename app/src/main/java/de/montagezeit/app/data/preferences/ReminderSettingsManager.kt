@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.domain.util.AppDefaults
@@ -26,9 +23,9 @@ private val Context.reminderDataStore: DataStore<Preferences> by preferencesData
 class ReminderSettingsManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    
+
     private val dataStore = context.reminderDataStore
-    
+
     /**
      * Flow für Reminder-Settings
      */
@@ -40,32 +37,26 @@ class ReminderSettingsManager @Inject constructor(
             workEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime()
                 ?: AppDefaults.WORK_END,
             breakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: AppDefaults.BREAK_MINUTES,
-            locationRadiusKm = preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] ?: AppDefaults.LOCATION_RADIUS_KM,
 
-            // Standort
-            defaultDayLocationLabel = preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] ?: AppDefaults.DEFAULT_CITY,
-            preferGpsLocation = preferences[ReminderSettingsKeys.PREFER_GPS_LOCATION] ?: true,
-            fallbackOnLowAccuracy = preferences[ReminderSettingsKeys.FALLBACK_ON_LOW_ACCURACY] ?: true,
-            
             // Morning Window
             morningReminderEnabled = preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] ?: true,
-            morningWindowStart = preferences[ReminderSettingsKeys.MORNING_WINDOW_START]?.toLocalTime() 
+            morningWindowStart = preferences[ReminderSettingsKeys.MORNING_WINDOW_START]?.toLocalTime()
                 ?: LocalTime.of(6, 0),
-            morningWindowEnd = preferences[ReminderSettingsKeys.MORNING_WINDOW_END]?.toLocalTime() 
+            morningWindowEnd = preferences[ReminderSettingsKeys.MORNING_WINDOW_END]?.toLocalTime()
                 ?: LocalTime.of(13, 0),
             morningCheckIntervalMinutes = preferences[ReminderSettingsKeys.MORNING_CHECK_INTERVAL] ?: 120,
-            
+
             // Evening Window
             eveningReminderEnabled = preferences[ReminderSettingsKeys.EVENING_REMINDER_ENABLED] ?: true,
-            eveningWindowStart = preferences[ReminderSettingsKeys.EVENING_WINDOW_START]?.toLocalTime() 
+            eveningWindowStart = preferences[ReminderSettingsKeys.EVENING_WINDOW_START]?.toLocalTime()
                 ?: LocalTime.of(16, 0),
-            eveningWindowEnd = preferences[ReminderSettingsKeys.EVENING_WINDOW_END]?.toLocalTime() 
+            eveningWindowEnd = preferences[ReminderSettingsKeys.EVENING_WINDOW_END]?.toLocalTime()
                 ?: LocalTime.of(22, 30),
             eveningCheckIntervalMinutes = preferences[ReminderSettingsKeys.EVENING_CHECK_INTERVAL] ?: 180,
-            
+
             // Fallback
             fallbackEnabled = preferences[ReminderSettingsKeys.FALLBACK_ENABLED] ?: true,
-            fallbackTime = preferences[ReminderSettingsKeys.FALLBACK_TIME]?.toLocalTime() 
+            fallbackTime = preferences[ReminderSettingsKeys.FALLBACK_TIME]?.toLocalTime()
                 ?: LocalTime.of(22, 30),
 
             // Tägliche Erinnerung
@@ -85,7 +76,7 @@ class ReminderSettingsManager @Inject constructor(
             pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER]
         )
     }
-    
+
     /**
      * Aktualisiert die Reminder-Settings
      */
@@ -93,10 +84,6 @@ class ReminderSettingsManager @Inject constructor(
         workStart: LocalTime? = null,
         workEnd: LocalTime? = null,
         breakMinutes: Int? = null,
-        locationRadiusKm: Int? = null,
-        defaultDayLocationLabel: String? = null,
-        preferGpsLocation: Boolean? = null,
-        fallbackOnLowAccuracy: Boolean? = null,
         morningReminderEnabled: Boolean? = null,
         morningWindowStart: LocalTime? = null,
         morningWindowEnd: LocalTime? = null,
@@ -121,22 +108,17 @@ class ReminderSettingsManager @Inject constructor(
             workStart?.let { preferences[ReminderSettingsKeys.WORK_START] = it.toPrefString() }
             workEnd?.let { preferences[ReminderSettingsKeys.WORK_END] = it.toPrefString() }
             breakMinutes?.let { preferences[ReminderSettingsKeys.BREAK_MINUTES] = it }
-            locationRadiusKm?.let { preferences[ReminderSettingsKeys.LOCATION_RADIUS_KM] = it }
 
-            defaultDayLocationLabel?.let { preferences[ReminderSettingsKeys.DEFAULT_DAY_LOCATION_LABEL] = it }
-            preferGpsLocation?.let { preferences[ReminderSettingsKeys.PREFER_GPS_LOCATION] = it }
-            fallbackOnLowAccuracy?.let { preferences[ReminderSettingsKeys.FALLBACK_ON_LOW_ACCURACY] = it }
-            
             morningReminderEnabled?.let { preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] = it }
             morningWindowStart?.let { preferences[ReminderSettingsKeys.MORNING_WINDOW_START] = it.toPrefString() }
             morningWindowEnd?.let { preferences[ReminderSettingsKeys.MORNING_WINDOW_END] = it.toPrefString() }
             morningCheckIntervalMinutes?.let { preferences[ReminderSettingsKeys.MORNING_CHECK_INTERVAL] = it }
-            
+
             eveningReminderEnabled?.let { preferences[ReminderSettingsKeys.EVENING_REMINDER_ENABLED] = it }
             eveningWindowStart?.let { preferences[ReminderSettingsKeys.EVENING_WINDOW_START] = it.toPrefString() }
             eveningWindowEnd?.let { preferences[ReminderSettingsKeys.EVENING_WINDOW_END] = it.toPrefString() }
             eveningCheckIntervalMinutes?.let { preferences[ReminderSettingsKeys.EVENING_CHECK_INTERVAL] = it }
-            
+
             fallbackEnabled?.let { preferences[ReminderSettingsKeys.FALLBACK_ENABLED] = it }
             fallbackTime?.let { preferences[ReminderSettingsKeys.FALLBACK_TIME] = it.toPrefString() }
 
@@ -146,14 +128,14 @@ class ReminderSettingsManager @Inject constructor(
             autoOffWeekends?.let { preferences[ReminderSettingsKeys.AUTO_OFF_WEEKENDS] = it }
             autoOffHolidays?.let { preferences[ReminderSettingsKeys.AUTO_OFF_HOLIDAYS] = it }
             holidayDates?.let { preferences[ReminderSettingsKeys.HOLIDAY_DATES] = it.toPrefString() }
-            
+
             pdfEmployeeName?.let { preferences[ReminderSettingsKeys.PDF_EMPLOYEE_NAME] = it }
             pdfCompany?.let { preferences[ReminderSettingsKeys.PDF_COMPANY] = it }
             pdfProject?.let { preferences[ReminderSettingsKeys.PDF_PROJECT] = it }
             pdfPersonnelNumber?.let { preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER] = it }
         }
     }
-    
+
     /**
      * Setzt alle Settings auf Default-Werte zurück
      */

@@ -3,8 +3,6 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import kotlinx.coroutines.flow.first
 
 /**
  * Ermittelt den bevorzugten Tagesort für manuelle Daily-Check-ins.
@@ -13,11 +11,10 @@ import kotlinx.coroutines.flow.first
  * 1) Heutiger Eintrag
  * 2) Letzter WORK-Eintrag
  * 3) Letzter Eintrag unabhängig vom Tagtyp
- * 4) Settings-Default
+ * 4) Default-Fallback
  */
 class ResolveDayLocationPrefill(
-    private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager
+    private val workEntryDao: WorkEntryDao
 ) {
 
     suspend operator fun invoke(existingEntry: WorkEntry?): String {
@@ -36,7 +33,6 @@ class ResolveDayLocationPrefill(
             return latestAnyLabel
         }
 
-        val settings = reminderSettingsManager.settings.first()
-        return settings.defaultDayLocationLabel.ifBlank { DEFAULT_DAY_LOCATION_LABEL }
+        return DEFAULT_DAY_LOCATION_LABEL
     }
 }

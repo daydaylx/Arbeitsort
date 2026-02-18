@@ -4,8 +4,6 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.createConfirmedOffDayEntry
 import de.montagezeit.app.data.local.entity.withConfirmedOffDay
-import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
@@ -16,8 +14,7 @@ import java.time.LocalDate
  * 2. confirmedWorkDay=true, confirmationAt=now setzen
  */
 class ConfirmOffDay(
-    private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager
+    private val workEntryDao: WorkEntryDao
 ) {
     
     companion object {
@@ -38,8 +35,7 @@ class ConfirmOffDay(
     ): WorkEntry {
         val existingEntry = workEntryDao.getByDate(date)
         val now = System.currentTimeMillis()
-        val settings = reminderSettingsManager.settings.first()
-        val dayLocationLabel = settings.defaultDayLocationLabel.ifBlank { "Leipzig" }
+        val dayLocationLabel = DEFAULT_DAY_LOCATION_LABEL
         
         val updatedEntry = existingEntry?.withConfirmedOffDay(
             source = source,
