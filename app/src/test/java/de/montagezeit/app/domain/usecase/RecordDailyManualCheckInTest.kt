@@ -38,15 +38,14 @@ class RecordDailyManualCheckInTest {
             ReminderSettings(
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),
-                breakMinutes = 45,
-                defaultDayLocationLabel = "Leipzig"
+                breakMinutes = 45
             )
         )
 
         useCase = RecordDailyManualCheckIn(
             workEntryDao = workEntryDao,
             reminderSettingsManager = reminderSettingsManager,
-            resolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao, reminderSettingsManager)
+            resolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao)
         )
     }
 
@@ -56,11 +55,9 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke setzt Tagesabschlussfelder bei manuellem Label`() = runTest {
+    fun `invoke sets day completion fields for manual label`() = runTest {
         val date = LocalDate.now()
         coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Alt"
-        coEvery { workEntryDao.getLatestDayLocationLabel() } returns "Fallback"
         coEvery { workEntryDao.upsert(any()) } returns Unit
 
         val result = useCase(date, "  Baustelle XY  ")
@@ -81,7 +78,7 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke nutzt heutigen Label bei leerem Input`() = runTest {
+    fun `invoke uses todays label for blank input`() = runTest {
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
             date = date,
@@ -106,7 +103,7 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke nutzt letzten WORK Label vor any Label`() = runTest {
+    fun `invoke uses latest work label before any label`() = runTest {
         val date = LocalDate.now()
         coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Werk 7"
@@ -119,29 +116,20 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke nutzt Settings Label wenn keine Historie vorhanden`() = runTest {
+    fun `invoke uses default city when no history exists`() = runTest {
         val date = LocalDate.now()
         coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
         coEvery { workEntryDao.getLatestDayLocationLabel() } returns null
         coEvery { workEntryDao.upsert(any()) } returns Unit
 
-        every { reminderSettingsManager.settings } returns flowOf(
-            ReminderSettings(
-                workStart = LocalTime.of(8, 0),
-                workEnd = LocalTime.of(17, 0),
-                breakMinutes = 45,
-                defaultDayLocationLabel = "Berlin"
-            )
-        )
-
         val result = useCase(date, " ")
 
-        assertEquals("Berlin", result.dayLocationLabel)
+        assertEquals("Leipzig", result.dayLocationLabel)
     }
 
     @Test
-    fun `invoke behaelt vorhandene status bei bereits erfassten snapshots`() = runTest {
+    fun `invoke keeps existing snapshot statuses when already captured`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,

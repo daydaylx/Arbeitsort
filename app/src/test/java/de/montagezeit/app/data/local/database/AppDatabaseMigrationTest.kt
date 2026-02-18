@@ -43,7 +43,7 @@ class AppDatabaseMigrationTest {
         createVersion5Database(dbName)
 
         val roomDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_5_6)
+            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
             .build()
 
         roomDb.openHelper.writableDatabase

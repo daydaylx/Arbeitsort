@@ -3,13 +3,9 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.preferences.ReminderSettings
-import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -18,8 +14,7 @@ import java.time.LocalDate
 class ResolveDayLocationPrefillTest {
 
     private val workEntryDao = mockk<WorkEntryDao>()
-    private val reminderSettingsManager = mockk<ReminderSettingsManager>()
-    private val useCase = ResolveDayLocationPrefill(workEntryDao, reminderSettingsManager)
+    private val useCase = ResolveDayLocationPrefill(workEntryDao)
 
     @Test
     fun `uses today label first`() = runTest {
@@ -59,15 +54,12 @@ class ResolveDayLocationPrefillTest {
     }
 
     @Test
-    fun `falls back to settings default label`() = runTest {
+    fun `falls back to default city when no history exists`() = runTest {
         coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
         coEvery { workEntryDao.getLatestDayLocationLabel() } returns null
-        every { reminderSettingsManager.settings } returns flowOf(
-            ReminderSettings(defaultDayLocationLabel = "Default City")
-        )
 
         val result = useCase(existingEntry = null)
 
-        assertEquals("Default City", result)
+        assertEquals("Leipzig", result)
     }
 }

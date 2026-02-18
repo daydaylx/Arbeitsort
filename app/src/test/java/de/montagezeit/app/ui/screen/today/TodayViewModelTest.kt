@@ -105,7 +105,7 @@ class TodayViewModelTest {
         )
         val workEntryDao = mockk<WorkEntryDao>()
         val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings(defaultDayLocationLabel = "Default Ort")
+        val settings = ReminderSettings()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
@@ -143,7 +143,7 @@ class TodayViewModelTest {
         )
         val workEntryDao = mockk<WorkEntryDao>()
         val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings(defaultDayLocationLabel = "Default Ort")
+        val settings = ReminderSettings()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
@@ -181,7 +181,7 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
         coEvery { workEntryDao.getLatestDayLocationLabel() } returns "Irgendein Ort"
-        every { settingsManager.settings } returns flowOf(ReminderSettings(defaultDayLocationLabel = "Standard-Ort"))
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
         val shownLatch = CountDownLatch(1)
@@ -212,7 +212,7 @@ class TodayViewModelTest {
         )
         val workEntryDao = mockk<WorkEntryDao>()
         val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings(defaultDayLocationLabel = "Standard-Ort")
+        val settings = ReminderSettings()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
@@ -239,7 +239,7 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `openDailyCheckInDialog falls back to settings label`() {
+    fun `openDailyCheckInDialog falls back to default city`() {
         val today = LocalDate.now()
         val existing = WorkEntry(
             date = today,
@@ -248,7 +248,7 @@ class TodayViewModelTest {
         )
         val workEntryDao = mockk<WorkEntryDao>()
         val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings(defaultDayLocationLabel = "Standard-Ort")
+        val settings = ReminderSettings()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
@@ -270,7 +270,7 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("Standard-Ort", viewModel.dailyCheckInLocationInput.value)
+        assertEquals("Leipzig", viewModel.dailyCheckInLocationInput.value)
         collectJob.cancel()
     }
 
@@ -357,7 +357,7 @@ class TodayViewModelTest {
         workEntryDao: WorkEntryDao,
         settingsManager: ReminderSettingsManager,
         recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
-        resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao, settingsManager)
+        resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao)
     ): TodayViewModel {
         return TodayViewModel(
             workEntryDao = workEntryDao,
