@@ -239,9 +239,9 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                // Zeitraum: Letzte 30 Tage
+                // Zeitraum: Letzte 30 Tage (inkl. heute)
                 val endDate = LocalDate.now()
-                val startDate = endDate.minusDays(30)
+                val startDate = endDate.minusDays(29)
                 
                 // Eintr�ge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)

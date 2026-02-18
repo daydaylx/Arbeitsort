@@ -262,11 +262,9 @@ class EditEntryViewModel @Inject constructor(
                 is EditUiState.Success -> {
                     val originalEntry = currentState.entry
                     
-                    // Prüfen ob Borderzone-Confirm erforderlich
-                    val isBorderzone = (originalEntry.morningLocationLabel == null ||
-                                     originalEntry.eveningLocationLabel == null)
-
-                    if (isBorderzone && !confirmBorderzone) {
+                    // Review-confirmation only for unresolved entries.
+                    val requiresConfirm = originalEntry.needsReview
+                    if (requiresConfirm && !confirmBorderzone) {
                         _screenState.update { it.copy(uiState = currentState.copy(showConfirmDialog = true)) }
                         return@launch
                     }

@@ -50,7 +50,7 @@ fun TodayScreenV2(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val todayEntry by viewModel.todayEntry.collectAsStateWithLifecycle()
+    val selectedEntry by viewModel.selectedEntry.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val weekDaysUi by viewModel.weekDaysUi.collectAsStateWithLifecycle()
     val weekStats by viewModel.weekStats.collectAsStateWithLifecycle()
@@ -62,7 +62,7 @@ fun TodayScreenV2(
     val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
 
-    val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: todayEntry
+    val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: selectedEntry
     val isViewingPastDay = selectedDate != LocalDate.now()
     val needsReview = currentEntry?.needsReview == true
     val reviewReason = getReviewReason(currentEntry)

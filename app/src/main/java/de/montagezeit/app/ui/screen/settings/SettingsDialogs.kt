@@ -116,7 +116,7 @@ fun PdfCustomRangeDialog(
     onPreviewRangeSelected: (LocalDate, LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var startDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var startDate by remember { mutableStateOf(LocalDate.now().minusDays(29)) }
     var endDate by remember { mutableStateOf(LocalDate.now()) }
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
