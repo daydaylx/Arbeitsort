@@ -8,6 +8,7 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
@@ -15,6 +16,8 @@ import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.domain.usecase.dailyTargetHoursFromSettings
+import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.work.ReminderWindowEvaluator
@@ -33,8 +36,6 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
-
-import de.montagezeit.app.domain.util.TimeCalculator
 
 enum class WeekDayStatus {
     CONFIRMED_WORK, CONFIRMED_OFF, PARTIAL, EMPTY
@@ -99,6 +100,7 @@ class TodayViewModel @Inject constructor(
     private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
+    private val calculateOvertimeForRange = CalculateOvertimeForRange()
 
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
@@ -128,6 +130,24 @@ class TodayViewModel @Inject constructor(
 
     private val _monthStats = MutableStateFlow<MonthStats?>(null)
     val monthStats: StateFlow<MonthStats?> = _monthStats.asStateFlow()
+
+    private val _isOvertimeConfigured = MutableStateFlow(true)
+    val isOvertimeConfigured: StateFlow<Boolean> = _isOvertimeConfigured.asStateFlow()
+
+    private val _overtimeYearDisplay = MutableStateFlow(formatSignedHours(0.0))
+    val overtimeYearDisplay: StateFlow<String> = _overtimeYearDisplay.asStateFlow()
+
+    private val _overtimeMonthDisplay = MutableStateFlow<String?>(formatSignedHours(0.0))
+    val overtimeMonthDisplay: StateFlow<String?> = _overtimeMonthDisplay.asStateFlow()
+
+    private val _overtimeYearActualDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearActualDisplay: StateFlow<String> = _overtimeYearActualDisplay.asStateFlow()
+
+    private val _overtimeYearTargetDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearTargetDisplay: StateFlow<String> = _overtimeYearTargetDisplay.asStateFlow()
+
+    private val _overtimeYearCountedDays = MutableStateFlow(0)
+    val overtimeYearCountedDays: StateFlow<Int> = _overtimeYearCountedDays.asStateFlow()
 
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
@@ -187,14 +207,42 @@ class TodayViewModel @Inject constructor(
                 val weekEnd = now.with(weekFields.dayOfWeek(), 7)
                 val monthStart = now.withDayOfMonth(1)
                 val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
+
                 val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
                     Pair(
                         workEntryDao.getByDateRange(weekStart, weekEnd),
                         workEntryDao.getByDateRange(monthStart, monthEnd)
                     )
                 }
+
                 _weekStats.value = calculateWeekStats(weekEntries)
                 _monthStats.value = calculateMonthStats(monthEntries)
+
+                val settings = reminderSettingsManager.settings.first()
+                val dailyTargetHours = dailyTargetHoursFromSettings(settings)
+                if (dailyTargetHours <= 0.0) {
+                    _isOvertimeConfigured.value = false
+                    _overtimeMonthDisplay.value = null
+                    return@launch
+                }
+
+                _isOvertimeConfigured.value = true
+                val yearStart = now.withDayOfYear(1)
+                val (yearEntries, currentMonthEntries) = withContext(Dispatchers.IO) {
+                    Pair(
+                        workEntryDao.getEntriesBetween(yearStart, now),
+                        workEntryDao.getEntriesBetween(monthStart, now)
+                    )
+                }
+
+                val yearOvertime = calculateOvertimeForRange(yearEntries, dailyTargetHours)
+                val monthOvertime = calculateOvertimeForRange(currentMonthEntries, dailyTargetHours)
+
+                _overtimeYearDisplay.value = formatSignedHours(yearOvertime.totalOvertimeHours)
+                _overtimeMonthDisplay.value = formatSignedHours(monthOvertime.totalOvertimeHours)
+                _overtimeYearActualDisplay.value = formatHours(yearOvertime.totalActualHours)
+                _overtimeYearTargetDisplay.value = formatHours(yearOvertime.totalTargetHours)
+                _overtimeYearCountedDays.value = yearOvertime.countedDays
             } catch (e: Exception) {
                 android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
             }
@@ -242,7 +290,7 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun calculateWeekStats(entries: List<WorkEntry>): WeekStats {
-        val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+        val workEntries = entries.filter { it.dayType == DayType.WORK }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
@@ -257,7 +305,7 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun calculateMonthStats(entries: List<WorkEntry>): MonthStats {
-        val workEntries = entries.filter { it.dayType == de.montagezeit.app.data.local.entity.DayType.WORK }
+        val workEntries = entries.filter { it.dayType == DayType.WORK }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
@@ -442,6 +490,16 @@ class TodayViewModel @Inject constructor(
 
     private fun removeLoadingAction(action: TodayAction) {
         _loadingActions.update { it - action }
+    }
+
+    private companion object {
+        fun formatSignedHours(hours: Double): String {
+            return String.format(Locale.GERMAN, "%+.2fh", hours)
+        }
+
+        fun formatHours(hours: Double): String {
+            return String.format(Locale.GERMAN, "%.2fh", hours)
+        }
     }
 }
 

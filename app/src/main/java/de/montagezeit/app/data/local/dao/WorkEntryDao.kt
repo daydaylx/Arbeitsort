@@ -8,6 +8,7 @@ import androidx.room.Update
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -21,6 +22,25 @@ interface WorkEntryDao {
     
     @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
+
+    @Query(
+        """
+        SELECT 
+            date,
+            workStart,
+            workEnd,
+            breakMinutes,
+            dayType,
+            confirmedWorkDay,
+            travelStartAt,
+            travelArriveAt,
+            travelPaidMinutes
+        FROM work_entries
+        WHERE date >= :startDate AND date <= :endDate
+        ORDER BY date ASC
+        """
+    )
+    suspend fun getEntriesBetween(startDate: LocalDate, endDate: LocalDate): List<OvertimeEntryRow>
 
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
     suspend fun getAll(): List<WorkEntry>
@@ -51,3 +71,15 @@ interface WorkEntryDao {
     @Query("DELETE FROM work_entries WHERE date = :date")
     suspend fun deleteByDate(date: LocalDate)
 }
+
+data class OvertimeEntryRow(
+    val date: LocalDate,
+    val workStart: LocalTime,
+    val workEnd: LocalTime,
+    val breakMinutes: Int,
+    val dayType: DayType,
+    val confirmedWorkDay: Boolean,
+    val travelStartAt: Long?,
+    val travelArriveAt: Long?,
+    val travelPaidMinutes: Int?
+)

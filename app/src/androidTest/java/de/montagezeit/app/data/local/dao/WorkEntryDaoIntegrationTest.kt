@@ -12,6 +12,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,5 +95,41 @@ class WorkEntryDaoIntegrationTest {
         assertEquals(2, results.size)
         assertEquals(LocalDate.of(2024, 8, 5), results[0].date)
         assertEquals(LocalDate.of(2024, 8, 10), results[1].date)
+    }
+
+    @Test
+    fun getEntriesBetween_returns_projection_in_ascending_order() = runTest {
+        val unconfirmed = WorkEntry(
+            date = LocalDate.of(2024, 9, 1),
+            confirmedWorkDay = false,
+            breakMinutes = 30
+        )
+        val confirmedWork = WorkEntry(
+            date = LocalDate.of(2024, 9, 2),
+            dayType = DayType.WORK,
+            confirmedWorkDay = true,
+            breakMinutes = 45
+        )
+        val confirmedOff = WorkEntry(
+            date = LocalDate.of(2024, 9, 3),
+            dayType = DayType.OFF,
+            confirmedWorkDay = true,
+            travelPaidMinutes = 90
+        )
+        dao.upsert(confirmedOff)
+        dao.upsert(confirmedWork)
+        dao.upsert(unconfirmed)
+
+        val result = dao.getEntriesBetween(
+            LocalDate.of(2024, 9, 1),
+            LocalDate.of(2024, 9, 3)
+        )
+
+        assertEquals(3, result.size)
+        assertEquals(LocalDate.of(2024, 9, 1), result[0].date)
+        assertEquals(LocalDate.of(2024, 9, 2), result[1].date)
+        assertEquals(LocalDate.of(2024, 9, 3), result[2].date)
+        assertTrue(result[1].confirmedWorkDay)
+        assertEquals(90, result[2].travelPaidMinutes)
     }
 }

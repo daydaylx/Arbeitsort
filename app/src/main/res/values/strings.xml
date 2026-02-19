@@ -100,6 +100,12 @@
     <string name="day_location_source_gps">GPS</string>
     <string name="day_location_source_manual">Manuell</string>
     <string name="day_location_source_fallback">Fallback</string>
+    <string name="overtime_title">Überstunden</string>
+    <string name="overtime_year_value">Jahr: %1$s</string>
+    <string name="overtime_month_value">Monat: %1$s</string>
+    <string name="overtime_actual_target">IST %1$s | SOLL %2$s</string>
+    <string name="overtime_counted_days">Gezählte Tage: %1$d</string>
+    <string name="overtime_not_configured">Nicht konfiguriert</string>
     <string name="action_change_location">Ort ändern</string>
     <string name="day_location_dialog_title">Tagesort ändern</string>
     <string name="day_location_dialog_label">Stadt</string>

@@ -55,6 +55,12 @@ fun TodayScreenV2(
     val weekDaysUi by viewModel.weekDaysUi.collectAsStateWithLifecycle()
     val weekStats by viewModel.weekStats.collectAsStateWithLifecycle()
     val monthStats by viewModel.monthStats.collectAsStateWithLifecycle()
+    val isOvertimeConfigured by viewModel.isOvertimeConfigured.collectAsStateWithLifecycle()
+    val overtimeYearDisplay by viewModel.overtimeYearDisplay.collectAsStateWithLifecycle()
+    val overtimeMonthDisplay by viewModel.overtimeMonthDisplay.collectAsStateWithLifecycle()
+    val overtimeYearActualDisplay by viewModel.overtimeYearActualDisplay.collectAsStateWithLifecycle()
+    val overtimeYearTargetDisplay by viewModel.overtimeYearTargetDisplay.collectAsStateWithLifecycle()
+    val overtimeYearCountedDays by viewModel.overtimeYearCountedDays.collectAsStateWithLifecycle()
     val showReviewSheet by viewModel.showReviewSheet.collectAsStateWithLifecycle()
     val reviewScope by viewModel.reviewScope.collectAsStateWithLifecycle()
     val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
@@ -153,6 +159,12 @@ fun TodayScreenV2(
                         weekDaysUi = weekDaysUi,
                         weekStats = weekStats,
                         monthStats = monthStats,
+                        isOvertimeConfigured = isOvertimeConfigured,
+                        overtimeYearDisplay = overtimeYearDisplay,
+                        overtimeMonthDisplay = overtimeMonthDisplay,
+                        overtimeYearActualDisplay = overtimeYearActualDisplay,
+                        overtimeYearTargetDisplay = overtimeYearTargetDisplay,
+                        overtimeYearCountedDays = overtimeYearCountedDays,
                         onSelectDay = { viewModel.selectDate(it) },
                         onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
                         onEditDayLocation = {
@@ -288,6 +300,12 @@ private fun TodayContentV2(
     weekDaysUi: List<WeekDayUi>,
     weekStats: WeekStats?,
     monthStats: MonthStats?,
+    isOvertimeConfigured: Boolean,
+    overtimeYearDisplay: String,
+    overtimeMonthDisplay: String?,
+    overtimeYearActualDisplay: String,
+    overtimeYearTargetDisplay: String,
+    overtimeYearCountedDays: Int,
     onSelectDay: (LocalDate) -> Unit,
     onOpenReviewSheet: () -> Unit,
     onEditDayLocation: () -> Unit,
@@ -333,6 +351,15 @@ private fun TodayContentV2(
             onEditToday = onEditToday,
             onEditDayLocation = onEditDayLocation
         )
+
+        OvertimeCardV2(
+            isConfigured = isOvertimeConfigured,
+            yearDisplay = overtimeYearDisplay,
+            monthDisplay = overtimeMonthDisplay,
+            yearActualDisplay = overtimeYearActualDisplay,
+            yearTargetDisplay = overtimeYearTargetDisplay,
+            yearCountedDays = overtimeYearCountedDays
+        )
         
         if (entry != null && entry.dayType == DayType.WORK) {
             WorkHoursCardV2(entry = entry)
@@ -347,6 +374,58 @@ private fun TodayContentV2(
         }
 
         } // end inner Column
+    }
+}
+
+@Composable
+private fun OvertimeCardV2(
+    isConfigured: Boolean,
+    yearDisplay: String,
+    monthDisplay: String?,
+    yearActualDisplay: String,
+    yearTargetDisplay: String,
+    yearCountedDays: Int
+) {
+    MZCard {
+        Column {
+            MZSectionHeader(title = stringResource(R.string.overtime_title))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isConfigured) {
+                Text(
+                    text = stringResource(R.string.overtime_not_configured),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                return@Column
+            }
+
+            Text(
+                text = stringResource(R.string.overtime_year_value, yearDisplay),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            monthDisplay?.let {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.overtime_month_value, it),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.overtime_actual_target, yearActualDisplay, yearTargetDisplay),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.overtime_counted_days, yearCountedDays),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

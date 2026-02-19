@@ -359,6 +359,7 @@ class TodayViewModelTest {
         recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
         resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao)
     ): TodayViewModel {
+        coEvery { workEntryDao.getEntriesBetween(any(), any()) } returns emptyList()
         return TodayViewModel(
             workEntryDao = workEntryDao,
             recordDailyManualCheckIn = recordDailyManualCheckIn,
