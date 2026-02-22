@@ -144,6 +144,12 @@ class TodayViewModel @Inject constructor(
     private val _overtimeYearCountedDays = MutableStateFlow(0)
     val overtimeYearCountedDays: StateFlow<Int> = _overtimeYearCountedDays.asStateFlow()
 
+    private val _overtimeYearOffDayTravelDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearOffDayTravelDisplay: StateFlow<String> = _overtimeYearOffDayTravelDisplay.asStateFlow()
+
+    private val _overtimeYearOffDayTravelDays = MutableStateFlow(0)
+    val overtimeYearOffDayTravelDays: StateFlow<Int> = _overtimeYearOffDayTravelDays.asStateFlow()
+
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
 
@@ -233,6 +239,8 @@ class TodayViewModel @Inject constructor(
                 _overtimeYearActualDisplay.value = formatHours(yearOvertime.totalActualHours)
                 _overtimeYearTargetDisplay.value = formatHours(yearOvertime.totalTargetHours)
                 _overtimeYearCountedDays.value = yearOvertime.countedDays
+                _overtimeYearOffDayTravelDisplay.value = formatHours(yearOvertime.offDayTravelHours)
+                _overtimeYearOffDayTravelDays.value = yearOvertime.offDayTravelDays
             } catch (e: Exception) {
                 android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
             }

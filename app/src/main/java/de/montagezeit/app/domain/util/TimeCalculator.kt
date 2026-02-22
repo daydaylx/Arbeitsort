@@ -36,7 +36,9 @@ object TimeCalculator {
      * Beispiel: start=23:00 (am 01.01.), arrive=01:00 (am 01.01.) → diffMs negativ → +24h = 2h Reisezeit
      */
     fun calculateTravelMinutes(entry: WorkEntry): Int {
-        if (entry.travelPaidMinutes != null) return entry.travelPaidMinutes
+        entry.travelPaidMinutes?.let { paidMinutes ->
+            return paidMinutes.coerceAtLeast(0)
+        }
         val start = entry.travelStartAt ?: return 0
         val arrive = entry.travelArriveAt ?: return 0
         var diffMs = arrive - start

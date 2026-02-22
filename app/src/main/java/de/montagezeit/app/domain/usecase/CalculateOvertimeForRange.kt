@@ -9,7 +9,9 @@ data class OvertimeResult(
     val totalOvertimeHours: Double,
     val totalActualHours: Double,
     val totalTargetHours: Double,
-    val countedDays: Int
+    val countedDays: Int,
+    val offDayTravelHours: Double,
+    val offDayTravelDays: Int
 )
 
 class CalculateOvertimeForRange {
@@ -20,33 +22,46 @@ class CalculateOvertimeForRange {
                 totalOvertimeHours = 0.0,
                 totalActualHours = 0.0,
                 totalTargetHours = 0.0,
-                countedDays = 0
+                countedDays = 0,
+                offDayTravelHours = 0.0,
+                offDayTravelDays = 0
             )
         }
 
         var totalActualHours = 0.0
         var totalTargetHours = 0.0
         var countedDays = 0
+        var offDayTravelHours = 0.0
+        var offDayTravelDays = 0
 
         entries.forEach { entry ->
             if (!entry.confirmedWorkDay) {
                 return@forEach
             }
-
-            countedDays += 1
-
-            if (entry.dayType == DayType.WORK) {
-                totalTargetHours += dailyTargetHours
+            val workEntry = entry.toWorkEntry()
+            when (entry.dayType) {
+                DayType.WORK -> {
+                    countedDays += 1
+                    totalTargetHours += dailyTargetHours
+                    totalActualHours += TimeCalculator.calculatePaidTotalHours(workEntry)
+                }
+                DayType.OFF -> {
+                    val travelHours = TimeCalculator.calculateTravelMinutes(workEntry) / 60.0
+                    if (travelHours > 0.0) {
+                        offDayTravelHours += travelHours
+                        offDayTravelDays += 1
+                    }
+                }
             }
-
-            totalActualHours += TimeCalculator.calculatePaidTotalHours(entry.toWorkEntry())
         }
 
         return OvertimeResult(
             totalOvertimeHours = totalActualHours - totalTargetHours,
             totalActualHours = totalActualHours,
             totalTargetHours = totalTargetHours,
-            countedDays = countedDays
+            countedDays = countedDays,
+            offDayTravelHours = offDayTravelHours,
+            offDayTravelDays = offDayTravelDays
         )
     }
 }

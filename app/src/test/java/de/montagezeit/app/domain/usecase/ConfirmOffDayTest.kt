@@ -7,18 +7,37 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConfirmOffDayTest {
 
+    private val mainDispatcher = UnconfinedTestDispatcher()
     private val workEntryDao = mockk<WorkEntryDao>()
     private val useCase = ConfirmOffDay(workEntryDao)
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(mainDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `invoke creates OFF entry with confirmation data when no entry exists`() = runTest {

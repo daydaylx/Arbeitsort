@@ -465,7 +465,8 @@ data class EditFormData(
 
         // 4. Check travel times if both are set
         if (travelStartTime != null && travelArriveTime != null) {
-            if (travelArriveTime <= travelStartTime) {
+            // Overnight trips are allowed. Only identical times are invalid.
+            if (travelArriveTime == travelStartTime) {
                 errors.add(ValidationError.TravelArriveBeforeStart)
             }
         }

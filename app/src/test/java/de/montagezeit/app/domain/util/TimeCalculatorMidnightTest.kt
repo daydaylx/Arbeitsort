@@ -52,6 +52,15 @@ class TimeCalculatorMidnightTest {
     }
 
     @Test
+    fun `negative travelPaidMinutes are clamped to zero`() {
+        val entry = WorkEntry(
+            date = date,
+            travelPaidMinutes = -15
+        )
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(entry))
+    }
+
+    @Test
     fun `no travel fields returns zero`() {
         val entry = WorkEntry(date = date)
         assertEquals(0, TimeCalculator.calculateTravelMinutes(entry))

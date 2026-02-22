@@ -60,6 +60,8 @@ fun TodayScreenV2(
     val overtimeYearActualDisplay by viewModel.overtimeYearActualDisplay.collectAsStateWithLifecycle()
     val overtimeYearTargetDisplay by viewModel.overtimeYearTargetDisplay.collectAsStateWithLifecycle()
     val overtimeYearCountedDays by viewModel.overtimeYearCountedDays.collectAsStateWithLifecycle()
+    val overtimeYearOffDayTravelDisplay by viewModel.overtimeYearOffDayTravelDisplay.collectAsStateWithLifecycle()
+    val overtimeYearOffDayTravelDays by viewModel.overtimeYearOffDayTravelDays.collectAsStateWithLifecycle()
     val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
     val dailyCheckInLocationInput by viewModel.dailyCheckInLocationInput.collectAsStateWithLifecycle()
     val showDayLocationDialog by viewModel.showDayLocationDialog.collectAsStateWithLifecycle()
@@ -157,6 +159,8 @@ fun TodayScreenV2(
                         overtimeYearActualDisplay = overtimeYearActualDisplay,
                         overtimeYearTargetDisplay = overtimeYearTargetDisplay,
                         overtimeYearCountedDays = overtimeYearCountedDays,
+                        overtimeYearOffDayTravelDisplay = overtimeYearOffDayTravelDisplay,
+                        overtimeYearOffDayTravelDays = overtimeYearOffDayTravelDays,
                         onSelectDay = { viewModel.selectDate(it) },
                         onEditDayLocation = {
                             viewModel.openDayLocationDialog()
@@ -252,6 +256,8 @@ private fun TodayContentV2(
     overtimeYearActualDisplay: String,
     overtimeYearTargetDisplay: String,
     overtimeYearCountedDays: Int,
+    overtimeYearOffDayTravelDisplay: String,
+    overtimeYearOffDayTravelDays: Int,
     onSelectDay: (LocalDate) -> Unit,
     onEditDayLocation: () -> Unit,
     onEditToday: () -> Unit,
@@ -289,7 +295,9 @@ private fun TodayContentV2(
             monthDisplay = overtimeMonthDisplay,
             yearActualDisplay = overtimeYearActualDisplay,
             yearTargetDisplay = overtimeYearTargetDisplay,
-            yearCountedDays = overtimeYearCountedDays
+            yearCountedDays = overtimeYearCountedDays,
+            yearOffDayTravelDisplay = overtimeYearOffDayTravelDisplay,
+            yearOffDayTravelDays = overtimeYearOffDayTravelDays
         )
         
         if (entry != null && entry.dayType == DayType.WORK) {
@@ -315,7 +323,9 @@ private fun OvertimeCardV2(
     monthDisplay: String?,
     yearActualDisplay: String,
     yearTargetDisplay: String,
-    yearCountedDays: Int
+    yearCountedDays: Int,
+    yearOffDayTravelDisplay: String,
+    yearOffDayTravelDays: Int
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     MZCard(
@@ -374,6 +384,17 @@ private fun OvertimeCardV2(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (yearOffDayTravelDays > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.overtime_offday_travel_year,
+                                yearOffDayTravelDisplay,
+                                yearOffDayTravelDays
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

@@ -31,6 +31,8 @@ class CalculateOvertimeForRangeTest {
         assertEquals(9.0, result.totalActualHours, 0.0001)
         assertEquals(8.0, result.totalTargetHours, 0.0001)
         assertEquals(1, result.countedDays)
+        assertEquals(0.0, result.offDayTravelHours, 0.0001)
+        assertEquals(0, result.offDayTravelDays)
     }
 
     @Test
@@ -53,10 +55,12 @@ class CalculateOvertimeForRangeTest {
         assertEquals(6.0, result.totalActualHours, 0.0001)
         assertEquals(8.0, result.totalTargetHours, 0.0001)
         assertEquals(1, result.countedDays)
+        assertEquals(0.0, result.offDayTravelHours, 0.0001)
+        assertEquals(0, result.offDayTravelDays)
     }
 
     @Test
-    fun `freier tag mit ist zeit erhoeht ueberstunden`() {
+    fun `freier tag mit fahrzeit wird separat gezaehlt`() {
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -69,10 +73,12 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
 
-        assertEquals(2.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(2.0, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(0.0, result.totalActualHours, 0.0001)
         assertEquals(0.0, result.totalTargetHours, 0.0001)
-        assertEquals(1, result.countedDays)
+        assertEquals(0, result.countedDays)
+        assertEquals(2.0, result.offDayTravelHours, 0.0001)
+        assertEquals(1, result.offDayTravelDays)
     }
 
     @Test
@@ -103,10 +109,12 @@ class CalculateOvertimeForRangeTest {
         assertEquals(8.0, result.totalActualHours, 0.0001)
         assertEquals(8.0, result.totalTargetHours, 0.0001)
         assertEquals(1, result.countedDays)
+        assertEquals(0.0, result.offDayTravelHours, 0.0001)
+        assertEquals(0, result.offDayTravelDays)
     }
 
     @Test
-    fun `mix aus mehreren tagen`() {
+    fun `mix aus mehreren tagen trennt offday fahrzeit von ueberstunden`() {
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -143,10 +151,33 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
 
-        assertEquals(1.5, result.totalOvertimeHours, 0.0001)
-        assertEquals(17.5, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(16.0, result.totalActualHours, 0.0001)
         assertEquals(16.0, result.totalTargetHours, 0.0001)
-        assertEquals(3, result.countedDays)
+        assertEquals(2, result.countedDays)
+        assertEquals(1.5, result.offDayTravelHours, 0.0001)
+        assertEquals(1, result.offDayTravelDays)
+    }
+
+    @Test
+    fun `offday ohne fahrzeit erhoeht offday travel zaehler nicht`() {
+        val result = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 12),
+                    dayType = DayType.OFF,
+                    confirmedWorkDay = true
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(0.0, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalTargetHours, 0.0001)
+        assertEquals(0, result.countedDays)
+        assertEquals(0.0, result.offDayTravelHours, 0.0001)
+        assertEquals(0, result.offDayTravelDays)
     }
 
     private fun overtimeEntry(

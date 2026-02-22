@@ -1,8 +1,10 @@
 package de.montagezeit.app.ui.screen.edit
 
-import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.R
-import org.junit.Assert.*
+import de.montagezeit.app.data.local.entity.DayType
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalTime
 
@@ -10,12 +12,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return empty list for valid data`() {
-        val formData = EditFormData(
-            dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60
-        )
+        val formData = validFormData()
 
         val errors = formData.validate()
 
@@ -24,8 +21,18 @@ class EditFormDataValidationTest {
     }
 
     @Test
+    fun `validate should return MissingDayLocation when day location is blank`() {
+        val formData = validFormData(dayLocationLabel = " ")
+
+        val errors = formData.validate()
+
+        assertTrue(errors.any { it is ValidationError.MissingDayLocation })
+        assertFalse(formData.isValid())
+    }
+
+    @Test
     fun `validate should return WorkEndBeforeStart when workEnd equals workStart`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(8, 0),
             breakMinutes = 0
@@ -40,7 +47,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return WorkEndBeforeStart when workEnd is before workStart`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(17, 0),
             workEnd = LocalTime.of(8, 0),
             breakMinutes = 0
@@ -54,9 +61,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return NegativeBreakMinutes when breakMinutes is negative`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
+        val formData = validFormData(
             breakMinutes = -10
         )
 
@@ -68,10 +73,10 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return BreakLongerThanWorkTime when break exceeds work duration`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),  // 9 hours = 540 minutes
-            breakMinutes = 600  // 10 hours
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 600
         )
 
         val errors = formData.validate()
@@ -82,9 +87,9 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should allow breakMinutes equal to work duration`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),  // 9 hours = 540 minutes
+            workEnd = LocalTime.of(17, 0),
             breakMinutes = 540
         )
 
@@ -95,10 +100,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return TravelArriveBeforeStart when travelArrive equals travelStart`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60,
+        val formData = validFormData(
             travelStartTime = LocalTime.of(7, 0),
             travelArriveTime = LocalTime.of(7, 0)
         )
@@ -110,26 +112,21 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `validate should return TravelArriveBeforeStart when travelArrive is before travelStart`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60,
-            travelStartTime = LocalTime.of(7, 30),
-            travelArriveTime = LocalTime.of(7, 0)
+    fun `validate should allow overnight travel when travelArrive is before travelStart`() {
+        val formData = validFormData(
+            travelStartTime = LocalTime.of(23, 0),
+            travelArriveTime = LocalTime.of(1, 0)
         )
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertFalse(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertTrue(formData.isValid())
     }
 
     @Test
     fun `validate should not check travel times when only travelStart is set`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60,
+        val formData = validFormData(
             travelStartTime = LocalTime.of(7, 0),
             travelArriveTime = null
         )
@@ -142,10 +139,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should not check travel times when only travelArrive is set`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60,
+        val formData = validFormData(
             travelStartTime = null,
             travelArriveTime = LocalTime.of(8, 0)
         )
@@ -158,12 +152,10 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return multiple errors when multiple validations fail`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = -30,  // Invalid: negative
+        val formData = validFormData(
+            breakMinutes = -30,
             travelStartTime = LocalTime.of(7, 30),
-            travelArriveTime = LocalTime.of(7, 0)  // Invalid: arrive before start
+            travelArriveTime = LocalTime.of(7, 30)
         )
 
         val errors = formData.validate()
@@ -176,12 +168,12 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should return multiple errors including work time and break`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(12, 0),  // 4 hours = 240 minutes
-            breakMinutes = 300,  // Invalid: 5 hours > 4 hours work time
+            workEnd = LocalTime.of(12, 0),
+            breakMinutes = 300,
             travelStartTime = LocalTime.of(7, 30),
-            travelArriveTime = LocalTime.of(7, 0)  // Invalid: arrive before start
+            travelArriveTime = LocalTime.of(7, 30)
         )
 
         val errors = formData.validate()
@@ -194,9 +186,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should accept zero break minutes`() {
-        val formData = EditFormData(
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
+        val formData = validFormData(
             breakMinutes = 0
         )
 
@@ -208,7 +198,7 @@ class EditFormDataValidationTest {
 
     @Test
     fun `validate should work with edge case times`() {
-        val formData = EditFormData(
+        val formData = validFormData(
             workStart = LocalTime.of(23, 59),
             workEnd = LocalTime.of(23, 59, 59),
             breakMinutes = 0
@@ -216,27 +206,29 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        // workEnd is technically after workStart by 59 seconds
         assertTrue(errors.isEmpty())
         assertTrue(formData.isValid())
     }
 
     @Test
-    fun `validate should handle midnight crossing correctly`() {
-        val formData = EditFormData(
+    fun `validate should handle midnight crossing correctly for work time`() {
+        val formData = validFormData(
             workStart = LocalTime.of(22, 0),
-            workEnd = LocalTime.of(2, 0),  // Next day (not supported in current model)
+            workEnd = LocalTime.of(2, 0),
             breakMinutes = 60
         )
 
         val errors = formData.validate()
 
-        // Current implementation treats this as workEnd before workStart
         assertTrue(errors.any { it is ValidationError.WorkEndBeforeStart })
     }
 
     @Test
     fun `ValidationError should map to expected string resources`() {
+        assertEquals(
+            R.string.edit_validation_missing_day_location,
+            ValidationError.MissingDayLocation.messageRes
+        )
         assertEquals(
             R.string.edit_validation_work_end_before_start,
             ValidationError.WorkEndBeforeStart.messageRes
@@ -252,6 +244,26 @@ class EditFormDataValidationTest {
         assertEquals(
             R.string.edit_validation_travel_arrive_before_start,
             ValidationError.TravelArriveBeforeStart.messageRes
+        )
+    }
+
+    private fun validFormData(
+        dayType: DayType = DayType.WORK,
+        workStart: LocalTime = LocalTime.of(8, 0),
+        workEnd: LocalTime = LocalTime.of(17, 0),
+        breakMinutes: Int = 60,
+        dayLocationLabel: String = "Baustelle A",
+        travelStartTime: LocalTime? = null,
+        travelArriveTime: LocalTime? = null
+    ): EditFormData {
+        return EditFormData(
+            dayType = dayType,
+            workStart = workStart,
+            workEnd = workEnd,
+            breakMinutes = breakMinutes,
+            dayLocationLabel = dayLocationLabel,
+            travelStartTime = travelStartTime,
+            travelArriveTime = travelArriveTime
         )
     }
 }

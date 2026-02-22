@@ -12,6 +12,11 @@ class UpdateEntry(
     private val workEntryDao: WorkEntryDao
 ) {
 
+    companion object {
+        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
+        private const val MAX_TRAVEL_DURATION_MILLIS = 16 * 60 * 60 * 1000L
+    }
+
     /**
      * Aktualisiert einen WorkEntry mit den angegebenen Änderungen
      *
@@ -64,11 +69,18 @@ class UpdateEntry(
         val travelStart = entry.travelStartAt
         val travelArrive = entry.travelArriveAt
         if (travelStart != null && travelArrive != null) {
-            // Bei gleichen Datum-Timestamps: arrive muss >= start sein (oder Mitternachtsüberschreitung)
-            val diff = travelArrive - travelStart
-            // Nur validieren wenn keine Mitternachtsüberschreitung (diff >= 0 oder < -20h)
-            if (diff < 0 && diff > -20 * 60 * 60 * 1000L) {
+            var travelDuration = travelArrive - travelStart
+            if (travelDuration < 0) {
+                // Allow overnight travel where both timestamps were created for the same date.
+                travelDuration += DAY_MILLIS
+            }
+
+            if (travelDuration <= 0) {
                 throw IllegalArgumentException("travelArriveAt muss nach travelStartAt liegen")
+            }
+
+            if (travelDuration > MAX_TRAVEL_DURATION_MILLIS) {
+                throw IllegalArgumentException("Reisezeit darf maximal 16 Stunden betragen")
             }
         }
     }
