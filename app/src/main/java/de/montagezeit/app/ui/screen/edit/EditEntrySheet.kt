@@ -104,22 +104,13 @@ fun EditEntrySheet(
                         onPrevious = { onNavigateDate(date.minusDays(1)) },
                         onNext = { onNavigateDate(date.plusDays(1)) },
                         onToday = { onNavigateDate(LocalDate.now()) },
-                        onPickDate = { showNavigateDatePicker = true },
-                        modifier = Modifier.pointerInput(date, onNavigateDate) {
-                            var dragAccum = 0f
-                            detectHorizontalDragGestures(
-                                onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                                onDragEnd = {
-                                    if (dragAccum > swipeThresholdPx) {
-                                        onNavigateDate(date.minusDays(1))
-                                    } else if (dragAccum < -swipeThresholdPx) {
-                                        onNavigateDate(date.plusDays(1))
-                                    }
-                                    dragAccum = 0f
-                                },
-                                onDragCancel = { dragAccum = 0f }
-                            )
-                        }
+                        onPickDate = { showNavigateDatePicker = true }
+                    )
+                    DateNavigationSwipeZone(
+                        swipeThresholdPx = swipeThresholdPx,
+                        onSwipePrevious = { onNavigateDate(date.minusDays(1)) },
+                        onSwipeNext = { onNavigateDate(date.plusDays(1)) },
+                        modifier = Modifier.padding(bottom = 6.dp)
                     )
                     Divider()
                 }
@@ -412,6 +403,42 @@ fun DateNavigationRow(
         TextButton(onClick = onToday) {
             Text(stringResource(R.string.edit_action_today))
         }
+    }
+}
+
+@Composable
+private fun DateNavigationSwipeZone(
+    swipeThresholdPx: Float,
+    onSwipePrevious: () -> Unit,
+    onSwipeNext: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .pointerInput(swipeThresholdPx, onSwipePrevious, onSwipeNext) {
+                var dragAccum = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                    onDragEnd = {
+                        if (dragAccum > swipeThresholdPx) {
+                            onSwipePrevious()
+                        } else if (dragAccum < -swipeThresholdPx) {
+                            onSwipeNext()
+                        }
+                        dragAccum = 0f
+                    },
+                    onDragCancel = { dragAccum = 0f }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Divider(
+            modifier = Modifier.width(44.dp),
+            thickness = 2.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 

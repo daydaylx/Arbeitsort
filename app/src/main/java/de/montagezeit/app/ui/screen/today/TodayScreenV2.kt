@@ -405,11 +405,20 @@ private fun StatusCardV2(
         }
 
         if (entry != null) {
-            MZInfoRow(
-                icon = Icons.Default.LocationOn,
-                text = entry.dayLocationLabel,
-                iconTint = MaterialTheme.colorScheme.primary
-            )
+            val dayLocationLabel = entry.dayLocationLabel.trim()
+            if (dayLocationLabel.isNotEmpty()) {
+                MZInfoRow(
+                    icon = Icons.Default.LocationOn,
+                    text = dayLocationLabel,
+                    iconTint = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.today_day_location_unset),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             
             TextButton(
                 onClick = onEditDayLocation,

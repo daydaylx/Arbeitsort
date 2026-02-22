@@ -714,7 +714,7 @@ fun CalendarDayCell(
         Modifier
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .aspectRatio(1f)
             .clip(shape)
@@ -723,9 +723,15 @@ fun CalendarDayCell(
             .clickable(enabled = day.inMonth, onClick = onClick)
             .padding(6.dp)
     ) {
+        val compactLayout = maxWidth < 52.dp
+
         Text(
             text = day.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodySmall,
+            style = if (compactLayout) {
+                MaterialTheme.typography.labelSmall
+            } else {
+                MaterialTheme.typography.bodySmall
+            },
             color = if (day.inMonth) {
                 MaterialTheme.colorScheme.onSurface
             } else {
@@ -745,12 +751,27 @@ fun CalendarDayCell(
             }
 
             if (entry.dayType == DayType.OFF) {
-                Text(
-                    text = stringResource(R.string.history_day_type_off),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.align(Alignment.BottomStart)
-                )
+                if (compactLayout) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.16f),
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.history_day_type_off_short),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.history_day_type_off),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    )
+                }
             } else {
                 Row(
                     modifier = Modifier.align(Alignment.BottomStart),

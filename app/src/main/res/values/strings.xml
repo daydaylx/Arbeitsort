@@ -72,6 +72,7 @@
     <string name="today_confirmed">Heute bestätigt</string>
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
+    <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
     <string name="today_needs_review">Standort prüfen</string>
     <string name="today_error_unknown">Unbekannter Fehler</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
@@ -350,6 +351,7 @@
     <string name="history_weekday_sa">Sa</string>
     <string name="history_weekday_su">So</string>
     <string name="history_day_type_off">Frei</string>
+    <string name="history_day_type_off_short">F</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
     <string name="history_summary_workdays">%1$d Arbeitstage</string>
     <string name="history_summary_review_count">%1$d Review</string>
