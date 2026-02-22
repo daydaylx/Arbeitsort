@@ -15,57 +15,65 @@ internal object CheckInEntryBuilder {
     fun build(
         date: LocalDate,
         existingEntry: WorkEntry?,
-        snapshot: Snapshot
+        snapshot: Snapshot,
+        locationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
+        locationLat: Double? = null,
+        locationLon: Double? = null,
+        locationAccuracyMeters: Float? = null,
+        locationLabel: String? = null
     ): WorkEntry {
         val now = System.currentTimeMillis()
         val normalizedEntry = existingEntry?.copy(dayType = DayType.WORK)
         val dayLocation = DayLocationResolver.resolve(normalizedEntry)
 
+        // Standort-Review ist deaktiviert: Ortsangabe wird manuell geführt.
+        val needsReview = false
+
         return if (snapshot == Snapshot.MORNING) {
             normalizedEntry?.copy(
                 morningCapturedAt = now,
-                morningLocationStatus = LocationStatus.UNAVAILABLE,
-                morningLat = null,
-                morningLon = null,
-                morningAccuracyMeters = null,
-                morningLocationLabel = null,
-                outsideLeipzigMorning = null,
+                morningLocationStatus = locationStatus,
+                morningLat = locationLat,
+                morningLon = locationLon,
+                morningAccuracyMeters = locationAccuracyMeters,
+                morningLocationLabel = locationLabel,
                 dayLocationLabel = dayLocation.label,
                 dayLocationSource = dayLocation.source,
                 dayLocationLat = null,
                 dayLocationLon = null,
                 dayLocationAccuracyMeters = null,
-                needsReview = false,
+                needsReview = needsReview,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
                 morningCapturedAt = now,
-                morningLocationStatus = LocationStatus.UNAVAILABLE,
+                morningLocationStatus = locationStatus,
                 dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source
+                dayLocationSource = dayLocation.source,
+                needsReview = needsReview
             )
         } else {
             normalizedEntry?.copy(
                 eveningCapturedAt = now,
-                eveningLocationStatus = LocationStatus.UNAVAILABLE,
-                eveningLat = null,
-                eveningLon = null,
-                eveningAccuracyMeters = null,
-                eveningLocationLabel = null,
-                outsideLeipzigEvening = null,
+                eveningLocationStatus = locationStatus,
+                eveningLat = locationLat,
+                eveningLon = locationLon,
+                eveningAccuracyMeters = locationAccuracyMeters,
+                eveningLocationLabel = locationLabel,
                 dayLocationLabel = dayLocation.label,
                 dayLocationSource = dayLocation.source,
                 dayLocationLat = null,
                 dayLocationLon = null,
                 dayLocationAccuracyMeters = null,
-                needsReview = false,
+                needsReview = needsReview,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
                 eveningCapturedAt = now,
-                eveningLocationStatus = LocationStatus.UNAVAILABLE,
+                eveningLocationStatus = locationStatus,
                 dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source
+                dayLocationSource = dayLocation.source,
+                needsReview = needsReview
             )
         }
     }
@@ -76,8 +84,9 @@ internal object CheckInEntryBuilder {
         morningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
         eveningCapturedAt: Long? = null,
         eveningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
-        dayLocationLabel: String = DEFAULT_DAY_LOCATION_LABEL,
-        dayLocationSource: de.montagezeit.app.data.local.entity.DayLocationSource = de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK
+        dayLocationLabel: String = "",
+        dayLocationSource: de.montagezeit.app.data.local.entity.DayLocationSource = de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK,
+        needsReview: Boolean = false
     ): WorkEntry {
         val now = System.currentTimeMillis()
         return WorkEntry(
@@ -92,7 +101,7 @@ internal object CheckInEntryBuilder {
             morningLocationStatus = morningLocationStatus,
             eveningCapturedAt = eveningCapturedAt,
             eveningLocationStatus = eveningLocationStatus,
-            needsReview = false,
+            needsReview = needsReview,
             createdAt = now,
             updatedAt = now
         )

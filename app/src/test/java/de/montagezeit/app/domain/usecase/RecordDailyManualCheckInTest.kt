@@ -18,6 +18,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -44,8 +45,7 @@ class RecordDailyManualCheckInTest {
 
         useCase = RecordDailyManualCheckIn(
             workEntryDao = workEntryDao,
-            reminderSettingsManager = reminderSettingsManager,
-            resolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao)
+            reminderSettingsManager = reminderSettingsManager
         )
     }
 
@@ -78,54 +78,18 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke uses todays label for blank input`() = runTest {
+    fun `invoke throws for blank input`() = runTest {
         val date = LocalDate.now()
-        val existingEntry = WorkEntry(
-            date = date,
-            dayType = DayType.OFF,
-            dayLocationLabel = "Heute Ort",
-            dayLocationSource = DayLocationSource.FALLBACK
-        )
-
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } returns Unit
-
-        val result = useCase(date, "   ")
-
-        assertEquals("Heute Ort", result.dayLocationLabel)
-        assertEquals(DayType.WORK, result.dayType)
-        assertEquals(true, result.confirmedWorkDay)
-        assertNotNull(result.morningCapturedAt)
-        assertNotNull(result.eveningCapturedAt)
-
-        coVerify(exactly = 0) { workEntryDao.getLatestDayLocationLabelByDayType(any()) }
-        coVerify(exactly = 0) { workEntryDao.getLatestDayLocationLabel() }
-    }
-
-    @Test
-    fun `invoke uses latest work label before any label`() = runTest {
-        val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Werk 7"
-        coEvery { workEntryDao.getLatestDayLocationLabel() } returns "Sonstiger Ort"
-        coEvery { workEntryDao.upsert(any()) } returns Unit
-
-        val result = useCase(date, "")
-
-        assertEquals("Werk 7", result.dayLocationLabel)
-    }
-
-    @Test
-    fun `invoke uses default city when no history exists`() = runTest {
-        val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
-        coEvery { workEntryDao.getLatestDayLocationLabel() } returns null
-        coEvery { workEntryDao.upsert(any()) } returns Unit
-
-        val result = useCase(date, " ")
-
-        assertEquals("Leipzig", result.dayLocationLabel)
+        val error = try {
+            useCase(date, "   ")
+            fail("Expected IllegalArgumentException")
+            null
+        } catch (e: IllegalArgumentException) {
+            e
+        }
+        val thrown = requireNotNull(error)
+        assertEquals("dayLocationLabel darf nicht leer sein", thrown.message)
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
     }
 
     @Test

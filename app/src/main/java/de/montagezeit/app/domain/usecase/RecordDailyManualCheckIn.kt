@@ -14,8 +14,7 @@ import java.time.LocalDate
  */
 class RecordDailyManualCheckIn(
     private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager,
-    private val resolveDayLocationPrefill: ResolveDayLocationPrefill
+    private val reminderSettingsManager: ReminderSettingsManager
 ) {
 
     companion object {
@@ -23,14 +22,14 @@ class RecordDailyManualCheckIn(
     }
 
     suspend operator fun invoke(date: LocalDate, dayLocationLabel: String): WorkEntry {
+        val resolvedLabel = dayLocationLabel.trim()
+        if (resolvedLabel.isEmpty()) {
+            throw IllegalArgumentException("dayLocationLabel darf nicht leer sein")
+        }
+
         val now = System.currentTimeMillis()
         val existingEntry = workEntryDao.getByDate(date)
         val settings = reminderSettingsManager.settings.first()
-
-        val resolvedLabel = resolveDayLocationLabel(
-            submittedLabel = dayLocationLabel,
-            existingEntry = existingEntry
-        )
 
         val updatedEntry = if (existingEntry != null) {
             val morningAlreadyCaptured = existingEntry.morningCapturedAt != null
@@ -54,7 +53,6 @@ class RecordDailyManualCheckIn(
                 morningLat = existingEntry.morningLat,
                 morningLon = existingEntry.morningLon,
                 morningAccuracyMeters = existingEntry.morningAccuracyMeters,
-                outsideLeipzigMorning = existingEntry.outsideLeipzigMorning,
                 morningLocationStatus = if (morningAlreadyCaptured) {
                     existingEntry.morningLocationStatus
                 } else {
@@ -69,7 +67,6 @@ class RecordDailyManualCheckIn(
                 eveningLat = existingEntry.eveningLat,
                 eveningLon = existingEntry.eveningLon,
                 eveningAccuracyMeters = existingEntry.eveningAccuracyMeters,
-                outsideLeipzigEvening = existingEntry.outsideLeipzigEvening,
                 eveningLocationStatus = if (eveningAlreadyCaptured) {
                     existingEntry.eveningLocationStatus
                 } else {
@@ -110,17 +107,5 @@ class RecordDailyManualCheckIn(
 
         workEntryDao.upsert(updatedEntry)
         return updatedEntry
-    }
-
-    private suspend fun resolveDayLocationLabel(
-        submittedLabel: String,
-        existingEntry: WorkEntry?
-    ): String {
-        val trimmedSubmitted = submittedLabel.trim()
-        if (trimmedSubmitted.isNotEmpty()) {
-            return trimmedSubmitted
-        }
-
-        return resolveDayLocationPrefill(existingEntry)
     }
 }

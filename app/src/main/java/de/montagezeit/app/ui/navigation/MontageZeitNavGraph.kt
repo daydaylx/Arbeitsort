@@ -43,6 +43,7 @@ fun MontageZeitNavGraph(
     var editDate by remember { mutableStateOf<String?>(null) }
     var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
     var onEditSheetDismissed by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val currentOnEditSheetDismissed by rememberUpdatedState(onEditSheetDismissed)
 
     fun openEditSheet(date: LocalDate, onDismissed: (() -> Unit)? = null) {
         editDate = date.toString()
@@ -128,7 +129,7 @@ fun MontageZeitNavGraph(
                 showEditSheet = false
                 editDate = null
                 copiedFormData = null
-                onEditSheetDismissed?.invoke()
+                currentOnEditSheetDismissed?.invoke()
                 onEditSheetDismissed = null
             },
             onCopyToNewDate = { newDate, formData ->

@@ -73,7 +73,12 @@ class ReminderSettingsManager @Inject constructor(
             pdfEmployeeName = preferences[ReminderSettingsKeys.PDF_EMPLOYEE_NAME],
             pdfCompany = preferences[ReminderSettingsKeys.PDF_COMPANY],
             pdfProject = preferences[ReminderSettingsKeys.PDF_PROJECT],
-            pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER]
+            pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER],
+
+            // Überstunden-Ziele
+            dailyTargetHours = preferences[ReminderSettingsKeys.DAILY_TARGET_HOURS]?.toDoubleOrNull() ?: 8.0,
+            weeklyTargetHours = preferences[ReminderSettingsKeys.WEEKLY_TARGET_HOURS]?.toDoubleOrNull() ?: 40.0,
+            monthlyTargetHours = preferences[ReminderSettingsKeys.MONTHLY_TARGET_HOURS]?.toDoubleOrNull() ?: 160.0
         )
     }
 
@@ -102,7 +107,10 @@ class ReminderSettingsManager @Inject constructor(
         pdfEmployeeName: String? = null,
         pdfCompany: String? = null,
         pdfProject: String? = null,
-        pdfPersonnelNumber: String? = null
+        pdfPersonnelNumber: String? = null,
+        dailyTargetHours: Double? = null,
+        weeklyTargetHours: Double? = null,
+        monthlyTargetHours: Double? = null
     ) {
         dataStore.edit { preferences ->
             workStart?.let { preferences[ReminderSettingsKeys.WORK_START] = it.toPrefString() }
@@ -133,6 +141,10 @@ class ReminderSettingsManager @Inject constructor(
             pdfCompany?.let { preferences[ReminderSettingsKeys.PDF_COMPANY] = it }
             pdfProject?.let { preferences[ReminderSettingsKeys.PDF_PROJECT] = it }
             pdfPersonnelNumber?.let { preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER] = it }
+
+            dailyTargetHours?.let { preferences[ReminderSettingsKeys.DAILY_TARGET_HOURS] = it.toString() }
+            weeklyTargetHours?.let { preferences[ReminderSettingsKeys.WEEKLY_TARGET_HOURS] = it.toString() }
+            monthlyTargetHours?.let { preferences[ReminderSettingsKeys.MONTHLY_TARGET_HOURS] = it.toString() }
         }
     }
 

@@ -55,6 +55,10 @@ object AccessibilityDefaults {
     val CardCornerRadius = 16.dp
     val ButtonCornerRadius = 12.dp
     val ButtonHeight = 56.dp
+    val PrimaryButtonHeight = 56.dp
+    val SecondaryButtonHeight = 56.dp
+    val TertiaryButtonHeight = 48.dp
+    val IconButtonSize = 48.dp
 }
 
 /**
@@ -84,6 +88,7 @@ fun MZCard(
 /**
  * Card mit farbigem Header für Status-Anzeigen
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MZStatusCard(
     title: String,
@@ -93,36 +98,22 @@ fun MZStatusCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val (containerColor, contentColor) = when (status) {
-        StatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to 
+        StatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to
                               MaterialTheme.colorScheme.onPrimaryContainer
-        StatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to 
+        StatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to
                               MaterialTheme.colorScheme.onTertiaryContainer
-        StatusType.ERROR -> MaterialTheme.colorScheme.errorContainer to 
+        StatusType.ERROR -> MaterialTheme.colorScheme.errorContainer to
                             MaterialTheme.colorScheme.onErrorContainer
-        StatusType.INFO -> MaterialTheme.colorScheme.secondaryContainer to 
+        StatusType.INFO -> MaterialTheme.colorScheme.secondaryContainer to
                            MaterialTheme.colorScheme.onSecondaryContainer
-        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to 
+        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to
                               MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickableWithAccessibility(
-                        onClick,
-                        stringResource(R.string.action_edit_entry_manual)
-                    )
-                } else {
-                    Modifier
-                }
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        ),
-        shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
-    ) {
+    val cardShape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
+    val cardColors = CardDefaults.cardColors(containerColor = containerColor)
+
+    val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(
             modifier = Modifier.padding(AccessibilityDefaults.CardPadding)
         ) {
@@ -149,13 +140,32 @@ fun MZStatusCard(
                     color = contentColor
                 )
             }
-            
+
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(vertical = 8.dp))
-            
+
             Column {
                 content()
             }
         }
+    }
+
+    // Use different Card overloads based on onClick
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            enabled = true,
+            colors = cardColors,
+            shape = cardShape,
+            content = cardContent
+        )
+    } else {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = cardColors,
+            shape = cardShape,
+            content = cardContent
+        )
     }
 }
 

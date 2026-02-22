@@ -30,13 +30,18 @@ object TimeCalculator {
      * Gibt die bezahlten Reiseminuten zurück.
      * Nutzt travelPaidMinutes falls vorhanden.
      * Andernfalls wird die Differenz zwischen travelStartAt und travelArriveAt berechnet.
+     *
+     * WICHTIG: travelStartAt und travelArriveAt müssen beide epoch-Timestamps vom selben Datum sein.
+     * Bei Mitternachtsüberschreitung: Wenn arrive < start (zeitlich), werden 24h addiert.
+     * Beispiel: start=23:00 (am 01.01.), arrive=01:00 (am 01.01.) → diffMs negativ → +24h = 2h Reisezeit
      */
     fun calculateTravelMinutes(entry: WorkEntry): Int {
         if (entry.travelPaidMinutes != null) return entry.travelPaidMinutes
         val start = entry.travelStartAt ?: return 0
         val arrive = entry.travelArriveAt ?: return 0
         var diffMs = arrive - start
-        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L // overnight crossing: both timestamps use entry date
+        // Handle overnight crossing when both timestamps use the same date
+        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
         return (diffMs / 60_000L).toInt().coerceAtLeast(0)
     }
 

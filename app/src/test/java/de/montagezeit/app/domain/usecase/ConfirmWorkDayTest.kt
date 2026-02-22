@@ -50,7 +50,7 @@ class ConfirmWorkDayTest {
         assertEquals(LocalTime.of(9, 0), result.workStart)
         assertEquals(LocalTime.of(18, 0), result.workEnd)
         assertEquals(45, result.breakMinutes)
-        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
         assertNull(result.dayLocationLat)
         assertNull(result.dayLocationLon)

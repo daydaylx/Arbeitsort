@@ -2,8 +2,6 @@ package de.montagezeit.app.data.local.entity
 
 import java.time.LocalDate
 
-private const val DEFAULT_CITY_LABEL = "Leipzig"
-
 fun WorkEntry.withTravelCleared(now: Long): WorkEntry {
     return copy(
         travelStartAt = null,
@@ -26,7 +24,7 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
         confirmedWorkDay = true,
         confirmationAt = now,
         confirmationSource = source,
-        dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { DEFAULT_CITY_LABEL } },
+        dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { "" } },
         dayLocationSource = dayLocationSource,
         updatedAt = now
     )
@@ -41,7 +39,7 @@ fun createConfirmedOffDayEntry(
     return WorkEntry(
         date = date,
         dayType = DayType.OFF,
-        dayLocationLabel = fallbackDayLocationLabel.ifBlank { DEFAULT_CITY_LABEL },
+        dayLocationLabel = fallbackDayLocationLabel.ifBlank { "" },
         dayLocationSource = DayLocationSource.FALLBACK,
         travelPaidMinutes = 0,
         travelUpdatedAt = now,

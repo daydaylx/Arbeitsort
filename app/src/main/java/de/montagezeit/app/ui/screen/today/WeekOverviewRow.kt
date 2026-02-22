@@ -91,20 +91,20 @@ private fun WeekDayChip(
     Column(
         modifier = Modifier
             .width(44.dp)
+            .semantics {
+                contentDescription = cdText
+                selected = day.isSelected
+            }
+            .padding(vertical = 8.dp, horizontal = 4.dp)
             .clip(chipShape)
+            .clickable(onClick = onClick)
             .background(backgroundColor)
             .then(
                 if (borderColor != Color.Transparent)
                     Modifier.border(1.5.dp, borderColor, chipShape)
                 else
                     Modifier
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 4.dp)
-            .semantics {
-                contentDescription = cdText
-                selected = day.isSelected
-            },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

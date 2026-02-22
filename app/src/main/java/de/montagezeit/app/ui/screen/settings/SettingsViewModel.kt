@@ -357,6 +357,39 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
+
+    /**
+     * Aktualisiert das tägliche Überstunden-Ziel
+     */
+    fun updateDailyTargetHours(hours: Double) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                dailyTargetHours = hours.coerceIn(0.5, 24.0)
+            )
+        }
+    }
+
+    /**
+     * Aktualisiert das wöchentliche Überstunden-Ziel
+     */
+    fun updateWeeklyTargetHours(hours: Double) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                weeklyTargetHours = hours.coerceIn(1.0, 168.0)
+            )
+        }
+    }
+
+    /**
+     * Aktualisiert das monatliche Überstunden-Ziel
+     */
+    fun updateMonthlyTargetHours(hours: Double) {
+        viewModelScope.launch {
+            reminderSettingsManager.updateSettings(
+                monthlyTargetHours = hours.coerceIn(1.0, 744.0)
+            )
+        }
+    }
 }
 
 private fun buildExportError(

@@ -32,7 +32,6 @@ import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.util.asString
-import de.montagezeit.app.ui.util.getReviewReason
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -61,24 +60,20 @@ fun TodayScreenV2(
     val overtimeYearActualDisplay by viewModel.overtimeYearActualDisplay.collectAsStateWithLifecycle()
     val overtimeYearTargetDisplay by viewModel.overtimeYearTargetDisplay.collectAsStateWithLifecycle()
     val overtimeYearCountedDays by viewModel.overtimeYearCountedDays.collectAsStateWithLifecycle()
-    val showReviewSheet by viewModel.showReviewSheet.collectAsStateWithLifecycle()
-    val reviewScope by viewModel.reviewScope.collectAsStateWithLifecycle()
     val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
     val dailyCheckInLocationInput by viewModel.dailyCheckInLocationInput.collectAsStateWithLifecycle()
+    val showDayLocationDialog by viewModel.showDayLocationDialog.collectAsStateWithLifecycle()
+    val dayLocationInput by viewModel.dayLocationInput.collectAsStateWithLifecycle()
     val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
 
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: selectedEntry
     val isViewingPastDay = selectedDate != LocalDate.now()
-    val needsReview = currentEntry?.needsReview == true
-    val reviewReason = getReviewReason(currentEntry)
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDayLocationDialog by rememberSaveable { mutableStateOf(false) }
-    var dayLocationInput by rememberSaveable { mutableStateOf("") }
 
     val isDailyCheckInLoading = loadingActions.contains(TodayAction.DAILY_MANUAL_CHECK_IN)
     val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
-    val isReviewResolving = loadingActions.contains(TodayAction.RESOLVE_REVIEW)
+    val isUpdateDayLocationLoading = loadingActions.contains(TodayAction.UPDATE_DAY_LOCATION)
 
     val onOpenDailyCheckInDialogAction = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -117,13 +112,10 @@ fun TodayScreenV2(
         bottomBar = {
             StickyTodayActionBarV2(
                 entry = currentEntry,
-                needsReview = needsReview,
                 isDailyCheckInLoading = isDailyCheckInLoading,
                 isConfirmOffdayLoading = isConfirmOffdayLoading,
-                isReviewResolving = isReviewResolving,
                 onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
-                onConfirmOffDay = onConfirmOffDayAction,
-                onOpenReviewSheet = { viewModel.onOpenReviewSheet() }
+                onConfirmOffDay = onConfirmOffDayAction
             )
         }
     ) { paddingValues ->
@@ -166,13 +158,9 @@ fun TodayScreenV2(
                         overtimeYearTargetDisplay = overtimeYearTargetDisplay,
                         overtimeYearCountedDays = overtimeYearCountedDays,
                         onSelectDay = { viewModel.selectDate(it) },
-                        onOpenReviewSheet = { viewModel.onOpenReviewSheet() },
                         onEditDayLocation = {
-                            dayLocationInput = currentEntry?.dayLocationLabel.orEmpty()
-                            showDayLocationDialog = true
+                            viewModel.openDayLocationDialog()
                         },
-                        needsReview = needsReview,
-                        reviewReason = reviewReason,
                         onEditToday = {
                             viewModel.ensureTodayEntryThen {
                                 onOpenEditSheet(selectedDate)
@@ -182,31 +170,14 @@ fun TodayScreenV2(
                     )
                 }
             }
-            
-            if (showReviewSheet) {
-                val currentScope = reviewScope
-                if (currentScope != null) {
-                    ReviewSheet(
-                        isVisible = showReviewSheet,
-                        onDismissRequest = { viewModel.onDismissReviewSheet() },
-                        scope = currentScope,
-                        reviewReason = reviewReason,
-                        isResolving = isReviewResolving,
-                        onResolve = { label, isLeipzig -> 
-                            viewModel.onResolveReview(label, isLeipzig)
-                        }
-                    )
-                }
-            }
 
             if (showDayLocationDialog) {
                 DayLocationDialogV2(
-                    currentLabel = dayLocationInput,
-                    onDismiss = { showDayLocationDialog = false },
-                    onConfirm = { label ->
-                        viewModel.onUpdateDayLocation(label)
-                        showDayLocationDialog = false
-                    }
+                    input = dayLocationInput,
+                    isLoading = isUpdateDayLocationLoading,
+                    onInputChange = { viewModel.onDayLocationInputChanged(it) },
+                    onDismiss = { viewModel.onDismissDayLocationDialog() },
+                    onConfirm = { viewModel.submitDayLocationUpdate() }
                 )
             }
 
@@ -226,41 +197,16 @@ fun TodayScreenV2(
 @Composable
 private fun StickyTodayActionBarV2(
     entry: WorkEntry?,
-    needsReview: Boolean,
     isDailyCheckInLoading: Boolean,
     isConfirmOffdayLoading: Boolean,
-    isReviewResolving: Boolean,
     onOpenDailyCheckInDialog: () -> Unit,
-    onConfirmOffDay: () -> Unit,
-    onOpenReviewSheet: () -> Unit
+    onConfirmOffDay: () -> Unit
 ) {
     val isCompleted = entry?.confirmedWorkDay == true
-    if (isCompleted && !needsReview) {
+    if (isCompleted) {
         return
     }
-
-    val primaryLabel: String
-    val primaryLoading: Boolean
-    val primaryAction: () -> Unit
-    val showOffdayAction: Boolean
-
-    when {
-        needsReview -> {
-            primaryLabel = stringResource(R.string.today_needs_review)
-            primaryLoading = isReviewResolving
-            primaryAction = onOpenReviewSheet
-            showOffdayAction = false
-        }
-
-        !isCompleted -> {
-            primaryLabel = stringResource(R.string.action_daily_manual_check_in)
-            primaryLoading = isDailyCheckInLoading
-            primaryAction = onOpenDailyCheckInDialog
-            showOffdayAction = true
-        }
-
-        else -> return
-    }
+    val showOffdayAction = true
 
     Surface(
         tonalElevation = 2.dp,
@@ -283,11 +229,11 @@ private fun StickyTodayActionBarV2(
             }
 
             PrimaryActionButton(
-                onClick = primaryAction,
-                isLoading = primaryLoading,
+                onClick = onOpenDailyCheckInDialog,
+                isLoading = isDailyCheckInLoading,
                 modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
             ) {
-                Text(primaryLabel)
+                Text(stringResource(R.string.action_daily_manual_check_in))
             }
         }
     }
@@ -307,10 +253,7 @@ private fun TodayContentV2(
     overtimeYearTargetDisplay: String,
     overtimeYearCountedDays: Int,
     onSelectDay: (LocalDate) -> Unit,
-    onOpenReviewSheet: () -> Unit,
     onEditDayLocation: () -> Unit,
-    needsReview: Boolean,
-    reviewReason: String,
     onEditToday: () -> Unit,
     onOpenWeekView: () -> Unit
 ) {
@@ -333,18 +276,6 @@ private fun TodayContentV2(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-        AnimatedVisibility(
-            visible = needsReview,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            ReviewBannerV2(
-                reviewReason = reviewReason,
-                onOpenReviewSheet = onOpenReviewSheet
-            )
-        }
-
         StatusCardV2(
             entry = entry,
             date = selectedDate,
@@ -386,93 +317,70 @@ private fun OvertimeCardV2(
     yearTargetDisplay: String,
     yearCountedDays: Int
 ) {
-    MZCard {
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    MZCard(
+        modifier = Modifier.clickable(
+            enabled = isConfigured,
+            onClick = { isExpanded = !isExpanded }
+        )
+    ) {
         Column {
-            MZSectionHeader(title = stringResource(R.string.overtime_title))
-            Spacer(modifier = Modifier.height(12.dp))
-
             if (!isConfigured) {
-                Text(
-                    text = stringResource(R.string.overtime_not_configured),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.overtime_not_configured),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 return@Column
             }
 
             Text(
+                text = stringResource(
+                    R.string.overtime_month_value,
+                    monthDisplay ?: formatSignedZeroHours()
+                ),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
                 text = stringResource(R.string.overtime_year_value, yearDisplay),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.bodyLarge
             )
 
-            monthDisplay?.let {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.overtime_month_value, it),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.overtime_actual_target, yearActualDisplay, yearTargetDisplay),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.overtime_counted_days, yearCountedDays),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReviewBannerV2(
-    reviewReason: String,
-    onOpenReviewSheet: () -> Unit
-) {
-    MZCard(
-        modifier = Modifier.clickableWithAccessibility(
-            onClick = onOpenReviewSheet,
-            contentDescription = stringResource(R.string.today_needs_review)
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.today_needs_review),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = reviewReason,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            SecondaryActionButton(
-                onClick = onOpenReviewSheet
-            ) {
-                Text(stringResource(R.string.action_review))
+            AnimatedVisibility(visible = isExpanded) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.overtime_actual_target,
+                            yearActualDisplay,
+                            yearTargetDisplay
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.overtime_counted_days, yearCountedDays),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
+
+private fun formatSignedZeroHours(): String = String.format(Locale.GERMAN, "%+.2fh", 0.0)
 
 @Composable
 private fun StatusCardV2(
@@ -482,7 +390,6 @@ private fun StatusCardV2(
     onEditDayLocation: () -> Unit
 ) {
     val status = when {
-        entry?.needsReview == true -> StatusType.WARNING
         entry?.confirmedWorkDay == true -> StatusType.SUCCESS
         else -> StatusType.INFO
     }
@@ -506,7 +413,10 @@ private fun StatusCardV2(
             
             TextButton(
                 onClick = onEditDayLocation,
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Text(stringResource(R.string.action_change_location))
             }
@@ -750,6 +660,7 @@ private fun DailyManualCheckInDialogV2(
             PrimaryActionButton(
                 onClick = onConfirm,
                 isLoading = isLoading,
+                enabled = input.trim().isNotEmpty(),
                 content = { Text(stringResource(R.string.action_daily_manual_check_in)) }
             )
         },
@@ -763,12 +674,12 @@ private fun DailyManualCheckInDialogV2(
 
 @Composable
 private fun DayLocationDialogV2(
-    currentLabel: String,
+    input: String,
+    isLoading: Boolean,
+    onInputChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: () -> Unit
 ) {
-    var input by remember(currentLabel) { mutableStateOf(currentLabel) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.day_location_dialog_title)) },
@@ -776,7 +687,7 @@ private fun DayLocationDialogV2(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = input,
-                    onValueChange = { input = it },
+                    onValueChange = onInputChange,
                     label = { Text(stringResource(R.string.day_location_dialog_label)) },
                     placeholder = { Text(stringResource(R.string.day_location_dialog_placeholder)) },
                     singleLine = true,
@@ -791,7 +702,8 @@ private fun DayLocationDialogV2(
         },
         confirmButton = {
             PrimaryActionButton(
-                onClick = { onConfirm(input.trim()) },
+                onClick = onConfirm,
+                isLoading = isLoading,
                 enabled = input.trim().isNotEmpty(),
                 content = { Text(stringResource(R.string.action_apply)) }
             )

@@ -134,7 +134,7 @@ class PdfUtilitiesTest {
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(19, 0),
             breakMinutes = 60,
-            morningLocationLabel = "Leipzig",
+            morningLocationLabel = "Dresden",
             eveningLocationLabel = "Außen",
             confirmedWorkDay = true,
             confirmationAt = System.currentTimeMillis()
@@ -142,7 +142,7 @@ class PdfUtilitiesTest {
         
         val location = PdfUtilities.getLocation(entry)
         
-        assertEquals("Leipzig", location)
+        assertEquals("Dresden", location)
     }
     
     @Test

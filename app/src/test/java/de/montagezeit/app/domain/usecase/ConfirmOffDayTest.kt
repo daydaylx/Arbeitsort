@@ -29,7 +29,7 @@ class ConfirmOffDayTest {
         val result = useCase(date, source = "TEST")
 
         assertEquals(DayType.OFF, result.dayType)
-        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
         assertEquals(0, result.travelPaidMinutes)
         assertEquals(true, result.confirmedWorkDay)
@@ -74,7 +74,7 @@ class ConfirmOffDayTest {
     }
 
     @Test
-    fun `invoke uses fallback city when existing day location label is blank`() = runTest {
+    fun `invoke keeps day location blank when existing day location label is blank`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
@@ -89,7 +89,7 @@ class ConfirmOffDayTest {
         val result = useCase(date)
 
         assertEquals(DayType.OFF, result.dayType)
-        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.GPS, result.dayLocationSource)
     }
 }

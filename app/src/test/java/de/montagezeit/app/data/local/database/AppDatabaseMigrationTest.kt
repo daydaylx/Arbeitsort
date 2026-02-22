@@ -31,19 +31,25 @@ class AppDatabaseMigrationTest {
         listOf(
             "migration_1_2_test.db",
             "migration_2_3_test.db",
-            "migration_5_6_test.db"
+            "migration_5_6_test.db",
+            "migration_8_9_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
     }
 
     @Test
-    fun `migration 5 to 6 adds day location columns with defaults`() {
+    fun `migration chain from 5 updates day location and removes legacy location columns`() {
         val dbName = "migration_5_6_test.db"
         createVersion5Database(dbName)
 
         val roomDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
+            .addMigrations(
+                AppDatabase.MIGRATION_5_6,
+                AppDatabase.MIGRATION_6_7,
+                AppDatabase.MIGRATION_7_8,
+                AppDatabase.MIGRATION_8_9
+            )
             .build()
 
         roomDb.openHelper.writableDatabase
@@ -61,13 +67,15 @@ class AppDatabaseMigrationTest {
             assertTrue(hasColumn(db, "work_entries", "dayLocationLat"))
             assertTrue(hasColumn(db, "work_entries", "dayLocationLon"))
             assertTrue(hasColumn(db, "work_entries", "dayLocationAccuracyMeters"))
+            assertFalse(hasColumn(db, "work_entries", "outsideLeipzigMorning"))
+            assertFalse(hasColumn(db, "work_entries", "outsideLeipzigEvening"))
 
             db.rawQuery(
                 "SELECT dayLocationLabel, dayLocationSource, dayLocationLat, dayLocationLon, dayLocationAccuracyMeters FROM work_entries WHERE date = ?",
                 arrayOf("2026-01-05")
             ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
-                assertEquals("Leipzig", cursor.getString(0))
+                assertEquals("", cursor.getString(0))
                 assertEquals("FALLBACK", cursor.getString(1))
                 assertTrue(cursor.isNull(2))
                 assertTrue(cursor.isNull(3))

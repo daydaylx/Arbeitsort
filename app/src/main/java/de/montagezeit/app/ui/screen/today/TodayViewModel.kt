@@ -10,13 +10,9 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
-import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
-import de.montagezeit.app.domain.usecase.ResolveReview
-import de.montagezeit.app.domain.usecase.ReviewScope
 import de.montagezeit.app.domain.usecase.SetDayLocation
-import de.montagezeit.app.domain.usecase.dailyTargetHoursFromSettings
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.ui.util.UiText
@@ -86,7 +82,7 @@ data class MonthStats(
 enum class TodayAction {
     DAILY_MANUAL_CHECK_IN,
     CONFIRM_OFFDAY,
-    RESOLVE_REVIEW
+    UPDATE_DAY_LOCATION
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,7 +92,6 @@ class TodayViewModel @Inject constructor(
     private val recordDailyManualCheckIn: RecordDailyManualCheckIn,
     private val resolveDayLocationPrefill: ResolveDayLocationPrefill,
     private val confirmOffDay: ConfirmOffDay,
-    private val resolveReview: ResolveReview,
     private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
@@ -152,17 +147,17 @@ class TodayViewModel @Inject constructor(
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
 
-    private val _showReviewSheet = MutableStateFlow(false)
-    val showReviewSheet: StateFlow<Boolean> = _showReviewSheet.asStateFlow()
-
-    private val _reviewScope = MutableStateFlow<ReviewScope?>(null)
-    val reviewScope: StateFlow<ReviewScope?> = _reviewScope.asStateFlow()
-
     private val _showDailyCheckInDialog = MutableStateFlow(false)
     val showDailyCheckInDialog: StateFlow<Boolean> = _showDailyCheckInDialog.asStateFlow()
 
     private val _dailyCheckInLocationInput = MutableStateFlow("")
     val dailyCheckInLocationInput: StateFlow<String> = _dailyCheckInLocationInput.asStateFlow()
+
+    private val _showDayLocationDialog = MutableStateFlow(false)
+    val showDayLocationDialog: StateFlow<Boolean> = _showDayLocationDialog.asStateFlow()
+
+    private val _dayLocationInput = MutableStateFlow("")
+    val dayLocationInput: StateFlow<String> = _dayLocationInput.asStateFlow()
 
     private val _loadingActions = MutableStateFlow<Set<TodayAction>>(emptySet())
     val loadingActions: StateFlow<Set<TodayAction>> = _loadingActions.asStateFlow()
@@ -208,6 +203,10 @@ class TodayViewModel @Inject constructor(
                 val monthStart = now.withDayOfMonth(1)
                 val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
 
+                // Load settings for target hours
+                val settings = reminderSettingsManager.settings.first()
+                _isOvertimeConfigured.value = true
+
                 val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
                     Pair(
                         workEntryDao.getByDateRange(weekStart, weekEnd),
@@ -215,18 +214,9 @@ class TodayViewModel @Inject constructor(
                     )
                 }
 
-                _weekStats.value = calculateWeekStats(weekEntries)
-                _monthStats.value = calculateMonthStats(monthEntries)
+                _weekStats.value = calculateWeekStats(weekEntries, settings.weeklyTargetHours)
+                _monthStats.value = calculateMonthStats(monthEntries, settings.monthlyTargetHours)
 
-                val settings = reminderSettingsManager.settings.first()
-                val dailyTargetHours = dailyTargetHoursFromSettings(settings)
-                if (dailyTargetHours <= 0.0) {
-                    _isOvertimeConfigured.value = false
-                    _overtimeMonthDisplay.value = null
-                    return@launch
-                }
-
-                _isOvertimeConfigured.value = true
                 val yearStart = now.withDayOfYear(1)
                 val (yearEntries, currentMonthEntries) = withContext(Dispatchers.IO) {
                     Pair(
@@ -235,8 +225,8 @@ class TodayViewModel @Inject constructor(
                     )
                 }
 
-                val yearOvertime = calculateOvertimeForRange(yearEntries, dailyTargetHours)
-                val monthOvertime = calculateOvertimeForRange(currentMonthEntries, dailyTargetHours)
+                val yearOvertime = calculateOvertimeForRange(yearEntries, settings.dailyTargetHours)
+                val monthOvertime = calculateOvertimeForRange(currentMonthEntries, settings.dailyTargetHours)
 
                 _overtimeYearDisplay.value = formatSignedHours(yearOvertime.totalOvertimeHours)
                 _overtimeMonthDisplay.value = formatSignedHours(monthOvertime.totalOvertimeHours)
@@ -289,12 +279,11 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private fun calculateWeekStats(entries: List<WorkEntry>): WeekStats {
+    private fun calculateWeekStats(entries: List<WorkEntry>, targetHours: Double): WeekStats {
         val workEntries = entries.filter { it.dayType == DayType.WORK }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
-        val targetHours: Double = 40.0 // Standard: 40 Stunden/Woche
 
         return WeekStats(
             totalHours = totalHours,
@@ -304,12 +293,11 @@ class TodayViewModel @Inject constructor(
         )
     }
 
-    private fun calculateMonthStats(entries: List<WorkEntry>): MonthStats {
+    private fun calculateMonthStats(entries: List<WorkEntry>, targetHours: Double): MonthStats {
         val workEntries = entries.filter { it.dayType == DayType.WORK }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
-        val targetHours: Double = 160.0 // Standard: 160 Stunden/Monat (40h/Woche * 4)
 
         return MonthStats(
             totalHours = totalHours,
@@ -320,8 +308,17 @@ class TodayViewModel @Inject constructor(
     }
 
     fun selectDate(date: LocalDate) {
-        if (_selectedDate.value == date) return
+        val wasAlreadySelected = _selectedDate.value == date
         _selectedDate.value = date
+
+        // Update week overview highlights immediately
+        _weekDaysUi.update { days ->
+            days.map { it.copy(isSelected = it.date == date) }
+        }
+
+        // Skip reloading if already selected (optimization)
+        if (wasAlreadySelected) return
+
         viewModelScope.launch {
             try {
                 val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
@@ -329,10 +326,6 @@ class TodayViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
             }
-        }
-        // Refresh week overview to update isSelected highlights
-        _weekDaysUi.update { days ->
-            days.map { it.copy(isSelected = it.date == date) }
         }
     }
 
@@ -357,7 +350,32 @@ class TodayViewModel @Inject constructor(
         _showDailyCheckInDialog.value = false
     }
 
+    fun openDayLocationDialog() {
+        viewModelScope.launch {
+            try {
+                val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
+                val prefill = resolveDayLocationPrefill(existingEntry)
+                _dayLocationInput.value = prefill
+                _showDayLocationDialog.value = true
+            } catch (e: Exception) {
+                _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
+            }
+        }
+    }
+
+    fun onDayLocationInputChanged(label: String) {
+        _dayLocationInput.value = label
+    }
+
+    fun onDismissDayLocationDialog() {
+        _showDayLocationDialog.value = false
+    }
+
     fun submitDailyManualCheckIn(label: String = _dailyCheckInLocationInput.value) {
+        if (label.trim().isBlank()) {
+            _snackbarMessage.value = UiText.StringResource(R.string.error_day_location_required)
+            return
+        }
         viewModelScope.launch {
             addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
             try {
@@ -388,7 +406,7 @@ class TodayViewModel @Inject constructor(
                     val isNonWorking = ReminderWindowEvaluator.isNonWorkingDay(date, settings)
                     val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
                     val now = System.currentTimeMillis()
-                    val defaultLocation = DEFAULT_DAY_LOCATION_LABEL
+                    val defaultLocation = ""
                     val entry = WorkEntry(
                         date = date,
                         dayType = dayType,
@@ -423,59 +441,23 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    fun onOpenReviewSheet() {
-        val entry = selectedEntry.value ?: return
-
-        val scope = when {
-            entry.morningCapturedAt == null && entry.eveningCapturedAt == null -> ReviewScope.BOTH
-            entry.morningCapturedAt != null && entry.eveningCapturedAt != null -> ReviewScope.BOTH
-            entry.morningCapturedAt != null -> ReviewScope.MORNING
-            else -> ReviewScope.EVENING
-        }
-
-        _reviewScope.value = scope
-        _showReviewSheet.value = true
-    }
-
-    fun onResolveReview(label: String, isLeipzig: Boolean) {
-        viewModelScope.launch {
-            val scope = _reviewScope.value ?: return@launch
-            addLoadingAction(TodayAction.RESOLVE_REVIEW)
-            try {
-                val entry = resolveReview(
-                    date = _selectedDate.value,
-                    scope = scope,
-                    resolvedLabel = label,
-                    isLeipzig = isLeipzig
-                )
-                _uiState.value = TodayUiState.Success(entry)
-                _showReviewSheet.value = false
-                _reviewScope.value = null
-            } catch (e: Exception) {
-                _snackbarMessage.value = e.toUiText(R.string.today_error_review_save_failed)
-            } finally {
-                removeLoadingAction(TodayAction.RESOLVE_REVIEW)
-            }
-        }
-    }
-
-    fun onDismissReviewSheet() {
-        _showReviewSheet.value = false
-        _reviewScope.value = null
-    }
-
-    fun onUpdateDayLocation(label: String) {
+    fun submitDayLocationUpdate(label: String = _dayLocationInput.value) {
         viewModelScope.launch {
             val trimmed = label.trim()
-            if (trimmed.isBlank()) return@launch
-            addLoadingAction(TodayAction.RESOLVE_REVIEW)
+            if (trimmed.isBlank()) {
+                _snackbarMessage.value = UiText.StringResource(R.string.error_day_location_required)
+                return@launch
+            }
+            addLoadingAction(TodayAction.UPDATE_DAY_LOCATION)
             try {
                 val entry = setDayLocation(_selectedDate.value, trimmed)
                 _uiState.value = TodayUiState.Success(entry)
+                _dayLocationInput.value = entry.dayLocationLabel
+                _showDayLocationDialog.value = false
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
             } finally {
-                removeLoadingAction(TodayAction.RESOLVE_REVIEW)
+                removeLoadingAction(TodayAction.UPDATE_DAY_LOCATION)
             }
         }
     }

@@ -12,7 +12,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
     entities = [WorkEntry::class],
-    version = 7,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(
@@ -75,7 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLabel TEXT NOT NULL DEFAULT 'Leipzig'")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLabel TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationSource TEXT NOT NULL DEFAULT 'FALLBACK'")
                 db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLat REAL")
                 db.execSQL("ALTER TABLE work_entries ADD COLUMN dayLocationLon REAL")
@@ -91,13 +91,175 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 7→8: Legacy-Fallback-Werte aus dayLocationLabel entfernen.
+        // Fallback-Einträge werden grundsätzlich auf leeren Tagesort normalisiert.
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "UPDATE work_entries SET dayLocationLabel = '' " +
+                    "WHERE dayLocationSource = 'FALLBACK'"
+                )
+            }
+        }
+
+        // Migration 8→9:
+        // 1) Entfernt legacy Standort-Spalten aus älteren Versionen
+        // 2) Deaktiviert bestehende Review-Flags, da der Review-Flow entfällt
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `work_entries_new` (
+                        `date` TEXT NOT NULL,
+                        `workStart` TEXT NOT NULL,
+                        `workEnd` TEXT NOT NULL,
+                        `breakMinutes` INTEGER NOT NULL,
+                        `dayType` TEXT NOT NULL,
+                        `dayLocationLabel` TEXT NOT NULL,
+                        `dayLocationSource` TEXT NOT NULL,
+                        `dayLocationLat` REAL,
+                        `dayLocationLon` REAL,
+                        `dayLocationAccuracyMeters` REAL,
+                        `morningCapturedAt` INTEGER,
+                        `morningLocationLabel` TEXT,
+                        `morningLat` REAL,
+                        `morningLon` REAL,
+                        `morningAccuracyMeters` REAL,
+                        `morningLocationStatus` TEXT NOT NULL,
+                        `eveningCapturedAt` INTEGER,
+                        `eveningLocationLabel` TEXT,
+                        `eveningLat` REAL,
+                        `eveningLon` REAL,
+                        `eveningAccuracyMeters` REAL,
+                        `eveningLocationStatus` TEXT NOT NULL,
+                        `travelStartAt` INTEGER,
+                        `travelArriveAt` INTEGER,
+                        `travelLabelStart` TEXT,
+                        `travelLabelEnd` TEXT,
+                        `travelFromLabel` TEXT,
+                        `travelToLabel` TEXT,
+                        `travelDistanceKm` REAL,
+                        `travelPaidMinutes` INTEGER,
+                        `travelSource` TEXT,
+                        `travelUpdatedAt` INTEGER,
+                        `confirmedWorkDay` INTEGER NOT NULL,
+                        `confirmationAt` INTEGER,
+                        `confirmationSource` TEXT,
+                        `needsReview` INTEGER NOT NULL,
+                        `note` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`date`)
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `work_entries_new` (
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        dayLocationSource,
+                        dayLocationLat,
+                        dayLocationLon,
+                        dayLocationAccuracyMeters,
+                        morningCapturedAt,
+                        morningLocationLabel,
+                        morningLat,
+                        morningLon,
+                        morningAccuracyMeters,
+                        morningLocationStatus,
+                        eveningCapturedAt,
+                        eveningLocationLabel,
+                        eveningLat,
+                        eveningLon,
+                        eveningAccuracyMeters,
+                        eveningLocationStatus,
+                        travelStartAt,
+                        travelArriveAt,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        travelFromLabel,
+                        travelToLabel,
+                        travelDistanceKm,
+                        travelPaidMinutes,
+                        travelSource,
+                        travelUpdatedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        needsReview,
+                        note,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        dayLocationSource,
+                        dayLocationLat,
+                        dayLocationLon,
+                        dayLocationAccuracyMeters,
+                        morningCapturedAt,
+                        morningLocationLabel,
+                        morningLat,
+                        morningLon,
+                        morningAccuracyMeters,
+                        morningLocationStatus,
+                        eveningCapturedAt,
+                        eveningLocationLabel,
+                        eveningLat,
+                        eveningLon,
+                        eveningAccuracyMeters,
+                        eveningLocationStatus,
+                        travelStartAt,
+                        travelArriveAt,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        travelFromLabel,
+                        travelToLabel,
+                        travelDistanceKm,
+                        travelPaidMinutes,
+                        travelSource,
+                        travelUpdatedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        0,
+                        note,
+                        createdAt,
+                        updatedAt
+                    FROM `work_entries`
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE `work_entries`")
+                db.execSQL("ALTER TABLE `work_entries_new` RENAME TO `work_entries`")
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
-            MIGRATION_6_7
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+            MIGRATION_8_9
         )
     }
 }

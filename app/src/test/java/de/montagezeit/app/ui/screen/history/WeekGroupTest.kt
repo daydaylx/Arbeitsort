@@ -178,70 +178,6 @@ class WeekGroupTest {
     }
 
     @Test
-    fun `daysOutsideLeipzig should count days with morning OR evening outside Leipzig`() {
-        val entries = listOf(
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 5),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = true,
-                outsideLeipzigEvening = false,
-                needsReview = false
-            ),
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 6),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = false,
-                outsideLeipzigEvening = true,
-                needsReview = false
-            ),
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 7),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = true,
-                outsideLeipzigEvening = true,
-                needsReview = false
-            ),
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 8),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = false,
-                outsideLeipzigEvening = false,
-                needsReview = false
-            )
-        )
-
-        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
-
-        // Days 1, 2, 3 have at least one outside Leipzig
-        assertEquals(3, weekGroup.daysOutsideLeipzig)
-    }
-
-    @Test
-    fun `daysOutsideLeipzig should handle null values correctly`() {
-        val entries = listOf(
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 5),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = null,
-                outsideLeipzigEvening = null,
-                needsReview = false
-            ),
-            WorkEntry(
-                date = LocalDate.of(2026, 1, 6),
-                dayType = DayType.WORK,
-                outsideLeipzigMorning = true,
-                outsideLeipzigEvening = null,
-                needsReview = false
-            )
-        )
-
-        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
-
-        // Only day 2 has outside Leipzig
-        assertEquals(1, weekGroup.daysOutsideLeipzig)
-    }
-
-    @Test
     fun `week should keep assigned value`() {
         val weekGroup = createWeekGroup(year = 2026, week = 42, entries = emptyList())
 
@@ -290,9 +226,6 @@ class WeekGroupTest {
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val averageHoursPerDay = if (workDaysCount == 0) 0.0 else totalHours / workDaysCount
         val entriesNeedingReview = entries.count { it.needsReview }
-        val daysOutsideLeipzig = entries.count {
-            it.outsideLeipzigMorning == true || it.outsideLeipzigEvening == true
-        }
 
         return WeekGroup(
             year = year,
@@ -303,8 +236,7 @@ class WeekGroupTest {
             totalHours = totalHours,
             totalPaidHours = totalPaidHours,
             averageHoursPerDay = averageHoursPerDay,
-            entriesNeedingReview = entriesNeedingReview,
-            daysOutsideLeipzig = daysOutsideLeipzig
+            entriesNeedingReview = entriesNeedingReview
         )
     }
 }

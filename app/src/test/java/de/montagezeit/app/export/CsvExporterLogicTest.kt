@@ -53,7 +53,7 @@ class CsvExporterLogicTest {
     }
 
     private fun entry(
-        location: String = "Leipzig",
+        location: String = "Dresden",
         note: String? = null,
         dayType: DayType = DayType.WORK
     ) = WorkEntry(
@@ -74,7 +74,7 @@ class CsvExporterLogicTest {
         assertEquals(11, cols.size)
         assertEquals("2024-06-10", cols[0])
         assertEquals("WORK", cols[1])
-        assertEquals("Leipzig", cols[2])
+        assertEquals("Dresden", cols[2])
         assertEquals("08:00", cols[4])
         assertEquals("16:00", cols[5])
         assertEquals("60", cols[6])

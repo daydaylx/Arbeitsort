@@ -35,7 +35,7 @@ class ConfirmOffDay(
     ): WorkEntry {
         val existingEntry = workEntryDao.getByDate(date)
         val now = System.currentTimeMillis()
-        val dayLocationLabel = DEFAULT_DAY_LOCATION_LABEL
+        val dayLocationLabel = ""
         
         val updatedEntry = existingEntry?.withConfirmedOffDay(
             source = source,

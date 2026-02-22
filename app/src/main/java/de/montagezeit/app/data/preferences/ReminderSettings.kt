@@ -45,7 +45,12 @@ data class ReminderSettings(
     val pdfEmployeeName: String? = null,
     val pdfCompany: String? = null,
     val pdfProject: String? = null,
-    val pdfPersonnelNumber: String? = null
+    val pdfPersonnelNumber: String? = null,
+
+    // Überstunden-Ziele
+    val dailyTargetHours: Double = 8.0,
+    val weeklyTargetHours: Double = 40.0,
+    val monthlyTargetHours: Double = 160.0
 )
 
 /**
@@ -87,6 +92,11 @@ object ReminderSettingsKeys {
     val PDF_COMPANY = stringPreferencesKey("pdf_company")
     val PDF_PROJECT = stringPreferencesKey("pdf_project")
     val PDF_PERSONNEL_NUMBER = stringPreferencesKey("pdf_personnel_number")
+
+    // Überstunden-Ziele
+    val DAILY_TARGET_HOURS = stringPreferencesKey("daily_target_hours")
+    val WEEKLY_TARGET_HOURS = stringPreferencesKey("weekly_target_hours")
+    val MONTHLY_TARGET_HOURS = stringPreferencesKey("monthly_target_hours")
 }
 
 /**

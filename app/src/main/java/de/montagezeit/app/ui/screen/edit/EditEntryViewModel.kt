@@ -12,7 +12,6 @@ import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.DEFAULT_DAY_LOCATION_LABEL
 import de.montagezeit.app.domain.usecase.UpdateEntry
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +101,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = settings.workStart,
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes,
-                        dayLocationLabel = DEFAULT_DAY_LOCATION_LABEL,
+                        dayLocationLabel = "",
                         dayLocationSource = DayLocationSource.FALLBACK
                     )
                     val formData = EditFormData.fromEntry(defaultEntry)
@@ -253,7 +252,12 @@ class EditEntryViewModel @Inject constructor(
                     is EditUiState.NewEntry -> {
                         _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
                     }
-                    else -> return@launch
+                    else -> {
+                        _screenState.update {
+                            it.copy(uiState = EditUiState.Error(UiText.StringResource(R.string.error_validation_failed)))
+                        }
+                        return@launch
+                    }
                 }
                 return@launch
             }
@@ -274,7 +278,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
-                        dayLocationLabel = data.dayLocationLabel ?: DEFAULT_DAY_LOCATION_LABEL,
+                        dayLocationLabel = data.dayLocationLabel ?: "",
                         dayLocationSource = data.dayLocationSource,
                         dayLocationLat = data.dayLocationLat,
                         dayLocationLon = data.dayLocationLon,
@@ -298,7 +302,7 @@ class EditEntryViewModel @Inject constructor(
                         workStart = data.workStart,
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
-                        dayLocationLabel = data.dayLocationLabel ?: DEFAULT_DAY_LOCATION_LABEL,
+                        dayLocationLabel = data.dayLocationLabel ?: "",
                         dayLocationSource = data.dayLocationSource,
                         dayLocationLat = data.dayLocationLat,
                         dayLocationLon = data.dayLocationLon,
@@ -315,7 +319,12 @@ class EditEntryViewModel @Inject constructor(
                         updatedAt = System.currentTimeMillis()
                     )
                 }
-                else -> return@launch
+                else -> {
+                    _screenState.update {
+                        it.copy(uiState = EditUiState.Error(UiText.StringResource(R.string.error_cannot_save)))
+                    }
+                    return@launch
+                }
             }
 
             try {
@@ -409,7 +418,7 @@ data class EditFormData(
     val workStart: LocalTime = LocalTime.of(8, 0),
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
-    val dayLocationLabel: String? = DEFAULT_DAY_LOCATION_LABEL,
+    val dayLocationLabel: String? = null,
     val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
     val dayLocationLat: Double? = null,
     val dayLocationLon: Double? = null,

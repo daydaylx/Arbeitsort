@@ -2,9 +2,7 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.domain.util.AppDefaults
-
-internal const val DEFAULT_DAY_LOCATION_LABEL = AppDefaults.DEFAULT_CITY
+internal const val DEFAULT_DAY_LOCATION_LABEL = ""
 
 internal data class DayLocationData(
     val label: String,
@@ -32,8 +30,7 @@ internal object DayLocationResolver {
             )
         }
 
-        val existingLabel = existingEntry?.dayLocationLabel?.takeIf { it.isNotBlank() }
-            ?: DEFAULT_DAY_LOCATION_LABEL
+        val existingLabel = existingEntry?.dayLocationLabel?.takeIf { it.isNotBlank() } ?: ""
 
         return DayLocationData(
             label = existingLabel,

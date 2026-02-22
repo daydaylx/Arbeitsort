@@ -1,9 +1,11 @@
 package de.montagezeit.app.ui.screen.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -146,6 +148,15 @@ fun PdfCustomRangeDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(formatDialogDate(endDate))
+                }
+
+                AnimatedVisibility(visible = startDate.isAfter(endDate)) {
+                    Text(
+                        text = stringResource(R.string.error_invalid_date_range),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         },

@@ -32,7 +32,7 @@ class SetTravelEventTest {
         // Arrange
         val date = LocalDate.now()
         val timestamp = 1000000L
-        val label = "Leipzig"
+        val label = "Dresden"
         
         coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } just Runs
@@ -110,7 +110,7 @@ class SetTravelEventTest {
             date = date,
             dayType = DayType.WORK,
             travelStartAt = 1000000L,
-            travelLabelStart = "Leipzig",
+            travelLabelStart = "Dresden",
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
@@ -133,22 +133,22 @@ class SetTravelEventTest {
     }
     
     @Test
-    fun `invoke - DEPARTURE - Neuer Eintrag - Erstellt Entry mit travelStartAt`() = runTest {
+    fun `invoke - DEPARTURE - Neuer Eintrag - Erstellt Entry mit travelArriveAt`() = runTest {
         // Arrange
         val date = LocalDate.now()
         val timestamp = 3000000L
-        val label = "Leipzig"
-        
+        val label = "Dresden"
+
         coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } just Runs
-        
+
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.DEPARTURE, timestamp, label)
-        
+
         // Assert
-        assertEquals(timestamp, result.travelStartAt)
-        assertEquals(label, result.travelLabelStart)
-        
+        assertEquals(timestamp, result.travelArriveAt)
+        assertEquals(label, result.travelLabelEnd)
+
         coVerify { workEntryDao.upsert(result) }
     }
     
@@ -180,8 +180,8 @@ class SetTravelEventTest {
             dayType = DayType.WORK,
             travelStartAt = 1000000L,
             travelArriveAt = 2000000L,
-            travelLabelStart = "Leipzig",
-            travelLabelEnd = "Dresden",
+            travelLabelStart = "Dresden",
+            travelLabelEnd = "Berlin",
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
@@ -214,4 +214,3 @@ class SetTravelEventTest {
         setTravelEvent.clearTravelEvents(date)
     }
 }
-

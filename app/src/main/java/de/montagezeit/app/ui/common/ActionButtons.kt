@@ -20,8 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-
-private val ActionMinHeight = 48.dp
+import de.montagezeit.app.ui.components.AccessibilityDefaults
 
 @Composable
 fun PrimaryActionButton(
@@ -31,7 +30,7 @@ fun PrimaryActionButton(
     isLoading: Boolean = false,
     icon: ImageVector? = null,
     contentDescription: String? = null,
-    minHeight: Dp = ActionMinHeight,
+    minHeight: Dp = AccessibilityDefaults.PrimaryButtonHeight,
     shape: Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
     content: @Composable RowScope.() -> Unit
@@ -46,9 +45,9 @@ fun PrimaryActionButton(
 
     Button(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = minHeight)
-            .then(semanticsModifier),
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
         enabled = enabled && !isLoading,
         shape = resolvedShape,
         colors = resolvedColors
@@ -82,7 +81,7 @@ fun SecondaryActionButton(
     isLoading: Boolean = false,
     icon: ImageVector? = null,
     contentDescription: String? = null,
-    minHeight: Dp = ActionMinHeight,
+    minHeight: Dp = AccessibilityDefaults.SecondaryButtonHeight,
     shape: Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
     content: @Composable RowScope.() -> Unit
@@ -97,9 +96,9 @@ fun SecondaryActionButton(
 
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = minHeight)
-            .then(semanticsModifier),
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
         enabled = enabled && !isLoading,
         shape = resolvedShape,
         colors = resolvedColors
@@ -132,7 +131,7 @@ fun TertiaryActionButton(
     isLoading: Boolean = false,
     icon: ImageVector? = null,
     contentDescription: String? = null,
-    minHeight: Dp = ActionMinHeight,
+    minHeight: Dp = AccessibilityDefaults.TertiaryButtonHeight,
     shape: Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
     content: @Composable RowScope.() -> Unit
@@ -147,9 +146,9 @@ fun TertiaryActionButton(
 
     TextButton(
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = minHeight)
-            .then(semanticsModifier),
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
         enabled = enabled && !isLoading,
         shape = resolvedShape,
         colors = resolvedColors
@@ -183,7 +182,7 @@ fun DestructiveActionButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.heightIn(min = ActionMinHeight),
+        modifier = modifier.heightIn(min = AccessibilityDefaults.PrimaryButtonHeight),
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error,

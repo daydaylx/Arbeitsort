@@ -147,7 +147,7 @@ fun EditEntrySheet(
                             workStart = formData.workStart,
                             workEnd = formData.workEnd,
                             breakMinutes = formData.breakMinutes,
-                            dayLocationLabel = formData.dayLocationLabel ?: stringResource(R.string.location_leipzig),
+                            dayLocationLabel = formData.dayLocationLabel.orEmpty(),
                             dayLocationSource = formData.dayLocationSource,
                             dayLocationLat = formData.dayLocationLat,
                             dayLocationLon = formData.dayLocationLon,
@@ -1039,7 +1039,7 @@ fun LocationLabelsSection(
             value = dayLocationLabel ?: "",
             onValueChange = onDayLocationChange,
             label = { Text(stringResource(R.string.edit_label_day_location_required)) },
-            placeholder = { Text(stringResource(R.string.edit_placeholder_city_leipzig)) },
+            placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )

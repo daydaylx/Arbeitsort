@@ -41,7 +41,8 @@ fun TimePickerDialog(
     title: String? = null,
     initialTime: LocalTime,
     onTimeSelected: (LocalTime) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    validator: ((LocalTime) -> String?)? = null
 ) {
     val dialogTitle = title ?: stringResource(R.string.time_picker_title)
     val timePickerState = rememberTimePickerState(
@@ -50,6 +51,7 @@ fun TimePickerDialog(
         is24Hour = true
     )
     var showTimeInput by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -83,6 +85,18 @@ fun TimePickerDialog(
                     TimePicker(state = timePickerState)
                 }
 
+                // Display error message if validation fails
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -108,7 +122,13 @@ fun TimePickerDialog(
                             Text(stringResource(R.string.action_cancel))
                         }
                         TextButton(onClick = {
-                            onTimeSelected(LocalTime.of(timePickerState.hour, timePickerState.minute))
+                            val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                            val validationError = validator?.invoke(selectedTime)
+                            if (validationError != null) {
+                                errorMessage = validationError
+                            } else {
+                                onTimeSelected(selectedTime)
+                            }
                         }) {
                             Text(stringResource(R.string.action_ok))
                         }

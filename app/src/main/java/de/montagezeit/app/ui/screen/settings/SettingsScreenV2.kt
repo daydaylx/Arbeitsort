@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -29,11 +32,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -51,6 +57,7 @@ import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 /**
@@ -142,6 +149,9 @@ fun SettingsScreenV2(
                 onUpdatePdfSettings = { name, company, project, personnel ->
                     viewModel.updatePdfSettings(name, company, project, personnel)
                 },
+                onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
+                onUpdateWeeklyTargetHours = { viewModel.updateWeeklyTargetHours(it) },
+                onUpdateMonthlyTargetHours = { viewModel.updateMonthlyTargetHours(it) },
                 onResetExportState = { viewModel.resetExportState() },
                 hasNotificationPermission = hasNotificationPermission,
                 isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
@@ -206,6 +216,9 @@ fun SettingsContentV2(
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
     onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
+    onUpdateDailyTargetHours: (Double) -> Unit,
+    onUpdateWeeklyTargetHours: (Double) -> Unit,
+    onUpdateMonthlyTargetHours: (Double) -> Unit,
     onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
@@ -216,6 +229,7 @@ fun SettingsContentV2(
     modifier: Modifier = Modifier
 ) {
     var workTimesExpanded by rememberSaveable { mutableStateOf(false) }
+    var overtimeExpanded by rememberSaveable { mutableStateOf(false) }
     var remindersExpanded by rememberSaveable { mutableStateOf(false) }
     var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
     var exportExpanded by rememberSaveable { mutableStateOf(false) }
@@ -244,6 +258,18 @@ fun SettingsContentV2(
             onUpdateWorkStart = onUpdateWorkStart,
             onUpdateWorkEnd = onUpdateWorkEnd,
             onUpdateBreakMinutes = onUpdateBreakMinutes
+        )
+
+        // Overtime Targets Section
+        OvertimeTargetsSectionV2(
+            dailyTargetHours = settings.dailyTargetHours,
+            weeklyTargetHours = settings.weeklyTargetHours,
+            monthlyTargetHours = settings.monthlyTargetHours,
+            expanded = overtimeExpanded,
+            onExpandedChange = { overtimeExpanded = it },
+            onUpdateDailyTarget = onUpdateDailyTargetHours,
+            onUpdateWeeklyTarget = onUpdateWeeklyTargetHours,
+            onUpdateMonthlyTarget = onUpdateMonthlyTargetHours
         )
 
         // Reminder Settings Section
@@ -412,6 +438,10 @@ private fun CollapsibleSettingsCard(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val context = LocalContext.current
+    val expandLabel = stringResource(R.string.cd_expand_section, title)
+    val collapseLabel = stringResource(R.string.cd_collapse_section, title)
+
     MZCard(
         modifier = modifier.animateContentSize()
     ) {
@@ -419,7 +449,20 @@ private fun CollapsibleSettingsCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onExpandedChange(!expanded) },
+                    .clickable(
+                        onClickLabel = if (expanded) collapseLabel else expandLabel
+                    ) { onExpandedChange(!expanded) }
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = context.getString(
+                            R.string.settings_section_content_desc,
+                            title,
+                            if (expanded) {
+                                context.getString(R.string.settings_state_expanded)
+                            } else {
+                                context.getString(R.string.settings_state_collapsed)
+                            }
+                        )
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -905,10 +948,14 @@ fun HolidayRow(
             text = formatDate(date),
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onRemove) {
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(48.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.cd_remove_holiday)
+                contentDescription = stringResource(R.string.cd_remove_holiday),
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -1103,8 +1150,16 @@ fun SettingsToggleRowV2(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Switch
+            )
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1124,7 +1179,18 @@ fun SettingsToggleRowV2(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = null,
+            modifier = Modifier.semantics {
+                contentDescription = context.getString(
+                    R.string.settings_toggle_content_desc,
+                    title,
+                    if (checked) {
+                        context.getString(R.string.settings_toggle_active)
+                    } else {
+                        context.getString(R.string.settings_toggle_inactive)
+                    }
+                )
+            }
         )
     }
 }
@@ -1135,23 +1201,192 @@ fun SettingsTimeButtonRowV2(
     time: LocalTime,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    disabledReason: String? = null
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!enabled && disabledReason != null) {
+                Text(
+                    text = disabledReason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 11.sp
+                )
+            }
+        }
         SecondaryActionButton(
             onClick = onClick,
             enabled = enabled
         ) {
             Text(formatTime(time))
+        }
+    }
+}
+
+@Composable
+fun OvertimeTargetsSectionV2(
+    dailyTargetHours: Double,
+    weeklyTargetHours: Double,
+    monthlyTargetHours: Double,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onUpdateDailyTarget: (Double) -> Unit,
+    onUpdateWeeklyTarget: (Double) -> Unit,
+    onUpdateMonthlyTarget: (Double) -> Unit
+) {
+    CollapsibleSettingsCard(
+        title = stringResource(R.string.settings_overtime_targets),
+        summary = stringResource(
+            R.string.settings_overtime_targets_summary,
+            dailyTargetHours,
+            weeklyTargetHours,
+            monthlyTargetHours
+        ),
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        // Konsistenz-Warnung
+        val expectedWeekly = dailyTargetHours * 5
+        val expectedMonthly = dailyTargetHours * 20
+        val isInconsistent = (weeklyTargetHours - expectedWeekly).absoluteValue > 1.0 ||
+                            (monthlyTargetHours - expectedMonthly).absoluteValue > 5.0
+
+        if (isInconsistent) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = stringResource(R.string.overtime_targets_inconsistent_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.overtime_targets_description),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Tägliches Soll
+        NumericInputRow(
+            label = stringResource(R.string.label_daily_target),
+            value = dailyTargetHours,
+            unit = "Std.",
+            onValueChange = onUpdateDailyTarget,
+            minValue = 0.5,
+            maxValue = 24.0
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Wöchentliches Soll
+        NumericInputRow(
+            label = stringResource(R.string.label_weekly_target),
+            value = weeklyTargetHours,
+            unit = "Std.",
+            onValueChange = onUpdateWeeklyTarget,
+            minValue = 1.0,
+            maxValue = 168.0
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Monatliches Soll
+        NumericInputRow(
+            label = stringResource(R.string.label_monthly_target),
+            value = monthlyTargetHours,
+            unit = "Std.",
+            onValueChange = onUpdateMonthlyTarget,
+            minValue = 1.0,
+            maxValue = 744.0
+        )
+    }
+}
+
+@Composable
+private fun NumericInputRow(
+    label: String,
+    value: Double,
+    unit: String,
+    onValueChange: (Double) -> Unit,
+    minValue: Double,
+    maxValue: Double
+) {
+    var textValue by remember(value) { mutableStateOf(value.toString()) }
+    var isError by remember { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { newValue ->
+                    textValue = newValue
+                    newValue.toDoubleOrNull()?.let { num ->
+                        if (num in minValue..maxValue) {
+                            isError = false
+                            onValueChange(num)
+                        } else {
+                            isError = true
+                        }
+                    } ?: run {
+                        isError = newValue.isNotBlank()
+                    }
+                },
+                isError = isError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        if (isError) {
+            Text(
+                text = stringResource(R.string.error_value_range, minValue, maxValue),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

@@ -10,8 +10,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
  * Reihenfolge:
  * 1) Heutiger Eintrag
  * 2) Letzter WORK-Eintrag
- * 3) Letzter Eintrag unabhängig vom Tagtyp
- * 4) Default-Fallback
+ * 3) Leer
  */
 class ResolveDayLocationPrefill(
     private val workEntryDao: WorkEntryDao
@@ -28,11 +27,6 @@ class ResolveDayLocationPrefill(
             return latestWorkLabel
         }
 
-        val latestAnyLabel = workEntryDao.getLatestDayLocationLabel()?.trim().orEmpty()
-        if (latestAnyLabel.isNotEmpty()) {
-            return latestAnyLabel
-        }
-
-        return DEFAULT_DAY_LOCATION_LABEL
+        return ""
     }
 }

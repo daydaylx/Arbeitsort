@@ -77,13 +77,13 @@
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
     <string name="today_error_review_save_failed">Prüfung konnte nicht gespeichert werden</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
+    <string name="error_no_entry_to_review">Kein Eintrag zum Überprüfen vorhanden</string>
+    <string name="error_day_location_required">Bitte Arbeitsort eingeben</string>
     <string name="review_reason_low_accuracy_morning">GPS-Genauigkeit niedrig (morgens)</string>
     <string name="review_reason_low_accuracy_evening">GPS-Genauigkeit niedrig (abends)</string>
     <string name="review_reason_low_accuracy_both">GPS-Genauigkeit niedrig</string>
     <string name="review_reason_unavailable_morning">Standort nicht verfügbar (morgens)</string>
     <string name="review_reason_unavailable_evening">Standort nicht verfügbar (abends)</string>
-    <string name="review_reason_leipzig_check_morning">Leipzig-Prüfung ausstehend (morgens)</string>
-    <string name="review_reason_leipzig_check_evening">Leipzig-Prüfung ausstehend (abends)</string>
     <string name="review_reason_generic">Bitte Daten prüfen</string>
     <string name="action_confirm_offday">Heute frei</string>
     <string name="action_daily_manual_check_in">Einchecken (Arbeit)</string>
@@ -96,20 +96,20 @@
     <string name="day_type_off">Freier Tag</string>
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
-    <string name="day_location_label">Tagesort</string>
+    <string name="day_location_label">Arbeitsort</string>
     <string name="day_location_source_gps">GPS</string>
     <string name="day_location_source_manual">Manuell</string>
     <string name="day_location_source_fallback">Fallback</string>
     <string name="overtime_title">Überstunden</string>
-    <string name="overtime_year_value">Jahr: %1$s</string>
-    <string name="overtime_month_value">Monat: %1$s</string>
+    <string name="overtime_year_value">Überstunden Jahr: %1$s</string>
+    <string name="overtime_month_value">Überstunden Monat: %1$s</string>
     <string name="overtime_actual_target">IST %1$s | SOLL %2$s</string>
     <string name="overtime_counted_days">Gezählte Tage: %1$d</string>
     <string name="overtime_not_configured">Nicht konfiguriert</string>
-    <string name="action_change_location">Ort ändern</string>
-    <string name="day_location_dialog_title">Tagesort ändern</string>
-    <string name="day_location_dialog_label">Stadt</string>
-    <string name="day_location_dialog_placeholder">z.B. Leipzig</string>
+    <string name="action_change_location">Arbeitsort ändern</string>
+    <string name="day_location_dialog_title">Arbeitsort ändern</string>
+    <string name="day_location_dialog_label">Arbeitsort</string>
+    <string name="day_location_dialog_placeholder">z.B. Baustelle Nord</string>
     <string name="day_location_dialog_support">Wird für diesen Tag gespeichert</string>
     <string name="travel_label_from_to">Von %1$s nach %2$s</string>
     <string name="travel_label_from">Von %1$s</string>
@@ -118,7 +118,7 @@
     <string name="travel_time_start">Start %1$s</string>
     <string name="travel_time_arrive">Ankunft %1$s</string>
     <string name="travel_duration_label">Dauer %1$s</string>
-    <string name="location_status_ok">Leipzig</string>
+    <string name="location_status_ok">Standort ok</string>
     <string name="location_status_low_accuracy">Ungenau</string>
     <string name="location_status_unavailable">Kein Standort</string>
     
@@ -127,16 +127,14 @@
     <string name="review_explanation_evening">Standort wählen</string>
     <string name="review_explanation_both">Standort wählen</string>
     <string name="review_location_question">Wo warst du heute?</string>
-    <string name="review_option_leipzig">Leipzig</string>
-    <string name="review_option_leipzig_desc">In Leipzig gewesen</string>
     <string name="review_option_outside">Andere Stadt</string>
-    <string name="review_option_outside_desc">Außerhalb Leipzigs</string>
     <string name="review_location_label">Ort (Stadt)</string>
     <string name="review_location_placeholder">z.B. Berlin</string>
-    <string name="location_leipzig">Leipzig</string>
     <string name="action_cancel">Abbrechen</string>
+    <string name="action_cancel_anyway">Trotzdem abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     <string name="action_dismiss">Schließen</string>
+    <string name="confirm_cancel_saving">Der Eintrag wird gerade gespeichert. Wirklich abbrechen?</string>
     
     <!-- New Accessibility Strings -->
     <string name="loading">Laden...</string>
@@ -157,9 +155,18 @@
     <string name="settings_export">Export</string>
     <string name="settings_cd_collapse_section">Sektion einklappen</string>
     <string name="settings_cd_expand_section">Sektion ausklappen</string>
+    <string name="cd_expand_section">%s erweitern</string>
+    <string name="cd_collapse_section">%s einklappen</string>
+    <string name="settings_section_content_desc">%1$s. %2$s</string>
+    <string name="settings_state_expanded">Ausgeklappt</string>
+    <string name="settings_state_collapsed">Eingeklappt</string>
+    <string name="settings_toggle_content_desc">%1$s: %2$s</string>
+    <string name="settings_toggle_active">aktiviert</string>
+    <string name="settings_toggle_inactive">deaktiviert</string>
     <string name="settings_work_times_summary">%1$s – %2$s · %3$d Min Pause</string>
     <string name="settings_break_minutes_value">%1$s: %2$d Min</string>
     <string name="settings_reminders_summary">%1$d/4 aktiv</string>
+    <string name="reminder_disabled_reason">Erinnerungen sind deaktiviert</string>
     <string name="settings_summary_weekends_on">Wochenenden an</string>
     <string name="settings_summary_weekends_off">Wochenenden aus</string>
     <string name="settings_summary_holidays_off">Feiertage aus</string>
@@ -287,6 +294,7 @@
     <string name="pdf_custom_range_title">Benutzerdefinierter Zeitraum</string>
     <string name="pdf_range_from">Von</string>
     <string name="pdf_range_to">Bis</string>
+    <string name="error_invalid_date_range">Startdatum muss vor Enddatum liegen</string>
     <string name="cd_remove_holiday">Feiertag entfernen</string>
     <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
     <plurals name="settings_summary_holidays_count">
@@ -301,6 +309,7 @@
     <string name="time_picker_title">Zeit wählen</string>
     <string name="time_picker_cd_switch_to_clock">Zu Uhr wechseln</string>
     <string name="time_picker_cd_switch_to_keyboard">Zu Tastatur wechseln</string>
+    <string name="error_work_end_before_start">Feierabend muss nach Arbeitsbeginn liegen</string>
 
     <!-- History Screen -->
     <string name="history_title">Verlauf</string>
@@ -373,10 +382,6 @@
         <item quantity="one">%d Eintrag benötigt Überprüfung</item>
         <item quantity="other">%d Einträge benötigen Überprüfung</item>
     </plurals>
-    <plurals name="history_days_outside_leipzig">
-        <item quantity="one">%d Tag außerhalb Leipzig</item>
-        <item quantity="other">%d Tage außerhalb Leipzig</item>
-    </plurals>
     <plurals name="history_remaining_days">
         <item quantity="one">%d weiterer Tag</item>
         <item quantity="other">%d weitere Tage</item>
@@ -386,6 +391,8 @@
     <string name="edit_not_found">Eintrag nicht gefunden</string>
     <string name="edit_error_unknown">Unbekannter Fehler</string>
     <string name="edit_error_save_failed">Speichern fehlgeschlagen</string>
+    <string name="error_validation_failed">Bitte überprüfen Sie Ihre Eingaben</string>
+    <string name="error_cannot_save">Speichern nicht möglich</string>
     <string name="edit_toast_no_previous_entry">Kein Eintrag am Vortag</string>
     <string name="edit_validation_title">Eingabefehler</string>
     <string name="edit_action_ok">OK</string>
@@ -418,17 +425,17 @@
     <string name="edit_placeholder_destination">Zielort</string>
     <string name="edit_action_clear_travel_data">Reisedaten löschen</string>
     <string name="edit_section_location">Standort</string>
-    <string name="edit_label_day_location_required">Tagesort (Pflicht)</string>
-    <string name="edit_placeholder_city_leipzig">z.B. Leipzig</string>
+    <string name="edit_label_day_location_required">Arbeitsort (Pflicht)</string>
+    <string name="edit_placeholder_work_location">z.B. Baustelle Nord</string>
     <string name="edit_label_morning_optional">Morgens (Optional)</string>
     <string name="edit_label_evening_optional">Abends (Optional)</string>
     <string name="edit_placeholder_city_berlin">z.B. Berlin</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen...</string>
     <string name="edit_confirm_title">Bestätigung erforderlich</string>
-    <string name="edit_confirm_borderzone_text">Du befindest dich möglicherweise in der Grenzzone zu Leipzig. Bist du sicher, dass du speichern möchtest?</string>
+    <string name="edit_confirm_borderzone_text">Bitte prüfen, ob der Arbeitsort korrekt ist. Wirklich speichern?</string>
     <string name="edit_confirm_yes_save">Ja, speichern</string>
-    <string name="edit_validation_missing_day_location">Tagesort ist erforderlich</string>
+    <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
     <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
     <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
     <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
@@ -444,4 +451,14 @@
     <string name="week_back_to_today">Heute</string>
     <string name="week_chip_cd">%1$s %2$s</string>
     <string name="week_chip_cd_with_hours">%1$s %2$s, %3$.1f Stunden</string>
+
+    <!-- Overtime Target Settings -->
+    <string name="settings_overtime_targets">Überstunden-Ziele</string>
+    <string name="settings_overtime_targets_summary">Tag: %.1f Std. · Woche: %.1f Std. · Monat: %.1f Std.</string>
+    <string name="overtime_targets_description">Diese Werte werden für die Berechnung von Überstunden verwendet.</string>
+    <string name="overtime_targets_inconsistent_hint">Hinweis: Die Werte passen nicht zusammen. Standard wäre z.B. 8h/Tag × 5 Tage = 40h/Woche.</string>
+    <string name="label_daily_target">Soll-Stunden pro Tag</string>
+    <string name="label_weekly_target">Soll-Stunden pro Woche</string>
+    <string name="label_monthly_target">Soll-Stunden pro Monat</string>
+    <string name="error_value_range">Wert muss zwischen %.1f und %.1f liegen</string>
 </resources>

@@ -12,7 +12,6 @@ import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
-import de.montagezeit.app.domain.usecase.ResolveReview
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.SetTravelEvent
@@ -76,14 +75,8 @@ object ApplicationModule {
     @Provides
     fun provideRecordDailyManualCheckIn(
         workEntryDao: WorkEntryDao,
-        reminderSettingsManager: ReminderSettingsManager,
-        resolveDayLocationPrefill: ResolveDayLocationPrefill
+        reminderSettingsManager: ReminderSettingsManager
     ): RecordDailyManualCheckIn {
-        return RecordDailyManualCheckIn(workEntryDao, reminderSettingsManager, resolveDayLocationPrefill)
-    }
-
-    @Provides
-    fun provideResolveReview(workEntryDao: WorkEntryDao): ResolveReview {
-        return ResolveReview(workEntryDao)
+        return RecordDailyManualCheckIn(workEntryDao, reminderSettingsManager)
     }
 }

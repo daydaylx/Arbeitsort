@@ -404,6 +404,10 @@ private fun HistoryDayOverviewCard(
     val totalPaidHours = remember(entry) { entry?.let(TimeCalculator::calculatePaidTotalHours) ?: 0.0 }
     val travelMinutes = remember(entry) { entry?.let(TimeCalculator::calculateTravelMinutes) ?: 0 }
 
+    // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
+    val hoursOnlyFormat = stringResource(R.string.history_hours_only)
+    val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -491,12 +495,12 @@ private fun HistoryDayOverviewCard(
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "${stringResource(R.string.history_stat_total)} ${formatWorkHours(workHours)}",
+                        text = "${stringResource(R.string.history_stat_total)} ${formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat)}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
                         Text(
-                            text = "${stringResource(R.string.history_stat_paid)} ${formatWorkHours(totalPaidHours)}",
+                            text = "${stringResource(R.string.history_stat_paid)} ${formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -505,7 +509,7 @@ private fun HistoryDayOverviewCard(
                         Text(
                             text = stringResource(
                                 R.string.history_travel_duration_inline,
-                                formatMinutesAsHoursMinutes(travelMinutes)
+                                formatMinutesAsHoursMinutesPlain(travelMinutes, hoursOnlyFormat, hoursMinutesFormat)
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1199,29 +1203,6 @@ fun WeekGroupCard(
                             }
                         }
 
-                        if (week.daysOutsideLeipzig > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.history_days_outside_leipzig,
-                                        week.daysOutsideLeipzig,
-                                        week.daysOutsideLeipzig
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -1426,29 +1407,6 @@ fun MonthGroupCard(
                             }
                         }
 
-                        if (month.daysOutsideLeipzig > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.history_days_outside_leipzig,
-                                        month.daysOutsideLeipzig,
-                                        month.daysOutsideLeipzig
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -1496,6 +1454,10 @@ fun HistoryEntryItem(
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
     val totalPaidHours = remember(entry) { TimeCalculator.calculatePaidTotalHours(entry) }
 
+    // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
+    val hoursOnlyFormat = stringResource(R.string.history_hours_only)
+    val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1541,16 +1503,16 @@ fun HistoryEntryItem(
                 if (entry.dayType == DayType.WORK || travelMinutes > 0) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = formatWorkHours(workHours),
+                            text = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
-                        
+
                         if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
                             Text(
                                 text = stringResource(
                                     R.string.history_entry_total_paid,
-                                    formatWorkHours(totalPaidHours)
+                                    formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
                                 ),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -1595,37 +1557,42 @@ fun DayTypeIndicator(dayType: DayType) {
 fun LocationSummary(entry: WorkEntry) {
     val hasMorning = entry.morningCapturedAt != null
     val hasEvening = entry.eveningCapturedAt != null
-    
-    if (!hasMorning && !hasEvening) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = stringResource(
-                    R.string.history_day_location_summary,
-                    stringResource(R.string.day_location_label),
-                    entry.dayLocationLabel.orEmpty()
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
-        }
-        Text(
-            text = stringResource(R.string.history_label_no_checkin),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
-        )
-        return
-    }
-    
-    Row(
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 24.dp)
+    ) {
+        if (!hasMorning && !hasEvening) {
+            Column {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.history_day_location_summary,
+                            stringResource(R.string.day_location_label),
+                            entry.dayLocationLabel.orEmpty()
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.history_label_no_checkin),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
+                )
+            }
+        } else {
+            Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1646,31 +1613,33 @@ fun LocationSummary(entry: WorkEntry) {
         )
     }
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (hasMorning) {
-            LocationStatusIcon(status = entry.morningLocationStatus)
-        }
-        
-        if (hasEvening) {
-            LocationStatusIcon(status = entry.eveningLocationStatus)
-        }
-        
-        // Location labels (if available and different from default)
-        val defaultLabel = entry.dayLocationLabel
-        val labels = listOfNotNull(
-            entry.morningLocationLabel?.takeIf { it != defaultLabel },
-            entry.eveningLocationLabel?.takeIf { it != defaultLabel }
-        )
-        
-        if (labels.isNotEmpty()) {
-            Text(
-                text = labels.joinToString(", "),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasMorning) {
+                    LocationStatusIcon(status = entry.morningLocationStatus)
+                }
+
+                if (hasEvening) {
+                    LocationStatusIcon(status = entry.eveningLocationStatus)
+                }
+
+                // Location labels (if available and different from default)
+                val defaultLabel = entry.dayLocationLabel
+                val labels = listOfNotNull(
+                    entry.morningLocationLabel?.takeIf { it != defaultLabel },
+                    entry.eveningLocationLabel?.takeIf { it != defaultLabel }
+                )
+
+                if (labels.isNotEmpty()) {
+                    Text(
+                        text = labels.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }
@@ -1793,10 +1762,7 @@ private fun WeekGroup.copyWithEntries(entries: List<WorkEntry>): WeekGroup {
         totalHours = totalHours,
         totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
         averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
-        entriesNeedingReview = entries.count { it.needsReview },
-        daysOutsideLeipzig = entries.count { entry ->
-            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
-        }
+        entriesNeedingReview = entries.count { it.needsReview }
     )
 }
 
@@ -1810,10 +1776,7 @@ private fun MonthGroup.copyWithEntries(entries: List<WorkEntry>): MonthGroup {
         totalHours = totalHours,
         totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
         averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
-        entriesNeedingReview = entries.count { it.needsReview },
-        daysOutsideLeipzig = entries.count { entry ->
-            entry.outsideLeipzigMorning == true || entry.outsideLeipzigEvening == true
-        }
+        entriesNeedingReview = entries.count { it.needsReview }
     )
 }
 
@@ -1892,6 +1855,46 @@ private fun formatMinutesAsHoursMinutes(totalMinutes: Int): String {
         stringResource(R.string.history_hours_only, h)
     } else {
         stringResource(R.string.history_hours_and_minutes, h, m)
+    }
+}
+
+/**
+ * Non-@Composable helper to format work hours.
+ * Use this when calling from string templates or other non-@Composable contexts.
+ *
+ * @param hours Work hours as decimal (e.g., 8.5 for 8 hours 30 minutes)
+ * @param hoursOnlyFormat Format string for full hours (e.g., "%dh")
+ * @param hoursMinutesFormat Format string for hours + minutes (e.g., "%dh %dmin")
+ * @return Formatted string (e.g., "8h" or "8h 30min")
+ */
+private fun formatWorkHoursPlain(hours: Double, hoursOnlyFormat: String, hoursMinutesFormat: String): String {
+    val totalMinutes = (hours * 60).toInt()
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+
+    return if (m == 0) {
+        hoursOnlyFormat.format(h)
+    } else {
+        hoursMinutesFormat.format(h, m)
+    }
+}
+
+/**
+ * Non-@Composable helper to format minutes as hours and minutes.
+ * Use this when calling from string templates or other non-@Composable contexts.
+ *
+ * @param totalMinutes Total minutes to format
+ * @param hoursOnlyFormat Format string for full hours (e.g., "%dh")
+ * @param hoursMinutesFormat Format string for hours + minutes (e.g., "%dh %dmin")
+ * @return Formatted string (e.g., "2h" or "2h 15min")
+ */
+private fun formatMinutesAsHoursMinutesPlain(totalMinutes: Int, hoursOnlyFormat: String, hoursMinutesFormat: String): String {
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+    return if (m == 0) {
+        hoursOnlyFormat.format(h)
+    } else {
+        hoursMinutesFormat.format(h, m)
     }
 }
 

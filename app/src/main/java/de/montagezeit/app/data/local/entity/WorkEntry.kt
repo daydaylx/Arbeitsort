@@ -26,7 +26,7 @@ data class WorkEntry(
     val dayType: DayType = DayType.WORK,
 
     // Daily Location (Pflicht)
-    val dayLocationLabel: String = "Leipzig",
+    val dayLocationLabel: String = "",
     val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
     val dayLocationLat: Double? = null,
     val dayLocationLon: Double? = null,
@@ -38,7 +38,6 @@ data class WorkEntry(
     val morningLat: Double? = null,
     val morningLon: Double? = null,
     val morningAccuracyMeters: Float? = null,
-    val outsideLeipzigMorning: Boolean? = null,
     val morningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
     
     // Evening Snapshot
@@ -47,7 +46,6 @@ data class WorkEntry(
     val eveningLat: Double? = null,
     val eveningLon: Double? = null,
     val eveningAccuracyMeters: Float? = null,
-    val outsideLeipzigEvening: Boolean? = null,
     val eveningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
     
     // Travel (optional)

@@ -1,7 +1,11 @@
 package de.montagezeit.app.ui.common
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import java.time.LocalDate
 
@@ -12,9 +16,10 @@ fun DatePickerDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    var dialog: android.app.DatePickerDialog? by remember { mutableStateOf(null) }
 
-    LaunchedEffect(context, initialDate) {
-        val datePickerDialog = android.app.DatePickerDialog(
+    DisposableEffect(context, initialDate) {
+        dialog = android.app.DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
                 onDateSelected(LocalDate.of(year, month + 1, dayOfMonth))
@@ -23,7 +28,12 @@ fun DatePickerDialog(
             initialDate.monthValue - 1,
             initialDate.dayOfMonth
         )
-        datePickerDialog.setOnDismissListener { onDismiss() }
-        datePickerDialog.show()
+        dialog?.setOnDismissListener { onDismiss() }
+        dialog?.show()
+
+        onDispose {
+            dialog?.dismiss()
+            dialog = null
+        }
     }
 }

@@ -37,8 +37,7 @@ class RecordEveningCheckInTest {
         assertNull(result.eveningLat)
         assertNull(result.eveningLon)
         assertNull(result.eveningLocationLabel)
-        assertNull(result.outsideLeipzigEvening)
-        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
         assertFalse(result.needsReview)
 
@@ -77,7 +76,7 @@ class RecordEveningCheckInTest {
     }
 
     @Test
-    fun `invoke uses fallback city when existing label is blank and not manual`() = runTest {
+    fun `invoke uses empty label when existing label is blank and not manual`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
@@ -91,7 +90,7 @@ class RecordEveningCheckInTest {
 
         val result = useCase(date)
 
-        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
         assertTrue(result.eveningCapturedAt != null)
     }

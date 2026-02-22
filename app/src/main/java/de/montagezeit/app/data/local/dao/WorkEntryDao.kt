@@ -52,13 +52,6 @@ interface WorkEntryDao {
     )
     suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String?
 
-    @Query(
-        "SELECT dayLocationLabel FROM work_entries " +
-            "WHERE LENGTH(TRIM(dayLocationLabel)) > 0 " +
-            "ORDER BY date DESC LIMIT 1"
-    )
-    suspend fun getLatestDayLocationLabel(): String?
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: WorkEntry): Long
     

@@ -80,19 +80,21 @@ class SetTravelEvent(
             }
             
             TravelType.DEPARTURE -> {
-                // Abreise vom Ziel - kann travelStartAt überschreiben oder neuen Eintrag erstellen
-                // Für MVP: Wir überschreiben travelStartAt mit Abreise-Zeit
+                // Abreise vom Ziel - setzt travelArriveAt (Rückreise-Ende)
+                // Hinreise: travelStartAt (Abfahrt) → travelArriveAt (Ankunft am Ziel)
+                // Rückreise: DEPARTURE würde eigentlich einen neuen Eintrag benötigen
+                // Für MVP-Limitation: Nutze travelArriveAt für Rückreise-Ende
                 if (existingEntry != null) {
                     existingEntry.copy(
-                        travelStartAt = timestamp,
-                        travelLabelStart = label,
+                        travelArriveAt = timestamp,
+                        travelLabelEnd = label,
                         updatedAt = now
                     )
                 } else {
                     WorkEntry(
                         date = date,
-                        travelStartAt = timestamp,
-                        travelLabelStart = label,
+                        travelArriveAt = timestamp,
+                        travelLabelEnd = label,
                         createdAt = now,
                         updatedAt = now
                     )
