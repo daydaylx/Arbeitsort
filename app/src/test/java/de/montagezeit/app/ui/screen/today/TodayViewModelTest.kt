@@ -614,7 +614,7 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `swipe navigation: selectDate with plusDays and minusDays updates selectedDate and queries DB`() {
+    fun `swipe navigation selectDate with plusDays and minusDays updates selectedDate and queries DB`() {
         val today = LocalDate.now()
         val workEntryDao = mockk<WorkEntryDao>()
         val settingsManager = mockk<ReminderSettingsManager>()
