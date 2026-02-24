@@ -7,6 +7,7 @@ import dagger.hilt.components.SingletonComponent
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
@@ -70,6 +71,11 @@ object ApplicationModule {
     @Provides
     fun provideResolveDayLocationPrefill(workEntryDao: WorkEntryDao): ResolveDayLocationPrefill {
         return ResolveDayLocationPrefill(workEntryDao)
+    }
+
+    @Provides
+    fun provideDeleteDayEntry(workEntryDao: WorkEntryDao): DeleteDayEntry {
+        return DeleteDayEntry(workEntryDao)
     }
 
     @Provides

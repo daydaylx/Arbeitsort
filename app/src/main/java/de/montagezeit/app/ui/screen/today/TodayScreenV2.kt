@@ -2,6 +2,8 @@ package de.montagezeit.app.ui.screen.today
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -21,6 +24,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
@@ -68,6 +72,8 @@ fun TodayScreenV2(
     val dayLocationInput by viewModel.dayLocationInput.collectAsStateWithLifecycle()
     val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
     val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
+    val showDeleteDayDialog by viewModel.showDeleteDayDialog.collectAsStateWithLifecycle()
+    val deletedEntryForUndo by viewModel.deletedEntryForUndo.collectAsStateWithLifecycle()
 
     val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: selectedEntry
     val isViewingPastDay = selectedDate != LocalDate.now()
@@ -91,7 +97,21 @@ fun TodayScreenV2(
         snackbarHostState.showSnackbar(message.asString(context))
         viewModel.onSnackbarShown()
     }
-    
+
+    LaunchedEffect(deletedEntryForUndo) {
+        deletedEntryForUndo ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(R.string.today_delete_success),
+            actionLabel = context.getString(R.string.action_undo),
+            duration = SnackbarDuration.Long
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            viewModel.undoDeleteDay()
+        } else {
+            viewModel.onUndoWindowClosed()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -102,6 +122,14 @@ fun TodayScreenV2(
                     )
                 },
                 actions = {
+                    if (currentEntry != null) {
+                        IconButton(onClick = { viewModel.openDeleteDayDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.action_delete_day)
+                            )
+                        }
+                    }
                     if (isViewingPastDay) {
                         TextButton(onClick = { viewModel.selectDate(LocalDate.now()) }) {
                             Text(stringResource(R.string.week_back_to_today))
@@ -121,10 +149,22 @@ fun TodayScreenV2(
             )
         }
     ) { paddingValues ->
+        val swipeEnabled = !showDayLocationDialog && !showDailyCheckInDialog
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .horizontalSwipe(
+                    enabled = swipeEnabled,
+                    onSwipeLeft = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.selectDate(selectedDate.plusDays(1))
+                    },
+                    onSwipeRight = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.selectDate(selectedDate.minusDays(1))
+                    }
+                )
         ) {
             val errorState = uiState as? TodayUiState.Error
             val showInitialLoading = uiState is TodayUiState.Loading && currentEntry == null
@@ -173,6 +213,14 @@ fun TodayScreenV2(
                         onOpenWeekView = onOpenWeekView
                     )
                 }
+            }
+
+            if (showDeleteDayDialog) {
+                DeleteDayConfirmDialog(
+                    isLoading = loadingActions.contains(TodayAction.DELETE_DAY),
+                    onDismiss = { viewModel.dismissDeleteDayDialog() },
+                    onConfirm = { viewModel.confirmDeleteDay() }
+                )
             }
 
             if (showDayLocationDialog) {
@@ -746,6 +794,31 @@ private fun DayLocationDialogV2(
     )
 }
 
+@Composable
+private fun DeleteDayConfirmDialog(
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_delete_day_title)) },
+        text = { Text(stringResource(R.string.dialog_delete_day_message)) },
+        confirmButton = {
+            PrimaryActionButton(
+                onClick = onConfirm,
+                isLoading = isLoading,
+                content = { Text(stringResource(R.string.action_delete_day)) }
+            )
+        },
+        dismissButton = {
+            TertiaryActionButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        }
+    )
+}
+
 private fun getCurrentDateString(): String {
     return LocalDate.now().format(todayCurrentDateFormatter)
 }
@@ -762,3 +835,55 @@ private fun formatMinutes(minutes: Int): String {
 }
 
 private val todayCurrentDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
+
+/**
+ * Detects horizontal swipe gestures without conflicting with vertical scroll.
+ *
+ * Direction classification: a gesture is treated as horizontal only when the
+ * accumulated horizontal travel exceeds the vertical travel by a factor of 1.5.
+ * Until that threshold is reached neither axis consumes the events, so a
+ * predominantly vertical scroll is handled entirely by the scroll container.
+ * Once classified as horizontal, pointer events are consumed so the scroll
+ * container ignores them.
+ *
+ * [onSwipeLeft]  – called when the finger moves left  (negative X, i.e. next day)
+ * [onSwipeRight] – called when the finger moves right (positive X, i.e. previous day)
+ */
+private fun Modifier.horizontalSwipe(
+    enabled: Boolean = true,
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit,
+): Modifier = if (!enabled) this else pointerInput(onSwipeLeft, onSwipeRight) {
+    val swipeThreshold = 48.dp.toPx()
+    val horizontalIntentSlop = 18.dp.toPx()
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        var totalX = 0f
+        var totalY = 0f
+        var isHorizontalIntent = false
+        while (true) {
+            val event = awaitPointerEvent()
+            val change = event.changes.firstOrNull() ?: break
+            if (!change.pressed) {
+                val hasHorizontalDominance = abs(totalX) > abs(totalY) * 1.1f
+                if (isHorizontalIntent && hasHorizontalDominance) {
+                    when {
+                        totalX < -swipeThreshold -> onSwipeLeft()
+                        totalX > swipeThreshold -> onSwipeRight()
+                    }
+                }
+                break
+            }
+            val dx = change.position.x - change.previousPosition.x
+            val dy = change.position.y - change.previousPosition.y
+            totalX += dx
+            totalY += dy
+            if (!isHorizontalIntent && abs(totalX) > horizontalIntentSlop) {
+                isHorizontalIntent = abs(totalX) > abs(totalY)
+            }
+            if (isHorizontalIntent) {
+                change.consume()
+            }
+        }
+    }
+}

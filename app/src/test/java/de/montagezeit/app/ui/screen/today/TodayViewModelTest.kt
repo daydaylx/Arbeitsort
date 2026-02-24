@@ -7,6 +7,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
@@ -526,12 +527,135 @@ class TodayViewModelTest {
         coVerify(atLeast = 1) { workEntryDao.getByDate(yesterday) }
     }
 
+    @Test
+    fun `confirmDeleteDay removes entry and exposes it for undo`() {
+        val today = LocalDate.now()
+        val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(today) } returns existingEntry
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryDao.deleteByDate(today) } returns Unit
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        val deletedLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.deletedEntryForUndo.collect { entry ->
+                if (entry != null) deletedLatch.countDown()
+            }
+        }
+
+        viewModel.confirmDeleteDay()
+
+        assertTrue(deletedLatch.await(2, TimeUnit.SECONDS))
+        assertEquals(existingEntry, viewModel.deletedEntryForUndo.value)
+        assertTrue(viewModel.uiState.value is TodayUiState.Success)
+        assertEquals(null, (viewModel.uiState.value as TodayUiState.Success).entry)
+        coVerify(exactly = 1) { workEntryDao.deleteByDate(today) }
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `undoDeleteDay re-inserts the deleted entry`() {
+        val today = LocalDate.now()
+        val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(today) } returns existingEntry
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryDao.deleteByDate(today) } returns Unit
+        coEvery { workEntryDao.upsert(existingEntry) } returns Unit
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        // Delete
+        val deletedLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.deletedEntryForUndo.collect { if (it != null) deletedLatch.countDown() }
+        }
+        viewModel.confirmDeleteDay()
+        assertTrue(deletedLatch.await(2, TimeUnit.SECONDS))
+
+        // Undo
+        viewModel.undoDeleteDay()
+
+        assertEquals(null, viewModel.deletedEntryForUndo.value)
+        coVerify(exactly = 1) { workEntryDao.upsert(existingEntry) }
+        assertTrue(viewModel.uiState.value is TodayUiState.Success)
+        assertEquals(existingEntry, (viewModel.uiState.value as TodayUiState.Success).entry)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `confirmDeleteDay does nothing when no entry exists`() {
+        val today = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(today) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        viewModel.confirmDeleteDay()
+
+        // Short wait for coroutine to complete
+        Thread.sleep(200)
+        assertEquals(null, viewModel.deletedEntryForUndo.value)
+        coVerify(exactly = 0) { workEntryDao.deleteByDate(any()) }
+    }
+
+    @Test
+    fun `swipe navigation: selectDate with plusDays and minusDays updates selectedDate and queries DB`() {
+        val today = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        // Simulate swipe left (next day)
+        viewModel.selectDate(today.plusDays(1))
+        assertEquals(today.plusDays(1), viewModel.selectedDate.value)
+
+        // Simulate swipe left again
+        viewModel.selectDate(today.plusDays(2))
+        assertEquals(today.plusDays(2), viewModel.selectedDate.value)
+
+        // Simulate swipe right (previous day, back to +1)
+        viewModel.selectDate(today.plusDays(1))
+        assertEquals(today.plusDays(1), viewModel.selectedDate.value)
+
+        // Swipe right past today into past
+        viewModel.selectDate(today)
+        viewModel.selectDate(today.minusDays(1))
+        assertEquals(today.minusDays(1), viewModel.selectedDate.value)
+
+        // Verify DB was queried for each navigated date
+        coVerify { workEntryDao.getByDate(today.plusDays(1)) }
+        coVerify { workEntryDao.getByDate(today.plusDays(2)) }
+        coVerify { workEntryDao.getByDate(today.minusDays(1)) }
+    }
+
     private fun createViewModel(
         workEntryDao: WorkEntryDao,
         settingsManager: ReminderSettingsManager,
         recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
         resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao),
-        entriesBetween: List<OvertimeEntryRow> = emptyList()
+        entriesBetween: List<OvertimeEntryRow> = emptyList(),
+        deleteDayEntry: DeleteDayEntry = DeleteDayEntry(workEntryDao)
     ): TodayViewModel {
         coEvery { workEntryDao.getEntriesBetween(any(), any()) } returns entriesBetween
         return TodayViewModel(
@@ -540,7 +664,8 @@ class TodayViewModelTest {
             resolveDayLocationPrefill = resolveDayLocationPrefill,
             confirmOffDay = mockk<ConfirmOffDay>(relaxed = true),
             setDayLocation = mockk<SetDayLocation>(relaxed = true),
-            reminderSettingsManager = settingsManager
+            reminderSettingsManager = settingsManager,
+            deleteDayEntry = deleteDayEntry
         )
     }
 }

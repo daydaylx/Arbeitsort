@@ -78,6 +78,12 @@
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
     <string name="today_error_review_save_failed">Prüfung konnte nicht gespeichert werden</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
+    <string name="today_error_delete_failed">Löschen fehlgeschlagen</string>
+    <string name="today_delete_success">Eintrag gelöscht</string>
+    <string name="action_delete_day">Tag löschen</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="dialog_delete_day_title">Tag wirklich löschen?</string>
+    <string name="dialog_delete_day_message">Alle Daten für diesen Tag werden entfernt. Du kannst den Eintrag danach wiederherstellen.</string>
     <string name="error_no_entry_to_review">Kein Eintrag zum Überprüfen vorhanden</string>
     <string name="error_day_location_required">Bitte Arbeitsort eingeben</string>
     <string name="review_reason_low_accuracy_morning">GPS-Genauigkeit niedrig (morgens)</string>

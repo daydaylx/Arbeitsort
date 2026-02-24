@@ -232,6 +232,38 @@ class EditEntryViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteCurrentEntry(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            if (_screenState.value.isSaving) {
+                return@launch
+            }
+
+            try {
+                _screenState.update { it.copy(isSaving = true) }
+                val existingEntry = workEntryDao.getByDate(currentDate)
+                if (existingEntry == null) {
+                    _screenState.update { it.copy(isSaving = false, uiState = EditUiState.NewEntry(currentDate)) }
+                    onResult(false)
+                    return@launch
+                }
+
+                workEntryDao.deleteByDate(currentDate)
+                _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
+                onResult(true)
+            } catch (e: Exception) {
+                _screenState.update {
+                    it.copy(
+                        isSaving = false,
+                        uiState = EditUiState.Error(
+                            toUiText(e.message, R.string.today_error_delete_failed)
+                        )
+                    )
+                }
+                onResult(false)
+            }
+        }
+    }
     
     fun save(confirmBorderzone: Boolean = false) {
         viewModelScope.launch {

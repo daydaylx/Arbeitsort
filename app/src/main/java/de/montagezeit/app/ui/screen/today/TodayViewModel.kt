@@ -10,6 +10,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
@@ -82,7 +83,8 @@ data class MonthStats(
 enum class TodayAction {
     DAILY_MANUAL_CHECK_IN,
     CONFIRM_OFFDAY,
-    UPDATE_DAY_LOCATION
+    UPDATE_DAY_LOCATION,
+    DELETE_DAY
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -93,7 +95,8 @@ class TodayViewModel @Inject constructor(
     private val resolveDayLocationPrefill: ResolveDayLocationPrefill,
     private val confirmOffDay: ConfirmOffDay,
     private val setDayLocation: SetDayLocation,
-    private val reminderSettingsManager: ReminderSettingsManager
+    private val reminderSettingsManager: ReminderSettingsManager,
+    private val deleteDayEntry: DeleteDayEntry
 ) : ViewModel() {
     private val calculateOvertimeForRange = CalculateOvertimeForRange()
 
@@ -170,6 +173,13 @@ class TodayViewModel @Inject constructor(
 
     private val _snackbarMessage = MutableStateFlow<UiText?>(null)
     val snackbarMessage: StateFlow<UiText?> = _snackbarMessage.asStateFlow()
+
+    private val _showDeleteDayDialog = MutableStateFlow(false)
+    val showDeleteDayDialog: StateFlow<Boolean> = _showDeleteDayDialog.asStateFlow()
+
+    /** Holds the last deleted entry until the undo window closes. */
+    private val _deletedEntryForUndo = MutableStateFlow<WorkEntry?>(null)
+    val deletedEntryForUndo: StateFlow<WorkEntry?> = _deletedEntryForUndo.asStateFlow()
 
     init {
         loadTodayEntry()
@@ -468,6 +478,49 @@ class TodayViewModel @Inject constructor(
                 removeLoadingAction(TodayAction.UPDATE_DAY_LOCATION)
             }
         }
+    }
+
+    fun openDeleteDayDialog() {
+        _showDeleteDayDialog.value = true
+    }
+
+    fun dismissDeleteDayDialog() {
+        _showDeleteDayDialog.value = false
+    }
+
+    fun confirmDeleteDay() {
+        viewModelScope.launch {
+            addLoadingAction(TodayAction.DELETE_DAY)
+            try {
+                val deleted = deleteDayEntry(_selectedDate.value)
+                _showDeleteDayDialog.value = false
+                if (deleted != null) {
+                    _uiState.value = TodayUiState.Success(null)
+                    _deletedEntryForUndo.value = deleted
+                }
+            } catch (e: Exception) {
+                _snackbarMessage.value = e.toUiText(R.string.today_error_delete_failed)
+            } finally {
+                removeLoadingAction(TodayAction.DELETE_DAY)
+            }
+        }
+    }
+
+    fun undoDeleteDay() {
+        val entry = _deletedEntryForUndo.value ?: return
+        _deletedEntryForUndo.value = null
+        viewModelScope.launch {
+            try {
+                workEntryDao.upsert(entry)
+                _uiState.value = TodayUiState.Success(entry)
+            } catch (e: Exception) {
+                _snackbarMessage.value = e.toUiText(R.string.today_error_delete_failed)
+            }
+        }
+    }
+
+    fun onUndoWindowClosed() {
+        _deletedEntryForUndo.value = null
     }
 
     fun onSnackbarShown() {

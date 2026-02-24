@@ -52,6 +52,7 @@ fun EditEntrySheet(
     val context = LocalContext.current
     var showCopyDatePicker by remember { mutableStateOf(false) }
     var showNavigateDatePicker by remember { mutableStateOf(false) }
+    var showDeleteDayConfirmDialog by remember { mutableStateOf(false) }
     val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     LaunchedEffect(date) {
@@ -167,6 +168,7 @@ fun EditEntrySheet(
                             onNoteChange = { viewModel.updateNote(it) },
                             onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
+                            onDeleteDay = null,
                             onCopyPrevious = {
                                 viewModel.copyFromPreviousDay { success ->
                                     if (!success) {
@@ -257,6 +259,7 @@ fun EditEntrySheet(
                             onNoteChange = { viewModel.updateNote(it) },
                             onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
+                            onDeleteDay = { showDeleteDayConfirmDialog = true },
                             onCopyPrevious = {
                                 viewModel.copyFromPreviousDay { success ->
                                     if (!success) {
@@ -342,6 +345,25 @@ fun EditEntrySheet(
                     }
                 }
             }
+        }
+
+        if (showDeleteDayConfirmDialog) {
+            DeleteDayConfirmDialog(
+                isLoading = isSaving,
+                onDismiss = { showDeleteDayConfirmDialog = false },
+                onConfirm = {
+                    showDeleteDayConfirmDialog = false
+                    viewModel.deleteCurrentEntry { deleted ->
+                        if (deleted) {
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(R.string.today_delete_success),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            )
         }
     }
     
@@ -529,6 +551,7 @@ fun EditFormContent(
     onApplyDefaultTimes: (() -> Unit)? = null,
     onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
+    onDeleteDay: (() -> Unit)? = null,
     isSaving: Boolean = false,
     isNewEntry: Boolean = false,
     onCopy: (() -> Unit)? = null,
@@ -595,7 +618,8 @@ fun EditFormContent(
 
     val showSecondaryActions = (formData.needsReview || entry.needsReview) ||
         onCopyPrevious != null ||
-        (onCopy != null && !isNewEntry)
+        (onCopy != null && !isNewEntry) ||
+        (onDeleteDay != null && !isNewEntry)
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (formData.needsReview || entry.needsReview) {
@@ -637,6 +661,21 @@ fun EditFormContent(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(stringResource(R.string.edit_action_copy_entry))
+            }
+        }
+
+        if (onDeleteDay != null && !isNewEntry) {
+            DestructiveActionButton(
+                onClick = onDeleteDay,
+                enabled = !isSaving,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(stringResource(R.string.action_delete_day))
             }
         }
 
@@ -1139,6 +1178,46 @@ fun BorderzoneConfirmDialog(
         },
         dismissButton = {
             TertiaryActionButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun DeleteDayConfirmDialog(
+    isLoading: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = {
+            if (!isLoading) {
+                onDismiss()
+            }
+        },
+        title = { Text(stringResource(R.string.dialog_delete_day_title)) },
+        text = {
+            Text(
+                text = stringResource(R.string.dialog_delete_day_message),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            PrimaryActionButton(
+                onClick = onConfirm,
+                enabled = !isLoading,
+                isLoading = isLoading,
+                icon = Icons.Default.Delete
+            ) {
+                Text(stringResource(R.string.action_delete_day))
+            }
+        },
+        dismissButton = {
+            TertiaryActionButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         }
