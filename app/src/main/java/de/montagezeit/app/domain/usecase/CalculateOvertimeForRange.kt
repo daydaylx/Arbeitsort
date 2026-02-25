@@ -52,6 +52,12 @@ class CalculateOvertimeForRange {
                         offDayTravelDays += 1
                     }
                 }
+                DayType.COMP_TIME -> {
+                    // Comp-time consumes overtime: target hours are charged, no actual hours worked.
+                    // Net delta = 0 - dailyTargetHours = -dailyTargetHours (reduces overtime bank).
+                    countedDays += 1
+                    totalTargetHours += dailyTargetHours
+                }
             }
         }
 

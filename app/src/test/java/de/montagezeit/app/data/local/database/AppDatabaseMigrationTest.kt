@@ -32,7 +32,8 @@ class AppDatabaseMigrationTest {
             "migration_1_2_test.db",
             "migration_2_3_test.db",
             "migration_5_6_test.db",
-            "migration_8_9_test.db"
+            "migration_8_9_test.db",
+            "migration_9_10_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -48,7 +49,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
-                AppDatabase.MIGRATION_8_9
+                AppDatabase.MIGRATION_8_9,
+                AppDatabase.MIGRATION_9_10
             )
             .build()
 

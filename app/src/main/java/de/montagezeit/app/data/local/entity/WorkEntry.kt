@@ -74,7 +74,8 @@ data class WorkEntry(
 
 enum class DayType {
     WORK,
-    OFF
+    OFF,
+    COMP_TIME // Überstundenabbau (ganzer Tag) – reduziert Überstundenkonto um targetMinutes
 }
 
 enum class LocationStatus {

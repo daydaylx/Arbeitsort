@@ -153,6 +153,7 @@ fun EditEntrySheet(
                             entry = dummyEntry,
                             formData = formData,
                             validationErrors = state.validationErrors,
+                            dailyTargetHours = screenState.dailyTargetHours,
                             onDayTypeChange = { viewModel.updateDayType(it) },
                             onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                             onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
@@ -244,6 +245,7 @@ fun EditEntrySheet(
                             entry = entry,
                             formData = formData,
                             validationErrors = state.validationErrors,
+                            dailyTargetHours = screenState.dailyTargetHours,
                             onDayTypeChange = { viewModel.updateDayType(it) },
                             onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                             onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
@@ -534,6 +536,7 @@ fun EditFormContent(
     entry: de.montagezeit.app.data.local.entity.WorkEntry,
     formData: EditFormData,
     validationErrors: List<ValidationError> = emptyList(),
+    dailyTargetHours: Double = 8.0,
     onDayTypeChange: (de.montagezeit.app.data.local.entity.DayType) -> Unit,
     onWorkStartChange: (Int, Int) -> Unit,
     onWorkEndChange: (Int, Int) -> Unit,
@@ -557,6 +560,8 @@ fun EditFormContent(
     onCopy: (() -> Unit)? = null,
     showPrimarySaveButton: Boolean = true
 ) {
+    val isCompTime = formData.dayType == de.montagezeit.app.data.local.entity.DayType.COMP_TIME
+
     Text(
         text = formatDate(entry.date),
         style = MaterialTheme.typography.headlineSmall
@@ -567,46 +572,73 @@ fun EditFormContent(
             selectedType = formData.dayType,
             onTypeChange = onDayTypeChange
         )
+        // Ü-Abbau info banner: shown when COMP_TIME is active.
+        if (isCompTime) {
+            androidx.compose.material3.SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        text = stringResource(
+                            R.string.edit_comp_time_info,
+                            dailyTargetHours.toInt()
+                        ),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Bedtime,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
-    EditFormSectionCard {
-        WorkTimesSection(
-            workStart = formData.workStart,
-            workEnd = formData.workEnd,
-            breakMinutes = formData.breakMinutes,
-            validationErrors = validationErrors,
-            onStartChange = onWorkStartChange,
-            onEndChange = onWorkEndChange,
-            onBreakChange = onBreakMinutesChange,
-            onApplyDefaults = onApplyDefaultTimes
-        )
-    }
+    // Work times, travel and location sections are hidden for COMP_TIME days
+    // to prevent mixing work-day data with comp-time entries.
+    if (!isCompTime) {
+        EditFormSectionCard {
+            WorkTimesSection(
+                workStart = formData.workStart,
+                workEnd = formData.workEnd,
+                breakMinutes = formData.breakMinutes,
+                validationErrors = validationErrors,
+                onStartChange = onWorkStartChange,
+                onEndChange = onWorkEndChange,
+                onBreakChange = onBreakMinutesChange,
+                onApplyDefaults = onApplyDefaultTimes
+            )
+        }
 
-    EditFormSectionCard {
-        TravelSection(
-            travelStartTime = formData.travelStartTime,
-            travelArriveTime = formData.travelArriveTime,
-            travelLabelStart = formData.travelLabelStart,
-            travelLabelEnd = formData.travelLabelEnd,
-            validationErrors = validationErrors,
-            onTravelStartChange = onTravelStartChange,
-            onTravelArriveChange = onTravelArriveChange,
-            onTravelLabelStartChange = onTravelLabelStartChange,
-            onTravelLabelEndChange = onTravelLabelEndChange,
-            onClearTravel = onTravelClear
-        )
-    }
+        EditFormSectionCard {
+            TravelSection(
+                travelStartTime = formData.travelStartTime,
+                travelArriveTime = formData.travelArriveTime,
+                travelLabelStart = formData.travelLabelStart,
+                travelLabelEnd = formData.travelLabelEnd,
+                validationErrors = validationErrors,
+                onTravelStartChange = onTravelStartChange,
+                onTravelArriveChange = onTravelArriveChange,
+                onTravelLabelStartChange = onTravelLabelStartChange,
+                onTravelLabelEndChange = onTravelLabelEndChange,
+                onClearTravel = onTravelClear
+            )
+        }
 
-    EditFormSectionCard {
-        LocationLabelsSection(
-            entry = entry,
-            dayLocationLabel = formData.dayLocationLabel,
-            onDayLocationChange = onDayLocationChange,
-            morningLabel = formData.morningLocationLabel,
-            eveningLabel = formData.eveningLocationLabel,
-            onMorningLabelChange = onMorningLabelChange,
-            onEveningLabelChange = onEveningLabelChange
-        )
+        EditFormSectionCard {
+            LocationLabelsSection(
+                entry = entry,
+                dayLocationLabel = formData.dayLocationLabel,
+                onDayLocationChange = onDayLocationChange,
+                morningLabel = formData.morningLocationLabel,
+                eveningLabel = formData.eveningLocationLabel,
+                onMorningLabelChange = onMorningLabelChange,
+                onEveningLabelChange = onEveningLabelChange
+            )
+        }
     }
 
     EditFormSectionCard {
@@ -736,11 +768,12 @@ fun DayTypeSelector(
                 FilterChip(
                     selected = selectedType == type,
                     onClick = { onTypeChange(type) },
-                    label = { 
+                    label = {
                         Text(
                             when (type) {
                                 de.montagezeit.app.data.local.entity.DayType.WORK -> stringResource(R.string.edit_day_type_workday)
                                 de.montagezeit.app.data.local.entity.DayType.OFF -> stringResource(R.string.edit_day_type_off)
+                                de.montagezeit.app.data.local.entity.DayType.COMP_TIME -> stringResource(R.string.edit_day_type_comp_time)
                             }
                         )
                     },

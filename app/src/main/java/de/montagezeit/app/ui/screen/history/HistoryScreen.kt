@@ -474,6 +474,7 @@ private fun HistoryDayOverviewCard(
                         text = when (entry.dayType) {
                             DayType.WORK -> stringResource(R.string.day_type_work)
                             DayType.OFF -> stringResource(R.string.day_type_off)
+                            DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
                         },
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.weight(1f)
@@ -705,6 +706,7 @@ fun CalendarDayCell(
     val containerColor = when {
         !day.inMonth -> MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
         entry?.dayType == DayType.OFF -> MaterialTheme.colorScheme.secondaryContainer
+        entry?.dayType == DayType.COMP_TIME -> MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
@@ -769,6 +771,28 @@ fun CalendarDayCell(
                         text = stringResource(R.string.history_day_type_off),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    )
+                }
+            } else if (entry.dayType == DayType.COMP_TIME) {
+                if (compactLayout) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.16f),
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.history_day_type_comp_time_short),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.day_type_comp_time),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.align(Alignment.BottomStart)
                     )
                 }
@@ -885,6 +909,7 @@ fun BatchEditDialog(
                                         when (type) {
                                             DayType.WORK -> stringResource(R.string.history_batch_workday)
                                             DayType.OFF -> stringResource(R.string.history_batch_offday)
+                                            DayType.COMP_TIME -> stringResource(R.string.history_batch_comp_time)
                                         }
                                     )
                                 }
@@ -1564,6 +1589,7 @@ fun DayTypeIndicator(dayType: DayType) {
     val (icon, color) = when (dayType) {
         DayType.WORK -> Icons.Default.Work to MaterialTheme.colorScheme.primary
         DayType.OFF -> Icons.Default.FreeBreakfast to MaterialTheme.colorScheme.secondary
+        DayType.COMP_TIME -> Icons.Default.Bedtime to MaterialTheme.colorScheme.tertiary
     }
     
     Icon(

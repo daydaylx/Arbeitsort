@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
@@ -79,10 +80,14 @@ class CsvExporter @Inject constructor(
                     val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
                     val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
 
+                    val dayTypeLabel = when (entry.dayType) {
+                        DayType.COMP_TIME -> "Ü-Abbau"
+                        else -> entry.dayType.name
+                    }
                     val line = buildString {
                         append(entry.date.format(dateFormatter))
                         append(";")
-                        append(entry.dayType.name)
+                        append(dayTypeLabel)
                         append(";")
                         append(entry.dayLocationLabel.replace(";", ","))
                         append(";")

@@ -79,8 +79,12 @@ class EditEntryViewModel @Inject constructor(
     private fun loadEntry(date: LocalDate) {
         viewModelScope.launch {
             _screenState.update { it.copy(uiState = EditUiState.Loading, isSaving = false) }
-            
+
             try {
+                val settings = reminderSettingsManager.settings.first()
+                val targetMinutes = (settings.workEnd.toSecondOfDay() - settings.workStart.toSecondOfDay()) / 60 - settings.breakMinutes
+                val dailyTargetHours = maxOf(0, targetMinutes) / 60.0
+
                 val entry = workEntryDao.getByDate(date)
                 if (entry != null) {
                     val formData = EditFormData.fromEntry(entry)
@@ -88,11 +92,11 @@ class EditEntryViewModel @Inject constructor(
                         it.copy(
                             formData = formData,
                             uiState = EditUiState.Success(entry),
-                            isSaving = false
+                            isSaving = false,
+                            dailyTargetHours = dailyTargetHours
                         )
                     }
                 } else {
-                    val settings = reminderSettingsManager.settings.first()
                     val defaultDayType = defaultDayTypeForDate(date, settings)
                     // Neuen Eintrag mit Defaults erstellen
                     val defaultEntry = WorkEntry(
@@ -109,7 +113,8 @@ class EditEntryViewModel @Inject constructor(
                         it.copy(
                             formData = formData,
                             uiState = EditUiState.NewEntry(date),
-                            isSaving = false
+                            isSaving = false,
+                            dailyTargetHours = dailyTargetHours
                         )
                     }
                 }
@@ -125,7 +130,18 @@ class EditEntryViewModel @Inject constructor(
     }
     
     fun updateDayType(dayType: DayType) {
-        updateFormData { it.copy(dayType = dayType) }
+        if (dayType == DayType.COMP_TIME) {
+            // Clear snapshot labels to avoid mixing work-day data with comp-time.
+            updateFormData {
+                it.copy(
+                    dayType = dayType,
+                    morningLocationLabel = null,
+                    eveningLocationLabel = null
+                )
+            }
+        } else {
+            updateFormData { it.copy(dayType = dayType) }
+        }
     }
     
     fun updateWorkStart(hour: Int, minute: Int) {
@@ -297,7 +313,8 @@ class EditEntryViewModel @Inject constructor(
             val entryToSave = when (currentState) {
                 is EditUiState.Success -> {
                     val originalEntry = currentState.entry
-                    
+                    val now = System.currentTimeMillis()
+
                     // Review-confirmation only for unresolved entries.
                     val requiresConfirm = originalEntry.needsReview
                     if (requiresConfirm && !confirmBorderzone) {
@@ -305,6 +322,7 @@ class EditEntryViewModel @Inject constructor(
                         return@launch
                     }
 
+                    val isCompTime = data.dayType == DayType.COMP_TIME
                     originalEntry.copy(
                         dayType = data.dayType,
                         workStart = data.workStart,
@@ -323,11 +341,16 @@ class EditEntryViewModel @Inject constructor(
                         travelLabelStart = data.travelLabelStart,
                         travelLabelEnd = data.travelLabelEnd,
                         needsReview = data.needsReview,
-                        updatedAt = System.currentTimeMillis()
+                        confirmedWorkDay = if (isCompTime) true else originalEntry.confirmedWorkDay,
+                        confirmationAt = if (isCompTime && originalEntry.confirmationAt == null) now else originalEntry.confirmationAt,
+                        confirmationSource = if (isCompTime && originalEntry.confirmationSource == null) "COMP_TIME" else originalEntry.confirmationSource,
+                        updatedAt = now
                     )
                 }
                 is EditUiState.NewEntry -> {
                     // Neuen Eintrag erstellen
+                    val now = System.currentTimeMillis()
+                    val isCompTime = data.dayType == DayType.COMP_TIME
                     WorkEntry(
                         date = currentState.date,
                         dayType = data.dayType,
@@ -347,8 +370,11 @@ class EditEntryViewModel @Inject constructor(
                         travelLabelStart = data.travelLabelStart,
                         travelLabelEnd = data.travelLabelEnd,
                         needsReview = data.needsReview,
-                        createdAt = System.currentTimeMillis(),
-                        updatedAt = System.currentTimeMillis()
+                        confirmedWorkDay = isCompTime,
+                        confirmationAt = if (isCompTime) now else null,
+                        confirmationSource = if (isCompTime) "COMP_TIME" else null,
+                        createdAt = now,
+                        updatedAt = now
                     )
                 }
                 else -> {
@@ -442,7 +468,8 @@ class EditEntryViewModel @Inject constructor(
 data class EditScreenState(
     val uiState: EditUiState = EditUiState.Loading,
     val formData: EditFormData = EditFormData(),
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val dailyTargetHours: Double = 8.0
 )
 
 data class EditFormData(
@@ -469,6 +496,9 @@ data class EditFormData(
      * Returns empty list if validation passes.
      */
     fun validate(): List<ValidationError> {
+        // COMP_TIME days have no work times or location requirement.
+        if (dayType == DayType.COMP_TIME) return emptyList()
+
         val errors = mutableListOf<ValidationError>()
 
         if (dayLocationLabel.isNullOrBlank()) {

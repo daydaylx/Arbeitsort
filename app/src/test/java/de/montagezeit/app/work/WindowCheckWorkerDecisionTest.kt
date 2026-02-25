@@ -206,4 +206,39 @@ class WindowCheckWorkerDecisionTest {
         val entry = workEntry(morningCapturedAt = null, eveningCapturedAt = 2L)
         assertTrue(WindowCheckWorker.shouldShowFallbackReminder(entry))
     }
+
+    // -------------------------------------------------------------------------
+    // COMP_TIME
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `COMP_TIME tag mit confirmedWorkDay - alle Reminder unterdrückt`() {
+        val entry = workEntry(
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true
+        )
+
+        // Morning/Evening/Fallback: DayType.WORK check fails → no reminder
+        assertFalse(WindowCheckWorker.shouldShowMorningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
+        // Daily: explicit COMP_TIME guard returns false
+        assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
+    }
+
+    @Test
+    fun `COMP_TIME tag ohne confirmedWorkDay - Daily Reminder trotzdem unterdrückt`() {
+        // COMP_TIME is always auto-confirmed by SetDayType, but even without the
+        // confirmedWorkDay flag the explicit COMP_TIME guard must suppress the reminder.
+        val entry = workEntry(
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = false
+        )
+
+        assertFalse(WindowCheckWorker.shouldShowMorningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
+        // shouldShowDailyReminder has an explicit COMP_TIME guard before the confirmedWorkDay check
+        assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
+    }
 }

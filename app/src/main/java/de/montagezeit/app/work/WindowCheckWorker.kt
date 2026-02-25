@@ -200,6 +200,8 @@ class WindowCheckWorker @AssistedInject constructor(
         }
 
         internal fun shouldShowDailyReminder(entry: WorkEntry?): Boolean {
+            // COMP_TIME is always considered confirmed – no daily reminder needed.
+            if (entry?.dayType == DayType.COMP_TIME) return false
             return entry?.confirmedWorkDay != true
         }
     }

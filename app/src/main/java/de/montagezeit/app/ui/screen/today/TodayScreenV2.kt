@@ -522,6 +522,11 @@ private fun DayTypeRow(dayType: DayType) {
             stringResource(R.string.day_type_off),
             MaterialTheme.colorScheme.secondary
         )
+        DayType.COMP_TIME -> Triple(
+            Icons.Default.Bedtime,
+            stringResource(R.string.day_type_comp_time),
+            MaterialTheme.colorScheme.tertiary
+        )
     }
 
     Row(

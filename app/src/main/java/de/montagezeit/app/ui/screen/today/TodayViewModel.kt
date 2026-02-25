@@ -273,6 +273,9 @@ class TodayViewModel @Inject constructor(
                     val status = when {
                         entry == null -> WeekDayStatus.EMPTY
                         entry.dayType == DayType.OFF && entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_OFF
+                        // COMP_TIME is always confirmed (auto-set); show as CONFIRMED_OFF to visually
+                        // distinguish it from a regular work day while marking it as fulfilled.
+                        entry.dayType == DayType.COMP_TIME -> WeekDayStatus.CONFIRMED_OFF
                         entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_WORK
                         entry.morningCapturedAt != null || entry.eveningCapturedAt != null -> WeekDayStatus.PARTIAL
                         else -> WeekDayStatus.EMPTY
