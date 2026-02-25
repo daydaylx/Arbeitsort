@@ -42,10 +42,18 @@ class SetDayType(
                     confirmationSource = "COMP_TIME",
                     updatedAt = now
                 )
-                else -> existingEntry.copy(
-                    dayType = dayType,
-                    updatedAt = now
-                )
+                else -> {
+                    // When changing away from COMP_TIME, clear the auto-confirmation so the
+                    // new day type is not counted as confirmed in overtime calculations.
+                    val wasCompTime = existingEntry.dayType == DayType.COMP_TIME
+                    existingEntry.copy(
+                        dayType = dayType,
+                        confirmedWorkDay = if (wasCompTime) false else existingEntry.confirmedWorkDay,
+                        confirmationAt = if (wasCompTime) null else existingEntry.confirmationAt,
+                        confirmationSource = if (wasCompTime) null else existingEntry.confirmationSource,
+                        updatedAt = now
+                    )
+                }
             }
         } else {
             WorkEntry(

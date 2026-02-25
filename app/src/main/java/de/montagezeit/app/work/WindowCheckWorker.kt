@@ -169,10 +169,10 @@ class WindowCheckWorker @AssistedInject constructor(
         operationMutex.withLock {
             if (reminderFlagsStore.isDailyReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-            reminderFlagsStore.setDailyReminded(date)
             if (shouldShowDailyReminder(entry)) {
                 notificationManager.showDailyConfirmationNotification(date)
             }
+            reminderFlagsStore.setDailyReminded(date)
         }
     }
 

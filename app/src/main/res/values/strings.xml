@@ -454,6 +454,7 @@
     <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
     <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
     <string name="edit_validation_travel_arrive_before_start">Ankunftszeit muss nach Abfahrtszeit liegen</string>
+    <string name="edit_validation_travel_too_long">Reisezeit darf maximal 16 Stunden betragen</string>
 
     <!-- Today Screen (additional) -->
     <string name="action_review">Prüfen</string>

@@ -530,6 +530,12 @@ data class EditFormData(
             // Overnight trips are allowed. Only identical times are invalid.
             if (travelArriveTime == travelStartTime) {
                 errors.add(ValidationError.TravelArriveBeforeStart)
+            } else {
+                var diffMinutes = (travelArriveTime.toSecondOfDay() - travelStartTime.toSecondOfDay()) / 60
+                if (diffMinutes < 0) diffMinutes += 24 * 60 // overnight
+                if (diffMinutes > 16 * 60) {
+                    errors.add(ValidationError.TravelTooLong)
+                }
             }
         }
 
@@ -581,6 +587,7 @@ sealed class ValidationError(@StringRes val messageRes: Int) {
     object NegativeBreakMinutes : ValidationError(R.string.edit_validation_negative_break)
     object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
     object TravelArriveBeforeStart : ValidationError(R.string.edit_validation_travel_arrive_before_start)
+    object TravelTooLong : ValidationError(R.string.edit_validation_travel_too_long)
 }
 
 sealed class EditUiState {
