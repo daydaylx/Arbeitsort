@@ -100,7 +100,23 @@ class HistoryViewModel @Inject constructor(
 
                     var updated = baseEntry
                     if (request.dayType != null) {
-                        updated = updated.copy(dayType = request.dayType)
+                        val wasCompTime = updated.dayType == DayType.COMP_TIME
+                        val becomesCompTime = request.dayType == DayType.COMP_TIME
+                        updated = when {
+                            becomesCompTime -> updated.copy(
+                                dayType = DayType.COMP_TIME,
+                                confirmedWorkDay = true,
+                                confirmationAt = now,
+                                confirmationSource = "COMP_TIME"
+                            )
+                            wasCompTime -> updated.copy(
+                                dayType = request.dayType,
+                                confirmedWorkDay = false,
+                                confirmationAt = null,
+                                confirmationSource = null
+                            )
+                            else -> updated.copy(dayType = request.dayType)
+                        }
                     }
                     if (request.applyDefaultTimes) {
                         updated = updated.copy(
