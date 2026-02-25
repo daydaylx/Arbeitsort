@@ -101,6 +101,7 @@
     <string name="action_retry">Erneut versuchen</string>
     <string name="day_type_work">Arbeitstag</string>
     <string name="day_type_off">Freier Tag</string>
+    <string name="day_type_comp_time">Ü-Abbau</string>
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
@@ -359,6 +360,7 @@
     <string name="history_weekday_su">So</string>
     <string name="history_day_type_off">Frei</string>
     <string name="history_day_type_off_short">F</string>
+    <string name="history_day_type_comp_time_short">Ü</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
     <string name="history_summary_workdays">%1$d Arbeitstage</string>
     <string name="history_summary_review_count">%1$d Review</string>
@@ -382,6 +384,7 @@
     <string name="history_batch_daytype_set">Tagtyp setzen</string>
     <string name="history_batch_workday">Arbeitstag</string>
     <string name="history_batch_offday">Frei</string>
+    <string name="history_batch_comp_time">Ü-Abbau</string>
     <string name="history_batch_set_defaults">Standardzeiten setzen</string>
     <string name="history_batch_set_note">Notiz setzen</string>
     <string name="history_batch_note_placeholder">Notiz (leer = loeschen)</string>
@@ -416,6 +419,8 @@
     <string name="edit_section_day_type">Tagtyp</string>
     <string name="edit_day_type_workday">Arbeitstag</string>
     <string name="edit_day_type_off">Frei</string>
+    <string name="edit_day_type_comp_time">Ü-Abbau</string>
+    <string name="edit_comp_time_info">Ü-Abbau: −%1$d Std.</string>
     <string name="edit_section_work_times">Arbeitszeiten</string>
     <string name="edit_label_start">Beginn</string>
     <string name="edit_label_end">Ende</string>
