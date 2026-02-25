@@ -1,7 +1,7 @@
 # Architektur - MontageZeit
 
-**Status:** Aktiv / verbindlich  
-**Letzte Aktualisierung:** 2026-02-16
+**Status:** Aktiv / verbindlich
+**Letzte Aktualisierung:** 2026-02-25
 
 ## Dokumentstatus
 
@@ -14,16 +14,15 @@ MontageZeit ist eine single-module Android App mit offline-first Datenhaltung.
 Layer:
 - UI: Compose Screens + ViewModels
 - Domain: UseCases + reine Geschäftslogik
-- Data: Room/DAO, DataStore, LocationProvider, Netzwerkadapter
+- Data: Room/DAO, DataStore
 
 ## 2. Kernkomponenten
 
 ### 2.1 Persistence
 
-- Datenbank: `AppDatabase` (`version = 6`)
+- Datenbank: `AppDatabase` (`version = 10`)
 - Haupttabelle: `work_entries`
-- Cache-Tabelle: `route_cache`
-- Migrationen: `MIGRATION_1_2` bis `MIGRATION_5_6`
+- Migrationen: `MIGRATION_1_2` bis `MIGRATION_9_10`
 
 ### 2.2 Reminder & Scheduling
 
@@ -65,10 +64,15 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 `WorkEntry` beinhaltet:
 - Tagesstatus (`dayType`, `confirmedWorkDay`, `confirmation*`)
 - Arbeitszeit-Defaults (`workStart`, `workEnd`, `breakMinutes`)
-- Morning/Evening Snapshots (Koordinaten, Label, Accuracy, Status)
-- Tagesstandort (`dayLocation*`)
+- Daily Location (`dayLocationLabel`, `dayLocationSource`, Koordinaten)
+- Morning/Evening Snapshots (Timestamp, Label, Koordinaten, Accuracy, Status)
 - Travel-Daten (`travel*`)
 - Qualitätsflags (`needsReview`, `note`, Timestamps)
+
+### DayType Enum
+- `WORK` - Arbeitstag
+- `OFF` - Frei/Urlaub
+- `COMP_TIME` - Überstundenabbau (ganzer Tag)
 
 Ergänzende Helper zur Entkopplung von Copy-Bomben:
 - `WorkEntry.withTravelCleared(...)`
@@ -77,22 +81,19 @@ Ergänzende Helper zur Entkopplung von Copy-Bomben:
 
 ## 4. Privacy / Security
 
-### 4.1 API-Key Handling
-
-- Routing-Key wird über `RoutingSettingsManager` in DataStore gespeichert.
-- Key wird nicht in Logs geschrieben.
-- Ohne Key wird Routing mit `ApiError` abgebrochen.
-
-### 4.2 Externe Datenflüsse
-
-Outbound zu `api.openrouteservice.org` nur bei aktiver Distanzberechnung:
-- Geocoding: Standortlabel -> Koordinaten
-- Routing: Koordinaten Start/Ziel -> Distanz
-
-### 4.3 Lokale Logs
+### 4.1 Lokale Logs
 
 - `RingBufferLogger` schreibt lokal in `files/logs/debug.log`
 - max. 2 MB, Rotation behält neueste Zeilen
+- Kein Cloud-Upload
+
+### 4.2 Berechtigungen
+
+- `POST_NOTIFICATIONS` - Für Reminder
+- `RECEIVE_BOOT_COMPLETED` - Für Reboot-Resilienz
+- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_SPECIAL_USE` - Für Check-In Actions
+
+Keine Standort-Berechtigungen mehr (manuelles Check-in System).
 
 ## 5. Teststrategie
 

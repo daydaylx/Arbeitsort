@@ -14,11 +14,10 @@ Alle anderen Dateien unter `docs/` sind nur ergänzende, teilweise archivierte R
 
 - Kotlin, Coroutines, Flow
 - Jetpack Compose (Material3)
-- Room (Schema-Version 6, Migrationen 1→6)
+- Room (Schema-Version 10, Migrationen 1→10)
 - WorkManager
-- Hilt
+- Hilt (Dependency Injection)
 - DataStore Preferences
-- OkHttp + Moshi
 
 ## Voraussetzungen
 
@@ -51,6 +50,12 @@ cd Arbeitsort
   4. `defaultDayLocationLabel` aus Settings
 - Der tägliche manuelle Check-in setzt den Tag direkt als abgeschlossen (`confirmedWorkDay = true`) und markiert Morning/Evening-Snapshots als erfasst, damit keine zusätzlichen Today-Schritte erforderlich sind.
 - Optionale Nebenaktion: `Heute frei`.
+
+## DayType
+
+- `WORK` - Arbeitstag (Standard)
+- `OFF` - Frei/Urlaub
+- `COMP_TIME` - Überstundenabbau (ganzer Tag)
 
 ## Tests
 
@@ -85,27 +90,20 @@ cd Arbeitsort
 
 Deklariert in `app/src/main/AndroidManifest.xml`:
 
-- `ACCESS_COARSE_LOCATION`
-- `ACCESS_FINE_LOCATION`
-- `POST_NOTIFICATIONS`
-- `RECEIVE_BOOT_COMPLETED`
-- `FOREGROUND_SERVICE`
-- `FOREGROUND_SERVICE_SPECIAL_USE`
+- `POST_NOTIFICATIONS` - Für Reminder
+- `RECEIVE_BOOT_COMPLETED` - Für Reboot-Resilienz
+- `FOREGROUND_SERVICE` - Für Check-In Actions
+- `FOREGROUND_SERVICE_SPECIAL_USE` - Für Check-In Actions
+
+Keine Standort-Berechtigungen mehr (manuelles Check-in System).
 
 ## Datenschutz & Security
 
 ### Standortdaten
 
-- Standort wird nur für Check-in/Bestätigungslogik verwendet.
-- Bei fehlender/ungenauer Location wird fallback-basiert gespeichert und `needsReview` gesetzt.
+- Tagesort wird manuell vom Benutzer eingegeben.
+- Morning/Evening Snapshots sind optional.
 - Daten bleiben lokal in Room, sofern nicht explizit exportiert/geteilt wird.
-
-### Routing / Geocoding API
-
-- API-Key wird in `DataStore` über `RoutingSettingsManager` gespeichert.
-- Outbound Requests an `api.openrouteservice.org` erfolgen nur bei aktiver Routenberechnung.
-- Übertragen werden Start-/Ziel-Label bzw. daraus aufgelöste Koordinaten.
-- API-Keys werden nicht geloggt.
 
 ### Logging
 
@@ -127,4 +125,9 @@ Zusätzlich empfehlenswert:
 
 - Reminder-Manuelltest (Morning/Evening/Fallback/Daily)
 - Boot/Zeitzonen-Change Test
-- Export Smoke-Test (CSV/PDF)
+- Export Smoke-Test (CSV)
+
+## Version
+
+1.0.1
+Database Version: 10
