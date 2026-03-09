@@ -107,7 +107,7 @@ class HistoryViewModel @Inject constructor(
                                 dayType = DayType.COMP_TIME,
                                 confirmedWorkDay = true,
                                 confirmationAt = now,
-                                confirmationSource = "COMP_TIME"
+                                confirmationSource = DayType.COMP_TIME.name
                             )
                             wasCompTime -> updated.copy(
                                 dayType = request.dayType,
@@ -159,9 +159,11 @@ class HistoryViewModel @Inject constructor(
             .map { (yearWeek, weekEntries) ->
                 val sortedEntries = weekEntries.sortedByDescending { it.date }
                 val stats = calculateGroupStats(sortedEntries)
+                val weekStart = weekEntries.minOf { it.date }.with(weekFields.dayOfWeek(), 1)
                 WeekGroup(
                     year = yearWeek.first,
                     week = yearWeek.second,
+                    weekStart = weekStart,
                     entries = sortedEntries,
                     workDaysCount = stats.workDaysCount,
                     offDaysCount = stats.offDaysCount,
@@ -257,6 +259,7 @@ data class MonthGroup(
 data class WeekGroup(
     val year: Int,
     val week: Int,
+    val weekStart: LocalDate,
     val entries: List<WorkEntry>,
     val workDaysCount: Int,
     val offDaysCount: Int,

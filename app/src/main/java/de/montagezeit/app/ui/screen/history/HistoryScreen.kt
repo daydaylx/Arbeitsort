@@ -1099,8 +1099,14 @@ fun WeekGroupCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
+                    val weekEnd = week.weekStart.plusDays(6)
                     Text(
-                        text = stringResource(R.string.history_week_label, week.week),
+                        text = stringResource(
+                            R.string.history_week_label,
+                            week.week,
+                            formatShortDate(week.weekStart),
+                            formatShortDate(weekEnd)
+                        ),
                         style = MaterialTheme.typography.titleMedium
                     )
                     week.yearText.takeIf { it.isNotEmpty() }?.let { year ->

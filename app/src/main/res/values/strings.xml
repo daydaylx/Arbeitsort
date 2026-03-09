@@ -329,7 +329,7 @@
     <string name="history_summary_list">Liste</string>
     <string name="history_summary_month">Monat</string>
     <string name="history_summary_week">Woche</string>
-    <string name="history_week_label">KW %1$d</string>
+    <string name="history_week_label">KW %1$d · %2$s – %3$s</string>
     <string name="history_summary_months">Monate</string>
     <string name="history_summary_weeks">Wochen</string>
     <string name="history_day_overview_title">Tagesübersicht</string>
