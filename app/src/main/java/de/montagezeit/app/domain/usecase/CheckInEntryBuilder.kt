@@ -23,7 +23,7 @@ internal object CheckInEntryBuilder {
         locationLabel: String? = null
     ): WorkEntry {
         val now = System.currentTimeMillis()
-        val normalizedEntry = existingEntry?.copy(dayType = DayType.WORK)
+        val normalizedEntry = existingEntry
         val dayLocation = DayLocationResolver.resolve(normalizedEntry)
 
         // Standort-Review ist deaktiviert: Ortsangabe wird manuell geführt.

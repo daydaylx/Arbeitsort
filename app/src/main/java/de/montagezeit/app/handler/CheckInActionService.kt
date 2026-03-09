@@ -148,11 +148,19 @@ class CheckInActionService : Service() {
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
                 val reminderTypeRaw = intent.getStringExtra(ReminderActions.EXTRA_REMINDER_TYPE)
                 
-                // Entferne aktuelle Notification
-                notificationManager.cancelMorningReminder()
-                notificationManager.cancelEveningReminder()
-                notificationManager.cancelFallbackReminder()
-                notificationManager.cancelDailyReminder()
+                // Entferne nur den spezifischen Reminder-Typ der gesnoozed wird
+                when (reminderTypeRaw) {
+                    ReminderType.MORNING.name -> notificationManager.cancelMorningReminder()
+                    ReminderType.EVENING.name -> notificationManager.cancelEveningReminder()
+                    ReminderType.FALLBACK.name -> notificationManager.cancelFallbackReminder()
+                    ReminderType.DAILY.name -> notificationManager.cancelDailyReminder()
+                    else -> {
+                        notificationManager.cancelMorningReminder()
+                        notificationManager.cancelEveningReminder()
+                        notificationManager.cancelFallbackReminder()
+                        notificationManager.cancelDailyReminder()
+                    }
+                }
                 
                 // Plane neue Notification für später.
                 // WICHTIG: stopSelf() muss INNERHALB des Coroutine-Blocks stehen,

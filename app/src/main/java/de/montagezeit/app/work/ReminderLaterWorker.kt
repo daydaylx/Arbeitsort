@@ -36,23 +36,13 @@ class ReminderLaterWorker @AssistedInject constructor(
             }
         }
         
-        // Bestimme, ob es ein Morning- oder Evening-Reminder war
-        // (vereinfacht: prüfe ob es vor 13:00 ist für Morning, sonst Evening)
-        val currentHour = java.time.LocalTime.now().hour
-        
         return try {
             when (reminderType) {
                 ReminderType.MORNING -> notificationManager.showMorningReminder(date)
                 ReminderType.EVENING -> notificationManager.showEveningReminder(date)
                 ReminderType.FALLBACK -> notificationManager.showFallbackReminder(date)
                 ReminderType.DAILY -> notificationManager.showDailyConfirmationNotification(date)
-                null -> {
-                    if (currentHour < 13) {
-                        notificationManager.showMorningReminder(date)
-                    } else {
-                        notificationManager.showEveningReminder(date)
-                    }
-                }
+                null -> notificationManager.showMorningReminder(date)
             }
             Result.success()
         } catch (e: Exception) {

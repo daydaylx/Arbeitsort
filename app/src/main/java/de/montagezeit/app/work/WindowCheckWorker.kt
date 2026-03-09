@@ -83,7 +83,7 @@ class WindowCheckWorker @AssistedInject constructor(
                     if (!settings.dailyReminderEnabled) {
                         return Result.success()
                     }
-                    checkAndShowDailyReminder(today)
+                    checkAndShowDailyReminder(today, settings)
                     // Daily ist periodic, kein self-reschedule
                 }
                 null -> {
@@ -165,10 +165,14 @@ class WindowCheckWorker @AssistedInject constructor(
      *
      * ATOMIC: Mutex schützt gesamte Operation (read + DB query + notification + write)
      */
-    private suspend fun checkAndShowDailyReminder(date: LocalDate) {
+    private suspend fun checkAndShowDailyReminder(date: LocalDate, settings: ReminderSettings) {
         operationMutex.withLock {
             if (reminderFlagsStore.isDailyReminded(date)) return
             val entry = workEntryDao.getByDate(date)
+            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) {
+                reminderFlagsStore.setDailyReminded(date)
+                return
+            }
             if (shouldShowDailyReminder(entry)) {
                 notificationManager.showDailyConfirmationNotification(date)
             }
