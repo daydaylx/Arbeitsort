@@ -145,7 +145,9 @@ class CheckInActionService : Service() {
             ReminderActions.ACTION_REMIND_LATER -> {
                 val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
                 val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val minutesLater = intent.getIntExtra(ReminderActions.EXTRA_MINUTES_LATER, -1)
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
+                val delayMinutes = if (minutesLater > 0) minutesLater.toLong() else hoursLater * 60L
                 val reminderTypeRaw = intent.getStringExtra(ReminderActions.EXTRA_REMINDER_TYPE)
                 
                 // Entferne nur den spezifischen Reminder-Typ der gesnoozed wird
@@ -170,7 +172,7 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     scheduleReminderLater(
                         date = date,
-                        hoursLater = hoursLater,
+                        delayMinutes = delayMinutes,
                         reminderType = reminderTypeRaw
                     )
                     stopSelf()
@@ -332,17 +334,16 @@ class CheckInActionService : Service() {
      */
     private suspend fun scheduleReminderLater(
         date: LocalDate,
-        hoursLater: Int,
+        delayMinutes: Long,
         reminderType: String?
     ) {
         val inputData = Data.Builder()
             .putString("date", date.toString())
-            .putInt("hours_later", hoursLater)
             .putString(ReminderActions.EXTRA_REMINDER_TYPE, reminderType)
             .build()
-        
+
         val workRequest = OneTimeWorkRequestBuilder<ReminderLaterWorker>()
-            .setInitialDelay(hoursLater.toLong(), TimeUnit.HOURS)
+            .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
             .setInputData(inputData)
             .build()
 
@@ -364,7 +365,9 @@ class CheckInActionService : Service() {
 
     private fun confirmationLimiter(): ConfirmationReminderLimiter {
         val prefs = getSharedPreferences(CONFIRMATION_REMINDER_PREFS, Context.MODE_PRIVATE)
-        return ConfirmationReminderLimiter(prefs, CONFIRMATION_REMINDER_MAX)
+        val limiter = ConfirmationReminderLimiter(prefs, CONFIRMATION_REMINDER_MAX)
+        limiter.cleanup(LocalDate.now())
+        return limiter
     }
 
     private fun scheduleConfirmationReminderLater(date: LocalDate, minutesLater: Int) {

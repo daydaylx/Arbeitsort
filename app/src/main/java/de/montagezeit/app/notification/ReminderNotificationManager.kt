@@ -41,6 +41,7 @@ object ReminderActions {
     const val EXTRA_DATE = "extra_date"
     const val EXTRA_ACTION_TYPE = "extra_action_type"
     const val EXTRA_HOURS_LATER = "extra_hours_later"
+    const val EXTRA_MINUTES_LATER = "extra_minutes_later"
     const val EXTRA_REMINDER_TYPE = "extra_reminder_type"
     const val EXTRA_CONFIRMATION_SOURCE = "extra_confirmation_source"
 }
@@ -79,6 +80,9 @@ class ReminderNotificationManager @Inject constructor(
         private const val REQUEST_CODE_REMIND_LATER_2H_EVENING = 2016
         private const val REQUEST_CODE_REMIND_LATER_1H_FALLBACK = 2017
         private const val REQUEST_CODE_REMIND_LATER_2H_FALLBACK = 2018
+        private const val REQUEST_CODE_SNOOZE_10MIN_MORNING = 2019
+        private const val REQUEST_CODE_SNOOZE_10MIN_EVENING = 2020
+        private const val REQUEST_CODE_SNOOZE_10MIN_FALLBACK = 2021
         private const val REQUEST_CODE_MARK_DAY_OFF_MORNING = 2008
         private const val REQUEST_CODE_MARK_DAY_OFF_EVENING = 2009
         private const val REQUEST_CODE_MARK_DAY_OFF_FALLBACK = 2010
@@ -126,6 +130,10 @@ class ReminderNotificationManager @Inject constructor(
     private fun remindLaterActionLabel(hours: Int): String {
         return context.getString(R.string.action_remind_later_hours, hours)
     }
+
+    private fun snooze10MinActionLabel(): String {
+        return context.getString(R.string.action_snooze_10min)
+    }
     
     /**
      * Zeigt eine Morning-Reminder-Notification an
@@ -147,7 +155,7 @@ class ReminderNotificationManager @Inject constructor(
             .setAutoCancel(false) // Wird manuell entfernt
             .setGroup(NOTIFICATION_GROUP)
             .setContentIntent(createOpenAppPendingIntent(date))
-            // Erste 3 Actions in collapsed view: Arbeit / Frei / Später (1h)
+            // Erste 3 Actions in collapsed view: Arbeit / Frei / Snooze 10 Min.
             .addAction(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_morning_check_in),
@@ -164,6 +172,11 @@ class ReminderNotificationManager @Inject constructor(
                     date,
                     REQUEST_CODE_MARK_DAY_OFF_MORNING
                 )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                snooze10MinActionLabel(),
+                createSnooze10MinPendingIntent(date, ReminderType.MORNING, REQUEST_CODE_SNOOZE_10MIN_MORNING)
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
@@ -218,6 +231,11 @@ class ReminderNotificationManager @Inject constructor(
                     ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION,
                     REQUEST_CODE_EVENING_WITH_LOCATION
                 )
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                snooze10MinActionLabel(),
+                createSnooze10MinPendingIntent(date, ReminderType.EVENING, REQUEST_CODE_SNOOZE_10MIN_EVENING)
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
@@ -276,6 +294,11 @@ class ReminderNotificationManager @Inject constructor(
                 R.drawable.ic_launcher_foreground,
                 context.getString(R.string.action_edit_entry),
                 createEditPendingIntent(date, REQUEST_CODE_EDIT)
+            )
+            .addAction(
+                R.drawable.ic_launcher_foreground,
+                snooze10MinActionLabel(),
+                createSnooze10MinPendingIntent(date, ReminderType.FALLBACK, REQUEST_CODE_SNOOZE_10MIN_FALLBACK)
             )
             .addAction(
                 R.drawable.ic_launcher_foreground,
@@ -465,6 +488,25 @@ class ReminderNotificationManager @Inject constructor(
             putExtra(ReminderActions.EXTRA_REMINDER_TYPE, reminderType.name)
         }
         
+        return PendingIntent.getService(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun createSnooze10MinPendingIntent(
+        date: LocalDate,
+        reminderType: ReminderType,
+        requestCode: Int
+    ): PendingIntent {
+        val intent = Intent(context, CheckInActionService::class.java).apply {
+            action = ReminderActions.ACTION_REMIND_LATER
+            putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_MINUTES_LATER, 10)
+            putExtra(ReminderActions.EXTRA_REMINDER_TYPE, reminderType.name)
+        }
         return PendingIntent.getService(
             context,
             requestCode,
