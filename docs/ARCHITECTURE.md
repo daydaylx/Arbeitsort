@@ -59,6 +59,10 @@ Strategie:
 
 Diese Pfade bleiben für Notification-Actions/Worker relevant.
 
+**`CheckInEntryBuilder` Verhalten:**
+- Behält den bestehenden `dayType` eines existierenden DB-Eintrags.
+- Nur für neue Einträge (kein DB-Eintrag vorhanden) wird `WORK` als Default gesetzt.
+
 ## 3. Datenmodell (WorkEntry)
 
 `WorkEntry` beinhaltet:

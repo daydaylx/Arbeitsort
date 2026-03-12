@@ -257,11 +257,13 @@
     <string name="export_preview_totals_work_time">Arbeitszeit</string>
     <string name="export_preview_totals_travel_time">Reisezeit</string>
     <string name="export_preview_totals_paid_total">Gesamt bezahlt</string>
+    <string name="export_preview_totals_meal_allowance">Verpflegungspauschale</string>
     <string name="export_preview_row_break">Pause: %1$s</string>
     <string name="export_preview_row_time_range">%1$s – %2$s</string>
     <string name="export_preview_row_work">Arbeit: %1$s</string>
     <string name="export_preview_row_travel">Reise: %1$s</string>
     <string name="export_preview_row_total">Gesamt: %1$s</string>
+    <string name="export_preview_row_meal_allowance">Verpflegungspauschale: %1$s</string>
     <string name="export_preview_error_message">Fehler: %1$s</string>
     <string name="export_preview_no_pdf_app">Keine App zum Öffnen von PDFs gefunden.</string>
     <string name="export_preview_share_chooser_title">PDF teilen</string>
@@ -450,6 +452,7 @@
     <string name="edit_label_morning_optional">Morgens (Optional)</string>
     <string name="edit_label_evening_optional">Abends (Optional)</string>
     <string name="edit_placeholder_city_berlin">z.B. Berlin</string>
+    <string name="edit_section_meal_allowance">Verpflegungspauschale</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen...</string>
     <string name="edit_confirm_title">Bestätigung erforderlich</string>

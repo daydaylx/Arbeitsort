@@ -14,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 
@@ -45,11 +46,11 @@ class RecordEveningCheckInTest {
     }
 
     @Test
-    fun `invoke preserves manual day location and morning data on existing entry`() = runTest {
+    fun `invoke preserves manual day location and morning data on existing WORK entry`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
-            dayType = DayType.OFF,
+            dayType = DayType.WORK,
             dayLocationLabel = "Berlin",
             dayLocationSource = DayLocationSource.MANUAL,
             dayLocationLat = 52.52,
@@ -73,6 +74,47 @@ class RecordEveningCheckInTest {
         assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
         assertNotNull(result.eveningCapturedAt)
         assertFalse(result.needsReview)
+    }
+
+    @Test
+    fun `invoke blocks evening check-in for OFF day`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.OFF
+        )
+
+        coEvery { workEntryDao.getByDate(date) } returns existing
+
+        try {
+            useCase(date)
+            fail("Expected IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message?.contains("OFF") == true)
+        }
+
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+    }
+
+    @Test
+    fun `invoke blocks evening check-in for COMP_TIME day`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true
+        )
+
+        coEvery { workEntryDao.getByDate(date) } returns existing
+
+        try {
+            useCase(date)
+            fail("Expected IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message?.contains("COMP_TIME") == true)
+        }
+
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
     }
 
     @Test

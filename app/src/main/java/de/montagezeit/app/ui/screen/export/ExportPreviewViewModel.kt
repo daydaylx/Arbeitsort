@@ -65,6 +65,60 @@ internal fun calculatePreviewSummary(entries: List<WorkEntry>): PreviewSummary {
     )
 }
 
+internal fun buildExportPreviewTotals(summary: PreviewSummary): ExportPreviewTotals {
+    fun formatMinutes(minutes: Int): String = "${TimeCalculator.formatMinutesAsHours(minutes)} h"
+
+    return ExportPreviewTotals(
+        workHours = formatMinutes(summary.workMinutes),
+        travelHours = formatMinutes(summary.travelMinutes),
+        paidHours = formatMinutes(summary.paidMinutes),
+        mealAllowanceTotal = MealAllowanceCalculator.formatEuro(summary.mealAllowanceCents)
+    )
+}
+
+internal fun buildExportPreviewRow(entry: WorkEntry): ExportPreviewRow {
+    val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
+    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
+    val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+    val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK
+    val mealLabel = if (entry.mealAllowanceAmountCents > 0) {
+        MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
+    } else {
+        null
+    }
+    return ExportPreviewRow(
+        date = entry.date,
+        dateLabel = PdfUtilities.formatDate(entry.date),
+        startLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workStart) else PREVIEW_DASH,
+        endLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workEnd) else PREVIEW_DASH,
+        breakLabel = if (showWorkSchedule) "${entry.breakMinutes} min" else PREVIEW_DASH,
+        workLabel = buildPreviewMinutesLabel(workMinutes),
+        travelLabel = buildPreviewMinutesLabel(travelMinutes),
+        totalLabel = buildPreviewMinutesLabel(paidMinutes),
+        locationNote = buildPreviewLocationNote(entry),
+        mealAllowanceLabel = mealLabel
+    )
+}
+
+private fun buildPreviewMinutesLabel(minutes: Int): String {
+    return "${TimeCalculator.formatMinutesAsHours(minutes)} h"
+}
+
+private const val PREVIEW_DASH = "–"
+
+private fun buildPreviewLocationNote(entry: WorkEntry): String? {
+    val location = PdfUtilities.getLocation(entry).trim().takeIf { it.isNotBlank() }
+    val note = PdfUtilities.getNote(entry).trim().takeIf { it.isNotBlank() }
+    val combined = listOfNotNull(location, note).joinToString(" • ")
+    if (combined.isBlank()) return null
+    val maxLength = 48
+    return if (combined.length > maxLength) {
+        combined.take(maxLength - 1) + "…"
+    } else {
+        combined
+    }
+}
+
 sealed class PreviewState {
     data class List(
         val header: String,
@@ -250,52 +304,15 @@ class ExportPreviewViewModel @Inject constructor(
 
     private fun buildTotals(entries: List<WorkEntry>): ExportPreviewTotals {
         val summary = calculatePreviewSummary(entries)
-        return ExportPreviewTotals(
-            workHours = formatMinutes(summary.workMinutes),
-            travelHours = formatMinutes(summary.travelMinutes),
-            paidHours = formatMinutes(summary.paidMinutes),
-            mealAllowanceTotal = MealAllowanceCalculator.formatEuro(summary.mealAllowanceCents)
-        )
+        return buildExportPreviewTotals(summary)
     }
 
     private fun buildRow(entry: WorkEntry): ExportPreviewRow {
-        val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-        val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
-        val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
-        val mealLabel = if (entry.mealAllowanceAmountCents > 0) {
-            MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
-        } else {
-            null
-        }
-        return ExportPreviewRow(
-            date = entry.date,
-            dateLabel = PdfUtilities.formatDate(entry.date),
-            startLabel = PdfUtilities.formatTime(entry.workStart),
-            endLabel = PdfUtilities.formatTime(entry.workEnd),
-            breakLabel = "${entry.breakMinutes} min",
-            workLabel = formatMinutes(workMinutes),
-            travelLabel = formatMinutes(travelMinutes),
-            totalLabel = formatMinutes(paidMinutes),
-            locationNote = formatLocationNote(entry),
-            mealAllowanceLabel = mealLabel
-        )
+        return buildExportPreviewRow(entry)
     }
 
     private fun formatMinutes(minutes: Int): String {
-        return "${TimeCalculator.formatMinutesAsHours(minutes)} h"
-    }
-
-    private fun formatLocationNote(entry: WorkEntry): String? {
-        val location = PdfUtilities.getLocation(entry).trim().takeIf { it.isNotBlank() }
-        val note = PdfUtilities.getNote(entry).trim().takeIf { it.isNotBlank() }
-        val combined = listOfNotNull(location, note).joinToString(" • ")
-        if (combined.isBlank()) return null
-        val maxLength = 48
-        return if (combined.length > maxLength) {
-            combined.take(maxLength - 1) + "…"
-        } else {
-            combined
-        }
+        return buildPreviewMinutesLabel(minutes)
     }
 
     private data class DateRange(val start: LocalDate, val end: LocalDate)

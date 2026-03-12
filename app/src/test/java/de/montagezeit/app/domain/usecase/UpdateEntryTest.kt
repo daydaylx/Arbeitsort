@@ -92,6 +92,47 @@ class UpdateEntryTest {
     }
 
     @Test
+    fun `invoke speichert OFF-Tag ohne dayLocationLabel`() = runTest {
+        val entry = WorkEntry(
+            date = LocalDate.now(),
+            dayType = DayType.OFF,
+            dayLocationLabel = "",
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            createdAt = 1_000_000L,
+            updatedAt = 1_000_000L
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertEquals(DayType.OFF, result.dayType)
+        assertEquals("", result.dayLocationLabel)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `invoke speichert COMP_TIME-Tag ohne dayLocationLabel`() = runTest {
+        val entry = WorkEntry(
+            date = LocalDate.now(),
+            dayType = DayType.COMP_TIME,
+            dayLocationLabel = "",
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            createdAt = 1_000_000L,
+            updatedAt = 1_000_000L
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertEquals(DayType.COMP_TIME, result.dayType)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
     fun `invoke lehnt zu lange fahrzeit ab`() = runTest {
         val date = LocalDate.of(2026, 2, 1)
         val entry = validEntry(

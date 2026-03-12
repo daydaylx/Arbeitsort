@@ -1,7 +1,9 @@
 package de.montagezeit.app.work
 
+import android.database.sqlite.SQLiteException
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import java.io.IOException
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -240,5 +242,20 @@ class WindowCheckWorkerDecisionTest {
         assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
         // shouldShowDailyReminder has an explicit COMP_TIME guard before the confirmedWorkDay check
         assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
+    }
+
+    @Test
+    fun `shouldRetryOn retries for io exceptions`() {
+        assertTrue(WindowCheckWorker.shouldRetryOn(IOException("temporary")))
+    }
+
+    @Test
+    fun `shouldRetryOn retries for sqlite exceptions`() {
+        assertTrue(WindowCheckWorker.shouldRetryOn(SQLiteException("db locked")))
+    }
+
+    @Test
+    fun `shouldRetryOn does not retry for illegal state`() {
+        assertFalse(WindowCheckWorker.shouldRetryOn(IllegalStateException("logic bug")))
     }
 }

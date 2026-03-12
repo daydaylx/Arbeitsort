@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.confirmationStateForDayType
+import de.montagezeit.app.data.local.entity.withMealAllowanceCleared
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -100,22 +102,20 @@ class HistoryViewModel @Inject constructor(
 
                     var updated = baseEntry
                     if (request.dayType != null) {
-                        val wasCompTime = updated.dayType == DayType.COMP_TIME
-                        val becomesCompTime = request.dayType == DayType.COMP_TIME
-                        updated = when {
-                            becomesCompTime -> updated.copy(
-                                dayType = DayType.COMP_TIME,
-                                confirmedWorkDay = true,
-                                confirmationAt = now,
-                                confirmationSource = DayType.COMP_TIME.name
-                            )
-                            wasCompTime -> updated.copy(
-                                dayType = request.dayType,
-                                confirmedWorkDay = false,
-                                confirmationAt = null,
-                                confirmationSource = null
-                            )
-                            else -> updated.copy(dayType = request.dayType)
+                        val confirmationState = updated.confirmationStateForDayType(
+                            dayType = request.dayType,
+                            now = now
+                        )
+                        val shouldClearMealAllowance =
+                            request.dayType != DayType.WORK || updated.dayType != DayType.WORK
+                        updated = updated.copy(
+                            dayType = request.dayType,
+                            confirmedWorkDay = confirmationState.confirmedWorkDay,
+                            confirmationAt = confirmationState.confirmationAt,
+                            confirmationSource = confirmationState.confirmationSource
+                        )
+                        if (shouldClearMealAllowance) {
+                            updated = updated.withMealAllowanceCleared()
                         }
                     }
                     if (request.applyDefaultTimes) {

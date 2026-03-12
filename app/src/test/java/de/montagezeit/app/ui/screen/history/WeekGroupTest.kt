@@ -7,6 +7,8 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.temporal.WeekFields
+import java.util.Locale
 
 class WeekGroupTest {
 
@@ -313,10 +315,14 @@ class WeekGroupTest {
         val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val averageHoursPerDay = if (workDaysCount == 0) 0.0 else totalHours / workDaysCount
         val entriesNeedingReview = entries.count { it.needsReview }  // alle, auch unbestätigte
+        val weekFields = WeekFields.of(Locale.GERMAN)
+        val weekStart = entries.minOfOrNull { it.date }?.with(weekFields.dayOfWeek(), 1)
+            ?: LocalDate.of(year, 1, 4).with(weekFields.weekOfWeekBasedYear(), week.toLong()).with(weekFields.dayOfWeek(), 1)
 
         return WeekGroup(
             year = year,
             week = week,
+            weekStart = weekStart,
             entries = entries,
             workDaysCount = workDaysCount,
             offDaysCount = offDaysCount,

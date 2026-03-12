@@ -67,6 +67,8 @@ Clean Architecture mit drei Layern:
 - **Notification Actions:** Check-in, später erinnern
 - **Edge Cases:** `BOOT_COMPLETED`- und `TIMEZONE_CHANGED`-Receiver planen Reminder neu
 - **Samsung Sleep Mode:** Erfordert besondere Behandlung (App muss vom Schlafmodus ausgenommen werden)
+- **Daily-Reminder** prüft wie Morning/Evening/Fallback auf Nicht-Werktage (`isNonWorkingDay`); an Nicht-Werktagen kein Reminder
+- **`ACTION_REMIND_LATER`** cancelt nur den jeweiligen Reminder-Typ (MORNING/EVENING/FALLBACK/DAILY), nicht alle; `null`-Fallback cancelt alle
 
 ### Export
 - **CSV-Format:** Semikolon-separiert, UTF-8

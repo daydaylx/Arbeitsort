@@ -111,6 +111,19 @@ class PdfUtilitiesAdditionalTest {
         assertEquals("-1,50", result)
     }
 
+    @Test
+    fun `getLocation - blank morning label falls back to day location`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 1, 15),
+            dayType = DayType.WORK,
+            morningLocationLabel = "",
+            eveningLocationLabel = null,
+            dayLocationLabel = "Leipzig"
+        )
+
+        assertEquals("Leipzig", PdfUtilities.getLocation(entry))
+    }
+
     // -------------------------------------------------------------------------
     // sumWorkHours – Grenzfälle
     // -------------------------------------------------------------------------

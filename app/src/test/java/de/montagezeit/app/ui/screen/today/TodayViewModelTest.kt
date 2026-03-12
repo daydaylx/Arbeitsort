@@ -6,6 +6,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
@@ -525,6 +526,41 @@ class TodayViewModelTest {
         // Verify DB was queried for both dates
         coVerify(atLeast = 1) { workEntryDao.getByDate(today) }
         coVerify(atLeast = 1) { workEntryDao.getByDate(yesterday) }
+    }
+
+    @Test
+    fun `selectDate rebuilds week overview from selected date`() {
+        val today = LocalDate.now()
+        val otherWeekDate = today.plusWeeks(1)
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val weekLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.weekDaysUi.collect { days ->
+                if (
+                    days.firstOrNull()?.date == WeekCalculator.weekStart(otherWeekDate) &&
+                    days.any { it.date == otherWeekDate && it.isSelected }
+                ) {
+                    weekLatch.countDown()
+                }
+            }
+        }
+
+        viewModel.selectDate(otherWeekDate)
+
+        assertTrue(weekLatch.await(2, TimeUnit.SECONDS))
+        val weekDays = viewModel.weekDaysUi.value
+        assertEquals(WeekCalculator.weekStart(otherWeekDate), weekDays.first().date)
+        assertTrue(weekDays.any { it.date == otherWeekDate && it.isSelected })
+        assertTrue(weekDays.none { it.isToday })
+        collectJob.cancel()
     }
 
     @Test

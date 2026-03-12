@@ -27,6 +27,9 @@ Prüft regelmäßig ob Reminder notwendig sind:
 - Prüft ob dayType == WORK
 - Vermeidet mehrfache Erinnerungen pro Tag (SharedPreferences Flag)
 - **Wichtig**: Pro Worker-Typ nur im eigenen Fenster aktiv, sonst sofort `Result.success()`
+- **Daily Reminder**: `checkAndShowDailyReminder()` prüft ebenfalls auf Nicht-Werktage
+  (`isNonWorkingDay`), analog zu Morning/Evening/Fallback. An Nicht-Werktagen wird das Flag
+  gesetzt und kein Daily-Reminder angezeigt.
 
 **Logik:**
 ```kotlin
@@ -63,6 +66,8 @@ ForegroundService für Check-In Actions:
 - Ruft RecordMorningCheckIn/RecordEveningCheckIn UseCases auf
 - Zeigt Toast bei Erfolg/Fehler
 - Cancelt Reminder-Notification nach Check-in
+- **`ACTION_REMIND_LATER`**: Cancelt nur den spezifischen Reminder-Typ (MORNING/EVENING/FALLBACK/DAILY),
+  der gesnoozed wird. Nur bei fehlendem Typ (`null`-Fallback) werden alle Reminder gecancelt.
 
 **Warum ForegroundService?**
 - Location-Requests mit Timeout können länger dauern als BroadcastReceiver lebt
@@ -238,7 +243,7 @@ PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
 
 ## Initialisierung
 
-In `MontageZeitApplication.onCreate()`:
+In `MontageZeitApp.onCreate()`:
 ```kotlin
 lifecycleScope.launch {
     reminderScheduler.scheduleAll()
@@ -269,12 +274,7 @@ lifecycleScope.launch {
    adb shell dumpsys activity services de.montagezeit.app
    ```
 
-2. **Location Permission prüfen**:
-   ```bash
-   adb shell pm grant de.montagezeit.app android.permission.ACCESS_FINE_LOCATION
-   ```
-
-3. **Logs prüfen**:
+2. **Logs prüfen**:
    ```bash
    adb logcat | grep -E "CheckInActionService|WindowCheckWorker"
    ```

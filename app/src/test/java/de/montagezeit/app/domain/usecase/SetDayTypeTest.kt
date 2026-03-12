@@ -83,6 +83,10 @@ class SetDayTypeTest {
         val existingEntry = WorkEntry(
             date = date,
             dayType = DayType.WORK,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820,
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
@@ -95,6 +99,10 @@ class SetDayTypeTest {
         
         // Assert
         assertEquals(DayType.OFF, result.dayType)
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
         
         coVerify { workEntryDao.upsert(result) }
     }
@@ -106,20 +114,127 @@ class SetDayTypeTest {
         val existingEntry = WorkEntry(
             date = date,
             dayType = DayType.OFF,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820,
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        
+
         coEvery { workEntryDao.getByDate(date) } returns existingEntry
         coEvery { workEntryDao.upsert(any()) } just Runs
-        
+
         // Act
         val result = setDayType.invoke(date, DayType.WORK)
-        
+
         // Assert
         assertEquals(DayType.WORK, result.dayType)
-        
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
+
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `invoke - WORK zu COMP_TIME - Setzt confirmedWorkDay und confirmationSource`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            confirmedWorkDay = false,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820,
+            createdAt = 1000000L,
+            updatedAt = 1000000L
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.upsert(any()) } just Runs
+
+        val result = setDayType.invoke(date, DayType.COMP_TIME)
+
+        assertEquals(DayType.COMP_TIME, result.dayType)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
+        assertNotNull(result.confirmationAt)
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `invoke - OFF zu COMP_TIME - Setzt confirmedWorkDay und confirmationSource`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.OFF,
+            confirmedWorkDay = false,
+            createdAt = 1000000L,
+            updatedAt = 1000000L
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.upsert(any()) } just Runs
+
+        val result = setDayType.invoke(date, DayType.COMP_TIME)
+
+        assertEquals(DayType.COMP_TIME, result.dayType)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
+        assertNotNull(result.confirmationAt)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `invoke - COMP_TIME zu WORK - Loescht confirmedWorkDay und confirmationSource`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true,
+            confirmationAt = 9000000L,
+            confirmationSource = DayType.COMP_TIME.name,
+            createdAt = 1000000L,
+            updatedAt = 1000000L
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.upsert(any()) } just Runs
+
+        val result = setDayType.invoke(date, DayType.WORK)
+
+        assertEquals(DayType.WORK, result.dayType)
+        assertFalse(result.confirmedWorkDay)
+        assertNull(result.confirmationAt)
+        assertNull(result.confirmationSource)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `invoke - COMP_TIME zu OFF - Loescht confirmedWorkDay und confirmationSource`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true,
+            confirmationAt = 9000000L,
+            confirmationSource = DayType.COMP_TIME.name,
+            createdAt = 1000000L,
+            updatedAt = 1000000L
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.upsert(any()) } just Runs
+
+        val result = setDayType.invoke(date, DayType.OFF)
+
+        assertEquals(DayType.OFF, result.dayType)
+        assertFalse(result.confirmedWorkDay)
+        assertNull(result.confirmationAt)
+        assertNull(result.confirmationSource)
         coVerify { workEntryDao.upsert(result) }
     }
 }
-

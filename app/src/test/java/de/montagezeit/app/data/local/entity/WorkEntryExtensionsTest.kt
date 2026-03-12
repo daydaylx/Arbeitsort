@@ -1,7 +1,9 @@
 package de.montagezeit.app.data.local.entity
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -40,10 +42,8 @@ class WorkEntryExtensionsTest {
 
     @Test
     fun `withTravelCleared setzt travelPaidMinutes nicht auf 0`() {
-        // 0 wäre ein harter Override, der Timestamps ignoriert
         val entry = baseEntry(travelPaidMinutes = 60)
         val cleared = entry.withTravelCleared(now)
-        // null != 0 – sicherstellen dass es wirklich null ist
         assertNull(cleared.travelPaidMinutes)
         assertEquals(0 != cleared.travelPaidMinutes, true)
     }
@@ -60,14 +60,11 @@ class WorkEntryExtensionsTest {
 
     @Test
     fun `nach withTravelCleared koennen neue Timestamps wirken`() {
-        // Bug-Regressionstest: war travelPaidMinutes = 0, blockierte das Timestamps danach
         val entry = baseEntry(travelPaidMinutes = 60)
         val cleared = entry.withTravelCleared(now)
-        // Jetzt neue Timestamps setzen
         val start = epochOf(LocalTime.of(7, 0))
         val arrive = epochOf(LocalTime.of(9, 0))
         val withTimestamps = cleared.copy(travelStartAt = start, travelArriveAt = arrive)
-        // TimeCalculator sollte 120min (2h) aus Timestamps berechnen
         val travelMin = de.montagezeit.app.domain.util.TimeCalculator.calculateTravelMinutes(withTimestamps)
         assertEquals("Nach withTravelCleared müssen Timestamps ausgewertet werden, nicht blockiert", 120, travelMin)
     }
@@ -91,6 +88,66 @@ class WorkEntryExtensionsTest {
         val entry = baseEntry(travelPaidMinutes = 90)
         val offDay = entry.withConfirmedOffDay(source = "TEST", now = now, fallbackDayLocationLabel = "")
         assertNull(offDay.travelPaidMinutes)
+    }
+
+    @Test
+    fun `confirmationStateForDayType sets fresh comp time confirmation`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 3, 12),
+            dayType = DayType.WORK,
+            confirmedWorkDay = true,
+            confirmationAt = 1_000L,
+            confirmationSource = "UI"
+        )
+
+        val result = entry.confirmationStateForDayType(
+            dayType = DayType.COMP_TIME,
+            now = 5_000L
+        )
+
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(5_000L, result.confirmationAt)
+        assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
+    }
+
+    @Test
+    fun `confirmationStateForDayType clears comp time confirmation when leaving comp time`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 3, 12),
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true,
+            confirmationAt = 2_000L,
+            confirmationSource = DayType.COMP_TIME.name
+        )
+
+        val result = entry.confirmationStateForDayType(
+            dayType = DayType.WORK,
+            now = 5_000L
+        )
+
+        assertFalse(result.confirmedWorkDay)
+        assertNull(result.confirmationAt)
+        assertNull(result.confirmationSource)
+    }
+
+    @Test
+    fun `confirmationStateForDayType preserves existing confirmation for non comp time transition`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 3, 12),
+            dayType = DayType.WORK,
+            confirmedWorkDay = true,
+            confirmationAt = 3_000L,
+            confirmationSource = "UI"
+        )
+
+        val result = entry.confirmationStateForDayType(
+            dayType = DayType.OFF,
+            now = 5_000L
+        )
+
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(3_000L, result.confirmationAt)
+        assertEquals("UI", result.confirmationSource)
     }
 
     private fun epochOf(time: LocalTime): Long =

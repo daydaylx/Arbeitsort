@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.common.DestructiveActionButton
 import de.montagezeit.app.ui.common.PrimaryActionButton
@@ -166,6 +167,8 @@ fun EditEntrySheet(
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                             onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                             onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                            onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
+                            onMealBreakfastIncludedChange = { viewModel.updateMealBreakfastIncluded(it) },
                             onNoteChange = { viewModel.updateNote(it) },
                             onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
@@ -258,6 +261,8 @@ fun EditEntrySheet(
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                             onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
                             onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
+                            onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
+                            onMealBreakfastIncludedChange = { viewModel.updateMealBreakfastIncluded(it) },
                             onNoteChange = { viewModel.updateNote(it) },
                             onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
@@ -549,6 +554,8 @@ fun EditFormContent(
     onDayLocationChange: (String) -> Unit,
     onMorningLabelChange: (String) -> Unit,
     onEveningLabelChange: (String) -> Unit,
+    onMealArrivalDepartureChange: (Boolean) -> Unit,
+    onMealBreakfastIncludedChange: (Boolean) -> Unit,
     onNoteChange: (String) -> Unit,
     onResetReview: () -> Unit,
     onApplyDefaultTimes: (() -> Unit)? = null,
@@ -637,6 +644,18 @@ fun EditFormContent(
                 eveningLabel = formData.eveningLocationLabel,
                 onMorningLabelChange = onMorningLabelChange,
                 onEveningLabelChange = onEveningLabelChange
+            )
+        }
+    }
+
+    if (formData.dayType == de.montagezeit.app.data.local.entity.DayType.WORK) {
+        EditFormSectionCard {
+            MealAllowanceSection(
+                isArrivalDeparture = formData.mealIsArrivalDeparture,
+                breakfastIncluded = formData.mealBreakfastIncluded,
+                allowancePreviewCents = formData.mealAllowancePreviewCents(),
+                onArrivalDepartureChange = onMealArrivalDepartureChange,
+                onBreakfastIncludedChange = onMealBreakfastIncludedChange
             )
         }
     }
@@ -1186,6 +1205,62 @@ fun NoteSection(
                 .fillMaxWidth()
                 .height(100.dp),
             maxLines = 5
+        )
+    }
+}
+
+@Composable
+fun MealAllowanceSection(
+    isArrivalDeparture: Boolean,
+    breakfastIncluded: Boolean,
+    allowancePreviewCents: Int,
+    onArrivalDepartureChange: (Boolean) -> Unit,
+    onBreakfastIncludedChange: (Boolean) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.edit_section_meal_allowance),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp)
+        ) {
+            Checkbox(
+                checked = isArrivalDeparture,
+                onCheckedChange = onArrivalDepartureChange
+            )
+            Text(
+                text = stringResource(R.string.meal_allowance_arrival_departure_label),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp)
+        ) {
+            Checkbox(
+                checked = breakfastIncluded,
+                onCheckedChange = onBreakfastIncludedChange
+            )
+            Text(
+                text = stringResource(R.string.meal_allowance_breakfast_label),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Text(
+            text = stringResource(
+                R.string.meal_allowance_preview_label,
+                MealAllowanceCalculator.formatEuro(allowancePreviewCents)
+            ),
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

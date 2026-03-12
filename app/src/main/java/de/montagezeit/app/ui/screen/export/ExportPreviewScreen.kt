@@ -241,6 +241,18 @@ private fun TotalsCard(totals: ExportPreviewTotals) {
                     Text(totals.paidHours, fontWeight = FontWeight.Bold)
                 }
             }
+            Divider(modifier = Modifier.padding(top = 4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.export_preview_totals_meal_allowance),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(totals.mealAllowanceTotal, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -258,6 +270,13 @@ private fun ExportPreviewRowCard(
             }
             .clickable(onClick = onClick)
     ) {
+        val footerLines = buildList {
+            row.locationNote?.let(::add)
+            row.mealAllowanceLabel?.let {
+                add(stringResource(R.string.export_preview_row_meal_allowance, it))
+            }
+        }
+
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -280,13 +299,15 @@ private fun ExportPreviewRowCard(
                 Text(stringResource(R.string.export_preview_row_travel, row.travelLabel))
                 Text(stringResource(R.string.export_preview_row_total, row.totalLabel))
             }
-            row.locationNote?.let { note ->
+            if (footerLines.isNotEmpty()) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = note,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                footerLines.forEach { line ->
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

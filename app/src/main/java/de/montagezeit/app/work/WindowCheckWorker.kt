@@ -1,5 +1,6 @@
 package de.montagezeit.app.work
 
+import android.database.sqlite.SQLiteException
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -13,7 +14,9 @@ import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.notification.ReminderNotificationManager
+import java.io.IOException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -94,8 +97,11 @@ class WindowCheckWorker @AssistedInject constructor(
             }
 
             return Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            return Result.retry()
+            android.util.Log.w("WindowCheckWorker", "doWork failed", e)
+            return if (shouldRetryOn(e)) Result.retry() else Result.failure()
         }
     }
 
@@ -207,6 +213,10 @@ class WindowCheckWorker @AssistedInject constructor(
             // COMP_TIME is always considered confirmed – no daily reminder needed.
             if (entry?.dayType == DayType.COMP_TIME) return false
             return entry?.confirmedWorkDay != true
+        }
+
+        internal fun shouldRetryOn(throwable: Throwable): Boolean {
+            return throwable is IOException || throwable is SQLiteException
         }
     }
 }

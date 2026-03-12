@@ -277,6 +277,7 @@ class TodayViewModel @Inject constructor(
                 _overtimeYearOffDayTravelDays.value = yearOvertime.offDayTravelDays
             } catch (e: Exception) {
                 android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
+                _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
             }
         }
     }
@@ -286,7 +287,7 @@ class TodayViewModel @Inject constructor(
             try {
                 val selected = _selectedDate.value
                 val today = LocalDate.now()
-                val weekStart = WeekCalculator.weekStart(today)
+                val weekStart = WeekCalculator.weekStart(selected)
                 val weekDates = WeekCalculator.weekDays(weekStart)
                 val entries = withContext(Dispatchers.IO) {
                     workEntryDao.getByDateRange(weekDates.first(), weekDates.last())
@@ -320,6 +321,7 @@ class TodayViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.w("TodayViewModel", "loadWeekOverview failed: ${e.message}")
+                _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
             }
         }
     }
@@ -356,6 +358,7 @@ class TodayViewModel @Inject constructor(
 
     fun selectDate(date: LocalDate) {
         val wasAlreadySelected = _selectedDate.value == date
+        val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
         _selectedDate.value = date
 
         // Update week overview highlights immediately
@@ -365,6 +368,10 @@ class TodayViewModel @Inject constructor(
 
         // Skip reloading if already selected (optimization)
         if (wasAlreadySelected) return
+
+        if (!isDateInCurrentWeek) {
+            loadWeekOverview()
+        }
 
         viewModelScope.launch {
             try {

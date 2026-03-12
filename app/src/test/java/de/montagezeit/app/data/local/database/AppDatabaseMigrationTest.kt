@@ -31,7 +31,11 @@ class AppDatabaseMigrationTest {
         listOf(
             "migration_1_2_test.db",
             "migration_2_3_test.db",
+            "migration_3_4_test.db",
+            "migration_4_5_test.db",
             "migration_5_6_test.db",
+            "migration_6_7_test.db",
+            "migration_7_8_test.db",
             "migration_8_9_test.db",
             "migration_9_10_test.db",
             "migration_10_11_test.db"
@@ -51,7 +55,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
                 AppDatabase.MIGRATION_8_9,
-                AppDatabase.MIGRATION_9_10
+                AppDatabase.MIGRATION_9_10,
+                AppDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -95,6 +100,152 @@ class AppDatabaseMigrationTest {
         try {
             AppDatabase.MIGRATION_1_2.migrate(db)
             assertTrue(tableExists(db, "route_cache"))
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 3 to 4 adds confirmation columns`() {
+        val dbName = "migration_3_4_test.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 3)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `needsReview` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+
+            AppDatabase.MIGRATION_3_4.migrate(db)
+
+            val sqlite = SQLiteDatabase.openDatabase(
+                context.getDatabasePath(dbName).path,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            sqlite.use { rawDb ->
+                assertTrue(hasColumn(rawDb, "work_entries", "confirmedWorkDay"))
+                assertTrue(hasColumn(rawDb, "work_entries", "confirmationAt"))
+                assertTrue(hasColumn(rawDb, "work_entries", "confirmationSource"))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 4 to 5 creates dayType date index`() {
+        val dbName = "migration_4_5_test.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 4)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `confirmedWorkDay` INTEGER NOT NULL DEFAULT 0,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    `needsReview` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+
+            AppDatabase.MIGRATION_4_5.migrate(db)
+
+            assertTrue(indexExists(db, "index_work_entries_dayType_date"))
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 6 to 7 drops route_cache table`() {
+        val dbName = "migration_6_7_test.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 6)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `needsReview` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `route_cache` (
+                    `fromLabel` TEXT NOT NULL,
+                    `toLabel` TEXT NOT NULL,
+                    `distanceKm` REAL NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`fromLabel`, `toLabel`)
+                )
+                """.trimIndent()
+            )
+
+            AppDatabase.MIGRATION_6_7.migrate(db)
+
+            assertFalse(tableExists(db, "route_cache"))
+            assertTrue(tableExists(db, "work_entries"))
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 7 to 8 clears dayLocationLabel for FALLBACK entries`() {
+        val dbName = "migration_7_8_test.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 7)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `dayLocationLabel` TEXT NOT NULL DEFAULT '',
+                    `dayLocationSource` TEXT NOT NULL DEFAULT 'FALLBACK',
+                    `needsReview` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL("INSERT INTO work_entries (date, dayType, dayLocationLabel, dayLocationSource, needsReview, createdAt) VALUES ('2026-01-01', 'WORK', 'Leipzig', 'FALLBACK', 0, 1000)")
+            db.execSQL("INSERT INTO work_entries (date, dayType, dayLocationLabel, dayLocationSource, needsReview, createdAt) VALUES ('2026-01-02', 'WORK', 'München', 'MANUAL', 0, 1001)")
+
+            AppDatabase.MIGRATION_7_8.migrate(db)
+
+            val sqlite = SQLiteDatabase.openDatabase(
+                context.getDatabasePath(dbName).path,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            sqlite.use { rawDb ->
+                rawDb.rawQuery("SELECT dayLocationLabel FROM work_entries WHERE date = '2026-01-01'", null).use { c ->
+                    assertTrue(c.moveToFirst())
+                    assertEquals("", c.getString(0))
+                }
+                rawDb.rawQuery("SELECT dayLocationLabel FROM work_entries WHERE date = '2026-01-02'", null).use { c ->
+                    assertTrue(c.moveToFirst())
+                    assertEquals("München", c.getString(0))
+                }
+            }
         } finally {
             helper.close()
         }
@@ -242,7 +393,7 @@ class AppDatabaseMigrationTest {
     }
 
     private fun hasColumnSupport(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
-        db.query("PRAGMA table_info($table)", null).use { cursor ->
+        db.query("PRAGMA table_info($table)").use { cursor ->
             while (cursor.moveToNext()) {
                 val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
                 if (name == column) return true

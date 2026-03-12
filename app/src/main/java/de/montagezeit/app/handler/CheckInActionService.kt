@@ -97,6 +97,9 @@ class CheckInActionService : Service() {
                         recordMorningCheckIn(date)
                         showToast(R.string.toast_check_in_success)
                         notificationManager.cancelMorningReminder()
+                    } catch (e: IllegalStateException) {
+                        notificationManager.cancelMorningReminder()
+                        showToast(R.string.toast_check_in_error)
                     } catch (e: Exception) {
                         showToast(R.string.toast_check_in_error)
                     } finally {
@@ -116,6 +119,9 @@ class CheckInActionService : Service() {
                         recordEveningCheckIn(date)
                         showToast(R.string.toast_check_in_success)
                         notificationManager.cancelEveningReminder()
+                    } catch (e: IllegalStateException) {
+                        notificationManager.cancelEveningReminder()
+                        showToast(R.string.toast_check_in_error)
                     } catch (e: Exception) {
                         showToast(R.string.toast_check_in_error)
                     } finally {

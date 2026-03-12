@@ -23,6 +23,9 @@ internal object CheckInEntryBuilder {
         locationLabel: String? = null
     ): WorkEntry {
         val now = System.currentTimeMillis()
+        if (existingEntry != null && existingEntry.dayType != DayType.WORK) {
+            throw IllegalStateException("Check-in nicht erlaubt für dayType=${existingEntry.dayType}")
+        }
         val normalizedEntry = existingEntry
         val dayLocation = DayLocationResolver.resolve(normalizedEntry)
 

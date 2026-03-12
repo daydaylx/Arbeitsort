@@ -88,6 +88,10 @@ class ConfirmOffDayTest {
         assertNull(result.travelToLabel)
         assertNull(result.travelDistanceKm)
         assertNull(result.travelPaidMinutes)
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
         assertTrue(result.confirmedWorkDay)
         assertEquals("UI", result.confirmationSource)
     }

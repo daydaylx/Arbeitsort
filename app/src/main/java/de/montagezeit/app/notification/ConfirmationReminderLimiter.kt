@@ -28,5 +28,18 @@ class ConfirmationReminderLimiter(
         return prefs.getInt(key(date), 0)
     }
 
+    fun cleanup(today: LocalDate, keepDays: Int = 7) {
+        val cutoff = today.minusDays(keepDays.toLong())
+        val editor = prefs.edit()
+        prefs.all.keys
+            .filter { it.startsWith("count_") }
+            .forEach { key ->
+                runCatching { LocalDate.parse(key.removePrefix("count_")) }
+                    .getOrNull()
+                    ?.let { date -> if (date < cutoff) editor.remove(key) }
+            }
+        editor.apply()
+    }
+
     private fun key(date: LocalDate): String = "count_${date}"
 }
