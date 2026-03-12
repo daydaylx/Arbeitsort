@@ -12,6 +12,7 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
 import java.io.FileOutputStream
@@ -53,11 +54,12 @@ class PdfExporter @Inject constructor(
         private const val COL_START = 50
         private const val COL_END = 50
         private const val COL_BREAK = 45
-        private const val COL_WORK_TIME = 60
-        private const val COL_TRAVEL_WINDOW = 80
+        private const val COL_WORK_TIME = 50
+        private const val COL_TRAVEL_WINDOW = 70
         private const val COL_TRAVEL_TIME = 55
         private const val COL_TOTAL_TIME = 55
-        private const val COL_LOCATION = 60
+        private const val COL_LOCATION = 50
+        private const val COL_MEAL_ALLOWANCE = 30
     }
     
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
@@ -304,7 +306,10 @@ class PdfExporter @Inject constructor(
         xPos += COL_TOTAL_TIME
 
         canvas.drawText(string(R.string.pdf_export_column_location), xPos, yPos + 20, paintTableHeader)
-        
+        xPos += COL_LOCATION
+
+        canvas.drawText(string(R.string.pdf_export_column_meal_allowance), xPos, yPos + 20, paintTableHeader)
+
         // Trennlinie unter Tabellenkopf
         yPos += TABLE_HEADER_HEIGHT
         canvas.drawLine(MARGIN.toFloat(), yPos, (PAGE_WIDTH - MARGIN).toFloat(), yPos, paintLine)
@@ -401,8 +406,17 @@ class PdfExporter @Inject constructor(
 
             // Ort
             val location = PdfUtilities.getLocation(entry)
-            activeCanvas.drawText(location.take(10), xPos, y + 15, paintTableText)
-            
+            activeCanvas.drawText(location.take(8), xPos, y + 15, paintTableText)
+            xPos += COL_LOCATION
+
+            // Verpflegungspauschale
+            val vpText = if (entry.mealAllowanceAmountCents > 0) {
+                MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
+            } else {
+                string(R.string.pdf_export_placeholder_dash)
+            }
+            activeCanvas.drawText(vpText.take(8), xPos, y + 15, paintTableText)
+
             y += ROW_HEIGHT
         }
         
@@ -457,7 +471,16 @@ class PdfExporter @Inject constructor(
             paintSummary
         )
         yPos += 25
-        
+
+        val totalMealAllowanceCents = entries.sumOf { it.mealAllowanceAmountCents }
+        canvas.drawText(
+            string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),
+            MARGIN.toFloat(),
+            yPos,
+            paintSummary
+        )
+        yPos += 25
+
         // Trennlinie
         canvas.drawLine(MARGIN.toFloat(), yPos, (PAGE_WIDTH - MARGIN).toFloat(), yPos, paintLine)
         yPos += SPACING * 3

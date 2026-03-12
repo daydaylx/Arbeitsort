@@ -12,7 +12,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
     entities = [WorkEntry::class],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(
@@ -260,6 +260,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 10→11: Verpflegungspauschale-Felder hinzugefügt.
+        // Altbestände erhalten Standardwerte false/false/0/0.
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN mealIsArrivalDeparture INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN mealBreakfastIncluded INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN mealAllowanceBaseCents INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN mealAllowanceAmountCents INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -269,7 +280,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_6_7,
             MIGRATION_7_8,
             MIGRATION_8_9,
-            MIGRATION_9_10
+            MIGRATION_9_10,
+            MIGRATION_10_11
         )
     }
 }

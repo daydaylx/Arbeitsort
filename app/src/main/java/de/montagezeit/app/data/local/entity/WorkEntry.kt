@@ -65,6 +65,12 @@ data class WorkEntry(
     val confirmationAt: Long? = null,
     val confirmationSource: String? = null,
     
+    // Verpflegungspauschale
+    val mealIsArrivalDeparture: Boolean = false,
+    val mealBreakfastIncluded: Boolean = false,
+    val mealAllowanceBaseCents: Int = 0,
+    val mealAllowanceAmountCents: Int = 0,
+
     // Meta & Flags
     val needsReview: Boolean = false,
     val note: String? = null,

@@ -8,6 +8,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.export.PdfUtilities
@@ -23,7 +24,8 @@ import javax.inject.Inject
 data class ExportPreviewTotals(
     val workHours: String,
     val travelHours: String,
-    val paidHours: String
+    val paidHours: String,
+    val mealAllowanceTotal: String
 )
 
 data class ExportPreviewRow(
@@ -35,13 +37,15 @@ data class ExportPreviewRow(
     val workLabel: String,
     val travelLabel: String,
     val totalLabel: String,
-    val locationNote: String?
+    val locationNote: String?,
+    val mealAllowanceLabel: String?
 )
 
 data class PreviewSummary(
     val workMinutes: Int,
     val travelMinutes: Int,
-    val paidMinutes: Int
+    val paidMinutes: Int,
+    val mealAllowanceCents: Int
 ) {
     val workHours: Double = workMinutes / 60.0
     val travelHours: Double = travelMinutes / 60.0
@@ -52,10 +56,12 @@ internal fun calculatePreviewSummary(entries: List<WorkEntry>): PreviewSummary {
     val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it) }
     val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
     val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it) }
+    val mealAllowanceCents = entries.sumOf { it.mealAllowanceAmountCents }
     return PreviewSummary(
         workMinutes = workMinutes,
         travelMinutes = travelMinutes,
-        paidMinutes = paidMinutes
+        paidMinutes = paidMinutes,
+        mealAllowanceCents = mealAllowanceCents
     )
 }
 
@@ -247,7 +253,8 @@ class ExportPreviewViewModel @Inject constructor(
         return ExportPreviewTotals(
             workHours = formatMinutes(summary.workMinutes),
             travelHours = formatMinutes(summary.travelMinutes),
-            paidHours = formatMinutes(summary.paidMinutes)
+            paidHours = formatMinutes(summary.paidMinutes),
+            mealAllowanceTotal = MealAllowanceCalculator.formatEuro(summary.mealAllowanceCents)
         )
     }
 
@@ -255,6 +262,11 @@ class ExportPreviewViewModel @Inject constructor(
         val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
         val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
         val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+        val mealLabel = if (entry.mealAllowanceAmountCents > 0) {
+            MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
+        } else {
+            null
+        }
         return ExportPreviewRow(
             date = entry.date,
             dateLabel = PdfUtilities.formatDate(entry.date),
@@ -264,7 +276,8 @@ class ExportPreviewViewModel @Inject constructor(
             workLabel = formatMinutes(workMinutes),
             travelLabel = formatMinutes(travelMinutes),
             totalLabel = formatMinutes(paidMinutes),
-            locationNote = formatLocationNote(entry)
+            locationNote = formatLocationNote(entry),
+            mealAllowanceLabel = mealLabel
         )
     }
 

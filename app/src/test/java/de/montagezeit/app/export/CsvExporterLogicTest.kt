@@ -3,6 +3,7 @@ package de.montagezeit.app.export
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,6 +48,16 @@ class CsvExporterLogicTest {
             append(";")
             append(paidTotalMinutes)
             append(";")
+            append(if (entry.mealIsArrivalDeparture) 1 else 0)
+            append(";")
+            append(if (entry.mealBreakfastIncluded) 1 else 0)
+            append(";")
+            append(entry.mealAllowanceBaseCents)
+            append(";")
+            append(entry.mealAllowanceAmountCents)
+            append(";")
+            append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
+            append(";")
             append(entry.note?.replace(";", ",")?.replace("\n", " ")?.replace("\r", "") ?: "")
             append("\n")
         }
@@ -71,7 +82,7 @@ class CsvExporterLogicTest {
     fun `normal entry produces correct CSV line`() {
         val line = buildCsvLine(entry())
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(11, cols.size)
+        assertEquals(16, cols.size)
         assertEquals("2024-06-10", cols[0])
         assertEquals("WORK", cols[1])
         assertEquals("Dresden", cols[2])
@@ -112,7 +123,7 @@ class CsvExporterLogicTest {
     fun `null note produces empty note field`() {
         val line = buildCsvLine(entry(note = null))
         val cols = line.trimEnd('\n').split(";")
-        assertEquals("", cols[10])
+        assertEquals("", cols[15])
     }
 
     @Test
@@ -121,5 +132,30 @@ class CsvExporterLogicTest {
         val cols = line.trimEnd('\n').split(";")
         assertEquals("OFF", cols[1])
         assertEquals("0", cols[7]) // workMinutes
+    }
+
+    @Test
+    fun `meal allowance fields exported correctly`() {
+        val entryWithMeal = WorkEntry(
+            date = java.time.LocalDate.of(2024, 6, 10),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Dresden",
+            dayLocationSource = DayLocationSource.MANUAL,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(16, 0),
+            breakMinutes = 60,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+        val line = buildCsvLine(entryWithMeal)
+        val cols = line.trimEnd('\n').split(";")
+        assertEquals(16, cols.size)
+        assertEquals("1", cols[10])    // mealIsArrivalDeparture
+        assertEquals("1", cols[11])    // mealBreakfastIncluded
+        assertEquals("1400", cols[12]) // mealAllowanceBaseCents
+        assertEquals("820", cols[13])  // mealAllowanceAmountCents
+        assertEquals("8,20 €", cols[14]) // mealAllowanceEuro
     }
 }
