@@ -7,6 +7,7 @@ import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -60,7 +61,7 @@ class RecordDailyManualCheckInTest {
         coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } returns Unit
 
-        val result = useCase(date, "  Baustelle XY  ")
+        val result = useCase(DailyManualCheckInInput(date, "  Baustelle XY  "))
 
         assertEquals(DayType.WORK, result.dayType)
         assertEquals("Baustelle XY", result.dayLocationLabel)
@@ -81,7 +82,7 @@ class RecordDailyManualCheckInTest {
     fun `invoke throws for blank input`() = runTest {
         val date = LocalDate.now()
         val error = try {
-            useCase(date, "   ")
+            useCase(DailyManualCheckInInput(date, "   "))
             fail("Expected IllegalArgumentException")
             null
         } catch (e: IllegalArgumentException) {
@@ -107,12 +108,83 @@ class RecordDailyManualCheckInTest {
         coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
 
-        val result = useCase(date, "Neuer Ort")
+        val result = useCase(DailyManualCheckInInput(date, "Neuer Ort"))
 
         assertEquals(LocationStatus.OK, result.morningLocationStatus)
         assertEquals(LocationStatus.LOW_ACCURACY, result.eveningLocationStatus)
         assertEquals(1_000L, result.morningCapturedAt)
         assertEquals(2_000L, result.eveningCapturedAt)
         assertEquals("Neuer Ort", result.dayLocationLabel)
+    }
+
+    @Test
+    fun `invoke stores meal allowance for normal day without breakfast`() = runTest {
+        val date = LocalDate.now()
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Baustelle",
+                isArrivalDeparture = false,
+                breakfastIncluded = false
+            )
+        )
+
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(MealAllowanceCalculator.BASE_NORMAL_CENTS, result.mealAllowanceBaseCents)
+        assertEquals(MealAllowanceCalculator.BASE_NORMAL_CENTS, result.mealAllowanceAmountCents)
+    }
+
+    @Test
+    fun `invoke stores meal allowance for arrival departure with breakfast`() = runTest {
+        val date = LocalDate.now()
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Baustelle",
+                isArrivalDeparture = true,
+                breakfastIncluded = true
+            )
+        )
+
+        assertEquals(true, result.mealIsArrivalDeparture)
+        assertEquals(true, result.mealBreakfastIncluded)
+        assertEquals(MealAllowanceCalculator.BASE_ARRIVAL_DEPARTURE_CENTS, result.mealAllowanceBaseCents)
+        assertEquals(820, result.mealAllowanceAmountCents)
+    }
+
+    @Test
+    fun `invoke updates meal allowance on existing entry`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Alt",
+            mealIsArrivalDeparture = false,
+            mealBreakfastIncluded = false,
+            mealAllowanceBaseCents = 0,
+            mealAllowanceAmountCents = 0
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existing
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Neu",
+                isArrivalDeparture = false,
+                breakfastIncluded = true
+            )
+        )
+
+        assertFalse(result.mealIsArrivalDeparture)
+        assertEquals(true, result.mealBreakfastIncluded)
+        assertEquals(2220, result.mealAllowanceAmountCents)
     }
 }

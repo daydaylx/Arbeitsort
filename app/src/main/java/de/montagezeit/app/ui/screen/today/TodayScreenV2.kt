@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
@@ -68,6 +69,9 @@ fun TodayScreenV2(
     val overtimeYearOffDayTravelDays by viewModel.overtimeYearOffDayTravelDays.collectAsStateWithLifecycle()
     val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
     val dailyCheckInLocationInput by viewModel.dailyCheckInLocationInput.collectAsStateWithLifecycle()
+    val dailyCheckInIsArrivalDeparture by viewModel.dailyCheckInIsArrivalDeparture.collectAsStateWithLifecycle()
+    val dailyCheckInBreakfastIncluded by viewModel.dailyCheckInBreakfastIncluded.collectAsStateWithLifecycle()
+    val dailyCheckInAllowancePreviewCents by viewModel.dailyCheckInAllowancePreviewCents.collectAsStateWithLifecycle()
     val showDayLocationDialog by viewModel.showDayLocationDialog.collectAsStateWithLifecycle()
     val dayLocationInput by viewModel.dayLocationInput.collectAsStateWithLifecycle()
     val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
@@ -237,7 +241,12 @@ fun TodayScreenV2(
                 DailyManualCheckInDialogV2(
                     input = dailyCheckInLocationInput,
                     isLoading = isDailyCheckInLoading,
+                    isArrivalDeparture = dailyCheckInIsArrivalDeparture,
+                    breakfastIncluded = dailyCheckInBreakfastIncluded,
+                    allowancePreviewCents = dailyCheckInAllowancePreviewCents,
                     onInputChange = { viewModel.onDailyCheckInLocationChanged(it) },
+                    onArrivalDepartureChanged = { viewModel.onDailyCheckInArrivalDepartureChanged(it) },
+                    onBreakfastIncludedChanged = { viewModel.onDailyCheckInBreakfastIncludedChanged(it) },
                     onDismiss = { viewModel.onDismissDailyCheckInDialog() },
                     onConfirm = { viewModel.submitDailyManualCheckIn() }
                 )
@@ -715,7 +724,12 @@ private fun StatisticsDashboardCardV2(
 private fun DailyManualCheckInDialogV2(
     input: String,
     isLoading: Boolean,
+    isArrivalDeparture: Boolean,
+    breakfastIncluded: Boolean,
+    allowancePreviewCents: Int,
     onInputChange: (String) -> Unit,
+    onArrivalDepartureChanged: (Boolean) -> Unit,
+    onBreakfastIncludedChanged: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -736,6 +750,46 @@ private fun DailyManualCheckInDialogV2(
                     text = stringResource(R.string.daily_check_in_dialog_support),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onArrivalDepartureChanged(!isArrivalDeparture) }
+                ) {
+                    Checkbox(
+                        checked = isArrivalDeparture,
+                        onCheckedChange = onArrivalDepartureChanged
+                    )
+                    Text(
+                        text = stringResource(R.string.meal_allowance_arrival_departure_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onBreakfastIncludedChanged(!breakfastIncluded) }
+                ) {
+                    Checkbox(
+                        checked = breakfastIncluded,
+                        onCheckedChange = onBreakfastIncludedChanged
+                    )
+                    Text(
+                        text = stringResource(R.string.meal_allowance_breakfast_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(
+                        R.string.meal_allowance_preview_label,
+                        MealAllowanceCalculator.formatEuro(allowancePreviewCents)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         },

@@ -33,7 +33,8 @@ class AppDatabaseMigrationTest {
             "migration_2_3_test.db",
             "migration_5_6_test.db",
             "migration_8_9_test.db",
-            "migration_9_10_test.db"
+            "migration_9_10_test.db",
+            "migration_10_11_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -127,6 +128,127 @@ class AppDatabaseMigrationTest {
         } finally {
             helper.close()
         }
+    }
+
+    @Test
+    fun `migration 10 to 11 adds meal allowance columns with default zero`() {
+        val dbName = "migration_10_11_test.db"
+        createVersion10Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 10)
+        try {
+            AppDatabase.MIGRATION_10_11.migrate(db)
+
+            assertTrue(hasColumnSupport(db, "work_entries", "mealIsArrivalDeparture"))
+            assertTrue(hasColumnSupport(db, "work_entries", "mealBreakfastIncluded"))
+            assertTrue(hasColumnSupport(db, "work_entries", "mealAllowanceBaseCents"))
+            assertTrue(hasColumnSupport(db, "work_entries", "mealAllowanceAmountCents"))
+
+            db.query(
+                "SELECT mealIsArrivalDeparture, mealBreakfastIncluded, mealAllowanceBaseCents, mealAllowanceAmountCents FROM work_entries WHERE date = ?",
+                arrayOf("2026-01-10")
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+                assertEquals(0, cursor.getInt(1))
+                assertEquals(0, cursor.getInt(2))
+                assertEquals(0, cursor.getInt(3))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    private fun createVersion10Database(dbName: String) {
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+
+        val db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        db.use {
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `workStart` TEXT NOT NULL,
+                    `workEnd` TEXT NOT NULL,
+                    `breakMinutes` INTEGER NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `dayLocationLabel` TEXT NOT NULL,
+                    `dayLocationSource` TEXT NOT NULL,
+                    `dayLocationLat` REAL,
+                    `dayLocationLon` REAL,
+                    `dayLocationAccuracyMeters` REAL,
+                    `morningCapturedAt` INTEGER,
+                    `morningLocationLabel` TEXT,
+                    `morningLat` REAL,
+                    `morningLon` REAL,
+                    `morningAccuracyMeters` REAL,
+                    `morningLocationStatus` TEXT NOT NULL,
+                    `eveningCapturedAt` INTEGER,
+                    `eveningLocationLabel` TEXT,
+                    `eveningLat` REAL,
+                    `eveningLon` REAL,
+                    `eveningAccuracyMeters` REAL,
+                    `eveningLocationStatus` TEXT NOT NULL,
+                    `travelStartAt` INTEGER,
+                    `travelArriveAt` INTEGER,
+                    `travelLabelStart` TEXT,
+                    `travelLabelEnd` TEXT,
+                    `travelFromLabel` TEXT,
+                    `travelToLabel` TEXT,
+                    `travelDistanceKm` REAL,
+                    `travelPaidMinutes` INTEGER,
+                    `travelSource` TEXT,
+                    `travelUpdatedAt` INTEGER,
+                    `confirmedWorkDay` INTEGER NOT NULL,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    `needsReview` INTEGER NOT NULL,
+                    `note` TEXT,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
+            it.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            it.execSQL(
+                """
+                INSERT INTO work_entries (
+                    date, workStart, workEnd, breakMinutes, dayType,
+                    dayLocationLabel, dayLocationSource,
+                    morningLocationStatus, eveningLocationStatus,
+                    confirmedWorkDay, needsReview, createdAt, updatedAt
+                ) VALUES (
+                    '2026-01-10', '08:00', '19:00', 60, 'WORK',
+                    'Baustelle', 'MANUAL',
+                    'UNAVAILABLE', 'UNAVAILABLE',
+                    1, 0, 1000, 1000
+                )
+                """.trimIndent()
+            )
+            it.version = 10
+        }
+    }
+
+    private fun openSupportDatabase(
+        dbName: String,
+        version: Int
+    ): Pair<SupportSQLiteOpenHelper, SupportSQLiteDatabase> {
+        return createSupportDatabase(dbName, version)
+    }
+
+    private fun hasColumnSupport(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
+        db.query("PRAGMA table_info($table)", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                if (name == column) return true
+            }
+        }
+        return false
     }
 
     private fun createVersion5Database(dbName: String) {

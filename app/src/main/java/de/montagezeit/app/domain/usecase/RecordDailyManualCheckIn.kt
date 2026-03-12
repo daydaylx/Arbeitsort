@@ -6,8 +6,16 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+
+data class DailyManualCheckInInput(
+    val date: LocalDate,
+    val dayLocationLabel: String,
+    val isArrivalDeparture: Boolean = false,
+    val breakfastIncluded: Boolean = false
+)
 
 /**
  * Speichert einen einmaligen manuellen Tages-Check-in inkl. Tagesabschluss.
@@ -21,15 +29,21 @@ class RecordDailyManualCheckIn(
         private const val CONFIRMATION_SOURCE_UI = "UI"
     }
 
-    suspend operator fun invoke(date: LocalDate, dayLocationLabel: String): WorkEntry {
-        val resolvedLabel = dayLocationLabel.trim()
+    suspend operator fun invoke(input: DailyManualCheckInInput): WorkEntry {
+        val resolvedLabel = input.dayLocationLabel.trim()
         if (resolvedLabel.isEmpty()) {
             throw IllegalArgumentException("dayLocationLabel darf nicht leer sein")
         }
 
         val now = System.currentTimeMillis()
-        val existingEntry = workEntryDao.getByDate(date)
+        val existingEntry = workEntryDao.getByDate(input.date)
         val settings = reminderSettingsManager.settings.first()
+
+        val mealResult = MealAllowanceCalculator.calculate(
+            dayType = DayType.WORK,
+            isArrivalDeparture = input.isArrivalDeparture,
+            breakfastIncluded = input.breakfastIncluded
+        )
 
         val updatedEntry = if (existingEntry != null) {
             val morningAlreadyCaptured = existingEntry.morningCapturedAt != null
@@ -72,6 +86,10 @@ class RecordDailyManualCheckIn(
                 } else {
                     LocationStatus.UNAVAILABLE
                 },
+                mealIsArrivalDeparture = input.isArrivalDeparture,
+                mealBreakfastIncluded = input.breakfastIncluded,
+                mealAllowanceBaseCents = mealResult.baseCents,
+                mealAllowanceAmountCents = mealResult.amountCents,
                 confirmedWorkDay = true,
                 confirmationAt = now,
                 confirmationSource = CONFIRMATION_SOURCE_UI,
@@ -80,7 +98,7 @@ class RecordDailyManualCheckIn(
             )
         } else {
             WorkEntry(
-                date = date,
+                date = input.date,
                 dayType = DayType.WORK,
                 workStart = settings.workStart,
                 workEnd = settings.workEnd,
@@ -96,6 +114,10 @@ class RecordDailyManualCheckIn(
                 eveningCapturedAt = now,
                 eveningLocationLabel = resolvedLabel,
                 eveningLocationStatus = LocationStatus.UNAVAILABLE,
+                mealIsArrivalDeparture = input.isArrivalDeparture,
+                mealBreakfastIncluded = input.breakfastIncluded,
+                mealAllowanceBaseCents = mealResult.baseCents,
+                mealAllowanceAmountCents = mealResult.amountCents,
                 confirmedWorkDay = true,
                 confirmationAt = now,
                 confirmationSource = CONFIRMATION_SOURCE_UI,

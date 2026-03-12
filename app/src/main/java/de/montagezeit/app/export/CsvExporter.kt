@@ -6,6 +6,7 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
 import java.io.FileOutputStream
@@ -72,7 +73,7 @@ class CsvExporter @Inject constructor(
                 it.write(0xBF) // UTF-8 BOM
 
                 // Header
-                val header = "date;dayType;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;note\n"
+                val header = "date;dayType;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
                 entries.forEach { entry ->
@@ -104,6 +105,16 @@ class CsvExporter @Inject constructor(
                         append(travelMinutes)
                         append(";")
                         append(paidTotalMinutes)
+                        append(";")
+                        append(if (entry.mealIsArrivalDeparture) 1 else 0)
+                        append(";")
+                        append(if (entry.mealBreakfastIncluded) 1 else 0)
+                        append(";")
+                        append(entry.mealAllowanceBaseCents)
+                        append(";")
+                        append(entry.mealAllowanceAmountCents)
+                        append(";")
+                        append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
                         append(";")
                         append(entry.note?.replace(";", ",")?.replace("\n", " ")?.replace("\r", "") ?: "")
                         append("\n")

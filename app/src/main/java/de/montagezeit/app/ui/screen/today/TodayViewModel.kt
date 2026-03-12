@@ -11,9 +11,11 @@ import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
+import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.ui.util.UiText
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -161,6 +164,27 @@ class TodayViewModel @Inject constructor(
 
     private val _dailyCheckInLocationInput = MutableStateFlow("")
     val dailyCheckInLocationInput: StateFlow<String> = _dailyCheckInLocationInput.asStateFlow()
+
+    private val _dailyCheckInIsArrivalDeparture = MutableStateFlow(false)
+    val dailyCheckInIsArrivalDeparture: StateFlow<Boolean> = _dailyCheckInIsArrivalDeparture.asStateFlow()
+
+    private val _dailyCheckInBreakfastIncluded = MutableStateFlow(false)
+    val dailyCheckInBreakfastIncluded: StateFlow<Boolean> = _dailyCheckInBreakfastIncluded.asStateFlow()
+
+    val dailyCheckInAllowancePreviewCents: StateFlow<Int> = combine(
+        _dailyCheckInIsArrivalDeparture,
+        _dailyCheckInBreakfastIncluded
+    ) { arrival, breakfast ->
+        MealAllowanceCalculator.calculate(
+            dayType = DayType.WORK,
+            isArrivalDeparture = arrival,
+            breakfastIncluded = breakfast
+        ).amountCents
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = MealAllowanceCalculator.BASE_NORMAL_CENTS
+    )
 
     private val _showDayLocationDialog = MutableStateFlow(false)
     val showDayLocationDialog: StateFlow<Boolean> = _showDayLocationDialog.asStateFlow()
@@ -356,6 +380,8 @@ class TodayViewModel @Inject constructor(
                 val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dailyCheckInLocationInput.value = prefill
+                _dailyCheckInIsArrivalDeparture.value = false
+                _dailyCheckInBreakfastIncluded.value = false
                 _showDailyCheckInDialog.value = true
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
@@ -365,6 +391,14 @@ class TodayViewModel @Inject constructor(
 
     fun onDailyCheckInLocationChanged(label: String) {
         _dailyCheckInLocationInput.value = label
+    }
+
+    fun onDailyCheckInArrivalDepartureChanged(value: Boolean) {
+        _dailyCheckInIsArrivalDeparture.value = value
+    }
+
+    fun onDailyCheckInBreakfastIncludedChanged(value: Boolean) {
+        _dailyCheckInBreakfastIncluded.value = value
     }
 
     fun onDismissDailyCheckInDialog() {
@@ -400,7 +434,13 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch {
             addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
             try {
-                val entry = recordDailyManualCheckIn(_selectedDate.value, label)
+                val input = DailyManualCheckInInput(
+                    date = _selectedDate.value,
+                    dayLocationLabel = label,
+                    isArrivalDeparture = _dailyCheckInIsArrivalDeparture.value,
+                    breakfastIncluded = _dailyCheckInBreakfastIncluded.value
+                )
+                val entry = recordDailyManualCheckIn(input)
                 _uiState.value = TodayUiState.Success(entry)
                 _dailyCheckInLocationInput.value = entry.dayLocationLabel
                 _showDailyCheckInDialog.value = false

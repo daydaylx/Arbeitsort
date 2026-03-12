@@ -249,7 +249,7 @@ class TodayViewModelTest {
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
-        coEvery { recordDailyManualCheckIn(any(), any()) } returns savedEntry
+        coEvery { recordDailyManualCheckIn(any()) } returns savedEntry
 
         val viewModel = createViewModel(
             workEntryDao = workEntryDao,
@@ -272,7 +272,7 @@ class TodayViewModelTest {
         assertTrue(successLatch.await(2, TimeUnit.SECONDS))
         assertEquals(false, viewModel.showDailyCheckInDialog.value)
         assertEquals("Gespeichert", viewModel.dailyCheckInLocationInput.value)
-        coVerify(exactly = 1) { recordDailyManualCheckIn(today, "Baustelle A") }
+        coVerify(exactly = 1) { recordDailyManualCheckIn(match { it.date == today && it.dayLocationLabel == "Baustelle A" }) }
         collectJob.cancel()
     }
 
@@ -287,7 +287,7 @@ class TodayViewModelTest {
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
-        coEvery { recordDailyManualCheckIn(any(), any()) } throws SecurityException("Location permission missing")
+        coEvery { recordDailyManualCheckIn(any()) } throws SecurityException("Location permission missing")
 
         val viewModel = createViewModel(
             workEntryDao = workEntryDao,
@@ -306,7 +306,7 @@ class TodayViewModelTest {
         viewModel.onDailyCheckInLocationChanged("Baustelle B")
         viewModel.submitDailyManualCheckIn()
 
-        coVerify(exactly = 1) { recordDailyManualCheckIn(today, "Baustelle B") }
+        coVerify(exactly = 1) { recordDailyManualCheckIn(match { it.date == today && it.dayLocationLabel == "Baustelle B" }) }
         assertTrue(snackbarLatch.await(2, TimeUnit.SECONDS))
         assertTrue(viewModel.uiState.value !is TodayUiState.Error)
         collectJob.cancel()
