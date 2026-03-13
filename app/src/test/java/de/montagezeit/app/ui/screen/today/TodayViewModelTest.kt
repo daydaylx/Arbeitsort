@@ -649,6 +649,80 @@ class TodayViewModelTest {
         coVerify { workEntryDao.getByDate(today.minusDays(1)) }
     }
 
+    @Test
+    fun `unbestaetigter WORK-Tag zaehlt nicht in Wochenwerte`() {
+        val today = LocalDate.now()
+        val confirmedEntry = WorkEntry(
+            date = today,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            confirmedWorkDay = true,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        val unconfirmedEntry = WorkEntry(
+            date = today.minusDays(1),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            confirmedWorkDay = false,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        // Beide Einträge (confirmed + unconfirmed) in der Woche
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns listOf(confirmedEntry, unconfirmedEntry)
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        // Kurz warten bis loadStatistics läuft
+        Thread.sleep(300)
+
+        val stats = viewModel.weekStats.value
+        // Nur der bestätigte Tag darf zählen → workDaysCount = 1
+        assertEquals(
+            "Nur bestätigte WORK-Tage dürfen in Wochenwerte einfließen",
+            1,
+            stats?.workDaysCount
+        )
+        // totalHours entspricht nur dem bestätigten Eintrag: (17h - 8h - 1h = 8h)
+        assertEquals(8.0, stats?.totalHours ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun `bestaetigter WORK-Tag zaehlt in Wochenwerte`() {
+        val today = LocalDate.now()
+        val confirmedEntry = WorkEntry(
+            date = today,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            confirmedWorkDay = true,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns listOf(confirmedEntry)
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        Thread.sleep(300)
+
+        val stats = viewModel.weekStats.value
+        assertEquals(1, stats?.workDaysCount)
+        assertEquals(8.0, stats?.totalHours ?: 0.0, 0.01)
+    }
+
     private fun createViewModel(
         workEntryDao: WorkEntryDao,
         settingsManager: ReminderSettingsManager,

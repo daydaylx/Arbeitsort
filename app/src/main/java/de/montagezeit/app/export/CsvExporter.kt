@@ -72,8 +72,9 @@ class CsvExporter @Inject constructor(
                 it.write(0xBB)
                 it.write(0xBF) // UTF-8 BOM
 
-                // Header
-                val header = "date;dayType;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
+                // Header: workStart/workEnd/breakMinutes nur für WORK-Tage befüllt
+                // confirmedWorkDay: 1 wenn Tag fachlich bestätigt, 0 sonst
+                val header = "date;dayType;confirmedWorkDay;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
                 entries.forEach { entry ->
@@ -85,20 +86,24 @@ class CsvExporter @Inject constructor(
                         DayType.COMP_TIME -> "Ü-Abbau"
                         else -> entry.dayType.name
                     }
+                    // Zeitfelder nur für WORK-Tage befüllen – bei OFF/COMP_TIME sind sie fachlich irrelevant
+                    val isWorkDay = entry.dayType == DayType.WORK
                     val line = buildString {
                         append(entry.date.format(dateFormatter))
                         append(";")
                         append(dayTypeLabel)
                         append(";")
+                        append(if (entry.confirmedWorkDay) 1 else 0)
+                        append(";")
                         append(entry.dayLocationLabel.replace(";", ","))
                         append(";")
                         append(entry.dayLocationSource.name)
                         append(";")
-                        append(entry.workStart.format(timeFormatter))
+                        append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
                         append(";")
-                        append(entry.workEnd.format(timeFormatter))
+                        append(if (isWorkDay) entry.workEnd.format(timeFormatter) else "")
                         append(";")
-                        append(entry.breakMinutes)
+                        append(if (isWorkDay) entry.breakMinutes.toString() else "")
                         append(";")
                         append(workMinutes)
                         append(";")

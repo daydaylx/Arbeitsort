@@ -387,7 +387,7 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 _screenState.update { it.copy(isSaving = true) }
-                workEntryDao.upsert(entryToSave)
+                updateEntry(entryToSave)
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
             } catch (e: Exception) {
                 _screenState.update {
@@ -501,7 +501,9 @@ data class EditFormData(
 
         val errors = mutableListOf<ValidationError>()
 
-        if (dayLocationLabel.isNullOrBlank()) {
+        // dayLocationLabel ist nur für WORK-Tage Pflicht. OFF-Tage können ohne Ort gültig sein
+        // (z.B. über ConfirmOffDay bestätigt, wo kein Ort eingegeben wird).
+        if (dayType == DayType.WORK && dayLocationLabel.isNullOrBlank()) {
             errors.add(ValidationError.MissingDayLocation)
         }
 

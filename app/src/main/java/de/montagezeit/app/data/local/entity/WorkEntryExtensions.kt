@@ -3,6 +3,8 @@ package de.montagezeit.app.data.local.entity
 import java.time.LocalDate
 
 fun WorkEntry.withTravelCleared(now: Long): WorkEntry {
+    // travelPaidMinutes = null bedeutet: kein Override, Timestamps werden genutzt.
+    // null statt 0, damit TimeCalculator nicht durch einen veralteten Override blockiert wird.
     return copy(
         travelStartAt = null,
         travelArriveAt = null,
@@ -11,7 +13,7 @@ fun WorkEntry.withTravelCleared(now: Long): WorkEntry {
         travelFromLabel = null,
         travelToLabel = null,
         travelDistanceKm = null,
-        travelPaidMinutes = 0,
+        travelPaidMinutes = null,
         travelSource = null,
         travelUpdatedAt = now,
         updatedAt = now
@@ -41,7 +43,7 @@ fun createConfirmedOffDayEntry(
         dayType = DayType.OFF,
         dayLocationLabel = fallbackDayLocationLabel.ifBlank { "" },
         dayLocationSource = DayLocationSource.FALLBACK,
-        travelPaidMinutes = 0,
+        travelPaidMinutes = null,
         travelUpdatedAt = now,
         confirmedWorkDay = true,
         confirmationAt = now,

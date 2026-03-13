@@ -325,7 +325,8 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun calculateWeekStats(entries: List<WorkEntry>, targetHours: Double): WeekStats {
-        val workEntries = entries.filter { it.dayType == DayType.WORK }
+        // Nur bestätigte WORK-Tage zählen – konsistent mit CalculateOvertimeForRange
+        val workEntries = entries.filter { it.dayType == DayType.WORK && it.confirmedWorkDay }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
@@ -339,7 +340,8 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun calculateMonthStats(entries: List<WorkEntry>, targetHours: Double): MonthStats {
-        val workEntries = entries.filter { it.dayType == DayType.WORK }
+        // Nur bestätigte WORK-Tage zählen – konsistent mit CalculateOvertimeForRange
+        val workEntries = entries.filter { it.dayType == DayType.WORK && it.confirmedWorkDay }
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size

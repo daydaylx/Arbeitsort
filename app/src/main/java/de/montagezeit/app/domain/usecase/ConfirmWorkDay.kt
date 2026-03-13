@@ -35,9 +35,11 @@ class ConfirmWorkDay(
 
         val updatedEntry = existingEntry?.copy(
             dayType = DayType.WORK,
-            workStart = workStart,
-            workEnd = workEnd,
-            breakMinutes = breakMinutes,
+            // Zeiten nur bei der ersten Bestätigung aus Settings setzen.
+            // Bereits bestätigte Einträge behalten ihre manuell gesetzten Zeiten.
+            workStart = if (!existingEntry.confirmedWorkDay) workStart else existingEntry.workStart,
+            workEnd = if (!existingEntry.confirmedWorkDay) workEnd else existingEntry.workEnd,
+            breakMinutes = if (!existingEntry.confirmedWorkDay) breakMinutes else existingEntry.breakMinutes,
             morningCapturedAt = existingEntry.morningCapturedAt ?: now,
             morningLocationStatus = existingEntry.morningLocationStatus.let {
                 if (it == LocationStatus.UNAVAILABLE) LocationStatus.UNAVAILABLE else it

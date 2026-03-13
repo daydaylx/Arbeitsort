@@ -247,6 +247,46 @@ class EditFormDataValidationTest {
         )
     }
 
+    @Test
+    fun `OFF Eintrag mit leerem dayLocationLabel ist valide`() {
+        // ConfirmOffDay erzeugt gültige OFF-Einträge ohne Tagesort.
+        // Solche Einträge müssen im Edit-Screen gespeichert werden können.
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            dayLocationLabel = ""
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("OFF Eintrag mit leerem Ort darf keinen MissingDayLocation-Fehler erzeugen",
+            errors.none { it is ValidationError.MissingDayLocation })
+    }
+
+    @Test
+    fun `OFF Eintrag mit dayLocationLabel ist ebenfalls valide`() {
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            dayLocationLabel = "Baustelle A"
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.none { it is ValidationError.MissingDayLocation })
+    }
+
+    @Test
+    fun `WORK Eintrag ohne dayLocationLabel bleibt ungueltig`() {
+        val formData = validFormData(
+            dayType = DayType.WORK,
+            dayLocationLabel = ""
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("WORK Eintrag ohne Ort muss MissingDayLocation-Fehler erzeugen",
+            errors.any { it is ValidationError.MissingDayLocation })
+    }
+
     private fun validFormData(
         dayType: DayType = DayType.WORK,
         workStart: LocalTime = LocalTime.of(8, 0),
