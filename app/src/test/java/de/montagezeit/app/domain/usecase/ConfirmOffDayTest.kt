@@ -50,7 +50,7 @@ class ConfirmOffDayTest {
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("", result.dayLocationLabel)
         assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
-        assertEquals(0, result.travelPaidMinutes)
+        assertNull(result.travelPaidMinutes)
         assertEquals(true, result.confirmedWorkDay)
         assertNotNull(result.confirmationAt)
         assertEquals("TEST", result.confirmationSource)
@@ -87,7 +87,7 @@ class ConfirmOffDayTest {
         assertNull(result.travelFromLabel)
         assertNull(result.travelToLabel)
         assertNull(result.travelDistanceKm)
-        assertEquals(0, result.travelPaidMinutes)
+        assertNull(result.travelPaidMinutes)
         assertTrue(result.confirmedWorkDay)
         assertEquals("UI", result.confirmationSource)
     }
