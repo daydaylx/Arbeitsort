@@ -200,11 +200,14 @@ class HistoryViewModel @Inject constructor(
     }
 
     private fun calculateGroupStats(entries: List<WorkEntry>): HistoryGroupStats {
-        val workDaysCount = entries.count { it.dayType == DayType.WORK }
-        val offDaysCount = entries.count { it.dayType == DayType.OFF }
-        val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
-        val totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-        val entriesNeedingReview = entries.count { it.needsReview }
+        // Nur bestätigte Einträge für Stunden und Tage zählen – konsistent mit CalculateOvertimeForRange
+        // und TodayViewModel.calculateWeekStats/calculateMonthStats.
+        val confirmedEntries = entries.filter { it.confirmedWorkDay }
+        val workDaysCount = confirmedEntries.count { it.dayType == DayType.WORK }
+        val offDaysCount = confirmedEntries.count { it.dayType == DayType.OFF }
+        val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+        val entriesNeedingReview = entries.count { it.needsReview }  // alle Einträge, auch unbestätigte
         val averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
 
         return HistoryGroupStats(

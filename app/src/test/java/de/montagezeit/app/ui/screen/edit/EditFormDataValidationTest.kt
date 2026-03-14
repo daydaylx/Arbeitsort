@@ -247,6 +247,95 @@ class EditFormDataValidationTest {
         )
     }
 
+    @Test
+    fun `OFF Eintrag mit leerem dayLocationLabel ist valide`() {
+        // ConfirmOffDay erzeugt gültige OFF-Einträge ohne Tagesort.
+        // Solche Einträge müssen im Edit-Screen gespeichert werden können.
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            dayLocationLabel = ""
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("OFF Eintrag mit leerem Ort darf keinen MissingDayLocation-Fehler erzeugen",
+            errors.none { it is ValidationError.MissingDayLocation })
+    }
+
+    @Test
+    fun `OFF Eintrag mit dayLocationLabel ist ebenfalls valide`() {
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            dayLocationLabel = "Baustelle A"
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.none { it is ValidationError.MissingDayLocation })
+    }
+
+    @Test
+    fun `WORK Eintrag ohne dayLocationLabel bleibt ungueltig`() {
+        val formData = validFormData(
+            dayType = DayType.WORK,
+            dayLocationLabel = ""
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("WORK Eintrag ohne Ort muss MissingDayLocation-Fehler erzeugen",
+            errors.any { it is ValidationError.MissingDayLocation })
+    }
+
+    @Test
+    fun `OFF-Tag mit workEnd vor workStart ist valide`() {
+        // Zeitvalidierung ist für OFF-Tage fachlich irrelevant (TimeCalculator gibt 0 zurück).
+        // OFF-Einträge erhalten denselben Early Return wie COMP_TIME.
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            workStart = LocalTime.of(17, 0),
+            workEnd = LocalTime.of(8, 0),  // vor workStart – bei WORK wäre das invalide
+            breakMinutes = 0
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("OFF-Tag mit umgekehrten Zeiten darf keinen WorkEndBeforeStart-Fehler erzeugen",
+            errors.none { it is ValidationError.WorkEndBeforeStart })
+        assertTrue(formData.isValid())
+    }
+
+    @Test
+    fun `OFF-Tag mit negativen breakMinutes ist valide`() {
+        val formData = validFormData(
+            dayType = DayType.OFF,
+            breakMinutes = -10
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("OFF-Tag mit negativer Pause darf keinen NegativeBreakMinutes-Fehler erzeugen",
+            errors.none { it is ValidationError.NegativeBreakMinutes })
+        assertTrue(formData.isValid())
+    }
+
+    @Test
+    fun `WORK-Tag mit workEnd vor workStart bleibt invalide`() {
+        // Sicherstellen: Bestehende WORK-Validierung ist unberührt
+        val formData = validFormData(
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(17, 0),
+            workEnd = LocalTime.of(8, 0),
+            breakMinutes = 0
+        )
+
+        val errors = formData.validate()
+
+        assertTrue("WORK-Tag mit umgekehrten Zeiten muss WorkEndBeforeStart-Fehler erzeugen",
+            errors.any { it is ValidationError.WorkEndBeforeStart })
+        assertFalse(formData.isValid())
+    }
+
     private fun validFormData(
         dayType: DayType = DayType.WORK,
         workStart: LocalTime = LocalTime.of(8, 0),

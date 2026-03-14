@@ -114,4 +114,69 @@ class ConfirmWorkDayTest {
         assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
         assertEquals(true, result.confirmedWorkDay)
     }
+
+    @Test
+    fun `bereits bestaetigter Eintrag mit manuellen Zeiten behaelt Zeiten bei`() = runTest {
+        val date = LocalDate.now()
+        // Eintrag der bereits manuell bestätigt und mit individuellen Zeiten ausgestattet ist
+        val manualStart = LocalTime.of(6, 30)
+        val manualEnd = LocalTime.of(15, 0)
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            workStart = manualStart,
+            workEnd = manualEnd,
+            breakMinutes = 30,
+            confirmedWorkDay = true  // bereits bestätigt
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existing
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+        every { reminderSettingsManager.settings } returns flowOf(
+            ReminderSettings(
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            )
+        )
+
+        val result = useCase(date, source = "NOTIFICATION")
+
+        // Manuelle Zeiten müssen erhalten bleiben – Settings dürfen sie nicht überschreiben
+        assertEquals("Manuelle workStart darf nicht überschrieben werden", manualStart, result.workStart)
+        assertEquals("Manuelle workEnd darf nicht überschrieben werden", manualEnd, result.workEnd)
+        assertEquals("Manuelle breakMinutes darf nicht überschrieben werden", 30, result.breakMinutes)
+    }
+
+    @Test
+    fun `unbestaetigter Eintrag bekommt Settings-Defaults`() = runTest {
+        val date = LocalDate.now()
+        // Eintrag der noch nicht bestätigt wurde → Settings-Defaults sollen angewendet werden
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            workStart = LocalTime.of(6, 0),
+            workEnd = LocalTime.of(14, 0),
+            breakMinutes = 30,
+            confirmedWorkDay = false  // noch nicht bestätigt
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existing
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+        every { reminderSettingsManager.settings } returns flowOf(
+            ReminderSettings(
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            )
+        )
+
+        val result = useCase(date, source = "NOTIFICATION")
+
+        // Bei erster Bestätigung sollen die Settings-Defaults angewendet werden
+        assertEquals(LocalTime.of(8, 0), result.workStart)
+        assertEquals(LocalTime.of(17, 0), result.workEnd)
+        assertEquals(60, result.breakMinutes)
+        assertEquals(true, result.confirmedWorkDay)
+    }
 }

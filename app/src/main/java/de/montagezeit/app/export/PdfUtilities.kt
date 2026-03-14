@@ -76,11 +76,15 @@ object PdfUtilities {
     }
     
     /**
-     * Holt den Ort für einen WorkEntry
-     * Priority: morningLocationLabel > eveningLocationLabel > ""
+     * Holt den Ort für einen WorkEntry.
+     * Priorität: dayLocationLabel > morningLocationLabel > eveningLocationLabel > ""
+     * dayLocationLabel ist der explizit gesetzte Tagesort (manuelles Check-in).
      */
     fun getLocation(entry: WorkEntry): String {
-        return entry.morningLocationLabel ?: entry.eveningLocationLabel ?: ""
+        return entry.dayLocationLabel.takeIf { it.isNotBlank() }
+            ?: entry.morningLocationLabel
+            ?: entry.eveningLocationLabel
+            ?: ""
     }
     
     /**

@@ -182,6 +182,48 @@ class PdfUtilitiesTest {
     }
     
     @Test
+    fun `getLocation - dayLocationLabel hat hoechste Prioritaet`() {
+        val entry = WorkEntry(
+            date = java.time.LocalDate.of(2026, 1, 15),
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(19, 0),
+            breakMinutes = 60,
+            dayLocationLabel = "Tagesort",
+            morningLocationLabel = "Morgen",
+            eveningLocationLabel = "Abend"
+        )
+        assertEquals("Tagesort", PdfUtilities.getLocation(entry))
+    }
+
+    @Test
+    fun `getLocation - nur dayLocationLabel gesetzt`() {
+        val entry = WorkEntry(
+            date = java.time.LocalDate.of(2026, 1, 15),
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(19, 0),
+            breakMinutes = 60,
+            dayLocationLabel = "Baustelle Nord"
+        )
+        assertEquals("Baustelle Nord", PdfUtilities.getLocation(entry))
+    }
+
+    @Test
+    fun `getLocation - leeres dayLocationLabel faellt auf morningLocationLabel zurueck`() {
+        val entry = WorkEntry(
+            date = java.time.LocalDate.of(2026, 1, 15),
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(19, 0),
+            breakMinutes = 60,
+            dayLocationLabel = "",
+            morningLocationLabel = "Morgenort"
+        )
+        assertEquals("Morgenort", PdfUtilities.getLocation(entry))
+    }
+
+    @Test
     fun `getNote - mit Notiz`() {
         val entry = WorkEntry(
             date = java.time.LocalDate.of(2026, 1, 15),

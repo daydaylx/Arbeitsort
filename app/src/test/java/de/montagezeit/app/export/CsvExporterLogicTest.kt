@@ -22,25 +22,40 @@ class CsvExporterLogicTest {
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    /** Reproduces the CSV row-building logic from CsvExporter. */
+    /**
+     * Reproduces the CSV row-building logic from CsvExporter.
+     * Neue Spalten: confirmedWorkDay (index 2); Zeitfelder leer bei OFF/COMP_TIME.
+     * Neue Spaltenreihenfolge:
+     *   0:date 1:dayType 2:confirmedWorkDay 3:dayLocation 4:dayLocationSource
+     *   5:workStart 6:workEnd 7:breakMinutes 8:workMinutes 9:travelMinutes
+     *   10:paidTotalMinutes 11:mealIsArrivalDeparture 12:mealBreakfastIncluded
+     *   13:mealAllowanceBaseCents 14:mealAllowanceAmountCents 15:mealAllowanceEuro 16:note
+     */
     private fun buildCsvLine(entry: WorkEntry): String {
         val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
         val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
         val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+        val isWorkDay = entry.dayType == DayType.WORK
+        val dayTypeLabel = when (entry.dayType) {
+            DayType.COMP_TIME -> "Ü-Abbau"
+            else -> entry.dayType.name
+        }
         return buildString {
             append(entry.date.format(dateFormatter))
             append(";")
-            append(entry.dayType.name)
+            append(dayTypeLabel)
+            append(";")
+            append(if (entry.confirmedWorkDay) 1 else 0)
             append(";")
             append(entry.dayLocationLabel.replace(";", ","))
             append(";")
             append(entry.dayLocationSource.name)
             append(";")
-            append(entry.workStart.format(timeFormatter))
+            append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
             append(";")
-            append(entry.workEnd.format(timeFormatter))
+            append(if (isWorkDay) entry.workEnd.format(timeFormatter) else "")
             append(";")
-            append(entry.breakMinutes)
+            append(if (isWorkDay) entry.breakMinutes.toString() else "")
             append(";")
             append(workMinutes)
             append(";")
@@ -82,13 +97,14 @@ class CsvExporterLogicTest {
     fun `normal entry produces correct CSV line`() {
         val line = buildCsvLine(entry())
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(16, cols.size)
+        assertEquals(17, cols.size)
         assertEquals("2024-06-10", cols[0])
         assertEquals("WORK", cols[1])
-        assertEquals("Dresden", cols[2])
-        assertEquals("08:00", cols[4])
-        assertEquals("16:00", cols[5])
-        assertEquals("60", cols[6])
+        // cols[2] = confirmedWorkDay
+        assertEquals("Dresden", cols[3])
+        assertEquals("08:00", cols[5])
+        assertEquals("16:00", cols[6])
+        assertEquals("60", cols[7])
     }
 
     @Test
@@ -123,7 +139,7 @@ class CsvExporterLogicTest {
     fun `null note produces empty note field`() {
         val line = buildCsvLine(entry(note = null))
         val cols = line.trimEnd('\n').split(";")
-        assertEquals("", cols[15])
+        assertEquals("", cols[16])
     }
 
     @Test
@@ -131,7 +147,7 @@ class CsvExporterLogicTest {
         val line = buildCsvLine(entry(dayType = DayType.OFF))
         val cols = line.trimEnd('\n').split(";")
         assertEquals("OFF", cols[1])
-        assertEquals("0", cols[7]) // workMinutes
+        assertEquals("0", cols[8]) // workMinutes (index shifted +1)
     }
 
     @Test
@@ -151,11 +167,53 @@ class CsvExporterLogicTest {
         )
         val line = buildCsvLine(entryWithMeal)
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(16, cols.size)
-        assertEquals("1", cols[10])    // mealIsArrivalDeparture
-        assertEquals("1", cols[11])    // mealBreakfastIncluded
-        assertEquals("1400", cols[12]) // mealAllowanceBaseCents
-        assertEquals("820", cols[13])  // mealAllowanceAmountCents
-        assertEquals("8,20 €", cols[14]) // mealAllowanceEuro
+        assertEquals(17, cols.size)
+        assertEquals("1", cols[11])    // mealIsArrivalDeparture (shifted +1)
+        assertEquals("1", cols[12])    // mealBreakfastIncluded
+        assertEquals("1400", cols[13]) // mealAllowanceBaseCents
+        assertEquals("820", cols[14])  // mealAllowanceAmountCents
+        assertEquals("8,20 €", cols[15]) // mealAllowanceEuro
+    }
+
+    @Test
+    fun `OFF Tag hat leere workStart workEnd breakMinutes Felder`() {
+        val line = buildCsvLine(entry(dayType = DayType.OFF))
+        val cols = line.trimEnd('\n').split(";")
+        assertEquals("OFF", cols[1])
+        assertEquals("", cols[5])  // workStart leer
+        assertEquals("", cols[6])  // workEnd leer
+        assertEquals("", cols[7])  // breakMinutes leer
+        assertEquals("0", cols[8]) // workMinutes = 0 (berechnet)
+    }
+
+    @Test
+    fun `COMP_TIME Tag hat leere Zeitfelder`() {
+        val line = buildCsvLine(entry(dayType = DayType.COMP_TIME))
+        val cols = line.trimEnd('\n').split(";")
+        assertEquals("Ü-Abbau", cols[1])
+        assertEquals("", cols[5])  // workStart leer
+        assertEquals("", cols[6])  // workEnd leer
+        assertEquals("", cols[7])  // breakMinutes leer
+    }
+
+    @Test
+    fun `WORK Tag hat Zeitfelder befuellt`() {
+        val line = buildCsvLine(entry(dayType = DayType.WORK))
+        val cols = line.trimEnd('\n').split(";")
+        assertEquals("WORK", cols[1])
+        assertEquals("08:00", cols[5])  // workStart befüllt
+        assertEquals("16:00", cols[6])  // workEnd befüllt
+        assertEquals("60", cols[7])     // breakMinutes befüllt
+    }
+
+    @Test
+    fun `confirmedWorkDay Spalte korrekt gesetzt`() {
+        val confirmedLine = buildCsvLine(entry().copy(confirmedWorkDay = true))
+        val confirmedCols = confirmedLine.trimEnd('\n').split(";")
+        assertEquals("1", confirmedCols[2])
+
+        val unconfirmedLine = buildCsvLine(entry().copy(confirmedWorkDay = false))
+        val unconfirmedCols = unconfirmedLine.trimEnd('\n').split(";")
+        assertEquals("0", unconfirmedCols[2])
     }
 }

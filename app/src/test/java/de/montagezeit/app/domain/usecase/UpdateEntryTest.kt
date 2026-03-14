@@ -11,6 +11,7 @@ import io.mockk.runs
 import io.mockk.unmockkAll
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import kotlin.test.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -107,11 +108,77 @@ class UpdateEntryTest {
         }
     }
 
+    @Test
+    fun `OFF Eintrag mit leerem dayLocationLabel wird gespeichert`() = runTest {
+        val entry = WorkEntry(
+            date = LocalDate.now(),
+            dayType = DayType.OFF,
+            dayLocationLabel = "",  // leer – erlaubt für OFF
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        // Darf keine Exception werfen
+        val result = updateEntry.invoke(entry)
+        assertEquals(DayType.OFF, result.dayType)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `COMP_TIME Eintrag wird ohne Zeitvalidierung gespeichert`() = runTest {
+        val entry = WorkEntry(
+            date = LocalDate.now(),
+            dayType = DayType.COMP_TIME,
+            dayLocationLabel = "",  // leer – erlaubt für COMP_TIME
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(8, 0),  // Ende = Start – wäre bei WORK ungültig
+            breakMinutes = 0
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+        assertEquals(DayType.COMP_TIME, result.dayType)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
+    fun `bei gesetzten Timestamps wird travelPaidMinutes genullt`() = runTest {
+        val date = LocalDate.now()
+        val entry = validEntry(
+            date = date,
+            travelStartAt = epochOf(date, LocalTime.of(7, 0)),
+            travelArriveAt = epochOf(date, LocalTime.of(9, 0)),
+            travelPaidMinutes = 120  // alter Override – muss nach dem Speichern null sein
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+        // Timestamps sind gesetzt → travelPaidMinutes muss null sein
+        assertNull(result.travelPaidMinutes)
+    }
+
+    @Test
+    fun `bei null Timestamps bleibt travelPaidMinutes unberuehrt`() = runTest {
+        val entry = validEntry(
+            travelStartAt = null,
+            travelArriveAt = null,
+            travelPaidMinutes = null
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+        assertNull(result.travelPaidMinutes)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
     private fun validEntry(
         date: LocalDate = LocalDate.now(),
         note: String? = null,
         travelStartAt: Long? = null,
         travelArriveAt: Long? = null,
+        travelPaidMinutes: Int? = null,
         createdAt: Long = System.currentTimeMillis(),
         updatedAt: Long = System.currentTimeMillis()
     ): WorkEntry {
@@ -124,6 +191,7 @@ class UpdateEntryTest {
             breakMinutes = 60,
             travelStartAt = travelStartAt,
             travelArriveAt = travelArriveAt,
+            travelPaidMinutes = travelPaidMinutes,
             note = note,
             createdAt = createdAt,
             updatedAt = updatedAt
