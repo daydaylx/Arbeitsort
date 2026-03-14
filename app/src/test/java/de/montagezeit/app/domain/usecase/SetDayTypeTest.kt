@@ -145,6 +145,14 @@ class SetDayTypeTest {
             date = date,
             dayType = DayType.WORK,
             confirmedWorkDay = false,
+            travelStartAt = 1_000L,
+            travelArriveAt = 2_000L,
+            travelLabelStart = "Start",
+            travelLabelEnd = "Ziel",
+            travelFromLabel = "A",
+            travelToLabel = "B",
+            travelDistanceKm = 42.0,
+            travelPaidMinutes = 30,
             mealIsArrivalDeparture = true,
             mealBreakfastIncluded = true,
             mealAllowanceBaseCents = 1400,
@@ -161,6 +169,14 @@ class SetDayTypeTest {
         assertTrue(result.confirmedWorkDay)
         assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
         assertNotNull(result.confirmationAt)
+        assertNull(result.travelStartAt)
+        assertNull(result.travelArriveAt)
+        assertNull(result.travelLabelStart)
+        assertNull(result.travelLabelEnd)
+        assertNull(result.travelFromLabel)
+        assertNull(result.travelToLabel)
+        assertNull(result.travelDistanceKm)
+        assertNull(result.travelPaidMinutes)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)

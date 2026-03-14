@@ -711,23 +711,19 @@ class TodayViewModelTest {
 
         coEvery { workEntryDao.getByDate(any()) } returns null
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        // Beide Einträge (confirmed + unconfirmed) in der Woche
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns listOf(confirmedEntry, unconfirmedEntry)
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
 
-        // Kurz warten bis loadStatistics läuft
         Thread.sleep(300)
 
         val stats = viewModel.weekStats.value
-        // Nur der bestätigte Tag darf zählen → workDaysCount = 1
         assertEquals(
             "Nur bestätigte WORK-Tage dürfen in Wochenwerte einfließen",
             1,
             stats?.workDaysCount
         )
-        // totalHours entspricht nur dem bestätigten Eintrag: (17h - 8h - 1h = 8h)
         assertEquals(8.0, stats?.totalHours ?: 0.0, 0.01)
     }
 
@@ -757,6 +753,164 @@ class TodayViewModelTest {
         val stats = viewModel.weekStats.value
         assertEquals(1, stats?.workDaysCount)
         assertEquals(8.0, stats?.totalHours ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun `monthStats mealAllowanceTotalCents sums confirmed work entries`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        val entries = listOf(
+            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
+            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2220),
+            WorkEntry(date = now.minusDays(2), dayType = DayType.OFF, mealAllowanceAmountCents = 0)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        Thread.sleep(300)
+
+        assertEquals(5020, viewModel.monthStats.value?.mealAllowanceTotalCents)
+    }
+
+    @Test
+    fun `monthStats mealAllowanceTotalCents ignores non-work entries with stale allowance`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        // Simulate a corrupt OFF entry that still has a non-zero meal allowance
+        val entries = listOf(
+            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
+            WorkEntry(date = now.minusDays(1), dayType = DayType.OFF, mealAllowanceAmountCents = 1400)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        Thread.sleep(300)
+
+        // Only the WORK entry's allowance should be counted
+        assertEquals(2800, viewModel.monthStats.value?.mealAllowanceTotalCents)
+    }
+
+    @Test
+    fun `monthStats mealAllowanceTotalCents ignores unconfirmed work entries`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        val entries = listOf(
+            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
+            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = false, mealAllowanceAmountCents = 2220)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        Thread.sleep(300)
+
+        assertEquals(2800, viewModel.monthStats.value?.mealAllowanceTotalCents)
+    }
+
+    @Test
+    fun `openDailyCheckInDialog prefills meal flags from existing entry`() {
+        val today = LocalDate.now()
+        val existing = WorkEntry(
+            date = today,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns existing
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val shownLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.showDailyCheckInDialog.collect { shown ->
+                if (shown) shownLatch.countDown()
+            }
+        }
+
+        viewModel.openDailyCheckInDialog()
+
+        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
+        assertEquals(true, viewModel.dailyCheckInIsArrivalDeparture.value)
+        assertEquals(true, viewModel.dailyCheckInBreakfastIncluded.value)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `openDailyCheckInDialog defaults meal flags to false when no entry exists`() {
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(any()) } returns null
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val shownLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            viewModel.showDailyCheckInDialog.collect { shown ->
+                if (shown) shownLatch.countDown()
+            }
+        }
+
+        viewModel.openDailyCheckInDialog()
+
+        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
+        assertEquals(false, viewModel.dailyCheckInIsArrivalDeparture.value)
+        assertEquals(false, viewModel.dailyCheckInBreakfastIncluded.value)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `monthStats mealAllowanceTotalCents is zero when all entries have no allowance`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>()
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        val entries = listOf(
+            WorkEntry(date = now, dayType = DayType.OFF, mealAllowanceAmountCents = 0),
+            WorkEntry(date = now.minusDays(1), dayType = DayType.COMP_TIME, mealAllowanceAmountCents = 0)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        Thread.sleep(300)
+
+        assertEquals(0, viewModel.monthStats.value?.mealAllowanceTotalCents)
     }
 
     private fun createViewModel(

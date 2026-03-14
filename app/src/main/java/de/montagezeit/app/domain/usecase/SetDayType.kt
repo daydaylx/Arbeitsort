@@ -4,6 +4,7 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.withMealAllowanceCleared
+import de.montagezeit.app.data.local.entity.withTravelCleared
 import java.time.LocalDate
 
 /**
@@ -37,13 +38,16 @@ class SetDayType(
         val updatedEntry = if (existingEntry != null) {
             val shouldClearMealAllowance = dayType != DayType.WORK || existingEntry.dayType != DayType.WORK
             when (dayType) {
-                DayType.COMP_TIME -> existingEntry.copy(
-                    dayType = dayType,
-                    confirmedWorkDay = true,
-                    confirmationAt = now,
-                    confirmationSource = DayType.COMP_TIME.name,
-                    updatedAt = now
-                ).withMealAllowanceCleared()
+                DayType.COMP_TIME -> existingEntry
+                    .withTravelCleared(now)
+                    .copy(
+                        dayType = dayType,
+                        confirmedWorkDay = true,
+                        confirmationAt = now,
+                        confirmationSource = DayType.COMP_TIME.name,
+                        updatedAt = now
+                    )
+                    .withMealAllowanceCleared()
                 else -> {
                     // When changing away from COMP_TIME, clear the auto-confirmation so the
                     // new day type is not counted as confirmed in overtime calculations.

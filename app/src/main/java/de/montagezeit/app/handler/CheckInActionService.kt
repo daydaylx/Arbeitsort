@@ -196,7 +196,6 @@ class CheckInActionService : Service() {
                     try {
                         confirmWorkDay(date, source = source)
                         showToast(R.string.toast_work_day_confirmed)
-                        markConfirmationReminderFlag(date)
                         confirmationLimiter().reset(date)
                         notificationManager.cancelDailyReminder()
                     } catch (e: Exception) {
@@ -218,7 +217,6 @@ class CheckInActionService : Service() {
                     try {
                         confirmOffDay(date, source = source)
                         showToast(R.string.toast_off_day_confirmed)
-                        markConfirmationReminderFlag(date)
                         confirmationLimiter().reset(date)
                         notificationManager.cancelDailyReminder()
                     } catch (e: Exception) {
@@ -363,10 +361,6 @@ class CheckInActionService : Service() {
 
     private suspend fun markReminderFlags(date: LocalDate) {
         reminderFlagsStore.setAllReminded(date)
-    }
-
-    private fun markConfirmationReminderFlag(@Suppress("UNUSED_PARAMETER") date: LocalDate) {
-        // Confirmation flag tracking removed; limiter manages its own counter
     }
 
     private fun confirmationLimiter(): ConfirmationReminderLimiter {

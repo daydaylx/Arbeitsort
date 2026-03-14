@@ -12,6 +12,7 @@ import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.usecase.UpdateEntry
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
@@ -185,6 +186,14 @@ class EditEntryViewModel @Inject constructor(
         updateFormData { it.copy(note = note.takeIf { it.isNotBlank() }) }
     }
 
+    fun updateMealArrivalDeparture(isArrivalDeparture: Boolean) {
+        updateFormData { it.copy(mealIsArrivalDeparture = isArrivalDeparture) }
+    }
+
+    fun updateMealBreakfastIncluded(breakfastIncluded: Boolean) {
+        updateFormData { it.copy(mealBreakfastIncluded = breakfastIncluded) }
+    }
+
     fun updateTravelStart(time: LocalTime?) {
         updateFormData { it.copy(travelStartTime = time) }
     }
@@ -310,6 +319,12 @@ class EditEntryViewModel @Inject constructor(
                 return@launch
             }
 
+            val mealAllowance = resolveMealAllowanceForSave(
+                dayType = data.dayType,
+                isArrivalDeparture = data.mealIsArrivalDeparture,
+                breakfastIncluded = data.mealBreakfastIncluded
+            )
+
             val entryToSave = when (currentState) {
                 is EditUiState.Success -> {
                     val originalEntry = currentState.entry
@@ -340,6 +355,10 @@ class EditEntryViewModel @Inject constructor(
                         travelArriveAt = data.travelArriveTime?.let { toEpochMillis(originalEntry.date, it) },
                         travelLabelStart = data.travelLabelStart,
                         travelLabelEnd = data.travelLabelEnd,
+                        mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
+                        mealBreakfastIncluded = mealAllowance.breakfastIncluded,
+                        mealAllowanceBaseCents = mealAllowance.baseCents,
+                        mealAllowanceAmountCents = mealAllowance.amountCents,
                         needsReview = data.needsReview,
                         confirmedWorkDay = if (isCompTime) true else originalEntry.confirmedWorkDay,
                         confirmationAt = if (isCompTime && originalEntry.confirmationAt == null) now else originalEntry.confirmationAt,
@@ -369,6 +388,10 @@ class EditEntryViewModel @Inject constructor(
                         travelArriveAt = data.travelArriveTime?.let { toEpochMillis(currentState.date, it) },
                         travelLabelStart = data.travelLabelStart,
                         travelLabelEnd = data.travelLabelEnd,
+                        mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
+                        mealBreakfastIncluded = mealAllowance.breakfastIncluded,
+                        mealAllowanceBaseCents = mealAllowance.baseCents,
+                        mealAllowanceAmountCents = mealAllowance.amountCents,
                         needsReview = data.needsReview,
                         confirmedWorkDay = isCompTime,
                         confirmationAt = if (isCompTime) now else null,
@@ -484,6 +507,8 @@ data class EditFormData(
     val dayLocationAccuracyMeters: Float? = null,
     val morningLocationLabel: String? = null,
     val eveningLocationLabel: String? = null,
+    val mealIsArrivalDeparture: Boolean = false,
+    val mealBreakfastIncluded: Boolean = false,
     val note: String? = null,
     val needsReview: Boolean = false,
     val travelStartTime: LocalTime? = null,
@@ -491,6 +516,14 @@ data class EditFormData(
     val travelLabelStart: String? = null,
     val travelLabelEnd: String? = null
 ) {
+    fun mealAllowancePreviewCents(): Int {
+        return resolveMealAllowanceForSave(
+            dayType = dayType,
+            isArrivalDeparture = mealIsArrivalDeparture,
+            breakfastIncluded = mealBreakfastIncluded
+        ).amountCents
+    }
+
     /**
      * Validates the form data and returns a list of validation errors.
      * Returns empty list if validation passes.
@@ -564,6 +597,8 @@ data class EditFormData(
                 dayLocationAccuracyMeters = entry.dayLocationAccuracyMeters,
                 morningLocationLabel = entry.morningLocationLabel,
                 eveningLocationLabel = entry.eveningLocationLabel,
+                mealIsArrivalDeparture = entry.mealIsArrivalDeparture,
+                mealBreakfastIncluded = entry.mealBreakfastIncluded,
                 note = entry.note,
                 needsReview = entry.needsReview,
                 travelStartTime = entry.travelStartAt?.let { toLocalTime(it) },
@@ -579,6 +614,40 @@ data class EditFormData(
                 .toLocalTime()
         }
     }
+}
+
+data class ResolvedMealAllowanceForSave(
+    val isArrivalDeparture: Boolean,
+    val breakfastIncluded: Boolean,
+    val baseCents: Int,
+    val amountCents: Int
+)
+
+fun resolveMealAllowanceForSave(
+    dayType: DayType,
+    isArrivalDeparture: Boolean,
+    breakfastIncluded: Boolean
+): ResolvedMealAllowanceForSave {
+    if (dayType != DayType.WORK) {
+        return ResolvedMealAllowanceForSave(
+            isArrivalDeparture = false,
+            breakfastIncluded = false,
+            baseCents = 0,
+            amountCents = 0
+        )
+    }
+
+    val result = MealAllowanceCalculator.calculate(
+        dayType = dayType,
+        isArrivalDeparture = isArrivalDeparture,
+        breakfastIncluded = breakfastIncluded
+    )
+    return ResolvedMealAllowanceForSave(
+        isArrivalDeparture = isArrivalDeparture,
+        breakfastIncluded = breakfastIncluded,
+        baseCents = result.baseCents,
+        amountCents = result.amountCents
+    )
 }
 
 /**

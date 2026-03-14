@@ -470,6 +470,7 @@
     <string name="cd_open_statistics">Statistiken anzeigen</string>
     <string name="today_stats_label_days">%1$s · %2$d Tage</string>
     <string name="today_stats_percent">%1$d%%</string>
+    <string name="meal_allowance_month_label">Verpflegung (Monat)</string>
 
     <!-- Week Overview Row -->
     <string name="week_back_to_today">Heute</string>

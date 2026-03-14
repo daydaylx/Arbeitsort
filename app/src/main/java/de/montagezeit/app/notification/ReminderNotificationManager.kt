@@ -91,6 +91,8 @@ class ReminderNotificationManager @Inject constructor(
         private const val REQUEST_CODE_REMIND_LATER_DAILY_1H = 2013
         private const val REQUEST_CODE_REMIND_LATER_DAILY_2H = 2014
         private const val REQUEST_CODE_OPEN_APP = 2100
+
+        private const val GROUP_SUMMARY_ID = 1000
     }
     
     init {
@@ -142,14 +144,13 @@ class ReminderNotificationManager @Inject constructor(
         // Erstelle Group Summary Notification (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(ReminderNotificationIds.MORNING_REMINDER - 1, groupSummary)
+            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
         }
-        
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_morning_title))
             .setContentText(context.getString(R.string.notification_morning_text))
-            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -210,14 +211,13 @@ class ReminderNotificationManager @Inject constructor(
         // Erstelle Group Summary Notification (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(ReminderNotificationIds.EVENING_REMINDER - 1, groupSummary)
+            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
         }
-        
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_evening_title))
             .setContentText(context.getString(R.string.notification_evening_text))
-            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -277,14 +277,13 @@ class ReminderNotificationManager @Inject constructor(
         // Erstelle Group Summary Notification (Android 7.0+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(ReminderNotificationIds.FALLBACK_REMINDER - 1, groupSummary)
+            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
         }
-        
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_fallback_title))
             .setContentText(context.getString(R.string.notification_fallback_text))
-            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true) // Persistente Notification
             .setAutoCancel(false) // Wird manuell entfernt
@@ -336,14 +335,13 @@ class ReminderNotificationManager @Inject constructor(
     fun showDailyConfirmationNotification(date: LocalDate) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(ReminderNotificationIds.DAILY_REMINDER - 1, groupSummary)
+            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_daily_confirmation_title))
             .setContentText(context.getString(R.string.notification_daily_confirmation_text))
-            .setContentIntent(createOpenAppPendingIntent(date))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .setAutoCancel(false)

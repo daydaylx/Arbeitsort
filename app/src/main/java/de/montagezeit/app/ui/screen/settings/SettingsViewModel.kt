@@ -160,7 +160,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF f�r den aktuellen Monat
+     * Exportiert PDF für den aktuellen Monat
      */
     fun exportPdfCurrentMonth() {
         viewModelScope.launch {
@@ -182,7 +182,7 @@ class SettingsViewModel @Inject constructor(
                 val startDate = now.withDayOfMonth(1)
                 val endDate = now.withDayOfMonth(now.lengthOfMonth())
                 
-                // Eintr�ge laden
+                // Einträge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
@@ -222,7 +222,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF f�r die letzten 30 Tage
+     * Exportiert PDF für die letzten 30 Tage
      */
     fun exportPdfLast30Days() {
         viewModelScope.launch {
@@ -243,7 +243,7 @@ class SettingsViewModel @Inject constructor(
                 val endDate = LocalDate.now()
                 val startDate = endDate.minusDays(29)
                 
-                // Eintr�ge laden
+                // Einträge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {
@@ -283,7 +283,7 @@ class SettingsViewModel @Inject constructor(
     }
     
     /**
-     * Exportiert PDF f�r einen benutzerdefinierten Zeitraum
+     * Exportiert PDF für einen benutzerdefinierten Zeitraum
      */
     fun exportPdfCustomRange(startDate: LocalDate, endDate: LocalDate) {
         viewModelScope.launch {
@@ -300,7 +300,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                // Eintr�ge laden
+                // Einträge laden
                 val entries = workEntryDao.getByDateRange(startDate, endDate)
                 
                 if (entries.isEmpty()) {

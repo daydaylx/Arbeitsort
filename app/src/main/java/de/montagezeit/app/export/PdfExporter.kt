@@ -3,6 +3,7 @@ package de.montagezeit.app.export
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -11,6 +12,7 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -184,7 +186,7 @@ class PdfExporter @Inject constructor(
                 pdfDocument.close()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("PdfExporter", "PDF export failed", e)
             null
         }
     }
@@ -576,7 +578,7 @@ class PdfExporter @Inject constructor(
                 file
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("PdfExporter", "PDF export failed", e)
             null
         }
     }

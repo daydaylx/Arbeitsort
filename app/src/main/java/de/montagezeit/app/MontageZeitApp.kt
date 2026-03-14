@@ -24,7 +24,7 @@ class MontageZeitApp : Application(), Configuration.Provider {
     @Inject
     lateinit var reminderScheduler: ReminderScheduler
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
         get() = if (::workerFactory.isInitialized) {
@@ -32,13 +32,12 @@ class MontageZeitApp : Application(), Configuration.Provider {
                 .setWorkerFactory(workerFactory)
                 .build()
         } else {
-            // Fallback for early access during injection
             Configuration.Builder().build()
         }
 
     override fun onCreate() {
         super.onCreate()
-        applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch {
             appDatabase.openHelper.writableDatabase
             reminderScheduler.scheduleAll()
         }

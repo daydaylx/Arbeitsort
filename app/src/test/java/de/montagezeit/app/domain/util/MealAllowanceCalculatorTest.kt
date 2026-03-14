@@ -103,4 +103,19 @@ class MealAllowanceCalculatorTest {
     fun `formatEuro formats 820 as 8 comma 20 euro`() {
         assertEquals("8,20 €", MealAllowanceCalculator.formatEuro(820))
     }
+
+    @Test
+    fun `formatEuro formats 1 cent correctly`() {
+        assertEquals("0,01 €", MealAllowanceCalculator.formatEuro(1))
+    }
+
+    @Test
+    fun `formatEuro formats large value correctly`() {
+        assertEquals("128,50 €", MealAllowanceCalculator.formatEuro(12850))
+    }
+
+    @Test
+    fun `formatEuro formats negative value with minus prefix`() {
+        assertEquals("-5,80 €", MealAllowanceCalculator.formatEuro(-580))
+    }
 }

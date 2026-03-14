@@ -71,7 +71,8 @@ data class MonthStats(
     val totalHours: Double,
     val totalPaidHours: Double,
     val workDaysCount: Int,
-    val targetHours: Double
+    val targetHours: Double,
+    val mealAllowanceTotalCents: Int = 0
 ) {
     val progress: Float
         get() = (totalHours / targetHours).coerceIn(0.0, 1.0).toFloat()
@@ -347,12 +348,14 @@ class TodayViewModel @Inject constructor(
         val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val workDaysCount = workEntries.size
+        val mealAllowanceTotalCents = workEntries.sumOf { it.mealAllowanceAmountCents }
 
         return MonthStats(
             totalHours = totalHours,
             totalPaidHours = totalPaidHours,
             workDaysCount = workDaysCount,
-            targetHours = targetHours
+            targetHours = targetHours,
+            mealAllowanceTotalCents = mealAllowanceTotalCents
         )
     }
 
@@ -389,8 +392,8 @@ class TodayViewModel @Inject constructor(
                 val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dailyCheckInLocationInput.value = prefill
-                _dailyCheckInIsArrivalDeparture.value = false
-                _dailyCheckInBreakfastIncluded.value = false
+                _dailyCheckInIsArrivalDeparture.value = existingEntry?.mealIsArrivalDeparture ?: false
+                _dailyCheckInBreakfastIncluded.value = existingEntry?.mealBreakfastIncluded ?: false
                 _showDailyCheckInDialog.value = true
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)

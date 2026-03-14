@@ -365,6 +365,7 @@ private fun TodayContentV2(
             StatisticsDashboardV2(
                 weekStats = weekStats,
                 monthStats = monthStats,
+                monthMealAllowanceCents = monthStats?.mealAllowanceTotalCents,
                 onOpenWeekView = onOpenWeekView
             )
         }
@@ -618,6 +619,7 @@ private fun WorkHoursCardV2(entry: WorkEntry) {
 private fun StatisticsDashboardV2(
     weekStats: WeekStats?,
     monthStats: MonthStats?,
+    monthMealAllowanceCents: Int?,
     onOpenWeekView: () -> Unit
 ) {
     when {
@@ -630,6 +632,7 @@ private fun StatisticsDashboardV2(
                 progress = weekStats.progress,
                 isOverTarget = weekStats.isOverTarget,
                 isUnderTarget = weekStats.isUnderTarget,
+                mealAllowanceCents = monthMealAllowanceCents,
                 onOpenWeekView = onOpenWeekView
             )
         }
@@ -642,6 +645,7 @@ private fun StatisticsDashboardV2(
                 progress = monthStats.progress,
                 isOverTarget = monthStats.isOverTarget,
                 isUnderTarget = monthStats.isUnderTarget,
+                mealAllowanceCents = monthMealAllowanceCents,
                 onOpenWeekView = onOpenWeekView
             )
         }
@@ -657,6 +661,7 @@ private fun StatisticsDashboardCardV2(
     progress: Float,
     isOverTarget: Boolean,
     isUnderTarget: Boolean,
+    mealAllowanceCents: Int? = null,
     onOpenWeekView: () -> Unit
 ) {
     val status = when {
@@ -716,6 +721,25 @@ private fun StatisticsDashboardCardV2(
                 },
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
+
+            if (mealAllowanceCents != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.meal_allowance_month_label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = MealAllowanceCalculator.formatEuro(mealAllowanceCents),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

@@ -187,4 +187,33 @@ class RecordDailyManualCheckInTest {
         assertEquals(true, result.mealBreakfastIncluded)
         assertEquals(2220, result.mealAllowanceAmountCents)
     }
+
+    @Test
+    fun `invoke preserves existing work schedule for existing WORK entry`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Alt",
+            workStart = LocalTime.of(6, 15),
+            workEnd = LocalTime.of(14, 45),
+            breakMinutes = 30
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existing
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Neu",
+                isArrivalDeparture = false,
+                breakfastIncluded = false
+            )
+        )
+
+        assertEquals(LocalTime.of(6, 15), result.workStart)
+        assertEquals(LocalTime.of(14, 45), result.workEnd)
+        assertEquals(30, result.breakMinutes)
+        assertEquals("Neu", result.dayLocationLabel)
+    }
 }

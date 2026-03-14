@@ -48,11 +48,12 @@ class RecordDailyManualCheckIn(
         val updatedEntry = if (existingEntry != null) {
             val morningAlreadyCaptured = existingEntry.morningCapturedAt != null
             val eveningAlreadyCaptured = existingEntry.eveningCapturedAt != null
+            val keepExistingWorkSchedule = existingEntry.dayType == DayType.WORK
             existingEntry.copy(
                 dayType = DayType.WORK,
-                workStart = settings.workStart,
-                workEnd = settings.workEnd,
-                breakMinutes = settings.breakMinutes,
+                workStart = if (keepExistingWorkSchedule) existingEntry.workStart else settings.workStart,
+                workEnd = if (keepExistingWorkSchedule) existingEntry.workEnd else settings.workEnd,
+                breakMinutes = if (keepExistingWorkSchedule) existingEntry.breakMinutes else settings.breakMinutes,
                 dayLocationLabel = resolvedLabel,
                 dayLocationSource = DayLocationSource.MANUAL,
                 dayLocationLat = null,

@@ -33,28 +33,27 @@ class ConfirmWorkDay(
 
         val dayLocation = DayLocationResolver.resolve(existingEntry)
 
-        val updatedEntry = existingEntry?.copy(
-            dayType = DayType.WORK,
-            // Zeiten nur bei der ersten Bestätigung aus Settings setzen.
-            // Bereits bestätigte Einträge behalten ihre manuell gesetzten Zeiten.
-            workStart = if (!existingEntry.confirmedWorkDay) workStart else existingEntry.workStart,
-            workEnd = if (!existingEntry.confirmedWorkDay) workEnd else existingEntry.workEnd,
-            breakMinutes = if (!existingEntry.confirmedWorkDay) breakMinutes else existingEntry.breakMinutes,
-            morningCapturedAt = existingEntry.morningCapturedAt ?: now,
-            morningLocationStatus = existingEntry.morningLocationStatus.let {
-                if (it == LocationStatus.UNAVAILABLE) LocationStatus.UNAVAILABLE else it
-            },
-            dayLocationLabel = dayLocation.label,
-            dayLocationSource = dayLocation.source,
-            dayLocationLat = null,
-            dayLocationLon = null,
-            dayLocationAccuracyMeters = null,
-            confirmedWorkDay = true,
-            confirmationAt = now,
-            confirmationSource = source,
-            needsReview = false,
-            updatedAt = now
-        ) ?: WorkEntry(
+        val updatedEntry = existingEntry?.let { entry ->
+            val keepExistingWorkSchedule = entry.dayType == DayType.WORK
+            entry.copy(
+                dayType = DayType.WORK,
+                workStart = if (keepExistingWorkSchedule) entry.workStart else workStart,
+                workEnd = if (keepExistingWorkSchedule) entry.workEnd else workEnd,
+                breakMinutes = if (keepExistingWorkSchedule) entry.breakMinutes else breakMinutes,
+                morningCapturedAt = entry.morningCapturedAt ?: now,
+                morningLocationStatus = entry.morningLocationStatus,
+                dayLocationLabel = dayLocation.label,
+                dayLocationSource = dayLocation.source,
+                dayLocationLat = null,
+                dayLocationLon = null,
+                dayLocationAccuracyMeters = null,
+                confirmedWorkDay = true,
+                confirmationAt = now,
+                confirmationSource = source,
+                needsReview = false,
+                updatedAt = now
+            )
+        } ?: WorkEntry(
             date = date,
             dayType = DayType.WORK,
             workStart = workStart,

@@ -51,6 +51,7 @@ class ReminderFlagsStore @Inject constructor(
     // -------------------------------------------------------------------------
     // Einmalige Migration SharedPreferences → DataStore
     // -------------------------------------------------------------------------
+    @Volatile
     private var migrationChecked = false
 
     private suspend fun ensureMigrated() {

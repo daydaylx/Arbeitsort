@@ -86,6 +86,9 @@ class ConfirmWorkDayTest {
         assertEquals(DayType.WORK, result.dayType)
         assertEquals("Berlin", result.dayLocationLabel)
         assertEquals(DayLocationSource.MANUAL, result.dayLocationSource)
+        assertEquals(LocalTime.of(8, 0), result.workStart)
+        assertEquals(LocalTime.of(19, 0), result.workEnd)
+        assertEquals(60, result.breakMinutes)
         assertNull(result.dayLocationLat)
         assertNull(result.dayLocationLon)
         assertEquals(LocationStatus.OK, result.morningLocationStatus)
@@ -149,9 +152,8 @@ class ConfirmWorkDayTest {
     }
 
     @Test
-    fun `unbestaetigter Eintrag bekommt Settings-Defaults`() = runTest {
+    fun `unbestaetigter WORK Eintrag behaelt bestehende Zeiten`() = runTest {
         val date = LocalDate.now()
-        // Eintrag der noch nicht bestätigt wurde → Settings-Defaults sollen angewendet werden
         val existing = WorkEntry(
             date = date,
             dayType = DayType.WORK,
@@ -173,10 +175,9 @@ class ConfirmWorkDayTest {
 
         val result = useCase(date, source = "NOTIFICATION")
 
-        // Bei erster Bestätigung sollen die Settings-Defaults angewendet werden
-        assertEquals(LocalTime.of(8, 0), result.workStart)
-        assertEquals(LocalTime.of(17, 0), result.workEnd)
-        assertEquals(60, result.breakMinutes)
+        assertEquals(LocalTime.of(6, 0), result.workStart)
+        assertEquals(LocalTime.of(14, 0), result.workEnd)
+        assertEquals(30, result.breakMinutes)
         assertEquals(true, result.confirmedWorkDay)
     }
 }
