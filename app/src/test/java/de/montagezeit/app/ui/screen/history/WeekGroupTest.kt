@@ -18,14 +18,16 @@ class WeekGroupTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),  // 9 hours
                 breakMinutes = 60,  // -1 hour
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(18, 0),  // 10 hours
                 breakMinutes = 60,  // -1 hour
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             )
         )
 
@@ -43,14 +45,16 @@ class WeekGroupTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),
                 breakMinutes = 60,
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),
                 breakMinutes = 60,
-                dayType = DayType.OFF  // Should not be counted
+                dayType = DayType.OFF,
+                confirmedWorkDay = true
             )
         )
 
@@ -68,14 +72,16 @@ class WeekGroupTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),
                 breakMinutes = 60,
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(19, 0),  // 11 hours
                 breakMinutes = 60,
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             )
         )
 
@@ -93,7 +99,8 @@ class WeekGroupTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(17, 0),
                 breakMinutes = 60,
-                dayType = DayType.OFF
+                dayType = DayType.OFF,
+                confirmedWorkDay = true
             )
         )
 
@@ -103,21 +110,24 @@ class WeekGroupTest {
     }
 
     @Test
-    fun `workDaysCount should count only WORK days`() {
+    fun `workDaysCount should count only confirmed WORK days`() {
         val entries = listOf(
             WorkEntry(
                 date = LocalDate.of(2026, 1, 5),
                 dayType = DayType.WORK,
+                confirmedWorkDay = true,
                 needsReview = false
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 dayType = DayType.WORK,
+                confirmedWorkDay = true,
                 needsReview = false
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 7),
                 dayType = DayType.OFF,
+                confirmedWorkDay = true,
                 needsReview = false
             )
         )
@@ -128,21 +138,24 @@ class WeekGroupTest {
     }
 
     @Test
-    fun `offDaysCount should count only OFF days`() {
+    fun `offDaysCount should count only confirmed OFF days`() {
         val entries = listOf(
             WorkEntry(
                 date = LocalDate.of(2026, 1, 5),
                 dayType = DayType.WORK,
+                confirmedWorkDay = true,
                 needsReview = false
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 dayType = DayType.OFF,
+                confirmedWorkDay = true,
                 needsReview = false
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 7),
                 dayType = DayType.OFF,
+                confirmedWorkDay = true,
                 needsReview = false
             )
         )
@@ -153,27 +166,31 @@ class WeekGroupTest {
     }
 
     @Test
-    fun `entriesNeedingReview should count entries with needsReview flag`() {
+    fun `entriesNeedingReview should count entries with needsReview flag including unconfirmed`() {
         val entries = listOf(
             WorkEntry(
                 date = LocalDate.of(2026, 1, 5),
                 dayType = DayType.WORK,
+                confirmedWorkDay = false,  // unbestätigt
                 needsReview = true
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 6),
                 dayType = DayType.WORK,
+                confirmedWorkDay = true,
                 needsReview = false
             ),
             WorkEntry(
                 date = LocalDate.of(2026, 1, 7),
                 dayType = DayType.WORK,
+                confirmedWorkDay = true,
                 needsReview = true
             )
         )
 
         val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
 
+        // Beide Einträge mit needsReview=true zählen, auch unbestätigte
         assertEquals(2, weekGroup.entriesNeedingReview)
     }
 
@@ -208,7 +225,8 @@ class WeekGroupTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(12, 30),  // 4.5 hours
                 breakMinutes = 30,  // -0.5 hour
-                dayType = DayType.WORK
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
             )
         )
 
@@ -218,14 +236,83 @@ class WeekGroupTest {
         assertEquals(4.0, weekGroup.totalHours, 0.1)
     }
 
+    // --- Neue Tests: confirmedWorkDay-Filter ---
+
+    @Test
+    fun `unbestaetigter WORK-Tag zaehlt nicht in workDaysCount`() {
+        val entries = listOf(
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 5),
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
+            ),
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 6),
+                dayType = DayType.WORK,
+                confirmedWorkDay = false  // unbestätigt → soll nicht zählen
+            )
+        )
+
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
+
+        assertEquals("Nur bestätigte WORK-Tage dürfen zählen", 1, weekGroup.workDaysCount)
+    }
+
+    @Test
+    fun `unbestaetigter WORK-Tag zaehlt nicht in totalHours`() {
+        val entries = listOf(
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 5),
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
+                dayType = DayType.WORK,
+                confirmedWorkDay = true  // 8h
+            ),
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 6),
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
+                dayType = DayType.WORK,
+                confirmedWorkDay = false  // unbestätigt → 0h
+            )
+        )
+
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
+
+        assertEquals("Unbestätigte Stunden dürfen nicht summiert werden", 8.0, weekGroup.totalHours, 0.1)
+    }
+
+    @Test
+    fun `unbestaetigter OFF-Tag zaehlt nicht in offDaysCount`() {
+        val entries = listOf(
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 5),
+                dayType = DayType.OFF,
+                confirmedWorkDay = true
+            ),
+            WorkEntry(
+                date = LocalDate.of(2026, 1, 6),
+                dayType = DayType.OFF,
+                confirmedWorkDay = false  // unbestätigt → nicht zählen
+            )
+        )
+
+        val weekGroup = createWeekGroup(year = 2026, week = 1, entries = entries)
+
+        assertEquals("Nur bestätigte OFF-Tage dürfen zählen", 1, weekGroup.offDaysCount)
+    }
+
     private fun createWeekGroup(year: Int, week: Int, entries: List<WorkEntry>): WeekGroup {
-        val workEntries = entries.filter { it.dayType == DayType.WORK }
-        val workDaysCount = workEntries.size
-        val offDaysCount = entries.count { it.dayType == DayType.OFF }
-        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
-        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+        // Nur bestätigte Einträge für Stunden und Tagzähler – konsistent mit CalculateOvertimeForRange
+        val confirmedEntries = entries.filter { it.confirmedWorkDay }
+        val workDaysCount = confirmedEntries.count { it.dayType == DayType.WORK }
+        val offDaysCount = confirmedEntries.count { it.dayType == DayType.OFF }
+        val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
+        val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val averageHoursPerDay = if (workDaysCount == 0) 0.0 else totalHours / workDaysCount
-        val entriesNeedingReview = entries.count { it.needsReview }
+        val entriesNeedingReview = entries.count { it.needsReview }  // alle, auch unbestätigte
 
         return WeekGroup(
             year = year,

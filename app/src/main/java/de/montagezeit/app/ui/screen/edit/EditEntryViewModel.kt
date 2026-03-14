@@ -496,8 +496,9 @@ data class EditFormData(
      * Returns empty list if validation passes.
      */
     fun validate(): List<ValidationError> {
-        // COMP_TIME days have no work times or location requirement.
-        if (dayType == DayType.COMP_TIME) return emptyList()
+        // OFF- und COMP_TIME-Tage haben fachlich keine relevanten Arbeitszeiten (TimeCalculator gibt 0).
+        // Eine Zeitvalidierung wäre irreführend und würde legitime Einträge blockieren.
+        if (dayType == DayType.COMP_TIME || dayType == DayType.OFF) return emptyList()
 
         val errors = mutableListOf<ValidationError>()
 

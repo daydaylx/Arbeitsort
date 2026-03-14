@@ -353,20 +353,26 @@ class PdfExporter @Inject constructor(
             activeCanvas.drawText(PdfUtilities.formatDate(entry.date), xPos, y + 15, paintTableText)
             xPos += COL_DATE
             
-            // Start
-            activeCanvas.drawText(PdfUtilities.formatTime(entry.workStart), xPos, y + 15, paintTableText)
-            xPos += COL_START
-            
-            // Ende
-            activeCanvas.drawText(PdfUtilities.formatTime(entry.workEnd), xPos, y + 15, paintTableText)
-            xPos += COL_END
-            
-            // Pause
+            // Start – nur für WORK-Tage fachlich relevant
+            val isWorkDay = entry.dayType == DayType.WORK
+            val dash = string(R.string.pdf_export_placeholder_dash)
             activeCanvas.drawText(
-                string(R.string.format_minutes, entry.breakMinutes),
-                xPos,
-                y + 15,
-                paintTableText
+                if (isWorkDay) PdfUtilities.formatTime(entry.workStart) else dash,
+                xPos, y + 15, paintTableText
+            )
+            xPos += COL_START
+
+            // Ende – nur für WORK-Tage
+            activeCanvas.drawText(
+                if (isWorkDay) PdfUtilities.formatTime(entry.workEnd) else dash,
+                xPos, y + 15, paintTableText
+            )
+            xPos += COL_END
+
+            // Pause – nur für WORK-Tage
+            activeCanvas.drawText(
+                if (isWorkDay) string(R.string.format_minutes, entry.breakMinutes) else dash,
+                xPos, y + 15, paintTableText
             )
             xPos += COL_BREAK
             
