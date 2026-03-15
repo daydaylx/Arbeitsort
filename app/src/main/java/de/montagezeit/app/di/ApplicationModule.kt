@@ -17,6 +17,8 @@ import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.SetTravelEvent
 import de.montagezeit.app.domain.usecase.UpdateEntry
+import de.montagezeit.app.domain.util.NonWorkingDayChecker
+import de.montagezeit.app.work.DefaultNonWorkingDayChecker
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -63,9 +65,15 @@ object ApplicationModule {
     @Provides
     fun provideSetDayLocation(
         workEntryDao: WorkEntryDao,
-        reminderSettingsManager: ReminderSettingsManager
+        reminderSettingsManager: ReminderSettingsManager,
+        nonWorkingDayChecker: NonWorkingDayChecker
     ): SetDayLocation {
-        return SetDayLocation(workEntryDao, reminderSettingsManager)
+        return SetDayLocation(workEntryDao, reminderSettingsManager, nonWorkingDayChecker)
+    }
+
+    @Provides
+    fun provideNonWorkingDayChecker(impl: DefaultNonWorkingDayChecker): NonWorkingDayChecker {
+        return impl
     }
 
     @Provides

@@ -58,13 +58,16 @@ android {
 
     lint {
         // Core Library Desugaring ermöglicht java.time.* auf API 24+
-        // Lint erkennt Desugaring nicht automatisch, daher deaktivieren wir NewApi
-        // für APIs, die via Desugaring verfügbar sind
+        // Lint erkennt Desugaring nicht automatisch und meldet false positives für
+        // java.time-APIs. Desugaring ist in compileOptions aktiviert und desugar_jdk_libs
+        // ist als Dependency eingebunden, daher ist NewApi hier sicher zu deaktivieren.
         disable += "NewApi"
-        // Warnings als Errors behandeln für kritische Checks
         warningsAsErrors = false
-        // Abort bei Errors (wird durch disable += "NewApi" verhindert)
         abortOnError = true
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 }
 

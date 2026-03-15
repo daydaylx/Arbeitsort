@@ -14,13 +14,20 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -87,13 +94,17 @@ fun TodayScreenV2(
     val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
     val isUpdateDayLocationLoading = loadingActions.contains(TodayAction.UPDATE_DAY_LOCATION)
 
-    val onOpenDailyCheckInDialogAction = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.openDailyCheckInDialog()
+    val onOpenDailyCheckInDialogAction = remember {
+        {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            viewModel.openDailyCheckInDialog()
+        }
     }
-    val onConfirmOffDayAction = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.onConfirmOffDay()
+    val onConfirmOffDayAction = remember {
+        {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            viewModel.onConfirmOffDay()
+        }
     }
 
     LaunchedEffect(snackbarMessage) {
@@ -744,6 +755,7 @@ private fun StatisticsDashboardCardV2(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun DailyManualCheckInDialogV2(
     input: String,
@@ -762,12 +774,15 @@ private fun DailyManualCheckInDialogV2(
         title = { Text(stringResource(R.string.daily_check_in_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val keyboardController = LocalSoftwareKeyboardController.current
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
                     label = { Text(stringResource(R.string.daily_check_in_dialog_label)) },
                     placeholder = { Text(stringResource(R.string.daily_check_in_dialog_placeholder)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
@@ -779,6 +794,7 @@ private fun DailyManualCheckInDialogV2(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .semantics { role = Role.Checkbox }
                         .clickable { onArrivalDepartureChanged(!isArrivalDeparture) }
                 ) {
                     Checkbox(
@@ -795,6 +811,7 @@ private fun DailyManualCheckInDialogV2(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .semantics { role = Role.Checkbox }
                         .clickable { onBreakfastIncludedChanged(!breakfastIncluded) }
                 ) {
                     Checkbox(
@@ -833,6 +850,7 @@ private fun DailyManualCheckInDialogV2(
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun DayLocationDialogV2(
     input: String,
@@ -846,12 +864,15 @@ private fun DayLocationDialogV2(
         title = { Text(stringResource(R.string.day_location_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val keyboardController = LocalSoftwareKeyboardController.current
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
                     label = { Text(stringResource(R.string.day_location_dialog_label)) },
                     placeholder = { Text(stringResource(R.string.day_location_dialog_placeholder)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(

@@ -105,8 +105,12 @@ class RingBufferLogger @Inject constructor(
                 logFile.writeText("")
             }
         } catch (e: Exception) {
-            // Bei Fehler einfach komplett löschen
-            logFile.delete()
+            // Bei Rotationsfehler: Datei truncaten statt löschen, um Datenerhalt zu maximieren
+            try {
+                logFile.writeText("[rotation error, log truncated]\n")
+            } catch (_: Exception) {
+                logFile.delete()
+            }
         }
     }
     

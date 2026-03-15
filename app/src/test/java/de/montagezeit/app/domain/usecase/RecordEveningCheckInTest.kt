@@ -20,7 +20,7 @@ import java.time.LocalDate
 
 class RecordEveningCheckInTest {
 
-    private val workEntryDao = mockk<WorkEntryDao>()
+    private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val useCase = RecordEveningCheckIn(workEntryDao)
 
     @Test

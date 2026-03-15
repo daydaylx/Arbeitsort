@@ -34,29 +34,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.math.abs
 
 /**
  * ForegroundService für Check-In Actions aus Notifications
- * 
+ *
  * Verwendet ForegroundService statt BroadcastReceiver, weil:
  * - Location-Requests mit Timeout (15s+) länger dauern können als BroadcastReceiver lebt
  * - ForegroundService hat höhere Priorität und wird vom System nicht abgebrochen
  */
 @AndroidEntryPoint
 class CheckInActionService : Service() {
-    
+
     @Inject
     lateinit var recordMorningCheckIn: RecordMorningCheckIn
-    
+
     @Inject
     lateinit var recordEveningCheckIn: RecordEveningCheckIn
 
     @Inject
     lateinit var setDayType: SetDayType
-    
+
     @Inject
     lateinit var notificationManager: ReminderNotificationManager
 
@@ -70,69 +74,88 @@ class CheckInActionService : Service() {
     lateinit var reminderFlagsStore: ReminderFlagsStore
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
+    private val operationMutex = Mutex()
+
     companion object {
         private const val NOTIFICATION_ID = 3000
         private const val CHANNEL_ID = "check_in_action_service"
         private const val CONFIRMATION_REMINDER_PREFS = "confirmation_reminder_count"
         private const val CONFIRMATION_REMINDER_MAX = 2
         private const val CONFIRMATION_REMIND_LATER_MINUTES = 60
+
+        /**
+         * Parst ein Datums-String mit Fehlerbehandlung.
+         * Bei Parse-Fehler oder wenn das Datum >1 Tag von [now] abweicht, wird [now] verwendet.
+         */
+        internal fun parseDateFromExtra(
+            dateStr: String?,
+            now: LocalDate = LocalDate.now()
+        ): LocalDate {
+            if (dateStr == null) return now
+            return try {
+                val parsed = LocalDate.parse(dateStr)
+                if (abs(ChronoUnit.DAYS.between(parsed, now)) > 1) now else parsed
+            } catch (_: Exception) {
+                now
+            }
+        }
     }
-    
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
     }
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ReminderActions.ACTION_MORNING_CHECK_IN_WITH_LOCATION -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
 
                 serviceScope.launch {
-                    try {
-                        recordMorningCheckIn(date)
-                        showToast(R.string.toast_check_in_success)
-                        notificationManager.cancelMorningReminder()
-                    } catch (e: IllegalStateException) {
-                        notificationManager.cancelMorningReminder()
-                        showToast(R.string.toast_check_in_error)
-                    } catch (e: Exception) {
-                        showToast(R.string.toast_check_in_error)
-                    } finally {
-                        stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            recordMorningCheckIn(date)
+                            showToast(R.string.toast_check_in_success)
+                            notificationManager.cancelMorningReminder()
+                        } catch (e: IllegalStateException) {
+                            notificationManager.cancelMorningReminder()
+                            showToast(R.string.toast_check_in_error)
+                        } catch (e: Exception) {
+                            showToast(R.string.toast_check_in_error)
+                        } finally {
+                            stopSelf()
+                        }
                     }
                 }
             }
 
             ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))
 
                 serviceScope.launch {
-                    try {
-                        recordEveningCheckIn(date)
-                        showToast(R.string.toast_check_in_success)
-                        notificationManager.cancelEveningReminder()
-                    } catch (e: IllegalStateException) {
-                        notificationManager.cancelEveningReminder()
-                        showToast(R.string.toast_check_in_error)
-                    } catch (e: Exception) {
-                        showToast(R.string.toast_check_in_error)
-                    } finally {
-                        stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            recordEveningCheckIn(date)
+                            showToast(R.string.toast_check_in_success)
+                            notificationManager.cancelEveningReminder()
+                        } catch (e: IllegalStateException) {
+                            notificationManager.cancelEveningReminder()
+                            showToast(R.string.toast_check_in_error)
+                        } catch (e: Exception) {
+                            showToast(R.string.toast_check_in_error)
+                        } finally {
+                            stopSelf()
+                        }
                     }
                 }
             }
-            
+
             ReminderActions.ACTION_EDIT_ENTRY -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
                 val editIntent = Intent(this, MainActivity::class.java).apply {
                     action = ReminderActions.ACTION_EDIT_ENTRY
                     putExtra(ReminderActions.EXTRA_DATE, date.toString())
@@ -147,15 +170,14 @@ class CheckInActionService : Service() {
                 notificationManager.cancelFallbackReminder()
                 stopSelf()
             }
-            
+
             ReminderActions.ACTION_REMIND_LATER -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
                 val minutesLater = intent.getIntExtra(ReminderActions.EXTRA_MINUTES_LATER, -1)
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
                 val delayMinutes = if (minutesLater > 0) minutesLater.toLong() else hoursLater * 60L
                 val reminderTypeRaw = intent.getStringExtra(ReminderActions.EXTRA_REMINDER_TYPE)
-                
+
                 // Entferne nur den spezifischen Reminder-Typ der gesnoozed wird
                 when (reminderTypeRaw) {
                     ReminderType.MORNING.name -> notificationManager.cancelMorningReminder()
@@ -169,67 +191,68 @@ class CheckInActionService : Service() {
                         notificationManager.cancelDailyReminder()
                     }
                 }
-                
-                // Plane neue Notification für später.
-                // WICHTIG: stopSelf() muss INNERHALB des Coroutine-Blocks stehen,
-                // da der serviceScope bei onDestroy() gecancelt wird. Würde stopSelf()
-                // außerhalb stehen, könnte der Job abgebrochen werden, bevor
-                // WorkManager den Reminder einreihen konnte.
+
                 serviceScope.launch {
-                    scheduleReminderLater(
-                        date = date,
-                        delayMinutes = delayMinutes,
-                        reminderType = reminderTypeRaw
-                    )
-                    stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            scheduleReminderLater(
+                                date = date,
+                                delayMinutes = delayMinutes,
+                                reminderType = reminderTypeRaw
+                            )
+                        } finally {
+                            stopSelf()
+                        }
+                    }
                 }
             }
 
             ReminderActions.ACTION_CONFIRM_WORK_DAY -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
 
                 serviceScope.launch {
-                    try {
-                        confirmWorkDay(date, source = source)
-                        showToast(R.string.toast_work_day_confirmed)
-                        confirmationLimiter().reset(date)
-                        notificationManager.cancelDailyReminder()
-                    } catch (e: Exception) {
-                        showToast(R.string.toast_confirm_day_failed)
-                    } finally {
-                        stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            confirmWorkDay(date, source = source)
+                            showToast(R.string.toast_work_day_confirmed)
+                            confirmationLimiter().reset(date)
+                            notificationManager.cancelDailyReminder()
+                        } catch (e: Exception) {
+                            showToast(R.string.toast_confirm_day_failed)
+                        } finally {
+                            stopSelf()
+                        }
                     }
                 }
             }
 
             ReminderActions.ACTION_CONFIRM_OFF_DAY -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
 
                 serviceScope.launch {
-                    try {
-                        confirmOffDay(date, source = source)
-                        showToast(R.string.toast_off_day_confirmed)
-                        confirmationLimiter().reset(date)
-                        notificationManager.cancelDailyReminder()
-                    } catch (e: Exception) {
-                        showToast(R.string.toast_confirm_day_failed)
-                    } finally {
-                        stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            confirmOffDay(date, source = source)
+                            showToast(R.string.toast_off_day_confirmed)
+                            confirmationLimiter().reset(date)
+                            notificationManager.cancelDailyReminder()
+                        } catch (e: Exception) {
+                            showToast(R.string.toast_confirm_day_failed)
+                        } finally {
+                            stopSelf()
+                        }
                     }
                 }
             }
 
             ReminderActions.ACTION_REMIND_LATER_CONFIRMATION -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
                 val limiter = confirmationLimiter()
 
                 // Prüfe Reminder Counter (max 2x pro Tag)
@@ -248,46 +271,56 @@ class CheckInActionService : Service() {
 
                 // Plane neue Notification in +60 Minuten
                 serviceScope.launch {
-                    scheduleConfirmationReminderLater(date, CONFIRMATION_REMIND_LATER_MINUTES)
-                    showToast(R.string.toast_reminder_set_later)
-                    stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            scheduleConfirmationReminderLater(date, CONFIRMATION_REMIND_LATER_MINUTES)
+                            showToast(R.string.toast_reminder_set_later)
+                        } finally {
+                            stopSelf()
+                        }
+                    }
                 }
             }
 
             ReminderActions.ACTION_MARK_DAY_OFF -> {
-                val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
-                val date = dateStr?.let { LocalDate.parse(it) } ?: LocalDate.now()
+                val date = parseDate(intent)
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_mark_day_off)))
 
                 serviceScope.launch {
-                    try {
-                        setDayType(date, DayType.OFF)
-                        showToast(R.string.toast_day_marked_off)
-                        markReminderFlags(date)
-                        notificationManager.cancelMorningReminder()
-                        notificationManager.cancelEveningReminder()
-                        notificationManager.cancelFallbackReminder()
-                        notificationManager.cancelDailyReminder()
-                    } catch (e: Exception) {
-                        showToast(R.string.toast_mark_day_off_failed)
-                    } finally {
-                        stopSelf()
+                    operationMutex.withLock {
+                        try {
+                            setDayType(date, DayType.OFF)
+                            showToast(R.string.toast_day_marked_off)
+                            markReminderFlags(date)
+                            notificationManager.cancelMorningReminder()
+                            notificationManager.cancelEveningReminder()
+                            notificationManager.cancelFallbackReminder()
+                            notificationManager.cancelDailyReminder()
+                        } catch (e: Exception) {
+                            showToast(R.string.toast_mark_day_off_failed)
+                        } finally {
+                            stopSelf()
+                        }
                     }
                 }
             }
         }
-        
+
         return START_NOT_STICKY
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
     }
-    
+
+    private fun parseDate(intent: Intent): LocalDate {
+        return parseDateFromExtra(intent.getStringExtra(ReminderActions.EXTRA_DATE))
+    }
+
     /**
      * Erstellt den Notification Channel für den ForegroundService
      */
@@ -300,12 +333,12 @@ class CheckInActionService : Service() {
             ).apply {
                 description = getString(R.string.notification_channel_check_in_actions_description)
             }
-            
+
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
     }
-    
+
     /**
      * Erstellt eine Processing-Notification für den ForegroundService
      */
@@ -317,7 +350,7 @@ class CheckInActionService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
-    
+
     /**
      * Zeigt einen Toast an
      */
@@ -326,13 +359,13 @@ class CheckInActionService : Service() {
             Toast.makeText(this@CheckInActionService, message, Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun showToast(resId: Int) {
         serviceScope.launch(Dispatchers.Main) {
             Toast.makeText(this@CheckInActionService, resId, Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     /**
      * Plant eine Reminder-Notification für später
      */

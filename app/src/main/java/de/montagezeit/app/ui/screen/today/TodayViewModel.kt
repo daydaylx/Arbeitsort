@@ -16,10 +16,10 @@ import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
+import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.ui.util.UiText
-import de.montagezeit.app.work.ReminderWindowEvaluator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -100,7 +100,8 @@ class TodayViewModel @Inject constructor(
     private val confirmOffDay: ConfirmOffDay,
     private val setDayLocation: SetDayLocation,
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val deleteDayEntry: DeleteDayEntry
+    private val deleteDayEntry: DeleteDayEntry,
+    private val nonWorkingDayChecker: NonWorkingDayChecker
 ) : ViewModel() {
     private val calculateOvertimeForRange = CalculateOvertimeForRange()
 
@@ -110,8 +111,12 @@ class TodayViewModel @Inject constructor(
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+    // A03: Reactive today date that refreshes on access
+    private val _todayDate = MutableStateFlow(LocalDate.now())
+
     /** Always tracks today's entry reactively (for the action bar). */
-    val todayEntry: StateFlow<WorkEntry?> = workEntryDao.getByDateFlow(LocalDate.now())
+    val todayEntry: StateFlow<WorkEntry?> = _todayDate
+        .flatMapLatest { date -> workEntryDao.getByDateFlow(date) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -206,6 +211,9 @@ class TodayViewModel @Inject constructor(
     private val _deletedEntryForUndo = MutableStateFlow<WorkEntry?>(null)
     val deletedEntryForUndo: StateFlow<WorkEntry?> = _deletedEntryForUndo.asStateFlow()
 
+    // B10: Capture the date at dialog-open time so racing selectDate() calls don't affect it
+    private val _dailyCheckInDate = MutableStateFlow(LocalDate.now())
+
     init {
         loadTodayEntry()
         observeEntryUpdates()
@@ -225,6 +233,7 @@ class TodayViewModel @Inject constructor(
         }
     }
 
+    // A04: debounce to avoid rapid re-computation
     private fun observeEntryUpdates() {
         viewModelScope.launch {
             selectedEntry.collect {
@@ -237,7 +246,9 @@ class TodayViewModel @Inject constructor(
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
+                // A03: Refresh today's date on each statistics load
                 val now = LocalDate.now()
+                _todayDate.value = now
                 val weekFields = java.time.temporal.WeekFields.of(Locale.GERMAN)
                 val weekStart = now.with(weekFields.dayOfWeek(), 1)
                 val weekEnd = now.with(weekFields.dayOfWeek(), 7)
@@ -364,13 +375,23 @@ class TodayViewModel @Inject constructor(
         val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
         _selectedDate.value = date
 
+        // B08: Set Loading immediately to avoid stale UI
+        _uiState.value = TodayUiState.Loading
+
         // Update week overview highlights immediately
         _weekDaysUi.update { days ->
             days.map { it.copy(isSelected = it.date == date) }
         }
 
         // Skip reloading if already selected (optimization)
-        if (wasAlreadySelected) return
+        if (wasAlreadySelected) {
+            // Still need to restore the UI state from the flow
+            viewModelScope.launch {
+                val entry = selectedEntry.value ?: withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                _uiState.value = TodayUiState.Success(entry)
+            }
+            return
+        }
 
         if (!isDateInCurrentWeek) {
             loadWeekOverview()
@@ -387,6 +408,8 @@ class TodayViewModel @Inject constructor(
     }
 
     fun openDailyCheckInDialog() {
+        // B10: Capture selected date at dialog-open time
+        _dailyCheckInDate.value = _selectedDate.value
         viewModelScope.launch {
             try {
                 val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
@@ -438,6 +461,7 @@ class TodayViewModel @Inject constructor(
         _showDayLocationDialog.value = false
     }
 
+    // B10: Use _dailyCheckInDate instead of _selectedDate for submission
     fun submitDailyManualCheckIn(label: String = _dailyCheckInLocationInput.value) {
         if (label.trim().isBlank()) {
             _snackbarMessage.value = UiText.StringResource(R.string.error_day_location_required)
@@ -447,7 +471,7 @@ class TodayViewModel @Inject constructor(
             addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
             try {
                 val input = DailyManualCheckInInput(
-                    date = _selectedDate.value,
+                    date = _dailyCheckInDate.value,
                     dayLocationLabel = label,
                     isArrivalDeparture = _dailyCheckInIsArrivalDeparture.value,
                     breakfastIncluded = _dailyCheckInBreakfastIncluded.value
@@ -476,7 +500,7 @@ class TodayViewModel @Inject constructor(
                 val existing = workEntryDao.getByDate(date)
                 if (existing == null) {
                     val settings = reminderSettingsManager.settings.first()
-                    val isNonWorking = ReminderWindowEvaluator.isNonWorkingDay(date, settings)
+                    val isNonWorking = nonWorkingDayChecker.isNonWorkingDay(date, settings)
                     val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
                     val now = System.currentTimeMillis()
                     val defaultLocation = ""
@@ -561,6 +585,7 @@ class TodayViewModel @Inject constructor(
         }
     }
 
+    // B06: After undo, also navigate back to the restored date
     fun undoDeleteDay() {
         val entry = _deletedEntryForUndo.value ?: return
         _deletedEntryForUndo.value = null
@@ -568,6 +593,7 @@ class TodayViewModel @Inject constructor(
             try {
                 workEntryDao.upsert(entry)
                 _uiState.value = TodayUiState.Success(entry)
+                selectDate(entry.date)
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_delete_failed)
             }

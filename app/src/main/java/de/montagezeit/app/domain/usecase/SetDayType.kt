@@ -32,49 +32,57 @@ class SetDayType(
         date: LocalDate,
         dayType: DayType
     ): WorkEntry {
-        val existingEntry = workEntryDao.getByDate(date)
-        val now = System.currentTimeMillis()
+        var result: WorkEntry? = null
+        workEntryDao.readModifyWrite(date) { existingEntry ->
+            val now = System.currentTimeMillis()
 
-        val updatedEntry = if (existingEntry != null) {
-            val shouldClearMealAllowance = dayType != DayType.WORK || existingEntry.dayType != DayType.WORK
-            when (dayType) {
-                DayType.COMP_TIME -> existingEntry
-                    .withTravelCleared(now)
-                    .copy(
-                        dayType = dayType,
-                        confirmedWorkDay = true,
-                        confirmationAt = now,
-                        confirmationSource = DayType.COMP_TIME.name,
-                        updatedAt = now
-                    )
-                    .withMealAllowanceCleared()
-                else -> {
-                    // When changing away from COMP_TIME, clear the auto-confirmation so the
-                    // new day type is not counted as confirmed in overtime calculations.
-                    val wasCompTime = existingEntry.dayType == DayType.COMP_TIME
-                    val baseEntry = existingEntry.copy(
-                        dayType = dayType,
-                        confirmedWorkDay = if (wasCompTime) false else existingEntry.confirmedWorkDay,
-                        confirmationAt = if (wasCompTime) null else existingEntry.confirmationAt,
-                        confirmationSource = if (wasCompTime) null else existingEntry.confirmationSource,
-                        updatedAt = now
-                    )
-                    if (shouldClearMealAllowance) baseEntry.withMealAllowanceCleared() else baseEntry
+            val updatedEntry = if (existingEntry != null) {
+                // Meal allowance only stays when both old and new type are WORK.
+                // OFF→WORK: meal stays 0 (correct – meal is set at check-in, not here).
+                val isWorkToWork = dayType == DayType.WORK && existingEntry.dayType == DayType.WORK
+                val shouldClearMealAllowance = !isWorkToWork
+                when (dayType) {
+                    // COMP_TIME→WORK: travel is not restored because COMP_TIME deliberately
+                    // clears travel data (it represents a full day off the overtime account).
+                    DayType.COMP_TIME -> existingEntry
+                        .withTravelCleared(now)
+                        .copy(
+                            dayType = dayType,
+                            confirmedWorkDay = true,
+                            confirmationAt = now,
+                            confirmationSource = DayType.COMP_TIME.name,
+                            updatedAt = now
+                        )
+                        .withMealAllowanceCleared()
+                    else -> {
+                        // When changing away from COMP_TIME, clear the auto-confirmation so the
+                        // new day type is not counted as confirmed in overtime calculations.
+                        val wasCompTime = existingEntry.dayType == DayType.COMP_TIME
+                        val baseEntry = existingEntry.copy(
+                            dayType = dayType,
+                            confirmedWorkDay = if (wasCompTime) false else existingEntry.confirmedWorkDay,
+                            confirmationAt = if (wasCompTime) null else existingEntry.confirmationAt,
+                            confirmationSource = if (wasCompTime) null else existingEntry.confirmationSource,
+                            updatedAt = now
+                        )
+                        if (shouldClearMealAllowance) baseEntry.withMealAllowanceCleared() else baseEntry
+                    }
                 }
+            } else {
+                WorkEntry(
+                    date = date,
+                    dayType = dayType,
+                    confirmedWorkDay = dayType == DayType.COMP_TIME,
+                    confirmationAt = if (dayType == DayType.COMP_TIME) now else null,
+                    confirmationSource = if (dayType == DayType.COMP_TIME) "COMP_TIME" else null,
+                    createdAt = now,
+                    updatedAt = now
+                )
             }
-        } else {
-            WorkEntry(
-                date = date,
-                dayType = dayType,
-                confirmedWorkDay = dayType == DayType.COMP_TIME,
-                confirmationAt = if (dayType == DayType.COMP_TIME) now else null,
-                confirmationSource = if (dayType == DayType.COMP_TIME) "COMP_TIME" else null,
-                createdAt = now,
-                updatedAt = now
-            )
-        }
 
-        workEntryDao.upsert(updatedEntry)
-        return updatedEntry
+            result = updatedEntry
+            updatedEntry
+        }
+        return result!!
     }
 }

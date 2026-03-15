@@ -185,12 +185,21 @@ class PdfExporter @Inject constructor(
             } finally {
                 pdfDocument.close()
             }
+        } catch (e: IOException) {
+            Log.e("PdfExporter", "PDF export IO error: ${e.javaClass.simpleName}", e)
+            null
+        } catch (e: IllegalArgumentException) {
+            Log.e("PdfExporter", "PDF export validation error: ${e.message}", e)
+            null
+        } catch (e: IllegalStateException) {
+            Log.e("PdfExporter", "PDF export state error: ${e.javaClass.simpleName}", e)
+            null
         } catch (e: Exception) {
-            Log.e("PdfExporter", "PDF export failed", e)
+            Log.e("PdfExporter", "PDF export failed (${e.javaClass.simpleName})", e)
             null
         }
     }
-    
+
     /**
      * Zeichnet den Header auf die erste Seite
      */

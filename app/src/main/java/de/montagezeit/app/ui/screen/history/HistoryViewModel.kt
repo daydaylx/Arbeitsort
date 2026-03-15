@@ -88,6 +88,7 @@ class HistoryViewModel @Inject constructor(
                 val dates = buildDateRange(request.startDate, request.endDate)
                 val now = System.currentTimeMillis()
 
+                val entriesToUpsert = mutableListOf<WorkEntry>()
                 for (date in dates) {
                     val existing = entriesByDate[date]
                     val baseEntry = existing ?: WorkEntry(
@@ -131,8 +132,11 @@ class HistoryViewModel @Inject constructor(
 
                     if (updated != baseEntry || existing == null) {
                         updated = updated.copy(updatedAt = now)
-                        workEntryDao.upsert(updated)
+                        entriesToUpsert.add(updated)
                     }
+                }
+                if (entriesToUpsert.isNotEmpty()) {
+                    workEntryDao.upsertAll(entriesToUpsert)
                 }
 
                 withContext(Dispatchers.Main) {

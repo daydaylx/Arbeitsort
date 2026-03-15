@@ -68,8 +68,8 @@ class HistoryViewModelTest {
             val end = secondArg<LocalDate>()
             if (start == date && end == date) listOf(existing) else emptyList()
         }
-        coEvery { workEntryDao.upsert(any()) } answers {
-            savedEntries += firstArg<WorkEntry>()
+        coEvery { workEntryDao.upsertAll(any()) } answers {
+            savedEntries += firstArg<List<WorkEntry>>()
             Unit
         }
 
@@ -100,6 +100,6 @@ class HistoryViewModelTest {
         assertFalse(saved.mealBreakfastIncluded)
         assertEquals(0, saved.mealAllowanceBaseCents)
         assertEquals(0, saved.mealAllowanceAmountCents)
-        coVerify(atLeast = 1) { workEntryDao.upsert(any()) }
+        coVerify(atLeast = 1) { workEntryDao.upsertAll(any()) }
     }
 }

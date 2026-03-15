@@ -10,6 +10,7 @@ import de.montagezeit.app.logging.e
 import de.montagezeit.app.work.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,7 +39,7 @@ class TimeChangeReceiver : BroadcastReceiver() {
 
                 // Keep receiver alive until async work completes
                 val pendingResult = goAsync()
-                val scope = CoroutineScope(Dispatchers.IO)
+                val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
                 scope.launch {
                     try {
                         logger.i("TimeChangeReceiver", "Zeitänderung erkannt: ${intent.action}, Reschedule Reminder")

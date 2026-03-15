@@ -12,6 +12,7 @@ import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -47,11 +48,12 @@ class TodayViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        io.mockk.unmockkAll()
     }
 
     @Test
     fun `ensureTodayEntryThen creates entry when missing`() {
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()
 
@@ -81,7 +83,7 @@ class TodayViewModelTest {
     fun `ensureTodayEntryThen skips upsert when entry exists`() {
         val today = LocalDate.now()
         val existing = WorkEntry(date = today)
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
@@ -106,7 +108,7 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "Baustelle Heute"
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()
 
@@ -142,7 +144,7 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "   "
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()
 
@@ -172,7 +174,7 @@ class TodayViewModelTest {
 
     @Test
     fun `openDailyCheckInDialog uses latest work label when today entry is missing`() {
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -207,7 +209,7 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = ""
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()
 
@@ -242,7 +244,7 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "Gespeichert"
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val recordDailyManualCheckIn = mockk<RecordDailyManualCheckIn>()
 
@@ -280,7 +282,7 @@ class TodayViewModelTest {
     @Test
     fun `submitDailyManualCheckIn surfaces security errors as snackbar without location flow`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val recordDailyManualCheckIn = mockk<RecordDailyManualCheckIn>()
 
@@ -316,7 +318,7 @@ class TodayViewModelTest {
     @Test
     fun `overtime uses configurable target from settings`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings(
             dailyTargetHours = 10.0,
@@ -363,7 +365,7 @@ class TodayViewModelTest {
     @Test
     fun `week stats uses weekly target from settings`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings(
             dailyTargetHours = 7.5,
@@ -395,7 +397,7 @@ class TodayViewModelTest {
     @Test
     fun `month stats uses monthly target from settings`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings(
             dailyTargetHours = 7.5,
@@ -427,7 +429,7 @@ class TodayViewModelTest {
     @Test
     fun `overtime targets default to 8-40-160 when not configured`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()  // No explicit target hours, should use defaults
 
@@ -471,7 +473,7 @@ class TodayViewModelTest {
     @Test
     fun `selectDate updates selectedDate even when same date is selected`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -502,7 +504,7 @@ class TodayViewModelTest {
     fun `selectDate switches between different dates correctly`() {
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -532,7 +534,7 @@ class TodayViewModelTest {
     fun `selectDate rebuilds week overview from selected date`() {
         val today = LocalDate.now()
         val otherWeekDate = today.plusWeeks(1)
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -567,7 +569,7 @@ class TodayViewModelTest {
     fun `confirmDeleteDay removes entry and exposes it for undo`() {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(today) } returns existingEntry
@@ -599,7 +601,7 @@ class TodayViewModelTest {
     fun `undoDeleteDay re-inserts the deleted entry`() {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(today) } returns existingEntry
@@ -632,7 +634,7 @@ class TodayViewModelTest {
     @Test
     fun `confirmDeleteDay does nothing when no entry exists`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(today) } returns null
@@ -652,7 +654,7 @@ class TodayViewModelTest {
     @Test
     fun `swipe navigation selectDate with plusDays and minusDays updates selectedDate and queries DB`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -706,7 +708,7 @@ class TodayViewModelTest {
             workEnd = LocalTime.of(17, 0),
             breakMinutes = 60
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -739,7 +741,7 @@ class TodayViewModelTest {
             workEnd = LocalTime.of(17, 0),
             breakMinutes = 60
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -758,7 +760,7 @@ class TodayViewModelTest {
     @Test
     fun `monthStats mealAllowanceTotalCents sums confirmed work entries`() {
         val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         val entries = listOf(
@@ -782,7 +784,7 @@ class TodayViewModelTest {
     @Test
     fun `monthStats mealAllowanceTotalCents ignores non-work entries with stale allowance`() {
         val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         // Simulate a corrupt OFF entry that still has a non-zero meal allowance
@@ -807,7 +809,7 @@ class TodayViewModelTest {
     @Test
     fun `monthStats mealAllowanceTotalCents ignores unconfirmed work entries`() {
         val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         val entries = listOf(
@@ -839,7 +841,7 @@ class TodayViewModelTest {
             mealAllowanceBaseCents = 1400,
             mealAllowanceAmountCents = 820
         )
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns existing
@@ -865,7 +867,7 @@ class TodayViewModelTest {
 
     @Test
     fun `openDailyCheckInDialog defaults meal flags to false when no entry exists`() {
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -893,7 +895,7 @@ class TodayViewModelTest {
     @Test
     fun `monthStats mealAllowanceTotalCents is zero when all entries have no allowance`() {
         val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
         val entries = listOf(
@@ -929,7 +931,8 @@ class TodayViewModelTest {
             confirmOffDay = mockk<ConfirmOffDay>(relaxed = true),
             setDayLocation = mockk<SetDayLocation>(relaxed = true),
             reminderSettingsManager = settingsManager,
-            deleteDayEntry = deleteDayEntry
+            deleteDayEntry = deleteDayEntry,
+            nonWorkingDayChecker = mockk<NonWorkingDayChecker>(relaxed = true)
         )
     }
 }

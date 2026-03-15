@@ -55,11 +55,17 @@ class RecordDailyManualCheckInTest {
         unmockkAll()
     }
 
+    private fun mockReadModifyWrite(date: LocalDate, existingEntry: WorkEntry?) {
+        coEvery { workEntryDao.readModifyWrite(date, any()) } coAnswers {
+            val modify = secondArg<(WorkEntry?) -> WorkEntry>()
+            modify(existingEntry)
+        }
+    }
+
     @Test
     fun `invoke sets day completion fields for manual label`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, null)
 
         val result = useCase(DailyManualCheckInInput(date, "  Baustelle XY  "))
 
@@ -75,7 +81,7 @@ class RecordDailyManualCheckInTest {
         assertEquals("UI", result.confirmationSource)
         assertFalse(result.needsReview)
 
-        coVerify(exactly = 1) { workEntryDao.upsert(result) }
+        coVerify(exactly = 1) { workEntryDao.readModifyWrite(date, any()) }
     }
 
     @Test
@@ -90,7 +96,7 @@ class RecordDailyManualCheckInTest {
         }
         val thrown = requireNotNull(error)
         assertEquals("dayLocationLabel darf nicht leer sein", thrown.message)
-        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+        coVerify(exactly = 0) { workEntryDao.readModifyWrite(any(), any()) }
     }
 
     @Test
@@ -105,8 +111,7 @@ class RecordDailyManualCheckInTest {
             eveningCapturedAt = 2_000L,
             eveningLocationStatus = LocationStatus.LOW_ACCURACY
         )
-        coEvery { workEntryDao.getByDate(date) } returns existing
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, existing)
 
         val result = useCase(DailyManualCheckInInput(date, "Neuer Ort"))
 
@@ -120,8 +125,7 @@ class RecordDailyManualCheckInTest {
     @Test
     fun `invoke stores meal allowance for normal day without breakfast`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, null)
 
         val result = useCase(
             DailyManualCheckInInput(
@@ -141,8 +145,7 @@ class RecordDailyManualCheckInTest {
     @Test
     fun `invoke stores meal allowance for arrival departure with breakfast`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, null)
 
         val result = useCase(
             DailyManualCheckInInput(
@@ -171,8 +174,7 @@ class RecordDailyManualCheckInTest {
             mealAllowanceBaseCents = 0,
             mealAllowanceAmountCents = 0
         )
-        coEvery { workEntryDao.getByDate(date) } returns existing
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, existing)
 
         val result = useCase(
             DailyManualCheckInInput(
@@ -199,8 +201,7 @@ class RecordDailyManualCheckInTest {
             workEnd = LocalTime.of(14, 45),
             breakMinutes = 30
         )
-        coEvery { workEntryDao.getByDate(date) } returns existing
-        coEvery { workEntryDao.upsert(any()) } returns Unit
+        mockReadModifyWrite(date, existing)
 
         val result = useCase(
             DailyManualCheckInInput(

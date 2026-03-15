@@ -6,7 +6,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import io.mockk.coEvery
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -56,9 +56,9 @@ class ReminderWindowEvaluatorTest {
     }
 
     @Test
-    fun `manual WORK override beats weekend auto off`() = runTest {
+    fun `manual WORK override beats weekend auto off`() = runBlocking {
         val date = LocalDate.of(2026, 2, 7) // Saturday
-        val dao = mockk<WorkEntryDao>()
+        val dao = mockk<WorkEntryDao>(relaxed = true)
         val settings = ReminderSettings(autoOffWeekends = true, autoOffHolidays = false)
         coEvery { dao.getByDate(date) } returns WorkEntry(date = date, dayType = DayType.WORK)
 
@@ -68,9 +68,9 @@ class ReminderWindowEvaluatorTest {
     }
 
     @Test
-    fun `manual OFF override beats working day defaults`() = runTest {
+    fun `manual OFF override beats working day defaults`() = runBlocking {
         val date = LocalDate.of(2026, 2, 9) // Monday
-        val dao = mockk<WorkEntryDao>()
+        val dao = mockk<WorkEntryDao>(relaxed = true)
         val settings = ReminderSettings(autoOffWeekends = false, autoOffHolidays = false)
         coEvery { dao.getByDate(date) } returns WorkEntry(date = date, dayType = DayType.OFF)
 

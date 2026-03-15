@@ -90,7 +90,7 @@ private fun WeekDayChip(
 
     Column(
         modifier = Modifier
-            .width(44.dp)
+            .width(48.dp)
             .semantics {
                 contentDescription = cdText
                 selected = day.isSelected

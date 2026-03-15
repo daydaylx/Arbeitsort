@@ -13,7 +13,7 @@ import java.time.LocalDate
 
 class ResolveDayLocationPrefillTest {
 
-    private val workEntryDao = mockk<WorkEntryDao>()
+    private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val useCase = ResolveDayLocationPrefill(workEntryDao)
 
     @Test

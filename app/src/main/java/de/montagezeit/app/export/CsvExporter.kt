@@ -24,13 +24,17 @@ class CsvExporter @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+    private fun csvEscape(value: String): String {
+        return if (value.contains(';') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
+            "\"${value.replace("\"", "\"\"")}\""
+        } else value
+    }
+
     /**
      * Exportiert Einträge als CSV-Datei.
      *
      * @param entries Liste der zu exportierenden Einträge
      * @return Uri zur CSV-Datei bei Erfolg, null bei Fehler
-     * @throws IllegalArgumentException wenn entries leer ist
-     * @throws java.io.IOException bei Dateisystem-Fehlern
      */
     fun exportToCsv(entries: List<WorkEntry>): Uri? {
         // Validate input
@@ -95,7 +99,7 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(if (entry.confirmedWorkDay) 1 else 0)
                         append(";")
-                        append(entry.dayLocationLabel.replace(";", ","))
+                        append(csvEscape(entry.dayLocationLabel))
                         append(";")
                         append(entry.dayLocationSource.name)
                         append(";")
@@ -121,7 +125,7 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
                         append(";")
-                        append(entry.note?.replace(";", ",")?.replace("\n", " ")?.replace("\r", "") ?: "")
+                        append(csvEscape(entry.note ?: ""))
                         append("\n")
                     }
                     it.write(line.toByteArray(Charsets.UTF_8))

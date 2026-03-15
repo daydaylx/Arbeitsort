@@ -38,6 +38,9 @@ class EditEntryViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
+    // B12: Cache timezone at ViewModel creation to ensure consistent conversion
+    private val editTimeZone: ZoneId = ZoneId.systemDefault()
+
     private var currentDate: LocalDate =
         savedStateHandle.get<String>("date")?.let { LocalDate.parse(it) } ?: LocalDate.now()
     
@@ -88,7 +91,7 @@ class EditEntryViewModel @Inject constructor(
 
                 val entry = workEntryDao.getByDate(date)
                 if (entry != null) {
-                    val formData = EditFormData.fromEntry(entry)
+                    val formData = EditFormData.fromEntry(entry, editTimeZone)
                     _screenState.update {
                         it.copy(
                             formData = formData,
@@ -109,7 +112,7 @@ class EditEntryViewModel @Inject constructor(
                         dayLocationLabel = "",
                         dayLocationSource = DayLocationSource.FALLBACK
                     )
-                    val formData = EditFormData.fromEntry(defaultEntry)
+                    val formData = EditFormData.fromEntry(defaultEntry, editTimeZone)
                     _screenState.update {
                         it.copy(
                             formData = formData,
@@ -463,7 +466,7 @@ class EditEntryViewModel @Inject constructor(
 
     private fun toEpochMillis(date: LocalDate, time: LocalTime): Long {
         return date.atTime(time)
-            .atZone(ZoneId.systemDefault())
+            .atZone(editTimeZone)
             .toInstant()
             .toEpochMilli()
     }
@@ -584,7 +587,7 @@ data class EditFormData(
     fun isValid(): Boolean = validate().isEmpty()
 
     companion object {
-        fun fromEntry(entry: WorkEntry): EditFormData {
+        fun fromEntry(entry: WorkEntry, zoneId: ZoneId = ZoneId.systemDefault()): EditFormData {
             return EditFormData(
                 dayType = entry.dayType,
                 workStart = entry.workStart,
@@ -601,16 +604,16 @@ data class EditFormData(
                 mealBreakfastIncluded = entry.mealBreakfastIncluded,
                 note = entry.note,
                 needsReview = entry.needsReview,
-                travelStartTime = entry.travelStartAt?.let { toLocalTime(it) },
-                travelArriveTime = entry.travelArriveAt?.let { toLocalTime(it) },
+                travelStartTime = entry.travelStartAt?.let { toLocalTime(it, zoneId) },
+                travelArriveTime = entry.travelArriveAt?.let { toLocalTime(it, zoneId) },
                 travelLabelStart = entry.travelLabelStart,
                 travelLabelEnd = entry.travelLabelEnd
             )
         }
 
-        private fun toLocalTime(timestamp: Long): LocalTime {
+        private fun toLocalTime(timestamp: Long, zoneId: ZoneId): LocalTime {
             return Instant.ofEpochMilli(timestamp)
-                .atZone(ZoneId.systemDefault())
+                .atZone(zoneId)
                 .toLocalTime()
         }
     }

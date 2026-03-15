@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -12,20 +13,20 @@ import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface WorkEntryDao {
+abstract class WorkEntryDao {
     
     @Query("SELECT * FROM work_entries WHERE date = :date")
-    suspend fun getByDate(date: LocalDate): WorkEntry?
-    
+    abstract suspend fun getByDate(date: LocalDate): WorkEntry?
+
     @Query("SELECT * FROM work_entries WHERE date = :date")
-    fun getByDateFlow(date: LocalDate): Flow<WorkEntry?>
-    
+    abstract fun getByDateFlow(date: LocalDate): Flow<WorkEntry?>
+
     @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
-    suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
+    abstract suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
 
     @Query(
         """
-        SELECT 
+        SELECT
             date,
             workStart,
             workEnd,
@@ -40,29 +41,38 @@ interface WorkEntryDao {
         ORDER BY date ASC
         """
     )
-    suspend fun getEntriesBetween(startDate: LocalDate, endDate: LocalDate): List<OvertimeEntryRow>
+    abstract suspend fun getEntriesBetween(startDate: LocalDate, endDate: LocalDate): List<OvertimeEntryRow>
 
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
-    suspend fun getAll(): List<WorkEntry>
+    abstract suspend fun getAll(): List<WorkEntry>
 
     @Query(
         "SELECT dayLocationLabel FROM work_entries " +
             "WHERE dayType = :dayType AND LENGTH(TRIM(dayLocationLabel)) > 0 " +
             "ORDER BY date DESC LIMIT 1"
     )
-    suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String?
+    abstract suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: WorkEntry): Long
-    
+    abstract suspend fun insert(entry: WorkEntry): Long
+
     @Update
-    suspend fun update(entry: WorkEntry)
-    
+    abstract suspend fun update(entry: WorkEntry)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entry: WorkEntry)
-    
+    abstract suspend fun upsert(entry: WorkEntry)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsertAll(entries: List<WorkEntry>)
+
     @Query("DELETE FROM work_entries WHERE date = :date")
-    suspend fun deleteByDate(date: LocalDate)
+    abstract suspend fun deleteByDate(date: LocalDate)
+
+    @Transaction
+    open suspend fun readModifyWrite(date: LocalDate, modify: (WorkEntry?) -> WorkEntry) {
+        val existing = getByDate(date)
+        upsert(modify(existing))
+    }
 }
 
 data class OvertimeEntryRow(

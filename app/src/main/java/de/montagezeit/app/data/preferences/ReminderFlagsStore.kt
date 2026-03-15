@@ -4,11 +4,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,13 +36,16 @@ class ReminderFlagsStore @Inject constructor(
 
     companion object {
         private const val SP_NAME = "reminder_flags"  // alter SP-Name
+        private const val RETENTION_DAYS = 7L
 
         // DataStore Keys: StringSet von "yyyy-MM-dd"-Dates
         val KEY_MORNING_DATES  = stringSetPreferencesKey("morning_reminded_dates")
         val KEY_EVENING_DATES  = stringSetPreferencesKey("evening_reminded_dates")
         val KEY_FALLBACK_DATES = stringSetPreferencesKey("fallback_reminded_dates")
         val KEY_DAILY_DATES    = stringSetPreferencesKey("daily_reminded_dates")
-        val KEY_MIGRATION_DONE = stringSetPreferencesKey("_migration_done")  // Sentinel
+        @Deprecated("Use KEY_MIGRATION_DONE_V2")
+        val KEY_MIGRATION_DONE = stringSetPreferencesKey("_migration_done")
+        val KEY_MIGRATION_DONE_V2 = booleanPreferencesKey("_migration_done_v2")
 
         // SP-Präfixe für die Migration
         private const val SP_PREFIX_MORNING  = "morning_reminded_"
@@ -49,53 +55,74 @@ class ReminderFlagsStore @Inject constructor(
     }
 
     // -------------------------------------------------------------------------
-    // Einmalige Migration SharedPreferences → DataStore
+    // Einmalige Migration SharedPreferences → DataStore (A06: Mutex statt @Volatile)
     // -------------------------------------------------------------------------
-    @Volatile
+    private val migrationMutex = Mutex()
     private var migrationChecked = false
 
     private suspend fun ensureMigrated() {
         if (migrationChecked) return
-        migrationChecked = true
+        migrationMutex.withLock {
+            if (migrationChecked) return@withLock
 
-        val current = dataStore.data.first()
-        if (current[KEY_MIGRATION_DONE]?.contains("done") == true) return
+            val current = dataStore.data.first()
+            @Suppress("DEPRECATION")
+            if (current[KEY_MIGRATION_DONE_V2] == true ||
+                current[KEY_MIGRATION_DONE]?.contains("done") == true) {
+                migrationChecked = true
+                return@withLock
+            }
 
-        val sp: SharedPreferences = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)
-        val allEntries = sp.all
-        if (allEntries.isEmpty()) {
-            // Nichts zu migrieren – Sentinel setzen
+            val sp: SharedPreferences = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)
+            val allEntries = sp.all
+            if (allEntries.isEmpty()) {
+                // Nichts zu migrieren – Sentinel setzen
+                dataStore.edit { prefs ->
+                    prefs[KEY_MIGRATION_DONE_V2] = true
+                }
+                migrationChecked = true
+                return@withLock
+            }
+
+            val morningDates  = mutableSetOf<String>()
+            val eveningDates  = mutableSetOf<String>()
+            val fallbackDates = mutableSetOf<String>()
+            val dailyDates    = mutableSetOf<String>()
+
+            for ((key, value) in allEntries) {
+                if (value != true) continue
+                when {
+                    key.startsWith(SP_PREFIX_MORNING)  -> morningDates.add(key.removePrefix(SP_PREFIX_MORNING))
+                    key.startsWith(SP_PREFIX_EVENING)  -> eveningDates.add(key.removePrefix(SP_PREFIX_EVENING))
+                    key.startsWith(SP_PREFIX_FALLBACK) -> fallbackDates.add(key.removePrefix(SP_PREFIX_FALLBACK))
+                    key.startsWith(SP_PREFIX_DAILY)    -> dailyDates.add(key.removePrefix(SP_PREFIX_DAILY))
+                }
+            }
+
             dataStore.edit { prefs ->
-                prefs[KEY_MIGRATION_DONE] = setOf("done")
+                if (morningDates.isNotEmpty())  prefs[KEY_MORNING_DATES]  = morningDates
+                if (eveningDates.isNotEmpty())  prefs[KEY_EVENING_DATES]  = eveningDates
+                if (fallbackDates.isNotEmpty()) prefs[KEY_FALLBACK_DATES] = fallbackDates
+                if (dailyDates.isNotEmpty())    prefs[KEY_DAILY_DATES]    = dailyDates
+                prefs[KEY_MIGRATION_DONE_V2] = true
             }
-            return
+
+            // Alte SharedPreferences nach erfolgreicher Migration löschen
+            sp.edit().clear().apply()
+            migrationChecked = true
         }
+    }
 
-        val morningDates  = mutableSetOf<String>()
-        val eveningDates  = mutableSetOf<String>()
-        val fallbackDates = mutableSetOf<String>()
-        val dailyDates    = mutableSetOf<String>()
-
-        for ((key, value) in allEntries) {
-            if (value != true) continue
-            when {
-                key.startsWith(SP_PREFIX_MORNING)  -> morningDates.add(key.removePrefix(SP_PREFIX_MORNING))
-                key.startsWith(SP_PREFIX_EVENING)  -> eveningDates.add(key.removePrefix(SP_PREFIX_EVENING))
-                key.startsWith(SP_PREFIX_FALLBACK) -> fallbackDates.add(key.removePrefix(SP_PREFIX_FALLBACK))
-                key.startsWith(SP_PREFIX_DAILY)    -> dailyDates.add(key.removePrefix(SP_PREFIX_DAILY))
+    // A01: Cleanup – entfernt Einträge älter als RETENTION_DAYS
+    private fun cleanupOldDates(dates: Set<String>): Set<String> {
+        val cutoff = LocalDate.now().minusDays(RETENTION_DAYS)
+        return dates.filter { dateStr ->
+            try {
+                LocalDate.parse(dateStr) >= cutoff
+            } catch (_: Exception) {
+                false
             }
-        }
-
-        dataStore.edit { prefs ->
-            if (morningDates.isNotEmpty())  prefs[KEY_MORNING_DATES]  = morningDates
-            if (eveningDates.isNotEmpty())  prefs[KEY_EVENING_DATES]  = eveningDates
-            if (fallbackDates.isNotEmpty()) prefs[KEY_FALLBACK_DATES] = fallbackDates
-            if (dailyDates.isNotEmpty())    prefs[KEY_DAILY_DATES]    = dailyDates
-            prefs[KEY_MIGRATION_DONE] = setOf("done")
-        }
-
-        // Alte SharedPreferences nach erfolgreicher Migration löschen
-        sp.edit().clear().apply()
+        }.toSet()
     }
 
     // -------------------------------------------------------------------------
@@ -110,7 +137,7 @@ class ReminderFlagsStore @Inject constructor(
     suspend fun setMorningReminded(date: LocalDate) {
         ensureMigrated()
         dataStore.edit { prefs ->
-            prefs[KEY_MORNING_DATES] = (prefs[KEY_MORNING_DATES] ?: emptySet()) + date.toString()
+            prefs[KEY_MORNING_DATES] = cleanupOldDates(prefs[KEY_MORNING_DATES] ?: emptySet()) + date.toString()
         }
     }
 
@@ -122,7 +149,7 @@ class ReminderFlagsStore @Inject constructor(
     suspend fun setEveningReminded(date: LocalDate) {
         ensureMigrated()
         dataStore.edit { prefs ->
-            prefs[KEY_EVENING_DATES] = (prefs[KEY_EVENING_DATES] ?: emptySet()) + date.toString()
+            prefs[KEY_EVENING_DATES] = cleanupOldDates(prefs[KEY_EVENING_DATES] ?: emptySet()) + date.toString()
         }
     }
 
@@ -134,7 +161,7 @@ class ReminderFlagsStore @Inject constructor(
     suspend fun setFallbackReminded(date: LocalDate) {
         ensureMigrated()
         dataStore.edit { prefs ->
-            prefs[KEY_FALLBACK_DATES] = (prefs[KEY_FALLBACK_DATES] ?: emptySet()) + date.toString()
+            prefs[KEY_FALLBACK_DATES] = cleanupOldDates(prefs[KEY_FALLBACK_DATES] ?: emptySet()) + date.toString()
         }
     }
 
@@ -146,7 +173,7 @@ class ReminderFlagsStore @Inject constructor(
     suspend fun setDailyReminded(date: LocalDate) {
         ensureMigrated()
         dataStore.edit { prefs ->
-            prefs[KEY_DAILY_DATES] = (prefs[KEY_DAILY_DATES] ?: emptySet()) + date.toString()
+            prefs[KEY_DAILY_DATES] = cleanupOldDates(prefs[KEY_DAILY_DATES] ?: emptySet()) + date.toString()
         }
     }
 
@@ -154,10 +181,10 @@ class ReminderFlagsStore @Inject constructor(
         ensureMigrated()
         val dateStr = date.toString()
         dataStore.edit { prefs ->
-            prefs[KEY_MORNING_DATES]  = (prefs[KEY_MORNING_DATES]  ?: emptySet()) + dateStr
-            prefs[KEY_EVENING_DATES]  = (prefs[KEY_EVENING_DATES]  ?: emptySet()) + dateStr
-            prefs[KEY_FALLBACK_DATES] = (prefs[KEY_FALLBACK_DATES] ?: emptySet()) + dateStr
-            prefs[KEY_DAILY_DATES]    = (prefs[KEY_DAILY_DATES]    ?: emptySet()) + dateStr
+            prefs[KEY_MORNING_DATES]  = cleanupOldDates(prefs[KEY_MORNING_DATES]  ?: emptySet()) + dateStr
+            prefs[KEY_EVENING_DATES]  = cleanupOldDates(prefs[KEY_EVENING_DATES]  ?: emptySet()) + dateStr
+            prefs[KEY_FALLBACK_DATES] = cleanupOldDates(prefs[KEY_FALLBACK_DATES] ?: emptySet()) + dateStr
+            prefs[KEY_DAILY_DATES]    = cleanupOldDates(prefs[KEY_DAILY_DATES]    ?: emptySet()) + dateStr
         }
     }
 }

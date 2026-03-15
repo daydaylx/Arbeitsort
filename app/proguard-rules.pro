@@ -54,10 +54,6 @@
     public <init>(...);
 }
 
-# Keep WorkManager configuration
--keep class androidx.work.** { *; }
--keep class androidx.work.impl.** { *; }
-
 # Keep Worker constructors (used by WorkerFactory)
 -keepclassmembers class * extends androidx.work.Worker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
@@ -72,13 +68,6 @@
 
 # Keep coroutines debug info
 -keepnames class kotlinx.coroutines.** { *; }
-
-# ============================================================================
-# MOSHI SERIALIZATION
-# ============================================================================
-# Keep Moshi adapters
--keep class com.squareup.moshi.** { *; }
--keep interface com.squareup.moshi.** { *; }
 
 # ============================================================================
 # DATA CLASSES & ENUMS
@@ -122,11 +111,12 @@
     public static *** i(...);
 }
 
-# Remove debug logging from RingBufferLogger
--assumenosideeffects class de.montagezeit.app.logging.RingBufferLogger {
-    public void d(...);
-    public void v(...);
-    public void i(...);
+# A08: Remove debug logging from RingBufferLogger extension functions
+# (Kotlin extension functions compile to static methods in *Kt class)
+-assumenosideeffects class de.montagezeit.app.logging.RingBufferLoggerKt {
+    public static ** d(...);
+    public static ** i(...);
+    public static ** w(...);
 }
 
 # ============================================================================

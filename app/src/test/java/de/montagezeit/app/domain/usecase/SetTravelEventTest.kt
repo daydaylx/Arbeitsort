@@ -18,7 +18,7 @@ class SetTravelEventTest {
     
     @Before
     fun setup() {
-        workEntryDao = mockk()
+        workEntryDao = mockk(relaxed = true)
         setTravelEvent = SetTravelEvent(workEntryDao)
     }
     

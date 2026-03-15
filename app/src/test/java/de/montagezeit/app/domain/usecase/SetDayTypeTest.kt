@@ -12,46 +12,53 @@ import java.time.LocalDate
 import org.junit.Assert.*
 
 class SetDayTypeTest {
-    
+
     private lateinit var workEntryDao: WorkEntryDao
     private lateinit var setDayType: SetDayType
-    
+
     @Before
     fun setup() {
         workEntryDao = mockk()
         setDayType = SetDayType(workEntryDao)
     }
-    
+
     @After
     fun tearDown() {
         unmockkAll()
     }
-    
+
+    /**
+     * Helper: mocks readModifyWrite to call the lambda with the given existing entry,
+     * then capture the upserted result.
+     */
+    private fun mockReadModifyWrite(date: LocalDate, existingEntry: WorkEntry?) {
+        coEvery { workEntryDao.readModifyWrite(date, any()) } coAnswers {
+            val modify = secondArg<(WorkEntry?) -> WorkEntry>()
+            val result = modify(existingEntry)
+            // The real readModifyWrite calls upsert internally, so we just verify the lambda output
+        }
+    }
+
     @Test
     fun `invoke - Neuer Eintrag - Erstellt WorkEntry mit DayType`() = runTest {
-        // Arrange
         val date = LocalDate.now()
         val dayType = DayType.WORK
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        
-        // Act
+
+        mockReadModifyWrite(date, null)
+
         val result = setDayType.invoke(date, dayType)
-        
-        // Assert
+
         assertEquals(date, result.date)
         assertEquals(dayType, result.dayType)
         assertNotNull(result.createdAt)
         assertNotNull(result.updatedAt)
         assertEquals(result.createdAt, result.updatedAt)
-        
-        coVerify { workEntryDao.upsert(result) }
+
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
-    
+
     @Test
     fun `invoke - Existierender Eintrag - Aktualisiert DayType`() = runTest {
-        // Arrange
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
             date = date,
@@ -60,25 +67,21 @@ class SetDayTypeTest {
             updatedAt = 1000000L
         )
         val newDayType = DayType.OFF
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        
-        // Act
+
+        mockReadModifyWrite(date, existingEntry)
+
         val result = setDayType.invoke(date, newDayType)
-        
-        // Assert
+
         assertEquals(date, result.date)
         assertEquals(newDayType, result.dayType)
         assertEquals(existingEntry.createdAt, result.createdAt)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
-        
-        coVerify { workEntryDao.upsert(result) }
+
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
-    
+
     @Test
     fun `invoke - WORK zu OFF - Aktualisiert korrekt`() = runTest {
-        // Arrange
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
             date = date,
@@ -90,26 +93,22 @@ class SetDayTypeTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        
-        // Act
+
+        mockReadModifyWrite(date, existingEntry)
+
         val result = setDayType.invoke(date, DayType.OFF)
-        
-        // Assert
+
         assertEquals(DayType.OFF, result.dayType)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)
         assertEquals(0, result.mealAllowanceAmountCents)
-        
-        coVerify { workEntryDao.upsert(result) }
+
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
-    
+
     @Test
     fun `invoke - OFF zu WORK - Aktualisiert korrekt`() = runTest {
-        // Arrange
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
             date = date,
@@ -122,20 +121,17 @@ class SetDayTypeTest {
             updatedAt = 1000000L
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
+        mockReadModifyWrite(date, existingEntry)
 
-        // Act
         val result = setDayType.invoke(date, DayType.WORK)
 
-        // Assert
         assertEquals(DayType.WORK, result.dayType)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)
         assertEquals(0, result.mealAllowanceAmountCents)
 
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
 
     @Test
@@ -160,8 +156,7 @@ class SetDayTypeTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
+        mockReadModifyWrite(date, existingEntry)
 
         val result = setDayType.invoke(date, DayType.COMP_TIME)
 
@@ -181,7 +176,7 @@ class SetDayTypeTest {
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)
         assertEquals(0, result.mealAllowanceAmountCents)
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
 
     @Test
@@ -194,8 +189,7 @@ class SetDayTypeTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
+        mockReadModifyWrite(date, existingEntry)
 
         val result = setDayType.invoke(date, DayType.COMP_TIME)
 
@@ -203,7 +197,7 @@ class SetDayTypeTest {
         assertTrue(result.confirmedWorkDay)
         assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
         assertNotNull(result.confirmationAt)
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
 
     @Test
@@ -218,8 +212,7 @@ class SetDayTypeTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
+        mockReadModifyWrite(date, existingEntry)
 
         val result = setDayType.invoke(date, DayType.WORK)
 
@@ -227,7 +220,7 @@ class SetDayTypeTest {
         assertFalse(result.confirmedWorkDay)
         assertNull(result.confirmationAt)
         assertNull(result.confirmationSource)
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
 
     @Test
@@ -242,8 +235,7 @@ class SetDayTypeTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
-        coEvery { workEntryDao.upsert(any()) } just Runs
+        mockReadModifyWrite(date, existingEntry)
 
         val result = setDayType.invoke(date, DayType.OFF)
 
@@ -251,6 +243,6 @@ class SetDayTypeTest {
         assertFalse(result.confirmedWorkDay)
         assertNull(result.confirmationAt)
         assertNull(result.confirmationSource)
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
 }

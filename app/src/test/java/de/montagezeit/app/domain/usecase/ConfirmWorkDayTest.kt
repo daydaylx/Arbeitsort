@@ -23,7 +23,7 @@ import java.time.LocalTime
 
 class ConfirmWorkDayTest {
 
-    private val workEntryDao = mockk<WorkEntryDao>()
+    private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val reminderSettingsManager = mockk<ReminderSettingsManager>()
 
     private val useCase = ConfirmWorkDay(
