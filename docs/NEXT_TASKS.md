@@ -1,9 +1,15 @@
 # Next Tasks - MontageZeit
 
-**Letzte Aktualisierung:** 2026-03-09
-**Status:** MVP produktionsreif (v1.0.2), offene Verbesserungen
+**Letzte Aktualisierung:** 2026-03-15
+**Status:** MVP produktionsreif, Kern-Audit-Punkte bereinigt, offene Verbesserungen
 
 ---
+
+## Hinweis
+
+Die zuletzt offenen Audit-Follow-ups zu Travel-Priorität, Reminder-Terminalzuständen,
+Edit-/COMP_TIME-Transitions und Default-Entry-Drift sind umgesetzt. Die Liste unten
+enthält nur noch verbleibende Produkt- und Komfort-Themen.
 
 ## Offene Features
 

@@ -15,6 +15,7 @@ import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -501,19 +502,12 @@ class TodayViewModel @Inject constructor(
                 if (existing == null) {
                     val settings = reminderSettingsManager.settings.first()
                     val isNonWorking = nonWorkingDayChecker.isNonWorkingDay(date, settings)
-                    val dayType = if (isNonWorking) DayType.OFF else DayType.WORK
                     val now = System.currentTimeMillis()
-                    val defaultLocation = ""
-                    val entry = WorkEntry(
+                    val entry = WorkEntryFactory.createDefaultEntry(
                         date = date,
-                        dayType = dayType,
-                        workStart = settings.workStart,
-                        workEnd = settings.workEnd,
-                        breakMinutes = settings.breakMinutes,
-                        dayLocationLabel = defaultLocation,
-                        dayLocationSource = de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK,
-                        createdAt = now,
-                        updatedAt = now
+                        settings = settings,
+                        dayType = if (isNonWorking) DayType.OFF else DayType.WORK,
+                        now = now
                     )
                     workEntryDao.upsert(entry)
                 }

@@ -55,6 +55,33 @@ fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeC
     }
 }
 
+fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
+    return when (dayType) {
+        DayType.COMP_TIME -> withTravelCleared(now)
+            .copy(
+                dayType = DayType.COMP_TIME,
+                confirmedWorkDay = true,
+                confirmationAt = now,
+                confirmationSource = DayType.COMP_TIME.name,
+                updatedAt = now
+            )
+            .withMealAllowanceCleared()
+
+        else -> {
+            val confirmationState = confirmationStateForDayType(dayType = dayType, now = now)
+            val transitioned = copy(
+                dayType = dayType,
+                confirmedWorkDay = confirmationState.confirmedWorkDay,
+                confirmationAt = confirmationState.confirmationAt,
+                confirmationSource = confirmationState.confirmationSource,
+                updatedAt = now
+            )
+            val shouldClearMealAllowance = !(dayType == DayType.WORK && this.dayType == DayType.WORK)
+            if (shouldClearMealAllowance) transitioned.withMealAllowanceCleared() else transitioned
+        }
+    }
+}
+
 fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocationLabel: String): WorkEntry {
     return withTravelCleared(now).copy(
         dayType = DayType.OFF,

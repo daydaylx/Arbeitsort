@@ -71,6 +71,20 @@ class WindowCheckWorkerDecisionTest {
         assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
     }
 
+    @Test
+    fun `bestaetigter WORK-Tag ohne Snapshots unterdrückt Check-In Reminder`() {
+        val entry = workEntry(
+            morningCapturedAt = null,
+            eveningCapturedAt = null,
+            confirmedWorkDay = true
+        )
+
+        assertFalse(WindowCheckWorker.shouldShowMorningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
+    }
+
     // -------------------------------------------------------------------------
     // WORK-Tag – kein Snapshot, nicht bestätigt
     // -------------------------------------------------------------------------
@@ -191,6 +205,13 @@ class WindowCheckWorkerDecisionTest {
     @Test
     fun `shouldShowDailyReminder - nicht bestaetigt ergibt true`() {
         assertTrue(WindowCheckWorker.shouldShowDailyReminder(workEntry(confirmedWorkDay = false)))
+    }
+
+    @Test
+    fun `isDailyReminderTerminal - bestaetigt oder comp time ergibt true`() {
+        assertTrue(WindowCheckWorker.isDailyReminderTerminal(workEntry(confirmedWorkDay = true)))
+        assertTrue(WindowCheckWorker.isDailyReminderTerminal(workEntry(dayType = DayType.COMP_TIME)))
+        assertFalse(WindowCheckWorker.isDailyReminderTerminal(null))
     }
 
     // -------------------------------------------------------------------------

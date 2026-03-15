@@ -23,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -830,7 +831,7 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `openDailyCheckInDialog prefills meal flags from existing entry`() {
+    fun `openDailyCheckInDialog prefills meal flags from existing entry`() = runTest {
         val today = LocalDate.now()
         val existing = WorkEntry(
             date = today,
@@ -850,23 +851,16 @@ class TodayViewModelTest {
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
-        val shownLatch = CountDownLatch(1)
-        val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) shownLatch.countDown()
-            }
-        }
 
         viewModel.openDailyCheckInDialog()
 
-        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
+        assertTrue(viewModel.showDailyCheckInDialog.value)
         assertEquals(true, viewModel.dailyCheckInIsArrivalDeparture.value)
         assertEquals(true, viewModel.dailyCheckInBreakfastIncluded.value)
-        collectJob.cancel()
     }
 
     @Test
-    fun `openDailyCheckInDialog defaults meal flags to false when no entry exists`() {
+    fun `openDailyCheckInDialog defaults meal flags to false when no entry exists`() = runTest {
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
@@ -877,19 +871,12 @@ class TodayViewModelTest {
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
-        val shownLatch = CountDownLatch(1)
-        val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) shownLatch.countDown()
-            }
-        }
 
         viewModel.openDailyCheckInDialog()
 
-        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
+        assertTrue(viewModel.showDailyCheckInDialog.value)
         assertEquals(false, viewModel.dailyCheckInIsArrivalDeparture.value)
         assertEquals(false, viewModel.dailyCheckInBreakfastIncluded.value)
-        collectJob.cancel()
     }
 
     @Test

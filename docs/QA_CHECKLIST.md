@@ -1,9 +1,12 @@
 # QA Checkliste - MontageZeit
 
-**Letztes Update:** 2026-02-25
-**Status:** Ready for Testing
+**Letztes Update:** 2026-03-15
+**Status:** Manual Verification Pending
 
 ## Übersicht
+
+Die zugrunde liegenden Unit-Tests und Audit-Fixes sind weitgehend umgesetzt.
+Die manuellen Checks unten sind weiterhin offen und nicht als erledigt zu interpretieren.
 
 Diese Checkliste deckt die **Top 10 Tests** für das manuelle Check-in System ab und mappt sie auf:
 - **Unit Tests** (automatisiert, schnell)

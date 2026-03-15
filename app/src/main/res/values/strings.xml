@@ -41,6 +41,7 @@
     <string name="action_confirm_later">Später</string>
     <string name="action_remind_later_hours">Später (%1$dh)</string>
     <string name="action_snooze_10min">10 Min.</string>
+    <string name="action_copy">Kopieren</string>
     
     <!-- Success Messages -->
     <string name="toast_check_in_success">Erfolgreich protokolliert</string>
@@ -268,6 +269,8 @@
     <string name="export_preview_no_pdf_app">Keine App zum Öffnen von PDFs gefunden.</string>
     <string name="export_preview_share_chooser_title">PDF teilen</string>
     <string name="export_preview_no_share_app">Keine App zum Teilen von PDFs gefunden.</string>
+    <string name="export_clipboard_label">Export-Link</string>
+    <string name="export_clipboard_copied">Export-Link in die Zwischenablage kopiert.</string>
     <string name="pdf_export_error_name_missing">Name fehlt</string>
     <string name="pdf_export_error_not_enough_storage_mb">Nicht genug Speicherplatz verfügbar (benötigt: %1$d MB)</string>
     <string name="pdf_export_title">Arbeitsnachweis – Monatsübersicht</string>

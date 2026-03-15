@@ -39,16 +39,13 @@ class SetDayLocation(
                     DayType.WORK
                 }
 
-                WorkEntry(
+                WorkEntryFactory.createDefaultEntry(
                     date = date,
+                    settings = settings,
                     dayType = dayType,
-                    workStart = settings.workStart,
-                    workEnd = settings.workEnd,
-                    breakMinutes = settings.breakMinutes,
                     dayLocationLabel = label,
                     dayLocationSource = DayLocationSource.MANUAL,
-                    createdAt = now,
-                    updatedAt = now
+                    now = now
                 )
             }
             result = updated

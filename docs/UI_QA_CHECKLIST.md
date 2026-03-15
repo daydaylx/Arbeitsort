@@ -1,5 +1,8 @@
 # UI QA-Checklist - Smoke-Tests
 
+**Status:** Dokumentierte manuelle Smoke-Tests, Stand 2026-03-15 weiterhin **nicht protokolliert durchgeführt**.
+**Hinweis:** Die Liste dient als offene Checkliste; Haken dürfen erst nach einem echten Geräte-/Emulator-Durchlauf gesetzt werden.
+
 ## Build & Installation
 
 - [ ] Projekt erfolgreich bauen (`./gradlew assembleDebug`)
@@ -122,7 +125,7 @@
 - [ ] "Exportieren" Button startet Export
 - [ ] Lade-Indikator wird angezeigt
 - [ ] Export erfolgreich: Dialog wird angezeigt
-- [ ] Export erfolgreich: "Kopieren" funktioniert (TODO)
+- [ ] Export erfolgreich: "Kopieren" funktioniert
 - [ ] Bei Fehler: Fehlermeldung wird angezeigt
 
 ## Navigation
@@ -190,7 +193,7 @@
 
 ## Known Issues
 
-- [ ] Clipboard-Kopieren im Export-Dialog muss noch implementiert werden
+- [ ] Manuelle Geräte-QA ist noch nicht protokolliert abgeschlossen
 
 ## Hinweise
 

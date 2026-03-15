@@ -1,11 +1,24 @@
 # Arbeitsort – Audit-Plan pro Datei
 
 **Projekt:** `daydaylx/Arbeitsort`
-**Stand der Analyse:** statische Quellcode-Prüfung des aktuellen `main`-Stands
+**Stand der Analyse:** statische Quellcode-Prüfung, zuletzt gegen `main` am 2026-03-15 abgeglichen
 **Ziel:** systematische Bereinigung von Logikfehlern, Inkonsistenzen und Architekturproblemen
 **Wichtig:** Dieser Plan priorisiert **fachliche Korrektheit vor kosmetischem Refactoring**.
 
 ---
+
+## Status-Snapshot (2026-03-15)
+
+- Die P0/P1-Kernpunkte aus diesem Plan sind inzwischen weitgehend umgesetzt:
+  - Travel-Timestamps gewinnen gegen alte `travelPaidMinutes`-Overrides.
+  - Today-, History- und Overtime-Summen folgen derselben Finalitätsregel.
+  - Edit-Save, `SetDayType` und `ConfirmOffDay` behandeln OFF/COMP_TIME konsistenter.
+  - Export-Ortslogik sowie CSV/PDF-Darstellung für OFF/COMP_TIME wurden bereinigt.
+  - Reminder-Entscheidungen respektieren bestätigte Tage als terminalen Zustand.
+- Dieses Dokument bleibt als **ursprünglicher Audit-Plan** erhalten; die Befund-Abschnitte unten beschreiben den Ausgangszustand vor der Bereinigung.
+- Noch offen außerhalb dieses Fix-Passes:
+  - manueller QA-Durchlauf auf Gerät
+  - optionale Produkt-Erweiterungen aus `docs/NEXT_TASKS.md`
 
 # 1. Zusammenfassung der Hauptprobleme
 

@@ -41,14 +41,14 @@ class TimeCalculatorMidnightTest {
     }
 
     @Test
-    fun `travelPaidMinutes takes priority over calculated value`() {
+    fun `calculated timestamps take priority over travelPaidMinutes`() {
         val entry = WorkEntry(
             date = date,
             travelStartAt = epochOf(LocalTime.of(8, 0)),
             travelArriveAt = epochOf(LocalTime.of(9, 0)),
             travelPaidMinutes = 999
         )
-        assertEquals(999, TimeCalculator.calculateTravelMinutes(entry))
+        assertEquals(60, TimeCalculator.calculateTravelMinutes(entry))
     }
 
     @Test
@@ -58,6 +58,16 @@ class TimeCalculatorMidnightTest {
             travelPaidMinutes = -15
         )
         assertEquals(0, TimeCalculator.calculateTravelMinutes(entry))
+    }
+
+    @Test
+    fun `travelPaidMinutes remain fallback without complete timestamps`() {
+        val entry = WorkEntry(
+            date = date,
+            travelStartAt = epochOf(LocalTime.of(8, 0)),
+            travelPaidMinutes = 45
+        )
+        assertEquals(45, TimeCalculator.calculateTravelMinutes(entry))
     }
 
     @Test

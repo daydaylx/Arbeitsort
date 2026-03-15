@@ -1,11 +1,13 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.withTravelCleared
 import java.time.LocalDate
 
 /**
- * UseCase zum Setzen von Travel-Events (Start/Arrive/Departure)
+ * UseCase zum Setzen eines einzelnen manuellen Travel-Fensters (Start/Arrive)
  * 
  * Ermöglicht das Erfassen von Anreise- und Abreise-Informationen
  */
@@ -14,12 +16,11 @@ class SetTravelEvent(
 ) {
     
     /**
-     * Travel-Typ
+     * Travel-Typ für das einzelne Fahrtfenster des Tages.
      */
     enum class TravelType {
         START,      // Anreise startet
-        ARRIVE,     // Ankunft am Ziel
-        DEPARTURE   // Abreise vom Ziel
+        ARRIVE      // Ankunft am Ziel
     }
     
     /**
@@ -47,6 +48,9 @@ class SetTravelEvent(
                     existingEntry.copy(
                         travelStartAt = timestamp,
                         travelLabelStart = label,
+                        travelPaidMinutes = null,
+                        travelSource = TravelSource.MANUAL,
+                        travelUpdatedAt = now,
                         updatedAt = now
                     )
                 } else {
@@ -54,6 +58,8 @@ class SetTravelEvent(
                         date = date,
                         travelStartAt = timestamp,
                         travelLabelStart = label,
+                        travelSource = TravelSource.MANUAL,
+                        travelUpdatedAt = now,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -66,6 +72,9 @@ class SetTravelEvent(
                     existingEntry.copy(
                         travelArriveAt = timestamp,
                         travelLabelEnd = label,
+                        travelPaidMinutes = null,
+                        travelSource = TravelSource.MANUAL,
+                        travelUpdatedAt = now,
                         updatedAt = now
                     )
                 } else {
@@ -73,28 +82,8 @@ class SetTravelEvent(
                         date = date,
                         travelArriveAt = timestamp,
                         travelLabelEnd = label,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                }
-            }
-            
-            TravelType.DEPARTURE -> {
-                // Abreise vom Ziel - setzt travelArriveAt (Rückreise-Ende)
-                // Hinreise: travelStartAt (Abfahrt) → travelArriveAt (Ankunft am Ziel)
-                // Rückreise: DEPARTURE würde eigentlich einen neuen Eintrag benötigen
-                // Für MVP-Limitation: Nutze travelArriveAt für Rückreise-Ende
-                if (existingEntry != null) {
-                    existingEntry.copy(
-                        travelArriveAt = timestamp,
-                        travelLabelEnd = label,
-                        updatedAt = now
-                    )
-                } else {
-                    WorkEntry(
-                        date = date,
-                        travelArriveAt = timestamp,
-                        travelLabelEnd = label,
+                        travelSource = TravelSource.MANUAL,
+                        travelUpdatedAt = now,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -117,13 +106,7 @@ class SetTravelEvent(
             ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
         
         val now = System.currentTimeMillis()
-        val updatedEntry = existingEntry.copy(
-            travelStartAt = null,
-            travelArriveAt = null,
-            travelLabelStart = null,
-            travelLabelEnd = null,
-            updatedAt = now
-        )
+        val updatedEntry = existingEntry.withTravelCleared(now)
         
         workEntryDao.upsert(updatedEntry)
         return updatedEntry

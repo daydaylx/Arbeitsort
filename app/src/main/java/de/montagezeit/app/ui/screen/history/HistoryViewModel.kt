@@ -11,6 +11,7 @@ import de.montagezeit.app.data.local.entity.confirmationStateForDayType
 import de.montagezeit.app.data.local.entity.withMealAllowanceCleared
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
@@ -91,14 +92,11 @@ class HistoryViewModel @Inject constructor(
                 val entriesToUpsert = mutableListOf<WorkEntry>()
                 for (date in dates) {
                     val existing = entriesByDate[date]
-                    val baseEntry = existing ?: WorkEntry(
+                    val baseEntry = existing ?: WorkEntryFactory.createDefaultEntry(
                         date = date,
-                        dayType = defaultDayTypeForDate(date, settings),
-                        workStart = settings.workStart,
-                        workEnd = settings.workEnd,
-                        breakMinutes = settings.breakMinutes,
-                        createdAt = now,
-                        updatedAt = now
+                        settings = settings,
+                        dayType = WorkEntryFactory.resolveAutoDayType(date, settings),
+                        now = now
                     )
 
                     var updated = baseEntry
@@ -234,15 +232,6 @@ class HistoryViewModel @Inject constructor(
         return dates
     }
 
-    private fun defaultDayTypeForDate(date: LocalDate, settings: ReminderSettings): DayType {
-        val isWeekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
-        val isHoliday = settings.holidayDates.contains(date)
-        return if ((settings.autoOffWeekends && isWeekend) || (settings.autoOffHolidays && isHoliday)) {
-            DayType.OFF
-        } else {
-            DayType.WORK
-        }
-    }
 }
 
 data class MonthGroup(

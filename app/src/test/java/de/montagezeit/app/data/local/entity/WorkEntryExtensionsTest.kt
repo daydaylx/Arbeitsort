@@ -150,6 +150,52 @@ class WorkEntryExtensionsTest {
         assertEquals("UI", result.confirmationSource)
     }
 
+    @Test
+    fun `transitionToDayType clears travel and meal data for comp time`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 3, 12),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            travelStartAt = epochOf(LocalTime.of(7, 0)),
+            travelArriveAt = epochOf(LocalTime.of(8, 30)),
+            travelPaidMinutes = 90,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+
+        val result = entry.transitionToDayType(dayType = DayType.COMP_TIME, now = now)
+
+        assertEquals(DayType.COMP_TIME, result.dayType)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
+        assertNull(result.travelStartAt)
+        assertNull(result.travelArriveAt)
+        assertNull(result.travelPaidMinutes)
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceAmountCents)
+    }
+
+    @Test
+    fun `transitionToDayType clears auto confirmation when leaving comp time`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 3, 12),
+            dayType = DayType.COMP_TIME,
+            confirmedWorkDay = true,
+            confirmationAt = 2_000L,
+            confirmationSource = DayType.COMP_TIME.name
+        )
+
+        val result = entry.transitionToDayType(dayType = DayType.WORK, now = now)
+
+        assertEquals(DayType.WORK, result.dayType)
+        assertFalse(result.confirmedWorkDay)
+        assertNull(result.confirmationAt)
+        assertNull(result.confirmationSource)
+    }
+
     private fun epochOf(time: LocalTime): Long =
         date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }

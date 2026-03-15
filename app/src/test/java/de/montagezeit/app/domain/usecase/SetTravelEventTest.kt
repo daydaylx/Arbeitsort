@@ -2,6 +2,7 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -73,6 +74,9 @@ class SetTravelEventTest {
         // Assert
         assertEquals(timestamp, result.travelStartAt)
         assertEquals(label, result.travelLabelStart)
+        assertNull(result.travelPaidMinutes)
+        assertEquals(TravelSource.MANUAL, result.travelSource)
+        assertNotNull(result.travelUpdatedAt)
         assertEquals(existingEntry.createdAt, result.createdAt)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
         
@@ -126,29 +130,12 @@ class SetTravelEventTest {
         // Assert
         assertEquals(timestamp, result.travelArriveAt)
         assertEquals(label, result.travelLabelEnd)
+        assertNull(result.travelPaidMinutes)
+        assertEquals(TravelSource.MANUAL, result.travelSource)
+        assertNotNull(result.travelUpdatedAt)
         assertEquals(existingEntry.travelStartAt, result.travelStartAt) // Behält Start
         assertEquals(existingEntry.travelLabelStart, result.travelLabelStart) // Behält Start Label
         
-        coVerify { workEntryDao.upsert(result) }
-    }
-    
-    @Test
-    fun `invoke - DEPARTURE - Neuer Eintrag - Erstellt Entry mit travelArriveAt`() = runTest {
-        // Arrange
-        val date = LocalDate.now()
-        val timestamp = 3000000L
-        val label = "Dresden"
-
-        coEvery { workEntryDao.getByDate(date) } returns null
-        coEvery { workEntryDao.upsert(any()) } just Runs
-
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.DEPARTURE, timestamp, label)
-
-        // Assert
-        assertEquals(timestamp, result.travelArriveAt)
-        assertEquals(label, result.travelLabelEnd)
-
         coVerify { workEntryDao.upsert(result) }
     }
     
@@ -197,6 +184,8 @@ class SetTravelEventTest {
         assertNull(result.travelArriveAt)
         assertNull(result.travelLabelStart)
         assertNull(result.travelLabelEnd)
+        assertNull(result.travelSource)
+        assertNotNull(result.travelUpdatedAt)
         assertEquals(existingEntry.dayType, result.dayType)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
         

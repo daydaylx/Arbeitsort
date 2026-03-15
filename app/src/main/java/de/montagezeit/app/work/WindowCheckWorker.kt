@@ -175,14 +175,19 @@ class WindowCheckWorker @AssistedInject constructor(
         operationMutex.withLock {
             if (reminderFlagsStore.isDailyReminded(date)) return
             val entry = workEntryDao.getByDate(date)
-            if (entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)) {
+            val isAutoNonWorkingDay = entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)
+            if (isAutoNonWorkingDay) {
                 reminderFlagsStore.setDailyReminded(date)
                 return
             }
             if (shouldShowDailyReminder(entry)) {
                 notificationManager.showDailyConfirmationNotification(date)
+                reminderFlagsStore.setDailyReminded(date)
+                return
             }
-            reminderFlagsStore.setDailyReminded(date)
+            if (isDailyReminderTerminal(entry)) {
+                reminderFlagsStore.setDailyReminded(date)
+            }
         }
     }
 
@@ -195,14 +200,17 @@ class WindowCheckWorker @AssistedInject constructor(
         const val KEY_REMINDER_TYPE = "reminder_type"
 
         internal fun shouldShowMorningReminder(entry: WorkEntry?): Boolean {
+            if (entry?.confirmedWorkDay == true) return false
             return entry == null || (entry.dayType == DayType.WORK && entry.morningCapturedAt == null)
         }
 
         internal fun shouldShowEveningReminder(entry: WorkEntry?): Boolean {
+            if (entry?.confirmedWorkDay == true) return false
             return entry == null || (entry.dayType == DayType.WORK && entry.eveningCapturedAt == null)
         }
 
         internal fun shouldShowFallbackReminder(entry: WorkEntry?): Boolean {
+            if (entry?.confirmedWorkDay == true) return false
             return entry == null || (
                 entry.dayType == DayType.WORK &&
                     (entry.morningCapturedAt == null || entry.eveningCapturedAt == null)
@@ -213,6 +221,11 @@ class WindowCheckWorker @AssistedInject constructor(
             // COMP_TIME is always considered confirmed – no daily reminder needed.
             if (entry?.dayType == DayType.COMP_TIME) return false
             return entry?.confirmedWorkDay != true
+        }
+
+        internal fun isDailyReminderTerminal(entry: WorkEntry?): Boolean {
+            if (entry == null) return false
+            return entry.confirmedWorkDay || entry.dayType == DayType.COMP_TIME
         }
 
         internal fun shouldRetryOn(throwable: Throwable): Boolean {

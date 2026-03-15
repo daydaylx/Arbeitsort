@@ -9,11 +9,14 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.DayLocationSource
+import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.usecase.UpdateEntry
+import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +26,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -101,16 +103,10 @@ class EditEntryViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    val defaultDayType = defaultDayTypeForDate(date, settings)
-                    // Neuen Eintrag mit Defaults erstellen
-                    val defaultEntry = WorkEntry(
+                    val defaultEntry = WorkEntryFactory.createDefaultEntry(
                         date = date,
-                        dayType = defaultDayType,
-                        workStart = settings.workStart,
-                        workEnd = settings.workEnd,
-                        breakMinutes = settings.breakMinutes,
-                        dayLocationLabel = "",
-                        dayLocationSource = DayLocationSource.FALLBACK
+                        settings = settings,
+                        dayType = WorkEntryFactory.resolveAutoDayType(date, settings)
                     )
                     val formData = EditFormData.fromEntry(defaultEntry, editTimeZone)
                     _screenState.update {
@@ -340,8 +336,15 @@ class EditEntryViewModel @Inject constructor(
                         return@launch
                     }
 
-                    val isCompTime = data.dayType == DayType.COMP_TIME
-                    originalEntry.copy(
+                    val baseEntry = originalEntry.transitionToDayType(dayType = data.dayType, now = now)
+                    val travelFields = resolveTravelFields(
+                        date = originalEntry.date,
+                        originalEntry = originalEntry,
+                        data = data,
+                        now = now
+                    )
+
+                    baseEntry.copy(
                         dayType = data.dayType,
                         workStart = data.workStart,
                         workEnd = data.workEnd,
@@ -354,25 +357,32 @@ class EditEntryViewModel @Inject constructor(
                         morningLocationLabel = data.morningLocationLabel,
                         eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
-                        travelStartAt = data.travelStartTime?.let { toEpochMillis(originalEntry.date, it) },
-                        travelArriveAt = data.travelArriveTime?.let { toEpochMillis(originalEntry.date, it) },
-                        travelLabelStart = data.travelLabelStart,
-                        travelLabelEnd = data.travelLabelEnd,
+                        travelStartAt = travelFields.startAt,
+                        travelArriveAt = travelFields.arriveAt,
+                        travelLabelStart = travelFields.labelStart,
+                        travelLabelEnd = travelFields.labelEnd,
+                        travelFromLabel = travelFields.fromLabel,
+                        travelToLabel = travelFields.toLabel,
+                        travelDistanceKm = travelFields.distanceKm,
+                        travelSource = travelFields.source,
+                        travelUpdatedAt = travelFields.updatedAt,
                         mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
                         mealAllowanceAmountCents = mealAllowance.amountCents,
                         needsReview = data.needsReview,
-                        confirmedWorkDay = if (isCompTime) true else originalEntry.confirmedWorkDay,
-                        confirmationAt = if (isCompTime && originalEntry.confirmationAt == null) now else originalEntry.confirmationAt,
-                        confirmationSource = if (isCompTime && originalEntry.confirmationSource == null) "COMP_TIME" else originalEntry.confirmationSource,
                         updatedAt = now
                     )
                 }
                 is EditUiState.NewEntry -> {
                     // Neuen Eintrag erstellen
                     val now = System.currentTimeMillis()
-                    val isCompTime = data.dayType == DayType.COMP_TIME
+                    val travelFields = resolveTravelFields(
+                        date = currentState.date,
+                        originalEntry = null,
+                        data = data,
+                        now = now
+                    )
                     WorkEntry(
                         date = currentState.date,
                         dayType = data.dayType,
@@ -387,18 +397,23 @@ class EditEntryViewModel @Inject constructor(
                         morningLocationLabel = data.morningLocationLabel,
                         eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
-                        travelStartAt = data.travelStartTime?.let { toEpochMillis(currentState.date, it) },
-                        travelArriveAt = data.travelArriveTime?.let { toEpochMillis(currentState.date, it) },
-                        travelLabelStart = data.travelLabelStart,
-                        travelLabelEnd = data.travelLabelEnd,
+                        travelStartAt = travelFields.startAt,
+                        travelArriveAt = travelFields.arriveAt,
+                        travelLabelStart = travelFields.labelStart,
+                        travelLabelEnd = travelFields.labelEnd,
+                        travelFromLabel = travelFields.fromLabel,
+                        travelToLabel = travelFields.toLabel,
+                        travelDistanceKm = travelFields.distanceKm,
+                        travelSource = travelFields.source,
+                        travelUpdatedAt = travelFields.updatedAt,
                         mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
                         mealAllowanceAmountCents = mealAllowance.amountCents,
                         needsReview = data.needsReview,
-                        confirmedWorkDay = isCompTime,
-                        confirmationAt = if (isCompTime) now else null,
-                        confirmationSource = if (isCompTime) "COMP_TIME" else null,
+                        confirmedWorkDay = data.dayType == DayType.COMP_TIME,
+                        confirmationAt = if (data.dayType == DayType.COMP_TIME) now else null,
+                        confirmationSource = if (data.dayType == DayType.COMP_TIME) DayType.COMP_TIME.name else null,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -471,16 +486,73 @@ class EditEntryViewModel @Inject constructor(
             .toEpochMilli()
     }
 
-    private fun defaultDayTypeForDate(
+    private fun resolveTravelFields(
         date: LocalDate,
-        settings: ReminderSettings
-    ): DayType {
-        val isWeekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
-        val isHoliday = settings.holidayDates.contains(date)
-        return if ((settings.autoOffWeekends && isWeekend) || (settings.autoOffHolidays && isHoliday)) {
-            DayType.OFF
+        originalEntry: WorkEntry?,
+        data: EditFormData,
+        now: Long
+    ): ResolvedTravelFields {
+        val shouldPersistTravel = data.dayType != DayType.COMP_TIME
+        val startAt = if (shouldPersistTravel) data.travelStartTime?.let { toEpochMillis(date, it) } else null
+        val arriveAt = if (shouldPersistTravel) data.travelArriveTime?.let { toEpochMillis(date, it) } else null
+        val labelStart = if (shouldPersistTravel) data.travelLabelStart else null
+        val labelEnd = if (shouldPersistTravel) data.travelLabelEnd else null
+        val hasTravelInput = startAt != null || arriveAt != null || labelStart != null || labelEnd != null
+
+        if (originalEntry == null) {
+            return ResolvedTravelFields(
+                startAt = startAt,
+                arriveAt = arriveAt,
+                labelStart = labelStart,
+                labelEnd = labelEnd,
+                fromLabel = null,
+                toLabel = null,
+                distanceKm = null,
+                source = if (hasTravelInput) TravelSource.MANUAL else null,
+                updatedAt = if (hasTravelInput) now else null
+            )
+        }
+
+        val originalHasTravelData = originalEntry.travelStartAt != null ||
+            originalEntry.travelArriveAt != null ||
+            originalEntry.travelLabelStart != null ||
+            originalEntry.travelLabelEnd != null ||
+            originalEntry.travelFromLabel != null ||
+            originalEntry.travelToLabel != null ||
+            originalEntry.travelDistanceKm != null ||
+            originalEntry.travelPaidMinutes != null ||
+            originalEntry.travelSource != null
+
+        val travelChanged = startAt != originalEntry.travelStartAt ||
+            arriveAt != originalEntry.travelArriveAt ||
+            labelStart != originalEntry.travelLabelStart ||
+            labelEnd != originalEntry.travelLabelEnd ||
+            (!shouldPersistTravel && originalHasTravelData)
+
+        return if (travelChanged) {
+            ResolvedTravelFields(
+                startAt = startAt,
+                arriveAt = arriveAt,
+                labelStart = labelStart,
+                labelEnd = labelEnd,
+                fromLabel = null,
+                toLabel = null,
+                distanceKm = null,
+                source = if (hasTravelInput) TravelSource.MANUAL else null,
+                updatedAt = now
+            )
         } else {
-            DayType.WORK
+            ResolvedTravelFields(
+                startAt = startAt,
+                arriveAt = arriveAt,
+                labelStart = labelStart,
+                labelEnd = labelEnd,
+                fromLabel = originalEntry.travelFromLabel,
+                toLabel = originalEntry.travelToLabel,
+                distanceKm = originalEntry.travelDistanceKm,
+                source = originalEntry.travelSource,
+                updatedAt = originalEntry.travelUpdatedAt
+            )
         }
     }
 
@@ -490,6 +562,18 @@ class EditEntryViewModel @Inject constructor(
         }
     }
 }
+
+private data class ResolvedTravelFields(
+    val startAt: Long?,
+    val arriveAt: Long?,
+    val labelStart: String?,
+    val labelEnd: String?,
+    val fromLabel: String?,
+    val toLabel: String?,
+    val distanceKm: Double?,
+    val source: TravelSource?,
+    val updatedAt: Long?
+)
 
 data class EditScreenState(
     val uiState: EditUiState = EditUiState.Loading,

@@ -46,6 +46,21 @@ class ReminderLaterWorkerDecisionTest {
     }
 
     @Test
+    fun `MORNING snooze is suppressed for confirmed work day without snapshots`() = runBlocking {
+        val date = LocalDate.of(2026, 3, 12)
+        coEvery { workEntryDao.getByDate(date) } returns workEntry(confirmedWorkDay = true)
+
+        val shouldShow = ReminderLaterWorker.shouldShowReminder(
+            date = date,
+            reminderType = ReminderType.MORNING,
+            workEntryDao = workEntryDao,
+            settings = ReminderSettings()
+        )
+
+        assertFalse(shouldShow)
+    }
+
+    @Test
     fun `FALLBACK snooze is suppressed when work day is already complete`() = runBlocking {
         val date = LocalDate.of(2026, 3, 12)
         coEvery { workEntryDao.getByDate(date) } returns workEntry(

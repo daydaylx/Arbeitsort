@@ -132,10 +132,10 @@ app/src/main/java/de/montagezeit/app/
 
 ## 🔧 Build
 
-### Benötigte Dateien
-Das Projekt benötigt noch:
-1. `gradle/wrapper/gradle-wrapper.jar` - Gradle Wrapper JAR
-2. `gradle/wrapper/gradle-wrapper.properties` - Wrapper-Konfiguration
+### Status
+- Gradle Wrapper ist vorhanden und der Debug-Build läuft über `./gradlew assembleDebug`.
+- Die zuletzt offenen Audit-Follow-ups zu Travel-Priorität, Reminder-Terminalzuständen und
+  COMP_TIME-/Edit-Transitions sind im Code umgesetzt und testseitig abgesichert.
 
 ### Build-Befehl
 ```bash
@@ -179,16 +179,13 @@ Enthält Checks für:
 
 ## 📝 Known Issues
 
-1. **Gradle Wrapper fehlt**: Die `gradle-wrapper.jar` und `gradle-wrapper.properties` müssen im `gradle/wrapper/` Verzeichnis erstellt werden, damit der Build funktioniert.
-2. **Clipboard Export**: Die Clipboard-Kopier-Funktionalität im Export-Dialog ist mit TODO markiert.
+1. **Manuelle Geräte-QA offen**: Die dokumentierten Smoke-Tests sind noch nicht als durchgeführt protokolliert.
 
 ## 🚀 Nächste Schritte
 
-1. Gradle Wrapper Setup (JAR und Properties)
-2. App auf Gerät testen und QA-Checklist abarbeiten
-3. Optional: Travel-Eintrag UI (falls gewünscht)
-4. Optional: Dark Theme Unterstützung
-5. Optional: Unit Tests für ViewModels
+1. App auf Gerät testen und QA-Checklist abarbeiten
+2. Optional: erweitertes Travel-Modell / UI nur falls mehr als ein Fahrtfenster pro Tag benötigt wird
+3. Optional: Dark Theme Unterstützung
 
 ## 📊 Code-Metriken
 

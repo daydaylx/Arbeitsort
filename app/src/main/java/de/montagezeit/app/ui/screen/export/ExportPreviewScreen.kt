@@ -1,5 +1,7 @@
 package de.montagezeit.app.ui.screen.export
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -153,6 +155,12 @@ fun ExportPreviewBottomSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.action_share))
+                    }
+                    TertiaryActionButton(
+                        onClick = { copyExportUri(context, state.fileUri) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.action_copy))
                     }
                     TertiaryActionButton(
                         onClick = { viewModel.returnToPreview() },
@@ -375,4 +383,18 @@ private fun sharePdf(context: Context, fileUri: Uri) {
             Toast.LENGTH_SHORT
         ).show()
     }
+}
+
+private fun copyExportUri(context: Context, fileUri: Uri) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText(
+        context.getString(R.string.export_clipboard_label),
+        fileUri.toString()
+    )
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(
+        context,
+        context.getString(R.string.export_clipboard_copied),
+        Toast.LENGTH_SHORT
+    ).show()
 }

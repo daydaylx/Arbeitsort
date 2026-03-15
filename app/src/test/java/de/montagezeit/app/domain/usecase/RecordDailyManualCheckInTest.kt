@@ -18,7 +18,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -63,7 +63,7 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke sets day completion fields for manual label`() = runTest {
+    fun `invoke confirms work day without synthesizing snapshots`() = runTest {
         val date = LocalDate.now()
         mockReadModifyWrite(date, null)
 
@@ -72,12 +72,10 @@ class RecordDailyManualCheckInTest {
         assertEquals(DayType.WORK, result.dayType)
         assertEquals("Baustelle XY", result.dayLocationLabel)
         assertEquals(DayLocationSource.MANUAL, result.dayLocationSource)
-        assertEquals(LocationStatus.UNAVAILABLE, result.morningLocationStatus)
-        assertEquals(LocationStatus.UNAVAILABLE, result.eveningLocationStatus)
-        assertNotNull(result.morningCapturedAt)
-        assertNotNull(result.eveningCapturedAt)
+        assertNull(result.morningCapturedAt)
+        assertNull(result.eveningCapturedAt)
         assertEquals(true, result.confirmedWorkDay)
-        assertNotNull(result.confirmationAt)
+        assertFalse(result.confirmationAt == null)
         assertEquals("UI", result.confirmationSource)
         assertFalse(result.needsReview)
 
@@ -120,6 +118,24 @@ class RecordDailyManualCheckInTest {
         assertEquals(1_000L, result.morningCapturedAt)
         assertEquals(2_000L, result.eveningCapturedAt)
         assertEquals("Neuer Ort", result.dayLocationLabel)
+    }
+
+    @Test
+    fun `invoke does not create snapshots on existing entry without captures`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Alt"
+        )
+        mockReadModifyWrite(date, existing)
+
+        val result = useCase(DailyManualCheckInInput(date, "Neuer Ort"))
+
+        assertNull(result.morningCapturedAt)
+        assertNull(result.eveningCapturedAt)
+        assertEquals("Neuer Ort", result.dayLocationLabel)
+        assertEquals(true, result.confirmedWorkDay)
     }
 
     @Test
