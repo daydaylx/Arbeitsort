@@ -1,7 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
@@ -15,12 +14,7 @@ internal object CheckInEntryBuilder {
     fun build(
         date: LocalDate,
         existingEntry: WorkEntry?,
-        snapshot: Snapshot,
-        locationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
-        locationLat: Double? = null,
-        locationLon: Double? = null,
-        locationAccuracyMeters: Float? = null,
-        locationLabel: String? = null
+        snapshot: Snapshot
     ): WorkEntry {
         val now = System.currentTimeMillis()
         if (existingEntry != null && existingEntry.dayType != DayType.WORK) {
@@ -29,54 +23,25 @@ internal object CheckInEntryBuilder {
         val normalizedEntry = existingEntry
         val dayLocation = DayLocationResolver.resolve(normalizedEntry)
 
-        // Standort-Review ist deaktiviert: Ortsangabe wird manuell geführt.
-        val needsReview = false
-
         return if (snapshot == Snapshot.MORNING) {
             normalizedEntry?.copy(
                 morningCapturedAt = now,
-                morningLocationStatus = locationStatus,
-                morningLat = locationLat,
-                morningLon = locationLon,
-                morningAccuracyMeters = locationAccuracyMeters,
-                morningLocationLabel = locationLabel,
-                dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source,
-                dayLocationLat = null,
-                dayLocationLon = null,
-                dayLocationAccuracyMeters = null,
-                needsReview = needsReview,
+                dayLocationLabel = dayLocation,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
                 morningCapturedAt = now,
-                morningLocationStatus = locationStatus,
-                dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source,
-                needsReview = needsReview
+                dayLocationLabel = dayLocation
             )
         } else {
             normalizedEntry?.copy(
                 eveningCapturedAt = now,
-                eveningLocationStatus = locationStatus,
-                eveningLat = locationLat,
-                eveningLon = locationLon,
-                eveningAccuracyMeters = locationAccuracyMeters,
-                eveningLocationLabel = locationLabel,
-                dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source,
-                dayLocationLat = null,
-                dayLocationLon = null,
-                dayLocationAccuracyMeters = null,
-                needsReview = needsReview,
+                dayLocationLabel = dayLocation,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
                 eveningCapturedAt = now,
-                eveningLocationStatus = locationStatus,
-                dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source,
-                needsReview = needsReview
+                dayLocationLabel = dayLocation
             )
         }
     }
@@ -84,27 +49,16 @@ internal object CheckInEntryBuilder {
     private fun createDefaultEntry(
         date: LocalDate,
         morningCapturedAt: Long? = null,
-        morningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
         eveningCapturedAt: Long? = null,
-        eveningLocationStatus: LocationStatus = LocationStatus.UNAVAILABLE,
-        dayLocationLabel: String = "",
-        dayLocationSource: de.montagezeit.app.data.local.entity.DayLocationSource = de.montagezeit.app.data.local.entity.DayLocationSource.FALLBACK,
-        needsReview: Boolean = false
+        dayLocationLabel: String = ""
     ): WorkEntry {
         val now = System.currentTimeMillis()
         return WorkEntry(
             date = date,
             dayType = DayType.WORK,
             dayLocationLabel = dayLocationLabel,
-            dayLocationSource = dayLocationSource,
-            dayLocationLat = null,
-            dayLocationLon = null,
-            dayLocationAccuracyMeters = null,
             morningCapturedAt = morningCapturedAt,
-            morningLocationStatus = morningLocationStatus,
             eveningCapturedAt = eveningCapturedAt,
-            eveningLocationStatus = eveningLocationStatus,
-            needsReview = needsReview,
             createdAt = now,
             updatedAt = now
         )

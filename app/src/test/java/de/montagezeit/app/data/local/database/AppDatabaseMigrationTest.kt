@@ -38,7 +38,8 @@ class AppDatabaseMigrationTest {
             "migration_7_8_test.db",
             "migration_8_9_test.db",
             "migration_9_10_test.db",
-            "migration_10_11_test.db"
+            "migration_10_11_test.db",
+            "migration_11_12_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -56,7 +57,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_7_8,
                 AppDatabase.MIGRATION_8_9,
                 AppDatabase.MIGRATION_9_10,
-                AppDatabase.MIGRATION_10_11
+                AppDatabase.MIGRATION_10_11,
+                AppDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -71,23 +73,32 @@ class AppDatabaseMigrationTest {
 
         sqlite.use { db ->
             assertTrue(hasColumn(db, "work_entries", "dayLocationLabel"))
-            assertTrue(hasColumn(db, "work_entries", "dayLocationSource"))
-            assertTrue(hasColumn(db, "work_entries", "dayLocationLat"))
-            assertTrue(hasColumn(db, "work_entries", "dayLocationLon"))
-            assertTrue(hasColumn(db, "work_entries", "dayLocationAccuracyMeters"))
+            assertFalse(hasColumn(db, "work_entries", "dayLocationSource"))
+            assertFalse(hasColumn(db, "work_entries", "dayLocationLat"))
+            assertFalse(hasColumn(db, "work_entries", "dayLocationLon"))
+            assertFalse(hasColumn(db, "work_entries", "dayLocationAccuracyMeters"))
+            assertFalse(hasColumn(db, "work_entries", "morningLocationLabel"))
+            assertFalse(hasColumn(db, "work_entries", "morningLat"))
+            assertFalse(hasColumn(db, "work_entries", "morningLon"))
+            assertFalse(hasColumn(db, "work_entries", "morningAccuracyMeters"))
+            assertFalse(hasColumn(db, "work_entries", "morningLocationStatus"))
+            assertFalse(hasColumn(db, "work_entries", "eveningLocationLabel"))
+            assertFalse(hasColumn(db, "work_entries", "eveningLat"))
+            assertFalse(hasColumn(db, "work_entries", "eveningLon"))
+            assertFalse(hasColumn(db, "work_entries", "eveningAccuracyMeters"))
+            assertFalse(hasColumn(db, "work_entries", "eveningLocationStatus"))
+            assertFalse(hasColumn(db, "work_entries", "needsReview"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigMorning"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigEvening"))
 
             db.rawQuery(
-                "SELECT dayLocationLabel, dayLocationSource, dayLocationLat, dayLocationLon, dayLocationAccuracyMeters FROM work_entries WHERE date = ?",
+                "SELECT dayLocationLabel, morningCapturedAt, eveningCapturedAt FROM work_entries WHERE date = ?",
                 arrayOf("2026-01-05")
             ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 assertEquals("", cursor.getString(0))
-                assertEquals("FALLBACK", cursor.getString(1))
+                assertTrue(cursor.isNull(1))
                 assertTrue(cursor.isNull(2))
-                assertTrue(cursor.isNull(3))
-                assertTrue(cursor.isNull(4))
             }
         }
     }
@@ -310,6 +321,61 @@ class AppDatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun `migration 11 to 12 removes GPS review and snapshot label columns while preserving business data`() {
+        val dbName = "migration_11_12_test.db"
+        createVersion11Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 11)
+        try {
+            AppDatabase.MIGRATION_11_12.migrate(db)
+
+            assertFalse(hasColumnSupport(db, "work_entries", "dayLocationSource"))
+            assertFalse(hasColumnSupport(db, "work_entries", "dayLocationLat"))
+            assertFalse(hasColumnSupport(db, "work_entries", "dayLocationLon"))
+            assertFalse(hasColumnSupport(db, "work_entries", "dayLocationAccuracyMeters"))
+            assertFalse(hasColumnSupport(db, "work_entries", "morningLocationLabel"))
+            assertFalse(hasColumnSupport(db, "work_entries", "morningLat"))
+            assertFalse(hasColumnSupport(db, "work_entries", "morningLon"))
+            assertFalse(hasColumnSupport(db, "work_entries", "morningAccuracyMeters"))
+            assertFalse(hasColumnSupport(db, "work_entries", "morningLocationStatus"))
+            assertFalse(hasColumnSupport(db, "work_entries", "eveningLocationLabel"))
+            assertFalse(hasColumnSupport(db, "work_entries", "eveningLat"))
+            assertFalse(hasColumnSupport(db, "work_entries", "eveningLon"))
+            assertFalse(hasColumnSupport(db, "work_entries", "eveningAccuracyMeters"))
+            assertFalse(hasColumnSupport(db, "work_entries", "eveningLocationStatus"))
+            assertFalse(hasColumnSupport(db, "work_entries", "needsReview"))
+            assertFalse(indexExists(db, "index_work_entries_needsReview"))
+
+            db.query(
+                """
+                SELECT
+                    dayLocationLabel,
+                    morningCapturedAt,
+                    eveningCapturedAt,
+                    travelPaidMinutes,
+                    mealAllowanceAmountCents,
+                    confirmationSource,
+                    note
+                FROM work_entries
+                WHERE date = ?
+                """.trimIndent(),
+                arrayOf("2026-01-11")
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("Baustelle Nord", cursor.getString(0))
+                assertEquals(1_111L, cursor.getLong(1))
+                assertEquals(2_222L, cursor.getLong(2))
+                assertEquals(35, cursor.getInt(3))
+                assertEquals(820, cursor.getInt(4))
+                assertEquals("UI", cursor.getString(5))
+                assertEquals("Altbestand", cursor.getString(6))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
     private fun createVersion10Database(dbName: String) {
         val dbFile = context.getDatabasePath(dbName)
         dbFile.parentFile?.mkdirs()
@@ -382,6 +448,95 @@ class AppDatabaseMigrationTest {
                 """.trimIndent()
             )
             it.version = 10
+        }
+    }
+
+    private fun createVersion11Database(dbName: String) {
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+
+        val db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        db.use {
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `workStart` TEXT NOT NULL,
+                    `workEnd` TEXT NOT NULL,
+                    `breakMinutes` INTEGER NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `dayLocationLabel` TEXT NOT NULL,
+                    `dayLocationSource` TEXT NOT NULL,
+                    `dayLocationLat` REAL,
+                    `dayLocationLon` REAL,
+                    `dayLocationAccuracyMeters` REAL,
+                    `morningCapturedAt` INTEGER,
+                    `morningLocationLabel` TEXT,
+                    `morningLat` REAL,
+                    `morningLon` REAL,
+                    `morningAccuracyMeters` REAL,
+                    `morningLocationStatus` TEXT NOT NULL,
+                    `eveningCapturedAt` INTEGER,
+                    `eveningLocationLabel` TEXT,
+                    `eveningLat` REAL,
+                    `eveningLon` REAL,
+                    `eveningAccuracyMeters` REAL,
+                    `eveningLocationStatus` TEXT NOT NULL,
+                    `travelStartAt` INTEGER,
+                    `travelArriveAt` INTEGER,
+                    `travelLabelStart` TEXT,
+                    `travelLabelEnd` TEXT,
+                    `travelFromLabel` TEXT,
+                    `travelToLabel` TEXT,
+                    `travelDistanceKm` REAL,
+                    `travelPaidMinutes` INTEGER,
+                    `travelSource` TEXT,
+                    `travelUpdatedAt` INTEGER,
+                    `confirmedWorkDay` INTEGER NOT NULL,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    `mealIsArrivalDeparture` INTEGER NOT NULL,
+                    `mealBreakfastIncluded` INTEGER NOT NULL,
+                    `mealAllowanceBaseCents` INTEGER NOT NULL,
+                    `mealAllowanceAmountCents` INTEGER NOT NULL,
+                    `needsReview` INTEGER NOT NULL,
+                    `note` TEXT,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_needsReview ON work_entries(needsReview)")
+            it.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            it.execSQL(
+                """
+                INSERT INTO work_entries (
+                    date, workStart, workEnd, breakMinutes, dayType,
+                    dayLocationLabel, dayLocationSource,
+                    morningCapturedAt, morningLocationLabel, morningLocationStatus,
+                    eveningCapturedAt, eveningLocationLabel, eveningLocationStatus,
+                    travelPaidMinutes, travelSource, confirmedWorkDay,
+                    confirmationAt, confirmationSource,
+                    mealIsArrivalDeparture, mealBreakfastIncluded,
+                    mealAllowanceBaseCents, mealAllowanceAmountCents,
+                    needsReview, note, createdAt, updatedAt
+                ) VALUES (
+                    '2026-01-11', '07:00', '16:00', 45, 'WORK',
+                    'Baustelle Nord', 'MANUAL',
+                    1111, 'Morgenort', 'OK',
+                    2222, 'Abendort', 'UNAVAILABLE',
+                    35, 'MANUAL', 1,
+                    3333, 'UI',
+                    1, 0,
+                    1400, 820,
+                    1, 'Altbestand', 1000, 2000
+                )
+                """.trimIndent()
+            )
+            it.version = 11
         }
     }
 

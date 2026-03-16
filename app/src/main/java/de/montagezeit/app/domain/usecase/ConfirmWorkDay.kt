@@ -2,7 +2,6 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import kotlinx.coroutines.flow.first
@@ -41,16 +40,10 @@ class ConfirmWorkDay(
                 workEnd = if (keepExistingWorkSchedule) entry.workEnd else workEnd,
                 breakMinutes = if (keepExistingWorkSchedule) entry.breakMinutes else breakMinutes,
                 morningCapturedAt = entry.morningCapturedAt ?: now,
-                morningLocationStatus = entry.morningLocationStatus,
-                dayLocationLabel = dayLocation.label,
-                dayLocationSource = dayLocation.source,
-                dayLocationLat = null,
-                dayLocationLon = null,
-                dayLocationAccuracyMeters = null,
+                dayLocationLabel = dayLocation,
                 confirmedWorkDay = true,
                 confirmationAt = now,
                 confirmationSource = source,
-                needsReview = false,
                 updatedAt = now
             )
         } ?: WorkEntry(
@@ -59,17 +52,11 @@ class ConfirmWorkDay(
             workStart = workStart,
             workEnd = workEnd,
             breakMinutes = breakMinutes,
-            dayLocationLabel = dayLocation.label,
-            dayLocationSource = dayLocation.source,
-            dayLocationLat = null,
-            dayLocationLon = null,
-            dayLocationAccuracyMeters = null,
+            dayLocationLabel = dayLocation,
             morningCapturedAt = now,
-            morningLocationStatus = LocationStatus.UNAVAILABLE,
             confirmedWorkDay = true,
             confirmationAt = now,
             confirmationSource = source,
-            needsReview = false,
             createdAt = now,
             updatedAt = now
         )

@@ -108,7 +108,9 @@ class CheckInActionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ReminderActions.ACTION_MORNING_CHECK_IN_WITH_LOCATION -> {
+            ReminderActions.ACTION_MORNING_CHECK_IN,
+            // TODO: Remove legacy action aliases after one release.
+            ReminderActions.LEGACY_ACTION_MORNING_CHECK_IN_WITH_LOCATION -> {
                 val date = parseDate(intent)
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
@@ -131,7 +133,8 @@ class CheckInActionService : Service() {
                 }
             }
 
-            ReminderActions.ACTION_EVENING_CHECK_IN_WITH_LOCATION -> {
+            ReminderActions.ACTION_EVENING_CHECK_IN,
+            ReminderActions.LEGACY_ACTION_EVENING_CHECK_IN_WITH_LOCATION -> {
                 val date = parseDate(intent)
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))

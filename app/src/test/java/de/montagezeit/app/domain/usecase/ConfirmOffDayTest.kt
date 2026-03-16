@@ -1,7 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import io.mockk.coEvery
@@ -9,6 +8,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -26,7 +26,8 @@ import java.time.LocalDate
 @OptIn(ExperimentalCoroutinesApi::class)
 class ConfirmOffDayTest {
 
-    private val mainDispatcher = UnconfinedTestDispatcher()
+    private val testScheduler = TestCoroutineScheduler()
+    private val mainDispatcher = UnconfinedTestDispatcher(testScheduler)
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val useCase = ConfirmOffDay(workEntryDao)
 
@@ -50,7 +51,6 @@ class ConfirmOffDayTest {
 
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("", result.dayLocationLabel)
-        assertEquals(DayLocationSource.FALLBACK, result.dayLocationSource)
         assertNull(result.travelPaidMinutes)
         assertEquals(true, result.confirmedWorkDay)
         assertNotNull(result.confirmationAt)
@@ -66,7 +66,6 @@ class ConfirmOffDayTest {
             date = date,
             dayType = DayType.WORK,
             dayLocationLabel = "Berlin",
-            dayLocationSource = DayLocationSource.MANUAL,
             travelStartAt = 1000L,
             travelArriveAt = 2000L,
             travelFromLabel = "A",
@@ -82,7 +81,6 @@ class ConfirmOffDayTest {
 
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("Berlin", result.dayLocationLabel)
-        assertEquals(DayLocationSource.MANUAL, result.dayLocationSource)
         assertNull(result.travelStartAt)
         assertNull(result.travelArriveAt)
         assertNull(result.travelFromLabel)
@@ -103,8 +101,7 @@ class ConfirmOffDayTest {
         val existing = WorkEntry(
             date = date,
             dayType = DayType.WORK,
-            dayLocationLabel = "",
-            dayLocationSource = DayLocationSource.GPS
+            dayLocationLabel = ""
         )
 
         coEvery { workEntryDao.getByDate(date) } returns existing
@@ -114,6 +111,5 @@ class ConfirmOffDayTest {
 
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("", result.dayLocationLabel)
-        assertEquals(DayLocationSource.GPS, result.dayLocationSource)
     }
 }

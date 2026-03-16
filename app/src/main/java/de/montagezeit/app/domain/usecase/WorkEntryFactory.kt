@@ -1,6 +1,5 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
@@ -24,7 +23,6 @@ object WorkEntryFactory {
         settings: ReminderSettings,
         dayType: DayType = resolveAutoDayType(date, settings),
         dayLocationLabel: String = "",
-        dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
         now: Long = System.currentTimeMillis()
     ): WorkEntry {
         return WorkEntry(
@@ -34,7 +32,6 @@ object WorkEntryFactory {
             workEnd = settings.workEnd,
             breakMinutes = settings.breakMinutes,
             dayLocationLabel = dayLocationLabel,
-            dayLocationSource = dayLocationSource,
             createdAt = now,
             updatedAt = now
         )

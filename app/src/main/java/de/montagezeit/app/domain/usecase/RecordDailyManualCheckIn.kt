@@ -1,7 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -53,10 +52,6 @@ class RecordDailyManualCheckIn(
                     workEnd = if (keepExistingWorkSchedule) existingEntry.workEnd else settings.workEnd,
                     breakMinutes = if (keepExistingWorkSchedule) existingEntry.breakMinutes else settings.breakMinutes,
                     dayLocationLabel = resolvedLabel,
-                    dayLocationSource = DayLocationSource.MANUAL,
-                    dayLocationLat = null,
-                    dayLocationLon = null,
-                    dayLocationAccuracyMeters = null,
                     mealIsArrivalDeparture = input.isArrivalDeparture,
                     mealBreakfastIncluded = input.breakfastIncluded,
                     mealAllowanceBaseCents = mealResult.baseCents,
@@ -64,7 +59,6 @@ class RecordDailyManualCheckIn(
                     confirmedWorkDay = true,
                     confirmationAt = now,
                     confirmationSource = CONFIRMATION_SOURCE_UI,
-                    needsReview = false,
                     updatedAt = now
                 )
             } else {
@@ -73,7 +67,6 @@ class RecordDailyManualCheckIn(
                     settings = settings,
                     dayType = DayType.WORK,
                     dayLocationLabel = resolvedLabel,
-                    dayLocationSource = DayLocationSource.MANUAL,
                     now = now
                 ).copy(
                     mealIsArrivalDeparture = input.isArrivalDeparture,
@@ -82,8 +75,7 @@ class RecordDailyManualCheckIn(
                     mealAllowanceAmountCents = mealResult.amountCents,
                     confirmedWorkDay = true,
                     confirmationAt = now,
-                    confirmationSource = CONFIRMATION_SOURCE_UI,
-                    needsReview = false
+                    confirmationSource = CONFIRMATION_SOURCE_UI
                 )
             }
             result = updatedEntry

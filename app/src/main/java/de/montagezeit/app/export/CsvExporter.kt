@@ -78,7 +78,7 @@ class CsvExporter @Inject constructor(
 
                 // Header: workStart/workEnd/breakMinutes nur für WORK-Tage befüllt
                 // confirmedWorkDay: 1 wenn Tag fachlich bestätigt, 0 sonst
-                val header = "date;dayType;confirmedWorkDay;dayLocation;dayLocationSource;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
+                val header = "date;dayType;confirmedWorkDay;dayLocation;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
                 entries.forEach { entry ->
@@ -100,8 +100,6 @@ class CsvExporter @Inject constructor(
                         append(if (entry.confirmedWorkDay) 1 else 0)
                         append(";")
                         append(csvEscape(entry.dayLocationLabel))
-                        append(";")
-                        append(entry.dayLocationSource.name)
                         append(";")
                         append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
                         append(";")

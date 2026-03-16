@@ -112,12 +112,10 @@ class PdfUtilitiesAdditionalTest {
     }
 
     @Test
-    fun `getLocation - blank morning label falls back to day location`() {
+    fun `getLocation - returns only manual day location`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 1, 15),
             dayType = DayType.WORK,
-            morningLocationLabel = "",
-            eveningLocationLabel = null,
             dayLocationLabel = "Leipzig"
         )
 

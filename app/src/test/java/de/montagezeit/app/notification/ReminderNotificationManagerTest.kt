@@ -1,9 +1,12 @@
 package de.montagezeit.app.notification
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +27,10 @@ class ReminderNotificationManagerTest {
         manager = ReminderNotificationManager(context)
         systemNm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         shadowNm = Shadows.shadowOf(systemNm)
+    }
+
+    private fun notification(notificationId: Int): Notification {
+        return requireNotNull(shadowNm.getNotification(notificationId))
     }
 
     @Test
@@ -48,6 +55,34 @@ class ReminderNotificationManagerTest {
     fun `showDailyConfirmationNotification creates notification with correct ID`() {
         manager.showDailyConfirmationNotification(LocalDate.of(2026, 3, 15))
         assertNotNull(shadowNm.getNotification(ReminderNotificationIds.DAILY_REMINDER))
+    }
+
+    @Test
+    fun `showMorningReminder uses new morning check in action`() {
+        manager.showMorningReminder(LocalDate.of(2026, 3, 15))
+
+        val notification = notification(ReminderNotificationIds.MORNING_REMINDER)
+        val actionIntent = Shadows.shadowOf(notification.actions.first().actionIntent).savedIntent
+
+        assertEquals(ReminderActions.ACTION_MORNING_CHECK_IN, actionIntent.action)
+        assertNotEquals(
+            ReminderActions.LEGACY_ACTION_MORNING_CHECK_IN_WITH_LOCATION,
+            actionIntent.action
+        )
+    }
+
+    @Test
+    fun `showEveningReminder uses new evening check in action`() {
+        manager.showEveningReminder(LocalDate.of(2026, 3, 15))
+
+        val notification = notification(ReminderNotificationIds.EVENING_REMINDER)
+        val actionIntent = Shadows.shadowOf(notification.actions.first().actionIntent).savedIntent
+
+        assertEquals(ReminderActions.ACTION_EVENING_CHECK_IN, actionIntent.action)
+        assertNotEquals(
+            ReminderActions.LEGACY_ACTION_EVENING_CHECK_IN_WITH_LOCATION,
+            actionIntent.action
+        )
     }
 
     @Test

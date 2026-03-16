@@ -1,7 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -26,10 +25,6 @@ class SetDayLocation(
             val updated = if (existing != null) {
                 existing.copy(
                     dayLocationLabel = label,
-                    dayLocationSource = DayLocationSource.MANUAL,
-                    dayLocationLat = null,
-                    dayLocationLon = null,
-                    dayLocationAccuracyMeters = null,
                     updatedAt = now
                 )
             } else {
@@ -44,7 +39,6 @@ class SetDayLocation(
                     settings = settings,
                     dayType = dayType,
                     dayLocationLabel = label,
-                    dayLocationSource = DayLocationSource.MANUAL,
                     now = now
                 )
             }

@@ -1,7 +1,7 @@
 # Architektur - MontageZeit
 
 **Status:** Aktiv / verbindlich
-**Letzte Aktualisierung:** 2026-02-25
+**Letzte Aktualisierung:** 2026-03-16
 
 ## Dokumentstatus
 
@@ -20,9 +20,9 @@ Layer:
 
 ### 2.1 Persistence
 
-- Datenbank: `AppDatabase` (`version = 10`)
+- Datenbank: `AppDatabase` (`version = 12`)
 - Haupttabelle: `work_entries`
-- Migrationen: `MIGRATION_1_2` bis `MIGRATION_9_10`
+- Migrationen: `MIGRATION_1_2` bis `MIGRATION_11_12`
 
 ### 2.2 Reminder & Scheduling
 
@@ -47,7 +47,6 @@ Strategie:
   - `dayType = WORK`
   - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
   - `confirmedWorkDay = true` + `confirmation*`
-  - Morning/Evening-Snapshots werden als erfasst markiert, damit keine weiteren Today-Schritte offen bleiben
 - Optionale Nebenaktion: `ConfirmOffDay`
 - Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
 
@@ -68,10 +67,10 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 `WorkEntry` beinhaltet:
 - Tagesstatus (`dayType`, `confirmedWorkDay`, `confirmation*`)
 - Arbeitszeit-Defaults (`workStart`, `workEnd`, `breakMinutes`)
-- Daily Location (`dayLocationLabel`, `dayLocationSource`, Koordinaten)
-- Morning/Evening Snapshots (Timestamp, Label, Koordinaten, Accuracy, Status)
+- Daily Location (`dayLocationLabel`)
+- Morning/Evening Check-in-Timestamps (`morningCapturedAt`, `eveningCapturedAt`)
 - Travel-Daten (`travel*`)
-- Qualitätsflags (`needsReview`, `note`, Timestamps)
+- Notiz und Meta-Zeitstempel (`note`, `createdAt`, `updatedAt`)
 
 ### DayType Enum
 - `WORK` - Arbeitstag

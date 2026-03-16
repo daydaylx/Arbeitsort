@@ -9,10 +9,9 @@ import java.time.LocalDate
 /**
  * UseCase zum Setzen des Tagtyps (WORK / OFF / COMP_TIME)
  *
- * Für COMP_TIME wird [WorkEntry.confirmedWorkDay] sofort auf `true` gesetzt
- * (Option A: auto-confirm). Begründung: COMP_TIME ist eine bewusste Nutzeraktion –
- * ein zweiter manueller Bestätigungsschritt wäre inkonsistent mit ConfirmOffDay,
- * das ebenfalls direkt bestätigt. Es gibt nichts zu "reviewen".
+ * Für COMP_TIME wird [WorkEntry.confirmedWorkDay] sofort auf `true` gesetzt.
+ * Begründung: COMP_TIME ist eine bewusste Nutzeraktion und verhält sich damit
+ * konsistent zu direkt bestätigten OFF-Tagen.
  *
  * @param workEntryDao DAO für WorkEntry
  */

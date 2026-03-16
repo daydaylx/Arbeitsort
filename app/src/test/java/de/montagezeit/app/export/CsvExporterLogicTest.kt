@@ -1,7 +1,6 @@
 package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -22,15 +21,6 @@ class CsvExporterLogicTest {
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    /**
-     * Reproduces the CSV row-building logic from CsvExporter.
-     * Neue Spalten: confirmedWorkDay (index 2); Zeitfelder leer bei OFF/COMP_TIME.
-     * Neue Spaltenreihenfolge:
-     *   0:date 1:dayType 2:confirmedWorkDay 3:dayLocation 4:dayLocationSource
-     *   5:workStart 6:workEnd 7:breakMinutes 8:workMinutes 9:travelMinutes
-     *   10:paidTotalMinutes 11:mealIsArrivalDeparture 12:mealBreakfastIncluded
-     *   13:mealAllowanceBaseCents 14:mealAllowanceAmountCents 15:mealAllowanceEuro 16:note
-     */
     private fun buildCsvLine(entry: WorkEntry): String {
         val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
         val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
@@ -48,8 +38,6 @@ class CsvExporterLogicTest {
             append(if (entry.confirmedWorkDay) 1 else 0)
             append(";")
             append(entry.dayLocationLabel.replace(";", ","))
-            append(";")
-            append(entry.dayLocationSource.name)
             append(";")
             append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
             append(";")
@@ -86,7 +74,6 @@ class CsvExporterLogicTest {
         date = LocalDate.of(2024, 6, 10),
         dayType = dayType,
         dayLocationLabel = location,
-        dayLocationSource = DayLocationSource.MANUAL,
         workStart = LocalTime.of(8, 0),
         workEnd = LocalTime.of(16, 0),
         breakMinutes = 60,
@@ -97,14 +84,13 @@ class CsvExporterLogicTest {
     fun `normal entry produces correct CSV line`() {
         val line = buildCsvLine(entry())
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(17, cols.size)
+        assertEquals(16, cols.size)
         assertEquals("2024-06-10", cols[0])
         assertEquals("WORK", cols[1])
-        // cols[2] = confirmedWorkDay
         assertEquals("Dresden", cols[3])
-        assertEquals("08:00", cols[5])
-        assertEquals("16:00", cols[6])
-        assertEquals("60", cols[7])
+        assertEquals("08:00", cols[4])
+        assertEquals("16:00", cols[5])
+        assertEquals("60", cols[6])
     }
 
     @Test
@@ -139,7 +125,7 @@ class CsvExporterLogicTest {
     fun `null note produces empty note field`() {
         val line = buildCsvLine(entry(note = null))
         val cols = line.trimEnd('\n').split(";")
-        assertEquals("", cols[16])
+        assertEquals("", cols[15])
     }
 
     @Test
@@ -147,16 +133,15 @@ class CsvExporterLogicTest {
         val line = buildCsvLine(entry(dayType = DayType.OFF))
         val cols = line.trimEnd('\n').split(";")
         assertEquals("OFF", cols[1])
-        assertEquals("0", cols[8]) // workMinutes (index shifted +1)
+        assertEquals("0", cols[7])
     }
 
     @Test
     fun `meal allowance fields exported correctly`() {
         val entryWithMeal = WorkEntry(
-            date = java.time.LocalDate.of(2024, 6, 10),
+            date = LocalDate.of(2024, 6, 10),
             dayType = DayType.WORK,
             dayLocationLabel = "Dresden",
-            dayLocationSource = DayLocationSource.MANUAL,
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(16, 0),
             breakMinutes = 60,
@@ -167,12 +152,12 @@ class CsvExporterLogicTest {
         )
         val line = buildCsvLine(entryWithMeal)
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(17, cols.size)
-        assertEquals("1", cols[11])    // mealIsArrivalDeparture (shifted +1)
-        assertEquals("1", cols[12])    // mealBreakfastIncluded
-        assertEquals("1400", cols[13]) // mealAllowanceBaseCents
-        assertEquals("820", cols[14])  // mealAllowanceAmountCents
-        assertEquals("8,20 €", cols[15]) // mealAllowanceEuro
+        assertEquals(16, cols.size)
+        assertEquals("1", cols[10])
+        assertEquals("1", cols[11])
+        assertEquals("1400", cols[12])
+        assertEquals("820", cols[13])
+        assertEquals("8,20 €", cols[14])
     }
 
     @Test
@@ -180,10 +165,10 @@ class CsvExporterLogicTest {
         val line = buildCsvLine(entry(dayType = DayType.OFF))
         val cols = line.trimEnd('\n').split(";")
         assertEquals("OFF", cols[1])
-        assertEquals("", cols[5])  // workStart leer
-        assertEquals("", cols[6])  // workEnd leer
-        assertEquals("", cols[7])  // breakMinutes leer
-        assertEquals("0", cols[8]) // workMinutes = 0 (berechnet)
+        assertEquals("", cols[4])
+        assertEquals("", cols[5])
+        assertEquals("", cols[6])
+        assertEquals("0", cols[7])
     }
 
     @Test
@@ -191,9 +176,9 @@ class CsvExporterLogicTest {
         val line = buildCsvLine(entry(dayType = DayType.COMP_TIME))
         val cols = line.trimEnd('\n').split(";")
         assertEquals("Ü-Abbau", cols[1])
-        assertEquals("", cols[5])  // workStart leer
-        assertEquals("", cols[6])  // workEnd leer
-        assertEquals("", cols[7])  // breakMinutes leer
+        assertEquals("", cols[4])
+        assertEquals("", cols[5])
+        assertEquals("", cols[6])
     }
 
     @Test
@@ -201,9 +186,9 @@ class CsvExporterLogicTest {
         val line = buildCsvLine(entry(dayType = DayType.WORK))
         val cols = line.trimEnd('\n').split(";")
         assertEquals("WORK", cols[1])
-        assertEquals("08:00", cols[5])  // workStart befüllt
-        assertEquals("16:00", cols[6])  // workEnd befüllt
-        assertEquals("60", cols[7])     // breakMinutes befüllt
+        assertEquals("08:00", cols[4])
+        assertEquals("16:00", cols[5])
+        assertEquals("60", cols[6])
     }
 
     @Test

@@ -1,9 +1,7 @@
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -71,13 +69,11 @@ class RecordDailyManualCheckInTest {
 
         assertEquals(DayType.WORK, result.dayType)
         assertEquals("Baustelle XY", result.dayLocationLabel)
-        assertEquals(DayLocationSource.MANUAL, result.dayLocationSource)
         assertNull(result.morningCapturedAt)
         assertNull(result.eveningCapturedAt)
         assertEquals(true, result.confirmedWorkDay)
         assertFalse(result.confirmationAt == null)
         assertEquals("UI", result.confirmationSource)
-        assertFalse(result.needsReview)
 
         coVerify(exactly = 1) { workEntryDao.readModifyWrite(date, any()) }
     }
@@ -98,23 +94,19 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke keeps existing snapshot statuses when already captured`() = runTest {
+    fun `invoke keeps existing snapshot timestamps when already captured`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
             dayType = DayType.WORK,
             dayLocationLabel = "Alt",
             morningCapturedAt = 1_000L,
-            morningLocationStatus = LocationStatus.OK,
-            eveningCapturedAt = 2_000L,
-            eveningLocationStatus = LocationStatus.LOW_ACCURACY
+            eveningCapturedAt = 2_000L
         )
         mockReadModifyWrite(date, existing)
 
         val result = useCase(DailyManualCheckInInput(date, "Neuer Ort"))
 
-        assertEquals(LocationStatus.OK, result.morningLocationStatus)
-        assertEquals(LocationStatus.LOW_ACCURACY, result.eveningLocationStatus)
         assertEquals(1_000L, result.morningCapturedAt)
         assertEquals(2_000L, result.eveningCapturedAt)
         assertEquals("Neuer Ort", result.dayLocationLabel)

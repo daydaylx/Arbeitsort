@@ -140,14 +140,7 @@ fun EditEntrySheet(
                             workEnd = formData.workEnd,
                             breakMinutes = formData.breakMinutes,
                             dayLocationLabel = formData.dayLocationLabel.orEmpty(),
-                            dayLocationSource = formData.dayLocationSource,
-                            dayLocationLat = formData.dayLocationLat,
-                            dayLocationLon = formData.dayLocationLon,
-                            dayLocationAccuracyMeters = formData.dayLocationAccuracyMeters,
-                            morningLocationLabel = formData.morningLocationLabel,
-                            eveningLocationLabel = formData.eveningLocationLabel,
-                            note = formData.note,
-                            needsReview = formData.needsReview
+                            note = formData.note
                         )
                         EditFormContent(
                             entry = dummyEntry,
@@ -164,12 +157,9 @@ fun EditEntrySheet(
                             onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
                             onTravelClear = { viewModel.clearTravel() },
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
-                            onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
-                            onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                             onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
                             onMealBreakfastIncludedChange = { viewModel.updateMealBreakfastIncluded(it) },
                             onNoteChange = { viewModel.updateNote(it) },
-                            onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
                             onDeleteDay = null,
                             onCopyPrevious = {
@@ -258,12 +248,9 @@ fun EditEntrySheet(
                             onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
                             onTravelClear = { viewModel.clearTravel() },
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
-                            onMorningLabelChange = { viewModel.updateMorningLocationLabel(it) },
-                            onEveningLabelChange = { viewModel.updateEveningLocationLabel(it) },
                             onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
                             onMealBreakfastIncludedChange = { viewModel.updateMealBreakfastIncluded(it) },
                             onNoteChange = { viewModel.updateNote(it) },
-                            onResetReview = { viewModel.resetNeedsReview() },
                             onSave = { viewModel.save() },
                             onDeleteDay = { showDeleteDayConfirmDialog = true },
                             onCopyPrevious = {
@@ -329,12 +316,6 @@ fun EditEntrySheet(
                             }
                         }
 
-                        if (state.showConfirmDialog) {
-                            BorderzoneConfirmDialog(
-                                onConfirm = { viewModel.confirmAndSave() },
-                                onDismiss = { viewModel.dismissConfirmDialog() }
-                            )
-                        }
                     }
 
                     is EditUiState.Saved -> {
@@ -551,12 +532,9 @@ fun EditFormContent(
     onTravelLabelEndChange: (String) -> Unit,
     onTravelClear: () -> Unit,
     onDayLocationChange: (String) -> Unit,
-    onMorningLabelChange: (String) -> Unit,
-    onEveningLabelChange: (String) -> Unit,
     onMealArrivalDepartureChange: (Boolean) -> Unit,
     onMealBreakfastIncludedChange: (Boolean) -> Unit,
     onNoteChange: (String) -> Unit,
-    onResetReview: () -> Unit,
     onApplyDefaultTimes: (() -> Unit)? = null,
     onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
@@ -636,13 +614,8 @@ fun EditFormContent(
 
         EditFormSectionCard {
             LocationLabelsSection(
-                entry = entry,
                 dayLocationLabel = formData.dayLocationLabel,
-                onDayLocationChange = onDayLocationChange,
-                morningLabel = formData.morningLocationLabel,
-                eveningLabel = formData.eveningLocationLabel,
-                onMorningLabelChange = onMorningLabelChange,
-                onEveningLabelChange = onEveningLabelChange
+                onDayLocationChange = onDayLocationChange
             )
         }
     }
@@ -666,26 +639,11 @@ fun EditFormContent(
         )
     }
 
-    val showSecondaryActions = (formData.needsReview || entry.needsReview) ||
-        onCopyPrevious != null ||
+    val showSecondaryActions = onCopyPrevious != null ||
         (onCopy != null && !isNewEntry) ||
         (onDeleteDay != null && !isNewEntry)
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (formData.needsReview || entry.needsReview) {
-            SecondaryActionButton(
-                onClick = onResetReview,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(stringResource(R.string.edit_action_reset_review_flag))
-            }
-        }
-
         if (onCopyPrevious != null) {
             SecondaryActionButton(
                 onClick = onCopyPrevious,
@@ -1138,13 +1096,8 @@ TimePickerDialog(
 
 @Composable
 fun LocationLabelsSection(
-    entry: de.montagezeit.app.data.local.entity.WorkEntry,
     dayLocationLabel: String?,
-    onDayLocationChange: (String) -> Unit,
-    morningLabel: String?,
-    eveningLabel: String?,
-    onMorningLabelChange: (String) -> Unit,
-    onEveningLabelChange: (String) -> Unit
+    onDayLocationChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -1160,28 +1113,6 @@ fun LocationLabelsSection(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-        
-        if (entry.morningCapturedAt != null) {
-            OutlinedTextField(
-                value = morningLabel ?: "",
-                onValueChange = onMorningLabelChange,
-                label = { Text(stringResource(R.string.edit_label_morning_optional)) },
-                placeholder = { Text(stringResource(R.string.edit_placeholder_city_berlin)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-        }
-        
-        if (entry.eveningCapturedAt != null) {
-            OutlinedTextField(
-                value = eveningLabel ?: "",
-                onValueChange = onEveningLabelChange,
-                label = { Text(stringResource(R.string.edit_label_evening_optional)) },
-                placeholder = { Text(stringResource(R.string.edit_placeholder_city_berlin)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-        }
     }
 }
 
@@ -1262,33 +1193,6 @@ fun MealAllowanceSection(
             style = MaterialTheme.typography.bodyMedium
         )
     }
-}
-
-@Composable
-fun BorderzoneConfirmDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_confirm_title)) },
-        text = {
-            Text(
-                stringResource(R.string.edit_confirm_borderzone_text),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        confirmButton = {
-            PrimaryActionButton(onClick = onConfirm) {
-                Text(stringResource(R.string.edit_confirm_yes_save))
-            }
-        },
-        dismissButton = {
-            TertiaryActionButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
-    )
 }
 
 @Composable

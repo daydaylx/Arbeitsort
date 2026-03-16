@@ -12,7 +12,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
     entities = [WorkEntry::class],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(
@@ -271,6 +271,118 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 11→12: GPS-/Review-/Snapshot-Label-Datenmodell entfernt.
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `work_entries_new` (
+                        `date` TEXT NOT NULL,
+                        `workStart` TEXT NOT NULL,
+                        `workEnd` TEXT NOT NULL,
+                        `breakMinutes` INTEGER NOT NULL,
+                        `dayType` TEXT NOT NULL,
+                        `dayLocationLabel` TEXT NOT NULL,
+                        `morningCapturedAt` INTEGER,
+                        `eveningCapturedAt` INTEGER,
+                        `travelStartAt` INTEGER,
+                        `travelArriveAt` INTEGER,
+                        `travelLabelStart` TEXT,
+                        `travelLabelEnd` TEXT,
+                        `travelFromLabel` TEXT,
+                        `travelToLabel` TEXT,
+                        `travelDistanceKm` REAL,
+                        `travelPaidMinutes` INTEGER,
+                        `travelSource` TEXT,
+                        `travelUpdatedAt` INTEGER,
+                        `confirmedWorkDay` INTEGER NOT NULL,
+                        `confirmationAt` INTEGER,
+                        `confirmationSource` TEXT,
+                        `mealIsArrivalDeparture` INTEGER NOT NULL,
+                        `mealBreakfastIncluded` INTEGER NOT NULL,
+                        `mealAllowanceBaseCents` INTEGER NOT NULL,
+                        `mealAllowanceAmountCents` INTEGER NOT NULL,
+                        `note` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`date`)
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `work_entries_new` (
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        morningCapturedAt,
+                        eveningCapturedAt,
+                        travelStartAt,
+                        travelArriveAt,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        travelFromLabel,
+                        travelToLabel,
+                        travelDistanceKm,
+                        travelPaidMinutes,
+                        travelSource,
+                        travelUpdatedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        mealIsArrivalDeparture,
+                        mealBreakfastIncluded,
+                        mealAllowanceBaseCents,
+                        mealAllowanceAmountCents,
+                        note,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        morningCapturedAt,
+                        eveningCapturedAt,
+                        travelStartAt,
+                        travelArriveAt,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        travelFromLabel,
+                        travelToLabel,
+                        travelDistanceKm,
+                        travelPaidMinutes,
+                        travelSource,
+                        travelUpdatedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        mealIsArrivalDeparture,
+                        mealBreakfastIncluded,
+                        mealAllowanceBaseCents,
+                        mealAllowanceAmountCents,
+                        note,
+                        createdAt,
+                        updatedAt
+                    FROM `work_entries`
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE `work_entries`")
+                db.execSQL("ALTER TABLE `work_entries_new` RENAME TO `work_entries`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -281,7 +393,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_7_8,
             MIGRATION_8_9,
             MIGRATION_9_10,
-            MIGRATION_10_11
+            MIGRATION_10_11,
+            MIGRATION_11_12
         )
     }
 }

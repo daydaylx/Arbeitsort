@@ -29,19 +29,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.LocationStatus
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.DatePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
-import de.montagezeit.app.ui.util.getReviewReason
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
-import java.time.Duration
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -160,37 +156,6 @@ fun HistoryContent(
     var calendarMode by remember { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var showNeedsReviewOnly by rememberSaveable { mutableStateOf(false) }
-
-    val filteredWeeks = remember(weeks, showNeedsReviewOnly) {
-        if (!showNeedsReviewOnly) {
-            weeks
-        } else {
-            weeks.mapNotNull { week ->
-                val filteredEntries = week.entries.filter { it.needsReview }
-                if (filteredEntries.isEmpty()) null else week.copyWithEntries(filteredEntries)
-            }
-        }
-    }
-
-    val filteredMonths = remember(months, showNeedsReviewOnly) {
-        if (!showNeedsReviewOnly) {
-            months
-        } else {
-            months.mapNotNull { month ->
-                val filteredEntries = month.entries.filter { it.needsReview }
-                if (filteredEntries.isEmpty()) null else month.copyWithEntries(filteredEntries)
-            }
-        }
-    }
-
-    val filteredEntriesByDate = remember(entriesByDate, showNeedsReviewOnly) {
-        if (!showNeedsReviewOnly) {
-            entriesByDate
-        } else {
-            entriesByDate.filterValues { it.needsReview }
-        }
-    }
     val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
 
     Column(
@@ -202,11 +167,9 @@ fun HistoryContent(
             calendarMode = calendarMode,
             showMonths = showMonths,
             canToggleMonths = months.isNotEmpty(),
-            showNeedsReviewOnly = showNeedsReviewOnly,
             onShowCalendarChange = { showCalendar = it },
             onCalendarModeChange = { calendarMode = it },
             onShowMonthsChange = { showMonths = it },
-            onShowNeedsReviewOnlyChange = { showNeedsReviewOnly = it },
             onPickDate = { showDatePicker = true }
         )
 
@@ -222,7 +185,7 @@ fun HistoryContent(
                 if (calendarMode == CalendarMode.MONTH) {
                     CalendarView(
                         month = selectedMonth,
-                        entriesByDate = filteredEntriesByDate,
+                        entriesByDate = entriesByDate,
                         onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
                         onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
                         onDayClick = { date ->
@@ -234,7 +197,7 @@ fun HistoryContent(
                 } else {
                     WeekCalendarView(
                         selectedDate = selectedDate,
-                        entriesByDate = filteredEntriesByDate,
+                        entriesByDate = entriesByDate,
                         onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
                         onNextWeek = { selectedDate = selectedDate.plusDays(7) },
                         onDayClick = { date ->
@@ -245,21 +208,13 @@ fun HistoryContent(
                     )
                 }
             }
-            filteredWeeks.isEmpty() && filteredMonths.isEmpty() -> {
+            weeks.isEmpty() && months.isEmpty() -> {
                 EmptyContent(
                     modifier = Modifier.fillMaxWidth(),
                     onAddPastDay = { showDatePicker = true },
                     showAddButton = true,
-                    title = if (showNeedsReviewOnly) {
-                        stringResource(R.string.history_empty_review_title)
-                    } else {
-                        stringResource(R.string.history_empty_title)
-                    },
-                    subtitle = if (showNeedsReviewOnly) {
-                        stringResource(R.string.history_empty_review_subtitle)
-                    } else {
-                        stringResource(R.string.history_empty_subtitle)
-                    }
+                    title = stringResource(R.string.history_empty_title),
+                    subtitle = stringResource(R.string.history_empty_subtitle)
                 )
             }
             else -> {
@@ -272,7 +227,7 @@ fun HistoryContent(
                 ) {
                     if (showMonths) {
                         items(
-                            items = filteredMonths,
+                            items = months,
                             key = { month -> "${month.year}-${month.month}" }
                         ) { month ->
                             MonthGroupCard(
@@ -282,7 +237,7 @@ fun HistoryContent(
                         }
                     } else {
                         items(
-                            items = filteredWeeks,
+                            items = weeks,
                             key = { week -> "${week.year}-${week.week}" }
                         ) { week ->
                             WeekGroupCard(
@@ -317,11 +272,9 @@ private fun HistoryMiniFilterBar(
     calendarMode: CalendarMode,
     showMonths: Boolean,
     canToggleMonths: Boolean,
-    showNeedsReviewOnly: Boolean,
     onShowCalendarChange: (Boolean) -> Unit,
     onCalendarModeChange: (CalendarMode) -> Unit,
     onShowMonthsChange: (Boolean) -> Unit,
-    onShowNeedsReviewOnlyChange: (Boolean) -> Unit,
     onPickDate: () -> Unit
 ) {
     Surface(
@@ -372,12 +325,6 @@ private fun HistoryMiniFilterBar(
                     label = { Text(stringResource(R.string.history_summary_months)) }
                 )
             }
-
-            FilterChip(
-                selected = showNeedsReviewOnly,
-                onClick = { onShowNeedsReviewOnlyChange(!showNeedsReviewOnly) },
-                label = { Text(stringResource(R.string.history_chip_review_short)) }
-            )
 
             AssistChip(
                 onClick = onPickDate,
@@ -479,19 +426,6 @@ private fun HistoryDayOverviewCard(
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.weight(1f)
                     )
-                    if (entry.needsReview) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.history_chip_review_short),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -742,16 +676,6 @@ fun CalendarDayCell(
         )
 
         if (entry != null) {
-            if (entry.needsReview) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.error)
-                )
-            }
-
             if (entry.dayType == DayType.OFF) {
                 if (compactLayout) {
                     Surface(
@@ -1077,10 +1001,6 @@ fun WeekGroupCard(
         append(stringResource(R.string.history_hours_decimal, week.totalHours))
         append(" · ")
         append(stringResource(R.string.history_summary_workdays, week.workDaysCount))
-        if (week.entriesNeedingReview > 0) {
-            append(" · ")
-            append(stringResource(R.string.history_summary_review_count, week.entriesNeedingReview))
-        }
     }
 
     Card(
@@ -1229,32 +1149,6 @@ fun WeekGroupCard(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-
-                        // Warnings/Info
-                        if (week.entriesNeedingReview > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.history_entries_need_review,
-                                        week.entriesNeedingReview,
-                                        week.entriesNeedingReview
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-
                     }
                 }
             }
@@ -1287,10 +1181,6 @@ fun MonthGroupCard(
         append(stringResource(R.string.history_hours_decimal, month.totalHours))
         append(" · ")
         append(stringResource(R.string.history_summary_workdays, month.workDaysCount))
-        if (month.entriesNeedingReview > 0) {
-            append(" · ")
-            append(stringResource(R.string.history_summary_review_count, month.entriesNeedingReview))
-        }
     }
 
     Card(
@@ -1433,32 +1323,6 @@ fun MonthGroupCard(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-
-                        // Warnings/Info
-                        if (month.entriesNeedingReview > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = pluralStringResource(
-                                        R.plurals.history_entries_need_review,
-                                        month.entriesNeedingReview,
-                                        month.entriesNeedingReview
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-
                     }
                 }
             }
@@ -1514,13 +1378,7 @@ fun HistoryEntryItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (entry.needsReview) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.secondaryContainer
-            }
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
     ) {
         Column(
             modifier = Modifier
@@ -1542,14 +1400,6 @@ fun HistoryEntryItem(
                         style = MaterialTheme.typography.titleMedium
                     )
                     DayTypeIndicator(dayType = entry.dayType)
-                    if (entry.needsReview) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = stringResource(R.string.history_cd_review_required),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                 }
 
                 if (entry.dayType == DayType.WORK || travelMinutes > 0) {
@@ -1574,16 +1424,6 @@ fun HistoryEntryItem(
                     }
                 }
             }
-
-            if (entry.needsReview) {
-                Text(
-                    text = getReviewReason(entry),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-
-            // Location Status Info
             LocationSummary(entry = entry)
             TravelSummaryRow(entry = entry)
         }
@@ -1608,92 +1448,49 @@ fun DayTypeIndicator(dayType: DayType) {
 
 @Composable
 fun LocationSummary(entry: WorkEntry) {
-    val hasMorning = entry.morningCapturedAt != null
-    val hasEvening = entry.eveningCapturedAt != null
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 24.dp)
-    ) {
-        if (!hasMorning && !hasEvening) {
-            Column {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.history_day_location_summary,
-                            stringResource(R.string.day_location_label),
-                            entry.dayLocationLabel.orEmpty()
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.history_label_no_checkin),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
-                )
-            }
-        } else {
-            Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.LocationOn,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = stringResource(
-                R.string.history_day_location_summary,
-                stringResource(R.string.day_location_label),
-                entry.dayLocationLabel.orEmpty()
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1
-        )
+    val locationLabel = entry.dayLocationLabel.ifBlank {
+        stringResource(R.string.today_day_location_unset)
     }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (hasMorning) {
-                    LocationStatusIcon(status = entry.morningLocationStatus)
-                }
-
-                if (hasEvening) {
-                    LocationStatusIcon(status = entry.eveningLocationStatus)
-                }
-
-                // Location labels (if available and different from default)
-                val defaultLabel = entry.dayLocationLabel
-                val labels = listOfNotNull(
-                    entry.morningLocationLabel?.takeIf { it != defaultLabel },
-                    entry.eveningLocationLabel?.takeIf { it != defaultLabel }
-                )
-
-                if (labels.isNotEmpty()) {
-                    Text(
-                        text = labels.joinToString(", "),
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1
-                    )
-                }
-            }
+    val checkInSummary = listOfNotNull(
+        entry.morningCapturedAt?.let {
+            stringResource(R.string.today_location_morning) + " " + formatTime(it)
+        },
+        entry.eveningCapturedAt?.let {
+            stringResource(R.string.today_location_evening) + " " + formatTime(it)
         }
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = stringResource(
+                    R.string.history_day_location_summary,
+                    stringResource(R.string.day_location_label),
+                    locationLabel
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1
+            )
+        }
+        Text(
+            text = checkInSummary.ifEmpty {
+                listOf(stringResource(R.string.history_label_no_checkin))
+            }.joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+        )
     }
 }
 
@@ -1761,22 +1558,6 @@ fun TravelSummaryRow(entry: WorkEntry) {
 }
 
 @Composable
-fun LocationStatusIcon(status: LocationStatus) {
-    val (icon, color) = when (status) {
-        LocationStatus.OK -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
-        LocationStatus.LOW_ACCURACY -> Icons.Default.Warning to MaterialTheme.colorScheme.error
-        LocationStatus.UNAVAILABLE -> Icons.Default.LocationOff to MaterialTheme.colorScheme.error
-    }
-    
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = color,
-        modifier = Modifier.size(16.dp)
-    )
-}
-
-@Composable
 fun ErrorContent(
     message: String,
     onRetry: () -> Unit,
@@ -1803,34 +1584,6 @@ fun ErrorContent(
             Text(stringResource(R.string.history_action_repeat))
         }
     }
-}
-
-private fun WeekGroup.copyWithEntries(entries: List<WorkEntry>): WeekGroup {
-    val workDaysCount = entries.count { it.dayType == DayType.WORK }
-    val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
-    return copy(
-        entries = entries,
-        workDaysCount = workDaysCount,
-        offDaysCount = entries.count { it.dayType == DayType.OFF },
-        totalHours = totalHours,
-        totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
-        averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
-        entriesNeedingReview = entries.count { it.needsReview }
-    )
-}
-
-private fun MonthGroup.copyWithEntries(entries: List<WorkEntry>): MonthGroup {
-    val workDaysCount = entries.count { it.dayType == DayType.WORK }
-    val totalHours = entries.sumOf { TimeCalculator.calculateWorkHours(it) }
-    return copy(
-        entries = entries,
-        workDaysCount = workDaysCount,
-        offDaysCount = entries.count { it.dayType == DayType.OFF },
-        totalHours = totalHours,
-        totalPaidHours = entries.sumOf { TimeCalculator.calculatePaidTotalHours(it) },
-        averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0,
-        entriesNeedingReview = entries.count { it.needsReview }
-    )
 }
 
 data class CalendarDay(

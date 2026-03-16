@@ -14,7 +14,7 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 
 - Single-Module-Android-Projekt (`:app`)
 - App-Version: `1.0.1` (`versionCode 2`)
-- Room-Datenbank: Schema `11`, Migrationen `1 -> 11`
+- Room-Datenbank: Schema `12`, Migrationen `1 -> 12`
 
 ## Tech Stack
 
@@ -48,9 +48,8 @@ Build-Umgebung:
 
 - Verlauf für die letzten 365 Tage
 - Wochen-, Monats- und Kalenderansichten
-- Filter für `needsReview`
 - Batch-Edit für Datumsbereiche
-- Edit-Sheet für DayType, Zeiten, Travel-Daten, Notiz und weitere Tagesdetails
+- Edit-Sheet für DayType, Zeiten, Travel-Daten, Tagesort und Notiz
 
 ### Reminder
 
@@ -86,7 +85,6 @@ Build-Umgebung:
   - `dayType = WORK`
   - `confirmedWorkDay = true`
   - Arbeitszeit-Defaults aus den Settings
-  - Morning-/Evening-Snapshots werden gesetzt, falls sie noch fehlen
   - Verpflegungspauschale wird aus den Dialogoptionen berechnet
 
 ### DayType
@@ -109,8 +107,8 @@ Build-Umgebung:
 ### Standortbezug
 
 - Die aktuelle Check-in-Logik arbeitet ohne Standort-Berechtigung und ohne GPS-Pflicht.
-- Tagesort wird manuell als Text gepflegt.
-- Das Datenmodell enthält weiterhin Standort- und Statusfelder für Tages- und Snapshot-Daten, die aktuelle Reminder-/Today-Logik nutzt aber keinen aktiven GPS-Flow.
+- Tagesort wird nur noch manuell als Text (`dayLocationLabel`) gepflegt.
+- Morning/Evening speichern nur noch ihre Erfassungszeitpunkte (`morningCapturedAt`, `eveningCapturedAt`).
 
 ## Build und Tests
 

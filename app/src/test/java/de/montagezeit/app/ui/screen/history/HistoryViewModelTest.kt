@@ -13,6 +13,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -33,7 +34,8 @@ class HistoryViewModelTest {
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private val dispatcher = UnconfinedTestDispatcher()
+    private val testScheduler = TestCoroutineScheduler()
+    private val dispatcher = UnconfinedTestDispatcher(testScheduler)
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val reminderSettingsManager = mockk<ReminderSettingsManager>()
 

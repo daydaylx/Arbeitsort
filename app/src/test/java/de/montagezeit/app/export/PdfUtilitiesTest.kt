@@ -127,15 +127,14 @@ class PdfUtilitiesTest {
     }
     
     @Test
-    fun `getLocation - morningLocationLabel`() {
+    fun `getLocation - dayLocationLabel`() {
         val entry = WorkEntry(
             date = java.time.LocalDate.of(2026, 1, 15),
             dayType = DayType.WORK,
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(19, 0),
             breakMinutes = 60,
-            morningLocationLabel = "Dresden",
-            eveningLocationLabel = "Außen",
+            dayLocationLabel = "Dresden",
             confirmedWorkDay = true,
             confirmationAt = System.currentTimeMillis()
         )
@@ -143,25 +142,6 @@ class PdfUtilitiesTest {
         val location = PdfUtilities.getLocation(entry)
         
         assertEquals("Dresden", location)
-    }
-    
-    @Test
-    fun `getLocation - eveningLocationLabel`() {
-        val entry = WorkEntry(
-            date = java.time.LocalDate.of(2026, 1, 15),
-            dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(19, 0),
-            breakMinutes = 60,
-            morningLocationLabel = null,
-            eveningLocationLabel = "Halle",
-            confirmedWorkDay = true,
-            confirmationAt = System.currentTimeMillis()
-        )
-        
-        val location = PdfUtilities.getLocation(entry)
-        
-        assertEquals("Halle", location)
     }
     
     @Test
@@ -189,9 +169,7 @@ class PdfUtilitiesTest {
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(19, 0),
             breakMinutes = 60,
-            dayLocationLabel = "Tagesort",
-            morningLocationLabel = "Morgen",
-            eveningLocationLabel = "Abend"
+            dayLocationLabel = "Tagesort"
         )
         assertEquals("Tagesort", PdfUtilities.getLocation(entry))
     }
@@ -207,20 +185,6 @@ class PdfUtilitiesTest {
             dayLocationLabel = "Baustelle Nord"
         )
         assertEquals("Baustelle Nord", PdfUtilities.getLocation(entry))
-    }
-
-    @Test
-    fun `getLocation - leeres dayLocationLabel faellt auf morningLocationLabel zurueck`() {
-        val entry = WorkEntry(
-            date = java.time.LocalDate.of(2026, 1, 15),
-            dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(19, 0),
-            breakMinutes = 60,
-            dayLocationLabel = "",
-            morningLocationLabel = "Morgenort"
-        )
-        assertEquals("Morgenort", PdfUtilities.getLocation(entry))
     }
 
     @Test

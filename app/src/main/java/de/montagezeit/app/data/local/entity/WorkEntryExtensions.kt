@@ -89,7 +89,6 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
         confirmationAt = now,
         confirmationSource = source,
         dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { "" } },
-        dayLocationSource = dayLocationSource,
         updatedAt = now
     ).withMealAllowanceCleared()
 }
@@ -104,7 +103,6 @@ fun createConfirmedOffDayEntry(
         date = date,
         dayType = DayType.OFF,
         dayLocationLabel = fallbackDayLocationLabel.ifBlank { "" },
-        dayLocationSource = DayLocationSource.FALLBACK,
         travelPaidMinutes = null,
         travelUpdatedAt = now,
         confirmedWorkDay = true,

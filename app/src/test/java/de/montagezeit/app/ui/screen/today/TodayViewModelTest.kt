@@ -23,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -39,7 +40,8 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModelTest {
 
-    private val mainDispatcher = UnconfinedTestDispatcher()
+    private val testScheduler = TestCoroutineScheduler()
+    private val mainDispatcher = UnconfinedTestDispatcher(testScheduler)
 
     @Before
     fun setup() {
@@ -483,6 +485,18 @@ class TodayViewModelTest {
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
+        val successLatch = CountDownLatch(1)
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            var loadingSeen = false
+            viewModel.uiState.collect { state ->
+                if (state is TodayUiState.Loading) {
+                    loadingSeen = true
+                }
+                if (loadingSeen && state is TodayUiState.Success) {
+                    successLatch.countDown()
+                }
+            }
+        }
 
         // Initially selectedDate should be today
         assertEquals(today, viewModel.selectedDate.value)
@@ -492,6 +506,7 @@ class TodayViewModelTest {
 
         // selectedDate should still be today
         assertEquals(today, viewModel.selectedDate.value)
+        assertTrue(successLatch.await(2, TimeUnit.SECONDS))
 
         // Week days UI should reflect selection
         val weekDays = viewModel.weekDaysUi.value
@@ -499,6 +514,7 @@ class TodayViewModelTest {
             val todayChip = weekDays.find { it.date == today }
             assertTrue("Today should be marked as selected", todayChip?.isSelected == true)
         }
+        collectJob.cancel()
     }
 
     @Test

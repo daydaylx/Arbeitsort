@@ -75,10 +75,8 @@
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
     <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
-    <string name="today_needs_review">Standort prüfen</string>
     <string name="today_error_unknown">Unbekannter Fehler</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
-    <string name="today_error_review_save_failed">Prüfung konnte nicht gespeichert werden</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
     <string name="today_error_delete_failed">Löschen fehlgeschlagen</string>
     <string name="today_delete_success">Eintrag gelöscht</string>
@@ -86,14 +84,7 @@
     <string name="action_undo">Rückgängig</string>
     <string name="dialog_delete_day_title">Tag wirklich löschen?</string>
     <string name="dialog_delete_day_message">Alle Daten für diesen Tag werden entfernt. Du kannst den Eintrag danach wiederherstellen.</string>
-    <string name="error_no_entry_to_review">Kein Eintrag zum Überprüfen vorhanden</string>
     <string name="error_day_location_required">Bitte Arbeitsort eingeben</string>
-    <string name="review_reason_low_accuracy_morning">GPS-Genauigkeit niedrig (morgens)</string>
-    <string name="review_reason_low_accuracy_evening">GPS-Genauigkeit niedrig (abends)</string>
-    <string name="review_reason_low_accuracy_both">GPS-Genauigkeit niedrig</string>
-    <string name="review_reason_unavailable_morning">Standort nicht verfügbar (morgens)</string>
-    <string name="review_reason_unavailable_evening">Standort nicht verfügbar (abends)</string>
-    <string name="review_reason_generic">Bitte Daten prüfen</string>
     <string name="action_confirm_offday">Heute frei</string>
     <string name="action_daily_manual_check_in">Einchecken (Arbeit)</string>
     <string name="daily_check_in_dialog_title">Einchecken (Arbeit)</string>
@@ -110,9 +101,6 @@
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
-    <string name="day_location_source_gps">GPS</string>
-    <string name="day_location_source_manual">Manuell</string>
-    <string name="day_location_source_fallback">Fallback</string>
     <string name="overtime_title">Überstunden</string>
     <string name="overtime_year_value">Überstunden Jahr: %1$s</string>
     <string name="overtime_month_value">Überstunden Monat: %1$s</string>
@@ -132,18 +120,6 @@
     <string name="travel_time_start">Start %1$s</string>
     <string name="travel_time_arrive">Ankunft %1$s</string>
     <string name="travel_duration_label">Dauer %1$s</string>
-    <string name="location_status_ok">Standort ok</string>
-    <string name="location_status_low_accuracy">Ungenau</string>
-    <string name="location_status_unavailable">Kein Standort</string>
-    
-    <!-- Review Sheet -->
-    <string name="review_explanation_morning">Standort wählen</string>
-    <string name="review_explanation_evening">Standort wählen</string>
-    <string name="review_explanation_both">Standort wählen</string>
-    <string name="review_location_question">Wo warst du heute?</string>
-    <string name="review_option_outside">Andere Stadt</string>
-    <string name="review_location_label">Ort (Stadt)</string>
-    <string name="review_location_placeholder">z.B. Berlin</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_cancel_anyway">Trotzdem abbrechen</string>
     <string name="action_apply">Übernehmen</string>
@@ -345,11 +321,8 @@
     <string name="history_summary_weeks">Wochen</string>
     <string name="history_day_overview_title">Tagesübersicht</string>
     <string name="history_day_overview_no_entry">Für diesen Tag gibt es noch keinen Eintrag.</string>
-    <string name="history_empty_review_title">Keine Review-Einträge</string>
     <string name="history_empty_title">Keine Einträge vorhanden</string>
-    <string name="history_empty_review_subtitle">Filter deaktivieren, um alle Einträge zu sehen.</string>
     <string name="history_empty_subtitle">Check-in-Einträge erscheinen hier</string>
-    <string name="history_chip_review_short">Review</string>
     <string name="history_action_pick_date">Datum wählen</string>
     <string name="history_cd_prev_month">Vorheriger Monat</string>
     <string name="history_cd_next_month">Nächster Monat</string>
@@ -360,7 +333,6 @@
     <string name="history_cd_collapse_week">Woche einklappen</string>
     <string name="history_cd_expand_month">Monat ausklappen</string>
     <string name="history_cd_collapse_month">Monat einklappen</string>
-    <string name="history_cd_review_required">Überprüfung erforderlich</string>
     <string name="history_action_repeat">Wiederholen</string>
     <string name="history_weekday_mo">Mo</string>
     <string name="history_weekday_tu">Di</string>
@@ -374,7 +346,6 @@
     <string name="history_day_type_comp_time_short">Ü</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
     <string name="history_summary_workdays">%1$d Arbeitstage</string>
-    <string name="history_summary_review_count">%1$d Review</string>
     <string name="history_stat_total">Gesamt:</string>
     <string name="history_stat_paid">Bezahlt:</string>
     <string name="history_stat_average">Durchschnitt:</string>
@@ -401,10 +372,6 @@
     <string name="history_batch_note_placeholder">Notiz (leer = loeschen)</string>
     <string name="history_batch_select_action">Bitte mindestens eine Aktion waehlen.</string>
     <string name="history_batch_apply">Anwenden</string>
-    <plurals name="history_entries_need_review">
-        <item quantity="one">%d Eintrag benötigt Überprüfung</item>
-        <item quantity="other">%d Einträge benötigen Überprüfung</item>
-    </plurals>
     <plurals name="history_remaining_days">
         <item quantity="one">%d weiterer Tag</item>
         <item quantity="other">%d weitere Tage</item>
@@ -424,7 +391,6 @@
     <string name="edit_cd_next_day">Nächster Tag</string>
     <string name="edit_action_today">Heute</string>
     <string name="action_create">Erstellen</string>
-    <string name="edit_action_reset_review_flag">Überprüfungsflag zurücksetzen</string>
     <string name="edit_action_copy_previous">Vortag kopieren</string>
     <string name="edit_action_copy_entry">Eintrag kopieren</string>
     <string name="edit_section_day_type">Tagtyp</string>
@@ -452,15 +418,9 @@
     <string name="edit_section_location">Standort</string>
     <string name="edit_label_day_location_required">Arbeitsort (Pflicht)</string>
     <string name="edit_placeholder_work_location">z.B. Baustelle Nord</string>
-    <string name="edit_label_morning_optional">Morgens (Optional)</string>
-    <string name="edit_label_evening_optional">Abends (Optional)</string>
-    <string name="edit_placeholder_city_berlin">z.B. Berlin</string>
     <string name="edit_section_meal_allowance">Verpflegungspauschale</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen...</string>
-    <string name="edit_confirm_title">Bestätigung erforderlich</string>
-    <string name="edit_confirm_borderzone_text">Bitte prüfen, ob der Arbeitsort korrekt ist. Wirklich speichern?</string>
-    <string name="edit_confirm_yes_save">Ja, speichern</string>
     <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
     <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
     <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
@@ -469,7 +429,6 @@
     <string name="edit_validation_travel_too_long">Reisezeit darf maximal 16 Stunden betragen</string>
 
     <!-- Today Screen (additional) -->
-    <string name="action_review">Prüfen</string>
     <string name="cd_open_statistics">Statistiken anzeigen</string>
     <string name="today_stats_label_days">%1$s · %2$d Tage</string>
     <string name="today_stats_percent">%1$d%%</string>

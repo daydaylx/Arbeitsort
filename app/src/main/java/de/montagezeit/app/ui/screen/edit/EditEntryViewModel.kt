@@ -8,7 +8,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.DayLocationSource
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.transitionToDayType
@@ -130,18 +129,7 @@ class EditEntryViewModel @Inject constructor(
     }
     
     fun updateDayType(dayType: DayType) {
-        if (dayType == DayType.COMP_TIME) {
-            // Clear snapshot labels to avoid mixing work-day data with comp-time.
-            updateFormData {
-                it.copy(
-                    dayType = dayType,
-                    morningLocationLabel = null,
-                    eveningLocationLabel = null
-                )
-            }
-        } else {
-            updateFormData { it.copy(dayType = dayType) }
-        }
+        updateFormData { it.copy(dayType = dayType) }
     }
     
     fun updateWorkStart(hour: Int, minute: Int) {
@@ -156,27 +144,13 @@ class EditEntryViewModel @Inject constructor(
         updateFormData { it.copy(breakMinutes = minutes) }
     }
     
-    fun updateMorningLocationLabel(label: String) {
-        updateFormData { it.copy(morningLocationLabel = label.takeIf { it.isNotBlank() }) }
-    }
-    
-    fun updateEveningLocationLabel(label: String) {
-        updateFormData { it.copy(eveningLocationLabel = label.takeIf { it.isNotBlank() }) }
-    }
-
     fun updateDayLocationLabel(label: String) {
         updateFormData {
             val trimmed = label.trim()
             if (trimmed.isBlank()) {
                 it.copy(dayLocationLabel = null)
             } else {
-                it.copy(
-                    dayLocationLabel = trimmed,
-                    dayLocationSource = DayLocationSource.MANUAL,
-                    dayLocationLat = null,
-                    dayLocationLon = null,
-                    dayLocationAccuracyMeters = null
-                )
+                it.copy(dayLocationLabel = trimmed)
             }
         }
     }
@@ -220,10 +194,6 @@ class EditEntryViewModel @Inject constructor(
         }
     }
     
-    fun resetNeedsReview() {
-        updateFormData { it.copy(needsReview = false) }
-    }
-
     fun applyDefaultWorkTimes() {
         viewModelScope.launch {
             val settings = reminderSettingsManager.settings.first()
@@ -243,11 +213,7 @@ class EditEntryViewModel @Inject constructor(
             val entry = workEntryDao.getByDate(previousDate)
             withContext(Dispatchers.Main) {
                 if (entry != null) {
-                    val copied = EditFormData.fromEntry(entry).copy(
-                        morningLocationLabel = null,
-                        eveningLocationLabel = null,
-                        needsReview = false
-                    )
+                    val copied = EditFormData.fromEntry(entry)
                     _screenState.update { it.copy(formData = copied) }
                     onResult(true)
                 } else {
@@ -289,7 +255,7 @@ class EditEntryViewModel @Inject constructor(
         }
     }
     
-    fun save(confirmBorderzone: Boolean = false) {
+    fun save() {
         viewModelScope.launch {
             val stateSnapshot = _screenState.value
             if (stateSnapshot.isSaving) {
@@ -329,13 +295,6 @@ class EditEntryViewModel @Inject constructor(
                     val originalEntry = currentState.entry
                     val now = System.currentTimeMillis()
 
-                    // Review-confirmation only for unresolved entries.
-                    val requiresConfirm = originalEntry.needsReview
-                    if (requiresConfirm && !confirmBorderzone) {
-                        _screenState.update { it.copy(uiState = currentState.copy(showConfirmDialog = true)) }
-                        return@launch
-                    }
-
                     val baseEntry = originalEntry.transitionToDayType(dayType = data.dayType, now = now)
                     val travelFields = resolveTravelFields(
                         date = originalEntry.date,
@@ -350,12 +309,6 @@ class EditEntryViewModel @Inject constructor(
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
                         dayLocationLabel = data.dayLocationLabel ?: "",
-                        dayLocationSource = data.dayLocationSource,
-                        dayLocationLat = data.dayLocationLat,
-                        dayLocationLon = data.dayLocationLon,
-                        dayLocationAccuracyMeters = data.dayLocationAccuracyMeters,
-                        morningLocationLabel = data.morningLocationLabel,
-                        eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
                         travelStartAt = travelFields.startAt,
                         travelArriveAt = travelFields.arriveAt,
@@ -370,7 +323,6 @@ class EditEntryViewModel @Inject constructor(
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
                         mealAllowanceAmountCents = mealAllowance.amountCents,
-                        needsReview = data.needsReview,
                         updatedAt = now
                     )
                 }
@@ -390,12 +342,6 @@ class EditEntryViewModel @Inject constructor(
                         workEnd = data.workEnd,
                         breakMinutes = data.breakMinutes,
                         dayLocationLabel = data.dayLocationLabel ?: "",
-                        dayLocationSource = data.dayLocationSource,
-                        dayLocationLat = data.dayLocationLat,
-                        dayLocationLon = data.dayLocationLon,
-                        dayLocationAccuracyMeters = data.dayLocationAccuracyMeters,
-                        morningLocationLabel = data.morningLocationLabel,
-                        eveningLocationLabel = data.eveningLocationLabel,
                         note = data.note,
                         travelStartAt = travelFields.startAt,
                         travelArriveAt = travelFields.arriveAt,
@@ -410,7 +356,6 @@ class EditEntryViewModel @Inject constructor(
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
                         mealAllowanceAmountCents = mealAllowance.amountCents,
-                        needsReview = data.needsReview,
                         confirmedWorkDay = data.dayType == DayType.COMP_TIME,
                         confirmationAt = if (data.dayType == DayType.COMP_TIME) now else null,
                         confirmationSource = if (data.dayType == DayType.COMP_TIME) DayType.COMP_TIME.name else null,
@@ -457,17 +402,6 @@ class EditEntryViewModel @Inject constructor(
                 }
             }
             else -> {}
-        }
-    }
-    
-    fun confirmAndSave() {
-        save(confirmBorderzone = true)
-    }
-
-    fun dismissConfirmDialog() {
-        val currentState = _screenState.value.uiState
-        if (currentState is EditUiState.Success) {
-            _screenState.update { it.copy(uiState = currentState.copy(showConfirmDialog = false)) }
         }
     }
     
@@ -588,16 +522,9 @@ data class EditFormData(
     val workEnd: LocalTime = LocalTime.of(19, 0),
     val breakMinutes: Int = 60,
     val dayLocationLabel: String? = null,
-    val dayLocationSource: DayLocationSource = DayLocationSource.FALLBACK,
-    val dayLocationLat: Double? = null,
-    val dayLocationLon: Double? = null,
-    val dayLocationAccuracyMeters: Float? = null,
-    val morningLocationLabel: String? = null,
-    val eveningLocationLabel: String? = null,
     val mealIsArrivalDeparture: Boolean = false,
     val mealBreakfastIncluded: Boolean = false,
     val note: String? = null,
-    val needsReview: Boolean = false,
     val travelStartTime: LocalTime? = null,
     val travelArriveTime: LocalTime? = null,
     val travelLabelStart: String? = null,
@@ -678,16 +605,9 @@ data class EditFormData(
                 workEnd = entry.workEnd,
                 breakMinutes = entry.breakMinutes,
                 dayLocationLabel = entry.dayLocationLabel,
-                dayLocationSource = entry.dayLocationSource,
-                dayLocationLat = entry.dayLocationLat,
-                dayLocationLon = entry.dayLocationLon,
-                dayLocationAccuracyMeters = entry.dayLocationAccuracyMeters,
-                morningLocationLabel = entry.morningLocationLabel,
-                eveningLocationLabel = entry.eveningLocationLabel,
                 mealIsArrivalDeparture = entry.mealIsArrivalDeparture,
                 mealBreakfastIncluded = entry.mealBreakfastIncluded,
                 note = entry.note,
-                needsReview = entry.needsReview,
                 travelStartTime = entry.travelStartAt?.let { toLocalTime(it, zoneId) },
                 travelArriveTime = entry.travelArriveAt?.let { toLocalTime(it, zoneId) },
                 travelLabelStart = entry.travelLabelStart,
@@ -753,7 +673,6 @@ sealed class EditUiState {
     object Loading : EditUiState()
     data class Success(
         val entry: WorkEntry,
-        val showConfirmDialog: Boolean = false,
         val validationErrors: List<ValidationError> = emptyList()
     ) : EditUiState()
     data class NewEntry(
