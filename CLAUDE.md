@@ -136,5 +136,5 @@ de.montagezeit.app/
 
 ## Version
 
-Aktuell: 1.0.1
-Database Version: 10
+Aktuell: 1.0.2
+Database Version: 13
