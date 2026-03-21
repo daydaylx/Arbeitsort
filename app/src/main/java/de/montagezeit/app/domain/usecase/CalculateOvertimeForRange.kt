@@ -82,6 +82,8 @@ private fun OvertimeEntryRow.toWorkEntry(): WorkEntry {
         travelStartAt = travelStartAt,
         travelArriveAt = travelArriveAt,
         travelPaidMinutes = travelPaidMinutes,
+        returnStartAt = returnStartAt,
+        returnArriveAt = returnArriveAt,
         confirmedWorkDay = confirmedWorkDay
     )
 }

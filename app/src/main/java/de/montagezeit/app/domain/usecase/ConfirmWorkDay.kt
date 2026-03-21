@@ -23,45 +23,45 @@ class ConfirmWorkDay(
         date: LocalDate,
         source: String = CONFIRMATION_SOURCE_NOTIFICATION
     ): WorkEntry {
-        val existingEntry = workEntryDao.getByDate(date)
         val settings = reminderSettingsManager.settings.first()
         val workStart = settings.workStart
         val workEnd = settings.workEnd
         val breakMinutes = settings.breakMinutes
         val now = System.currentTimeMillis()
-
-        val dayLocation = DayLocationResolver.resolve(existingEntry)
-
-        val updatedEntry = existingEntry?.let { entry ->
-            val keepExistingWorkSchedule = entry.dayType == DayType.WORK
-            entry.copy(
+        var result: WorkEntry? = null
+        workEntryDao.readModifyWrite(date) { existingEntry ->
+            val dayLocation = DayLocationResolver.resolve(existingEntry)
+            val updatedEntry = existingEntry?.let { entry ->
+                val keepExistingWorkSchedule = entry.dayType == DayType.WORK
+                entry.copy(
+                    dayType = DayType.WORK,
+                    workStart = if (keepExistingWorkSchedule) entry.workStart else workStart,
+                    workEnd = if (keepExistingWorkSchedule) entry.workEnd else workEnd,
+                    breakMinutes = if (keepExistingWorkSchedule) entry.breakMinutes else breakMinutes,
+                    morningCapturedAt = entry.morningCapturedAt ?: now,
+                    dayLocationLabel = dayLocation,
+                    confirmedWorkDay = true,
+                    confirmationAt = now,
+                    confirmationSource = source,
+                    updatedAt = now
+                )
+            } ?: WorkEntry(
+                date = date,
                 dayType = DayType.WORK,
-                workStart = if (keepExistingWorkSchedule) entry.workStart else workStart,
-                workEnd = if (keepExistingWorkSchedule) entry.workEnd else workEnd,
-                breakMinutes = if (keepExistingWorkSchedule) entry.breakMinutes else breakMinutes,
-                morningCapturedAt = entry.morningCapturedAt ?: now,
+                workStart = workStart,
+                workEnd = workEnd,
+                breakMinutes = breakMinutes,
                 dayLocationLabel = dayLocation,
+                morningCapturedAt = now,
                 confirmedWorkDay = true,
                 confirmationAt = now,
                 confirmationSource = source,
+                createdAt = now,
                 updatedAt = now
             )
-        } ?: WorkEntry(
-            date = date,
-            dayType = DayType.WORK,
-            workStart = workStart,
-            workEnd = workEnd,
-            breakMinutes = breakMinutes,
-            dayLocationLabel = dayLocation,
-            morningCapturedAt = now,
-            confirmedWorkDay = true,
-            confirmationAt = now,
-            confirmationSource = source,
-            createdAt = now,
-            updatedAt = now
-        )
-
-        workEntryDao.upsert(updatedEntry)
-        return updatedEntry
+            result = updatedEntry
+            updatedEntry
+        }
+        return result!!
     }
 }

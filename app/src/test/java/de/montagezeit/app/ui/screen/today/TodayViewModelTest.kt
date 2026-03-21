@@ -337,7 +337,9 @@ class TodayViewModelTest {
             confirmedWorkDay = true,
             travelStartAt = null,
             travelArriveAt = null,
-            travelPaidMinutes = 0
+            travelPaidMinutes = 0,
+            returnStartAt = null,
+            returnArriveAt = null
         )
 
         coEvery { workEntryDao.getByDate(any()) } returns null

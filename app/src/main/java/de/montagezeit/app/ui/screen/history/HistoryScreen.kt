@@ -1296,6 +1296,26 @@ fun MonthGroupCard(
                             }
                         }
 
+                        if (month.totalTravelMinutes > 0) {
+                            val hoursOnlyFormat = stringResource(R.string.history_hours_only)
+                            val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.history_stat_travel),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = formatMinutesAsHoursMinutesPlain(month.totalTravelMinutes, hoursOnlyFormat, hoursMinutesFormat),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+
                         // Days breakdown
                         Row(
                             modifier = Modifier.fillMaxWidth(),

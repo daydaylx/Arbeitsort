@@ -5,7 +5,6 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -13,8 +12,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Tests CSV row generation logic from CsvExporter without Android Context.
- * Mirrors the buildString logic in CsvExporter.exportToCsv to verify escaping.
+ * Tests the shared CSV formatting contract used by CsvExporter.
  */
 class CsvExporterLogicTest {
 
@@ -37,7 +35,7 @@ class CsvExporterLogicTest {
             append(";")
             append(if (entry.confirmedWorkDay) 1 else 0)
             append(";")
-            append(entry.dayLocationLabel.replace(";", ","))
+            append(CsvCellEncoder.encode(entry.dayLocationLabel))
             append(";")
             append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
             append(";")
@@ -61,7 +59,7 @@ class CsvExporterLogicTest {
             append(";")
             append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
             append(";")
-            append(entry.note?.replace(";", ",")?.replace("\n", " ")?.replace("\r", "") ?: "")
+            append(CsvCellEncoder.encode(entry.note ?: ""))
             append("\n")
         }
     }
@@ -94,31 +92,40 @@ class CsvExporterLogicTest {
     }
 
     @Test
-    fun `semicolon in location is replaced with comma`() {
+    fun `semicolon in location is quoted and preserved`() {
         val line = buildCsvLine(entry(location = "Stuttgart; Zentrum"))
-        assertFalse("Semicolon in location should be escaped", line.contains("Stuttgart; Zentrum"))
-        assertTrue(line.contains("Stuttgart, Zentrum"))
+        assertTrue(line.contains("\"Stuttgart; Zentrum\""))
     }
 
     @Test
-    fun `newline in note is replaced with space`() {
+    fun `newline in note is preserved inside quoted field`() {
         val line = buildCsvLine(entry(note = "First line\nSecond line"))
-        assertFalse("Newline in note should be escaped", line.contains("First line\nSecond line"))
-        assertTrue(line.contains("First line Second line"))
+        assertTrue(line.contains("\"First line\nSecond line\""))
     }
 
     @Test
-    fun `carriage return in note is removed`() {
+    fun `carriage return in note keeps quoted field valid`() {
         val line = buildCsvLine(entry(note = "Line\r\nEnd"))
-        assertFalse(line.contains("\r"))
-        assertTrue(line.contains("Line\nEnd") || line.contains("Line End"))
+        assertTrue(line.contains("\"Line\r\nEnd\""))
     }
 
     @Test
-    fun `semicolon in note is replaced with comma`() {
+    fun `semicolon in note is quoted and preserved`() {
         val line = buildCsvLine(entry(note = "Key; Value"))
-        assertFalse(line.contains("Key; Value"))
-        assertTrue(line.contains("Key, Value"))
+        assertTrue(line.contains("\"Key; Value\""))
+    }
+
+    @Test
+    fun `formula prefix in note is neutralized`() {
+        val line = buildCsvLine(entry(note = "=SUM(A1:A3)"))
+        assertTrue(line.endsWith(";\'=SUM(A1:A3)\n".replace("\\'", "'")))
+        assertTrue(line.contains("'=SUM(A1:A3)"))
+    }
+
+    @Test
+    fun `formula prefix in location is neutralized before quoting`() {
+        val line = buildCsvLine(entry(location = "@HQ"))
+        assertTrue(line.contains(";'@HQ;"))
     }
 
     @Test

@@ -39,7 +39,8 @@ class AppDatabaseMigrationTest {
             "migration_8_9_test.db",
             "migration_9_10_test.db",
             "migration_10_11_test.db",
-            "migration_11_12_test.db"
+            "migration_11_12_test.db",
+            "migration_12_13_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -58,7 +59,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_8_9,
                 AppDatabase.MIGRATION_9_10,
                 AppDatabase.MIGRATION_10_11,
-                AppDatabase.MIGRATION_11_12
+                AppDatabase.MIGRATION_11_12,
+                AppDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -90,6 +92,8 @@ class AppDatabaseMigrationTest {
             assertFalse(hasColumn(db, "work_entries", "needsReview"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigMorning"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigEvening"))
+            assertTrue(hasColumn(db, "work_entries", "returnStartAt"))
+            assertTrue(hasColumn(db, "work_entries", "returnArriveAt"))
 
             db.rawQuery(
                 "SELECT dayLocationLabel, morningCapturedAt, eveningCapturedAt FROM work_entries WHERE date = ?",

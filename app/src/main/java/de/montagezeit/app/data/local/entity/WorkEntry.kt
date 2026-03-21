@@ -44,7 +44,9 @@ data class WorkEntry(
     val travelPaidMinutes: Int? = null,
     val travelSource: TravelSource? = null,
     val travelUpdatedAt: Long? = null,
-    
+    val returnStartAt: Long? = null,
+    val returnArriveAt: Long? = null,
+
     // Daily Confirmation
     val confirmedWorkDay: Boolean = false,
     val confirmationAt: Long? = null,

@@ -13,7 +13,7 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 ## Projektstatus
 
 - Single-Module-Android-Projekt (`:app`)
-- App-Version: `1.0.1` (`versionCode 2`)
+- App-Version: `1.0.2` (`versionCode 3`)
 - Room-Datenbank: Schema `12`, Migrationen `1 -> 12`
 
 ## Tech Stack
@@ -70,6 +70,8 @@ Build-Umgebung:
   - Firma
   - Projekt
   - Personalnummer
+- CSV-Zellwerte werden mit Quoting fuer `;`, Anfuehrungszeichen und Zeilenumbrueche exportiert
+- Fuehrende Formel-Praefixe (`=`, `+`, `-`, `@`) werden fuer CSV zusaetzlich neutralisiert
 - Ein `CsvExporter` ist im Code vorhanden, ist aktuell aber nicht an den sichtbaren Settings-/Export-Flow angebunden
 
 ## Aktuelles Verhalten von Today, DayType und Remindern
@@ -127,6 +129,39 @@ Optional auf Gerät/Emulator:
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+## APK-Update ohne Datenverlust
+
+Ein normales Update über die bestehende Installation behält die lokalen Room-/DataStore-Daten.
+Voraussetzungen dafür:
+
+- gleiche `applicationId` (`de.montagezeit.app`)
+- höherer `versionCode` als in der installierten APK
+- dieselbe Signatur wie bei der bereits installierten App
+
+Wichtig:
+
+- `android.intent.action.MY_PACKAGE_REPLACED` wird empfangen; Reminder werden nach dem Update neu geplant.
+- `android:allowBackup="false"` bleibt aktiv. Ein Uninstall oder ein Install über eine andere Signatur löscht die lokalen Daten.
+
+Lokale Release-Signatur vorbereiten:
+
+```properties
+# keystore.properties (Repo-Root, nicht committen)
+storeFile=release-keystore.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+Release bauen und als Update installieren:
+
+```bash
+./gradlew assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Ohne `keystore.properties` wird weiterhin nur eine unsignierte Release-APK gebaut; die ist nicht update-fähig.
 
 ## Wichtige Pfade
 

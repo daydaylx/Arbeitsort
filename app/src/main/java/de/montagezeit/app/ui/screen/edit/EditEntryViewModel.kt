@@ -175,6 +175,14 @@ class EditEntryViewModel @Inject constructor(
         updateFormData { it.copy(travelArriveTime = time) }
     }
 
+    fun updateReturnStart(time: LocalTime?) {
+        updateFormData { it.copy(returnStartTime = time) }
+    }
+
+    fun updateReturnArrive(time: LocalTime?) {
+        updateFormData { it.copy(returnArriveTime = time) }
+    }
+
     fun updateTravelLabelStart(label: String) {
         updateFormData { it.copy(travelLabelStart = label.takeIf { it.isNotBlank() }) }
     }
@@ -189,7 +197,9 @@ class EditEntryViewModel @Inject constructor(
                 travelStartTime = null,
                 travelArriveTime = null,
                 travelLabelStart = null,
-                travelLabelEnd = null
+                travelLabelEnd = null,
+                returnStartTime = null,
+                returnArriveTime = null
             )
         }
     }
@@ -319,6 +329,8 @@ class EditEntryViewModel @Inject constructor(
                         travelDistanceKm = travelFields.distanceKm,
                         travelSource = travelFields.source,
                         travelUpdatedAt = travelFields.updatedAt,
+                        returnStartAt = travelFields.returnStartAt,
+                        returnArriveAt = travelFields.returnArriveAt,
                         mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
@@ -352,6 +364,8 @@ class EditEntryViewModel @Inject constructor(
                         travelDistanceKm = travelFields.distanceKm,
                         travelSource = travelFields.source,
                         travelUpdatedAt = travelFields.updatedAt,
+                        returnStartAt = travelFields.returnStartAt,
+                        returnArriveAt = travelFields.returnArriveAt,
                         mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
                         mealBreakfastIncluded = mealAllowance.breakfastIncluded,
                         mealAllowanceBaseCents = mealAllowance.baseCents,
@@ -431,7 +445,10 @@ class EditEntryViewModel @Inject constructor(
         val arriveAt = if (shouldPersistTravel) data.travelArriveTime?.let { toEpochMillis(date, it) } else null
         val labelStart = if (shouldPersistTravel) data.travelLabelStart else null
         val labelEnd = if (shouldPersistTravel) data.travelLabelEnd else null
-        val hasTravelInput = startAt != null || arriveAt != null || labelStart != null || labelEnd != null
+        val returnStartAt = if (shouldPersistTravel) data.returnStartTime?.let { toEpochMillis(date, it) } else null
+        val returnArriveAt = if (shouldPersistTravel) data.returnArriveTime?.let { toEpochMillis(date, it) } else null
+        val hasTravelInput = startAt != null || arriveAt != null || labelStart != null || labelEnd != null ||
+            returnStartAt != null || returnArriveAt != null
 
         if (originalEntry == null) {
             return ResolvedTravelFields(
@@ -443,7 +460,9 @@ class EditEntryViewModel @Inject constructor(
                 toLabel = null,
                 distanceKm = null,
                 source = if (hasTravelInput) TravelSource.MANUAL else null,
-                updatedAt = if (hasTravelInput) now else null
+                updatedAt = if (hasTravelInput) now else null,
+                returnStartAt = returnStartAt,
+                returnArriveAt = returnArriveAt
             )
         }
 
@@ -455,12 +474,16 @@ class EditEntryViewModel @Inject constructor(
             originalEntry.travelToLabel != null ||
             originalEntry.travelDistanceKm != null ||
             originalEntry.travelPaidMinutes != null ||
-            originalEntry.travelSource != null
+            originalEntry.travelSource != null ||
+            originalEntry.returnStartAt != null ||
+            originalEntry.returnArriveAt != null
 
         val travelChanged = startAt != originalEntry.travelStartAt ||
             arriveAt != originalEntry.travelArriveAt ||
             labelStart != originalEntry.travelLabelStart ||
             labelEnd != originalEntry.travelLabelEnd ||
+            returnStartAt != originalEntry.returnStartAt ||
+            returnArriveAt != originalEntry.returnArriveAt ||
             (!shouldPersistTravel && originalHasTravelData)
 
         return if (travelChanged) {
@@ -473,7 +496,9 @@ class EditEntryViewModel @Inject constructor(
                 toLabel = null,
                 distanceKm = null,
                 source = if (hasTravelInput) TravelSource.MANUAL else null,
-                updatedAt = now
+                updatedAt = now,
+                returnStartAt = returnStartAt,
+                returnArriveAt = returnArriveAt
             )
         } else {
             ResolvedTravelFields(
@@ -485,7 +510,9 @@ class EditEntryViewModel @Inject constructor(
                 toLabel = originalEntry.travelToLabel,
                 distanceKm = originalEntry.travelDistanceKm,
                 source = originalEntry.travelSource,
-                updatedAt = originalEntry.travelUpdatedAt
+                updatedAt = originalEntry.travelUpdatedAt,
+                returnStartAt = returnStartAt,
+                returnArriveAt = returnArriveAt
             )
         }
     }
@@ -506,7 +533,9 @@ private data class ResolvedTravelFields(
     val toLabel: String?,
     val distanceKm: Double?,
     val source: TravelSource?,
-    val updatedAt: Long?
+    val updatedAt: Long?,
+    val returnStartAt: Long?,
+    val returnArriveAt: Long?
 )
 
 data class EditScreenState(
@@ -528,7 +557,9 @@ data class EditFormData(
     val travelStartTime: LocalTime? = null,
     val travelArriveTime: LocalTime? = null,
     val travelLabelStart: String? = null,
-    val travelLabelEnd: String? = null
+    val travelLabelEnd: String? = null,
+    val returnStartTime: LocalTime? = null,
+    val returnArriveTime: LocalTime? = null
 ) {
     fun mealAllowancePreviewCents(): Int {
         return resolveMealAllowanceForSave(
@@ -589,6 +620,19 @@ data class EditFormData(
             }
         }
 
+        // 5. Check return trip times if both are set
+        if (returnStartTime != null && returnArriveTime != null) {
+            if (returnArriveTime == returnStartTime) {
+                errors.add(ValidationError.ReturnTravelArriveBeforeStart)
+            } else {
+                var diffMinutes = (returnArriveTime.toSecondOfDay() - returnStartTime.toSecondOfDay()) / 60
+                if (diffMinutes < 0) diffMinutes += 24 * 60 // overnight
+                if (diffMinutes > 16 * 60) {
+                    errors.add(ValidationError.ReturnTravelTooLong)
+                }
+            }
+        }
+
         return errors
     }
 
@@ -611,7 +655,9 @@ data class EditFormData(
                 travelStartTime = entry.travelStartAt?.let { toLocalTime(it, zoneId) },
                 travelArriveTime = entry.travelArriveAt?.let { toLocalTime(it, zoneId) },
                 travelLabelStart = entry.travelLabelStart,
-                travelLabelEnd = entry.travelLabelEnd
+                travelLabelEnd = entry.travelLabelEnd,
+                returnStartTime = entry.returnStartAt?.let { toLocalTime(it, zoneId) },
+                returnArriveTime = entry.returnArriveAt?.let { toLocalTime(it, zoneId) }
             )
         }
 
@@ -667,6 +713,8 @@ sealed class ValidationError(@StringRes val messageRes: Int) {
     object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
     object TravelArriveBeforeStart : ValidationError(R.string.edit_validation_travel_arrive_before_start)
     object TravelTooLong : ValidationError(R.string.edit_validation_travel_too_long)
+    object ReturnTravelArriveBeforeStart : ValidationError(R.string.edit_validation_return_arrive_before_start)
+    object ReturnTravelTooLong : ValidationError(R.string.edit_validation_return_too_long)
 }
 
 sealed class EditUiState {

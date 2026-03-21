@@ -10,6 +10,27 @@ All notable changes to this project will be documented in this file.
 - **Notifications**: Snooze-Action „10 Min." in Morning-, Evening- und Fallback-Reminder ergänzt.
   Tritt neben die bestehenden 1h/2h-Optionen. Die `scheduleReminderLater`-Funktion verwendet
   intern jetzt Minuten statt Stunden als Zeiteinheit.
+- **Build/Release**: Optionale lokale Release-Signatur via `keystore.properties` ergänzt und
+  den Update-Pfad für APK-Updates ohne Datenverlust dokumentiert.
+
+### Changed
+- **Today**: `TodayScreenV2` konsumiert jetzt einen aggregierten Screen-State statt vieler Root-Collects;
+  Snackbar-/Undo-Effekte und Dialog-State sind in eigene UI-Pfade ausgelagert.
+- **Today**: Refresh fuer Statistik und Wochenuebersicht wird bei `selectedEntry`-Aenderungen jetzt
+  debounced und nur noch ueber einen konsistenten Refresh-Key ausgeloest.
+- **Today**: Tageswechsel aktualisiert `todayEntry`, Wochenmarkierungen und "Zurueck zu heute" robuster,
+  auch wenn der Screen ueber Mitternacht offen bleibt.
+- **CI**: Redundanter `android.yml`-Workflow entfernt; `ci.yml` ist der einzige Quality-Gate-Workflow
+  und baut jetzt die Release-Variante.
+
+### Fixed
+- **CSV Export**: Zellen werden ueber eine gemeinsame Encoder-Logik formatiert; Zeilenumbrueche bleiben
+  in korrekt gequoteten Feldern erhalten und fuehrende Formel-Praefixe werden neutralisiert.
+- **CSV Export Tests**: `CsvExporterLogicTest` nutzt denselben Zellvertrag wie der produktive Exporter,
+  statt eine abweichende Sanitizing-Logik zu spiegeln.
+- **Data/Concurrency**: `ConfirmWorkDay`, `ConfirmOffDay`, `RecordMorningCheckIn`,
+  `RecordEveningCheckIn` und `SetTravelEvent` laufen jetzt ueber den transaktionalen
+  `readModifyWrite(...)`-Pfad des DAO.
 
 ## [1.0.2]
 

@@ -27,28 +27,48 @@ object TimeCalculator {
     }
 
     /**
-     * Gibt die bezahlten Reiseminuten zurück.
-     * Nutzt bevorzugt die manuell gepflegten Travel-Timestamps.
-     * travelPaidMinutes bleibt nur Fallback, wenn kein vollständiges Zeitpaar vorliegt.
-     *
-     * WICHTIG: travelStartAt und travelArriveAt müssen beide epoch-Timestamps vom selben Datum sein.
-     * Bei Mitternachtsüberschreitung: Wenn arrive < start (zeitlich), werden 24h addiert.
-     * Beispiel: start=23:00 (am 01.01.), arrive=01:00 (am 01.01.) → diffMs negativ → +24h = 2h Reisezeit
+     * Gibt die Hinfahrt-Minuten zurück, oder null wenn kein vollständiges Zeitpaar vorhanden.
      */
-    fun calculateTravelMinutes(entry: WorkEntry): Int {
+    private fun calculateOutboundMinutes(entry: WorkEntry): Int? {
         val start = entry.travelStartAt
         val arrive = entry.travelArriveAt
         if (start != null && arrive != null) {
             var diffMs = arrive - start
-            // Handle overnight crossing when both timestamps use the same date
             if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
             return (diffMs / 60_000L).toInt().coerceAtLeast(0)
         }
+        return null
+    }
 
-        entry.travelPaidMinutes?.let { paidMinutes ->
-            return paidMinutes.coerceAtLeast(0)
+    /**
+     * Gibt die Rückfahrt-Minuten zurück, oder null wenn kein vollständiges Zeitpaar vorhanden.
+     */
+    private fun calculateReturnMinutes(entry: WorkEntry): Int? {
+        val start = entry.returnStartAt
+        val arrive = entry.returnArriveAt
+        if (start != null && arrive != null) {
+            var diffMs = arrive - start
+            if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
+            return (diffMs / 60_000L).toInt().coerceAtLeast(0)
         }
-        return 0
+        return null
+    }
+
+    /**
+     * Gibt die bezahlten Reiseminuten zurück (Hinfahrt + Rückfahrt).
+     * Nutzt bevorzugt die manuell gepflegten Travel-Timestamps.
+     * travelPaidMinutes bleibt nur Fallback, wenn KEINE Timestamps für Hin- oder Rückfahrt vorliegen.
+     *
+     * Bei Mitternachtsüberschreitung: Wenn arrive < start (zeitlich), werden 24h addiert.
+     */
+    fun calculateTravelMinutes(entry: WorkEntry): Int {
+        val outbound = calculateOutboundMinutes(entry)
+        val returnTrip = calculateReturnMinutes(entry)
+
+        if (outbound == null && returnTrip == null) {
+            return entry.travelPaidMinutes?.coerceAtLeast(0) ?: 0
+        }
+        return (outbound ?: 0) + (returnTrip ?: 0)
     }
 
     /**

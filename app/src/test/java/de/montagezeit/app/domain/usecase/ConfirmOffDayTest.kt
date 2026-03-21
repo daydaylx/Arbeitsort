@@ -44,8 +44,8 @@ class ConfirmOffDayTest {
     @Test
     fun `invoke creates OFF entry with confirmation data when no entry exists`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
 
         val result = useCase(date, source = "TEST")
 
@@ -74,8 +74,8 @@ class ConfirmOffDayTest {
             travelPaidMinutes = 45
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
 
         val result = useCase(date, source = "UI")
 
@@ -104,8 +104,8 @@ class ConfirmOffDayTest {
             dayLocationLabel = ""
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
 
         val result = useCase(date)
 

@@ -12,7 +12,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
     entities = [WorkEntry::class],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(
@@ -383,6 +383,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 12→13: Rückfahrt-Zeitstempel hinzugefügt.
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN returnStartAt INTEGER")
+                db.execSQL("ALTER TABLE work_entries ADD COLUMN returnArriveAt INTEGER")
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -394,7 +402,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_8_9,
             MIGRATION_9_10,
             MIGRATION_10_11,
-            MIGRATION_11_12
+            MIGRATION_11_12,
+            MIGRATION_12_13
         )
     }
 }

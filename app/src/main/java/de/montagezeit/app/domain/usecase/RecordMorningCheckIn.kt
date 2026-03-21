@@ -12,13 +12,16 @@ class RecordMorningCheckIn(
 ) {
 
     suspend operator fun invoke(date: LocalDate): WorkEntry {
-        val existingEntry = workEntryDao.getByDate(date)
-        val updatedEntry = CheckInEntryBuilder.build(
-            date = date,
-            existingEntry = existingEntry,
-            snapshot = CheckInEntryBuilder.Snapshot.MORNING
-        )
-        workEntryDao.upsert(updatedEntry)
-        return updatedEntry
+        var result: WorkEntry? = null
+        workEntryDao.readModifyWrite(date) { existingEntry ->
+            val updatedEntry = CheckInEntryBuilder.build(
+                date = date,
+                existingEntry = existingEntry,
+                snapshot = CheckInEntryBuilder.Snapshot.MORNING
+            )
+            result = updatedEntry
+            updatedEntry
+        }
+        return result!!
     }
 }

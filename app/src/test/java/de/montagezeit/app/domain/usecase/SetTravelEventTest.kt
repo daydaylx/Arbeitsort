@@ -34,9 +34,8 @@ class SetTravelEventTest {
         val date = LocalDate.now()
         val timestamp = 1000000L
         val label = "Dresden"
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
         
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, label)
@@ -64,9 +63,8 @@ class SetTravelEventTest {
         )
         val timestamp = 2000000L
         val label = "Dresden"
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry)
         
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, label)
@@ -89,9 +87,8 @@ class SetTravelEventTest {
         val date = LocalDate.now()
         val timestamp = 2000000L
         val label = "Dresden"
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
         
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, label)
@@ -120,9 +117,8 @@ class SetTravelEventTest {
         )
         val timestamp = 2000000L
         val label = "Dresden"
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry)
         
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, label)
@@ -144,9 +140,8 @@ class SetTravelEventTest {
         // Arrange
         val date = LocalDate.now()
         val timestamp = 1000000L
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
         
         // Act
         val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, null)
@@ -172,9 +167,8 @@ class SetTravelEventTest {
             createdAt = 1000000L,
             updatedAt = 1000000L
         )
-        
-        coEvery { workEntryDao.getByDate(date) } returns existingEntry
         coEvery { workEntryDao.upsert(any()) } just Runs
+        stubReadModifyWrite(workEntryDao, existingEntry)
         
         // Act
         val result = setTravelEvent.clearTravelEvents(date)
@@ -196,8 +190,7 @@ class SetTravelEventTest {
     fun `clearTravelEvents - Nicht existierender Eintrag - Wirft Exception`() = runTest {
         // Arrange
         val date = LocalDate.now()
-        
-        coEvery { workEntryDao.getByDate(date) } returns null
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
         
         // Act
         setTravelEvent.clearTravelEvents(date)

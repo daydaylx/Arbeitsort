@@ -17,18 +17,30 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal object CsvCellEncoder {
+    private val formulaPrefixes = setOf('=', '+', '-', '@')
+
+    fun encode(value: String): String {
+        val hardened = if (value.trimStart().firstOrNull() in formulaPrefixes) {
+            "'$value"
+        } else {
+            value
+        }
+
+        return if (hardened.contains(';') || hardened.contains('"') || hardened.contains('\n') || hardened.contains('\r')) {
+            "\"${hardened.replace("\"", "\"\"")}\""
+        } else {
+            hardened
+        }
+    }
+}
+
 @Singleton
 class CsvExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-    private fun csvEscape(value: String): String {
-        return if (value.contains(';') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
-            "\"${value.replace("\"", "\"\"")}\""
-        } else value
-    }
 
     /**
      * Exportiert Einträge als CSV-Datei.
@@ -99,7 +111,7 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(if (entry.confirmedWorkDay) 1 else 0)
                         append(";")
-                        append(csvEscape(entry.dayLocationLabel))
+                        append(CsvCellEncoder.encode(entry.dayLocationLabel))
                         append(";")
                         append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
                         append(";")
@@ -123,7 +135,7 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
                         append(";")
-                        append(csvEscape(entry.note ?: ""))
+                        append(CsvCellEncoder.encode(entry.note ?: ""))
                         append("\n")
                     }
                     it.write(line.toByteArray(Charsets.UTF_8))

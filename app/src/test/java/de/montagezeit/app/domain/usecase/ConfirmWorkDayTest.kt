@@ -30,8 +30,8 @@ class ConfirmWorkDayTest {
     @Test
     fun `invoke creates work entry with settings and confirmation metadata`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
         every { reminderSettingsManager.settings } returns flowOf(
             ReminderSettings(
                 workStart = LocalTime.of(9, 0),
@@ -64,8 +64,8 @@ class ConfirmWorkDayTest {
             dayLocationLabel = "Berlin"
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
 
         val result = useCase(date, source = "UI_TEST")
@@ -88,8 +88,8 @@ class ConfirmWorkDayTest {
             morningCapturedAt = 1234L
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
 
         val result = useCase(date)
@@ -113,8 +113,8 @@ class ConfirmWorkDayTest {
             breakMinutes = 30,
             confirmedWorkDay = true  // bereits bestätigt
         )
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
         every { reminderSettingsManager.settings } returns flowOf(
             ReminderSettings(
                 workStart = LocalTime.of(8, 0),
@@ -143,8 +143,8 @@ class ConfirmWorkDayTest {
             breakMinutes = 30,
             confirmedWorkDay = false  // noch nicht bestätigt
         )
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
         every { reminderSettingsManager.settings } returns flowOf(
             ReminderSettings(
                 workStart = LocalTime.of(8, 0),

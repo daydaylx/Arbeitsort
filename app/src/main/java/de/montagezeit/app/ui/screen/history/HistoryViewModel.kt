@@ -193,7 +193,8 @@ class HistoryViewModel @Inject constructor(
                     offDaysCount = stats.offDaysCount,
                     totalHours = stats.totalHours,
                     totalPaidHours = stats.totalPaidHours,
-                    averageHoursPerDay = stats.averageHoursPerDay
+                    averageHoursPerDay = stats.averageHoursPerDay,
+                    totalTravelMinutes = stats.totalTravelMinutes
                 )
             }
             .sortedByDescending { it.year * 100 + it.month }
@@ -208,13 +209,15 @@ class HistoryViewModel @Inject constructor(
         val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
         val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
         val averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
+        val totalTravelMinutes = confirmedEntries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
 
         return HistoryGroupStats(
             workDaysCount = workDaysCount,
             offDaysCount = offDaysCount,
             totalHours = totalHours,
             totalPaidHours = totalPaidHours,
-            averageHoursPerDay = averageHoursPerDay
+            averageHoursPerDay = averageHoursPerDay,
+            totalTravelMinutes = totalTravelMinutes
         )
     }
 
@@ -238,7 +241,8 @@ data class MonthGroup(
     val offDaysCount: Int,
     val totalHours: Double,
     val totalPaidHours: Double,
-    val averageHoursPerDay: Double
+    val averageHoursPerDay: Double,
+    val totalTravelMinutes: Int = 0
 ) {
     val displayText: String
         get() = Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault())
@@ -267,7 +271,8 @@ private data class HistoryGroupStats(
     val offDaysCount: Int,
     val totalHours: Double,
     val totalPaidHours: Double,
-    val averageHoursPerDay: Double
+    val averageHoursPerDay: Double,
+    val totalTravelMinutes: Int
 )
 
 data class BatchEditRequest(

@@ -35,7 +35,9 @@ abstract class WorkEntryDao {
             confirmedWorkDay,
             travelStartAt,
             travelArriveAt,
-            travelPaidMinutes
+            travelPaidMinutes,
+            returnStartAt,
+            returnArriveAt
         FROM work_entries
         WHERE date >= :startDate AND date <= :endDate
         ORDER BY date ASC
@@ -84,5 +86,7 @@ data class OvertimeEntryRow(
     val confirmedWorkDay: Boolean,
     val travelStartAt: Long?,
     val travelArriveAt: Long?,
-    val travelPaidMinutes: Int?
+    val travelPaidMinutes: Int?,
+    val returnStartAt: Long?,
+    val returnArriveAt: Long?
 )

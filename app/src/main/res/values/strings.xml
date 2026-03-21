@@ -350,6 +350,7 @@
     <string name="history_stat_paid">Bezahlt:</string>
     <string name="history_stat_average">Durchschnitt:</string>
     <string name="history_stat_days">Tage:</string>
+    <string name="history_stat_travel">Reisezeit:</string>
     <string name="history_average_hours_per_day">Ø %1$.1f Std./Tag</string>
     <string name="history_days_breakdown_work_only">%1$d Arbeit</string>
     <string name="history_days_breakdown_work_with_off">%1$d Arbeit, %2$d frei</string>
@@ -427,6 +428,12 @@
     <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
     <string name="edit_validation_travel_arrive_before_start">Ankunftszeit muss nach Abfahrtszeit liegen</string>
     <string name="edit_validation_travel_too_long">Reisezeit darf maximal 16 Stunden betragen</string>
+    <string name="edit_label_outbound">Hinfahrt</string>
+    <string name="edit_label_return">Rückfahrt</string>
+    <string name="edit_label_return_start">Abfahrt</string>
+    <string name="edit_label_return_arrival">Ankunft</string>
+    <string name="edit_validation_return_arrive_before_start">Rückfahrt: Ankunftszeit muss nach Abfahrtszeit liegen</string>
+    <string name="edit_validation_return_too_long">Rückfahrt: Reisezeit darf maximal 16 Stunden betragen</string>
 
     <!-- Today Screen (additional) -->
     <string name="cd_open_statistics">Statistiken anzeigen</string>

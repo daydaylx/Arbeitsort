@@ -60,39 +60,9 @@ fun TodayScreenV2(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedEntry by viewModel.selectedEntry.collectAsStateWithLifecycle()
-    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
-    val weekDaysUi by viewModel.weekDaysUi.collectAsStateWithLifecycle()
-    val weekStats by viewModel.weekStats.collectAsStateWithLifecycle()
-    val monthStats by viewModel.monthStats.collectAsStateWithLifecycle()
-    val isOvertimeConfigured by viewModel.isOvertimeConfigured.collectAsStateWithLifecycle()
-    val overtimeYearDisplay by viewModel.overtimeYearDisplay.collectAsStateWithLifecycle()
-    val overtimeMonthDisplay by viewModel.overtimeMonthDisplay.collectAsStateWithLifecycle()
-    val overtimeYearActualDisplay by viewModel.overtimeYearActualDisplay.collectAsStateWithLifecycle()
-    val overtimeYearTargetDisplay by viewModel.overtimeYearTargetDisplay.collectAsStateWithLifecycle()
-    val overtimeYearCountedDays by viewModel.overtimeYearCountedDays.collectAsStateWithLifecycle()
-    val overtimeYearOffDayTravelDisplay by viewModel.overtimeYearOffDayTravelDisplay.collectAsStateWithLifecycle()
-    val overtimeYearOffDayTravelDays by viewModel.overtimeYearOffDayTravelDays.collectAsStateWithLifecycle()
-    val showDailyCheckInDialog by viewModel.showDailyCheckInDialog.collectAsStateWithLifecycle()
-    val dailyCheckInLocationInput by viewModel.dailyCheckInLocationInput.collectAsStateWithLifecycle()
-    val dailyCheckInIsArrivalDeparture by viewModel.dailyCheckInIsArrivalDeparture.collectAsStateWithLifecycle()
-    val dailyCheckInBreakfastIncluded by viewModel.dailyCheckInBreakfastIncluded.collectAsStateWithLifecycle()
-    val dailyCheckInAllowancePreviewCents by viewModel.dailyCheckInAllowancePreviewCents.collectAsStateWithLifecycle()
-    val showDayLocationDialog by viewModel.showDayLocationDialog.collectAsStateWithLifecycle()
-    val dayLocationInput by viewModel.dayLocationInput.collectAsStateWithLifecycle()
-    val loadingActions by viewModel.loadingActions.collectAsStateWithLifecycle()
-    val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
-    val showDeleteDayDialog by viewModel.showDeleteDayDialog.collectAsStateWithLifecycle()
-    val deletedEntryForUndo by viewModel.deletedEntryForUndo.collectAsStateWithLifecycle()
-
-    val currentEntry = (uiState as? TodayUiState.Success)?.entry ?: selectedEntry
-    val isViewingPastDay = selectedDate != LocalDate.now()
+    val screenState by viewModel.screenState.collectAsStateWithLifecycle()
+    val dialogState by viewModel.dialogState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    val isDailyCheckInLoading = loadingActions.contains(TodayAction.DAILY_MANUAL_CHECK_IN)
-    val isConfirmOffdayLoading = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
-    val isUpdateDayLocationLoading = loadingActions.contains(TodayAction.UPDATE_DAY_LOCATION)
 
     val onOpenDailyCheckInDialogAction = remember {
         {
@@ -106,6 +76,128 @@ fun TodayScreenV2(
             viewModel.onConfirmOffDay()
         }
     }
+
+    TodayTransientEffects(
+        viewModel = viewModel,
+        snackbarHostState = snackbarHostState
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.today_title),
+                        modifier = Modifier.semantics { heading() }
+                    )
+                },
+                actions = {
+                    if (screenState.currentEntry != null) {
+                        IconButton(onClick = { viewModel.openDeleteDayDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.action_delete_day)
+                            )
+                        }
+                    }
+                    if (screenState.isViewingPastDay) {
+                        TextButton(onClick = { viewModel.selectDate(LocalDate.now()) }) {
+                            Text(stringResource(R.string.week_back_to_today))
+                        }
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        bottomBar = {
+            StickyTodayActionBarV2(
+                entry = screenState.currentEntry,
+                isDailyCheckInLoading = screenState.isDailyCheckInLoading,
+                isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
+                onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
+                onConfirmOffDay = onConfirmOffDayAction
+            )
+        }
+    ) { paddingValues ->
+        val swipeEnabled = !dialogState.showDayLocationDialog && !dialogState.showDailyCheckInDialog
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .horizontalSwipe(
+                    enabled = swipeEnabled,
+                    onSwipeLeft = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.selectDate(screenState.selectedDate.plusDays(1))
+                    },
+                    onSwipeRight = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.selectDate(screenState.selectedDate.minusDays(1))
+                    }
+                )
+        ) {
+            val errorState = screenState.errorState
+            when {
+                screenState.showFullscreenError && errorState != null -> {
+                    MZErrorState(
+                        message = errorState.message.asString(context),
+                        onRetry = { viewModel.onResetError() },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                screenState.showInitialLoading -> {
+                    MZLoadingState(
+                        message = stringResource(R.string.loading),
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                else -> {
+                    TodayContentV2(
+                        entry = screenState.currentEntry,
+                        selectedDate = screenState.selectedDate,
+                        weekDaysUi = screenState.weekDaysUi,
+                        weekStats = screenState.weekStats,
+                        monthStats = screenState.monthStats,
+                        isOvertimeConfigured = screenState.isOvertimeConfigured,
+                        overtimeYearDisplay = screenState.overtimeYearDisplay,
+                        overtimeMonthDisplay = screenState.overtimeMonthDisplay,
+                        overtimeYearActualDisplay = screenState.overtimeYearActualDisplay,
+                        overtimeYearTargetDisplay = screenState.overtimeYearTargetDisplay,
+                        overtimeYearCountedDays = screenState.overtimeYearCountedDays,
+                        overtimeYearOffDayTravelDisplay = screenState.overtimeYearOffDayTravelDisplay,
+                        overtimeYearOffDayTravelDays = screenState.overtimeYearOffDayTravelDays,
+                        onSelectDay = { viewModel.selectDate(it) },
+                        onEditDayLocation = {
+                            viewModel.openDayLocationDialog()
+                        },
+                        onEditToday = {
+                            viewModel.ensureTodayEntryThen {
+                                onOpenEditSheet(screenState.selectedDate)
+                            }
+                        },
+                        onOpenWeekView = onOpenWeekView
+                    )
+                }
+            }
+        }
+
+        TodayDialogsHost(
+            viewModel = viewModel,
+            dialogState = dialogState
+        )
+    }
+}
+
+@Composable
+private fun TodayTransientEffects(
+    viewModel: TodayViewModel,
+    snackbarHostState: SnackbarHostState
+) {
+    val context = LocalContext.current
+    val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
+    val deletedEntryForUndo by viewModel.deletedEntryForUndo.collectAsStateWithLifecycle()
 
     LaunchedEffect(snackbarMessage) {
         val message = snackbarMessage ?: return@LaunchedEffect
@@ -126,143 +218,45 @@ fun TodayScreenV2(
             viewModel.onUndoWindowClosed()
         }
     }
+}
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.today_title),
-                        modifier = Modifier.semantics { heading() }
-                    )
-                },
-                actions = {
-                    if (currentEntry != null) {
-                        IconButton(onClick = { viewModel.openDeleteDayDialog() }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.action_delete_day)
-                            )
-                        }
-                    }
-                    if (isViewingPastDay) {
-                        TextButton(onClick = { viewModel.selectDate(LocalDate.now()) }) {
-                            Text(stringResource(R.string.week_back_to_today))
-                        }
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        bottomBar = {
-            StickyTodayActionBarV2(
-                entry = currentEntry,
-                isDailyCheckInLoading = isDailyCheckInLoading,
-                isConfirmOffdayLoading = isConfirmOffdayLoading,
-                onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
-                onConfirmOffDay = onConfirmOffDayAction
-            )
-        }
-    ) { paddingValues ->
-        val swipeEnabled = !showDayLocationDialog && !showDailyCheckInDialog
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .horizontalSwipe(
-                    enabled = swipeEnabled,
-                    onSwipeLeft = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.selectDate(selectedDate.plusDays(1))
-                    },
-                    onSwipeRight = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.selectDate(selectedDate.minusDays(1))
-                    }
-                )
-        ) {
-            val errorState = uiState as? TodayUiState.Error
-            val showInitialLoading = uiState is TodayUiState.Loading && currentEntry == null
-            val showFullscreenError = errorState != null && currentEntry == null
+@Composable
+private fun TodayDialogsHost(
+    viewModel: TodayViewModel,
+    dialogState: TodayDialogState
+) {
 
-            when {
-                showFullscreenError && errorState != null -> {
-                    MZErrorState(
-                        message = errorState.message.asString(context),
-                        onRetry = { viewModel.onResetError() },
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+    if (dialogState.showDeleteDayDialog) {
+        DeleteDayConfirmDialog(
+            isLoading = dialogState.isDeleteDayLoading,
+            onDismiss = { viewModel.dismissDeleteDayDialog() },
+            onConfirm = { viewModel.confirmDeleteDay() }
+        )
+    }
 
-                showInitialLoading -> {
-                    MZLoadingState(
-                        message = stringResource(R.string.loading),
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+    if (dialogState.showDayLocationDialog) {
+        DayLocationDialogV2(
+            input = dialogState.dayLocationInput,
+            isLoading = dialogState.isUpdateDayLocationLoading,
+            onInputChange = { viewModel.onDayLocationInputChanged(it) },
+            onDismiss = { viewModel.onDismissDayLocationDialog() },
+            onConfirm = { viewModel.submitDayLocationUpdate() }
+        )
+    }
 
-                else -> {
-                    TodayContentV2(
-                        entry = currentEntry,
-                        selectedDate = selectedDate,
-                        weekDaysUi = weekDaysUi,
-                        weekStats = weekStats,
-                        monthStats = monthStats,
-                        isOvertimeConfigured = isOvertimeConfigured,
-                        overtimeYearDisplay = overtimeYearDisplay,
-                        overtimeMonthDisplay = overtimeMonthDisplay,
-                        overtimeYearActualDisplay = overtimeYearActualDisplay,
-                        overtimeYearTargetDisplay = overtimeYearTargetDisplay,
-                        overtimeYearCountedDays = overtimeYearCountedDays,
-                        overtimeYearOffDayTravelDisplay = overtimeYearOffDayTravelDisplay,
-                        overtimeYearOffDayTravelDays = overtimeYearOffDayTravelDays,
-                        onSelectDay = { viewModel.selectDate(it) },
-                        onEditDayLocation = {
-                            viewModel.openDayLocationDialog()
-                        },
-                        onEditToday = {
-                            viewModel.ensureTodayEntryThen {
-                                onOpenEditSheet(selectedDate)
-                            }
-                        },
-                        onOpenWeekView = onOpenWeekView
-                    )
-                }
-            }
-
-            if (showDeleteDayDialog) {
-                DeleteDayConfirmDialog(
-                    isLoading = loadingActions.contains(TodayAction.DELETE_DAY),
-                    onDismiss = { viewModel.dismissDeleteDayDialog() },
-                    onConfirm = { viewModel.confirmDeleteDay() }
-                )
-            }
-
-            if (showDayLocationDialog) {
-                DayLocationDialogV2(
-                    input = dayLocationInput,
-                    isLoading = isUpdateDayLocationLoading,
-                    onInputChange = { viewModel.onDayLocationInputChanged(it) },
-                    onDismiss = { viewModel.onDismissDayLocationDialog() },
-                    onConfirm = { viewModel.submitDayLocationUpdate() }
-                )
-            }
-
-            if (showDailyCheckInDialog) {
-                DailyManualCheckInDialogV2(
-                    input = dailyCheckInLocationInput,
-                    isLoading = isDailyCheckInLoading,
-                    isArrivalDeparture = dailyCheckInIsArrivalDeparture,
-                    breakfastIncluded = dailyCheckInBreakfastIncluded,
-                    allowancePreviewCents = dailyCheckInAllowancePreviewCents,
-                    onInputChange = { viewModel.onDailyCheckInLocationChanged(it) },
-                    onArrivalDepartureChanged = { viewModel.onDailyCheckInArrivalDepartureChanged(it) },
-                    onBreakfastIncludedChanged = { viewModel.onDailyCheckInBreakfastIncludedChanged(it) },
-                    onDismiss = { viewModel.onDismissDailyCheckInDialog() },
-                    onConfirm = { viewModel.submitDailyManualCheckIn() }
-                )
-            }
-        }
+    if (dialogState.showDailyCheckInDialog) {
+        DailyManualCheckInDialogV2(
+            input = dialogState.dailyCheckInLocationInput,
+            isLoading = dialogState.isDailyCheckInLoading,
+            isArrivalDeparture = dialogState.dailyCheckInIsArrivalDeparture,
+            breakfastIncluded = dialogState.dailyCheckInBreakfastIncluded,
+            allowancePreviewCents = dialogState.dailyCheckInAllowancePreviewCents,
+            onInputChange = { viewModel.onDailyCheckInLocationChanged(it) },
+            onArrivalDepartureChanged = { viewModel.onDailyCheckInArrivalDepartureChanged(it) },
+            onBreakfastIncludedChanged = { viewModel.onDailyCheckInBreakfastIncludedChanged(it) },
+            onDismiss = { viewModel.onDismissDailyCheckInDialog() },
+            onConfirm = { viewModel.submitDailyManualCheckIn() }
+        )
     }
 }
 

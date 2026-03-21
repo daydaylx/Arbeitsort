@@ -22,8 +22,8 @@ class RecordMorningCheckInTest {
     @Test
     fun `invoke creates new WORK entry with morning timestamp`() = runTest {
         val date = LocalDate.now()
-        coEvery { workEntryDao.getByDate(date) } returns null
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existingEntry = null)
 
         val result = useCase(date)
 
@@ -45,8 +45,8 @@ class RecordMorningCheckInTest {
             eveningCapturedAt = 7777L
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
 
         val result = useCase(date)
 
@@ -64,7 +64,7 @@ class RecordMorningCheckInTest {
             dayType = DayType.OFF
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
+        stubReadModifyWrite(workEntryDao, existing)
 
         try {
             useCase(date)
@@ -85,7 +85,7 @@ class RecordMorningCheckInTest {
             confirmedWorkDay = true
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
+        stubReadModifyWrite(workEntryDao, existing)
 
         try {
             useCase(date)
@@ -106,8 +106,8 @@ class RecordMorningCheckInTest {
             dayLocationLabel = "   "
         )
 
-        coEvery { workEntryDao.getByDate(date) } returns existing
         coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
 
         val result = useCase(date)
 

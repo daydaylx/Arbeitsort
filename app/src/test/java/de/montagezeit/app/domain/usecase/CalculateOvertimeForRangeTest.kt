@@ -291,7 +291,9 @@ class CalculateOvertimeForRangeTest {
             confirmedWorkDay = confirmedWorkDay,
             travelStartAt = null,
             travelArriveAt = null,
-            travelPaidMinutes = travelPaidMinutes
+            travelPaidMinutes = travelPaidMinutes,
+            returnStartAt = null,
+            returnArriveAt = null
         )
     }
 }

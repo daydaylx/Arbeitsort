@@ -38,61 +38,62 @@ class SetTravelEvent(
         timestamp: Long,
         label: String? = null
     ): WorkEntry {
-        val existingEntry = workEntryDao.getByDate(date)
         val now = System.currentTimeMillis()
-        
-        val updatedEntry = when (type) {
-            TravelType.START -> {
-                // Anreise startet
-                if (existingEntry != null) {
-                    existingEntry.copy(
-                        travelStartAt = timestamp,
-                        travelLabelStart = label,
-                        travelPaidMinutes = null,
-                        travelSource = TravelSource.MANUAL,
-                        travelUpdatedAt = now,
-                        updatedAt = now
-                    )
-                } else {
-                    WorkEntry(
-                        date = date,
-                        travelStartAt = timestamp,
-                        travelLabelStart = label,
-                        travelSource = TravelSource.MANUAL,
-                        travelUpdatedAt = now,
-                        createdAt = now,
-                        updatedAt = now
-                    )
+
+        var result: WorkEntry? = null
+        workEntryDao.readModifyWrite(date) { existingEntry ->
+            val updatedEntry = when (type) {
+                TravelType.START -> {
+                    if (existingEntry != null) {
+                        existingEntry.copy(
+                            travelStartAt = timestamp,
+                            travelLabelStart = label,
+                            travelPaidMinutes = null,
+                            travelSource = TravelSource.MANUAL,
+                            travelUpdatedAt = now,
+                            updatedAt = now
+                        )
+                    } else {
+                        WorkEntry(
+                            date = date,
+                            travelStartAt = timestamp,
+                            travelLabelStart = label,
+                            travelSource = TravelSource.MANUAL,
+                            travelUpdatedAt = now,
+                            createdAt = now,
+                            updatedAt = now
+                        )
+                    }
+                }
+
+                TravelType.ARRIVE -> {
+                    if (existingEntry != null) {
+                        existingEntry.copy(
+                            travelArriveAt = timestamp,
+                            travelLabelEnd = label,
+                            travelPaidMinutes = null,
+                            travelSource = TravelSource.MANUAL,
+                            travelUpdatedAt = now,
+                            updatedAt = now
+                        )
+                    } else {
+                        WorkEntry(
+                            date = date,
+                            travelArriveAt = timestamp,
+                            travelLabelEnd = label,
+                            travelSource = TravelSource.MANUAL,
+                            travelUpdatedAt = now,
+                            createdAt = now,
+                            updatedAt = now
+                        )
+                    }
                 }
             }
-            
-            TravelType.ARRIVE -> {
-                // Ankunft am Ziel
-                if (existingEntry != null) {
-                    existingEntry.copy(
-                        travelArriveAt = timestamp,
-                        travelLabelEnd = label,
-                        travelPaidMinutes = null,
-                        travelSource = TravelSource.MANUAL,
-                        travelUpdatedAt = now,
-                        updatedAt = now
-                    )
-                } else {
-                    WorkEntry(
-                        date = date,
-                        travelArriveAt = timestamp,
-                        travelLabelEnd = label,
-                        travelSource = TravelSource.MANUAL,
-                        travelUpdatedAt = now,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                }
-            }
+            result = updatedEntry
+            updatedEntry
         }
-        
-        workEntryDao.upsert(updatedEntry)
-        return updatedEntry
+
+        return result!!
     }
     
     /**
@@ -102,13 +103,15 @@ class SetTravelEvent(
      * @return Aktualisierter WorkEntry
      */
     suspend fun clearTravelEvents(date: LocalDate): WorkEntry {
-        val existingEntry = workEntryDao.getByDate(date)
-            ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
-        
         val now = System.currentTimeMillis()
-        val updatedEntry = existingEntry.withTravelCleared(now)
-        
-        workEntryDao.upsert(updatedEntry)
-        return updatedEntry
+        var result: WorkEntry? = null
+        workEntryDao.readModifyWrite(date) { existingEntry ->
+            val current = existingEntry
+                ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
+            val updatedEntry = current.withTravelCleared(now)
+            result = updatedEntry
+            updatedEntry
+        }
+        return result!!
     }
 }
