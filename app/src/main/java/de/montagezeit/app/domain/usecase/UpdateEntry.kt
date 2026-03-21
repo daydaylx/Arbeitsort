@@ -31,9 +31,10 @@ class UpdateEntry(
 
         val now = System.currentTimeMillis()
 
-        // Wenn Timestamps gesetzt sind, travelPaidMinutes nullen damit Timestamps die Quelle sind.
-        // travelPaidMinutes != null würde als Override wirken und die Timestamps ignorieren.
-        val entryToSave = if (entry.travelStartAt != null || entry.travelArriveAt != null) {
+        // Sobald mindestens ein vollständiges Travel-Zeitpaar vorliegt, werden die
+        // Timestamp-basierten Minuten zur Quelle und travelPaidMinutes darf nicht
+        // mehr als Fallback/Altwert erhalten bleiben.
+        val entryToSave = if (entry.hasAnyCompleteTravelPair()) {
             entry.copy(travelPaidMinutes = null, updatedAt = now)
         } else {
             entry.copy(updatedAt = now)
@@ -87,23 +88,48 @@ class UpdateEntry(
     }
 
     private fun validateTravel(entry: WorkEntry) {
-        // 5. Wenn travelStartAt und travelArriveAt beide gesetzt sind, muss arrive nach start liegen
-        val travelStart = entry.travelStartAt
-        val travelArrive = entry.travelArriveAt
-        if (travelStart != null && travelArrive != null) {
-            var travelDuration = travelArrive - travelStart
-            if (travelDuration < 0) {
-                // Übernachtreise erlaubt: beide Timestamps für dasselbe Datum erzeugt
-                travelDuration += DAY_MILLIS
-            }
+        validateTravelPair(
+            start = entry.travelStartAt,
+            arrive = entry.travelArriveAt,
+            invalidOrderMessage = "travelArriveAt muss nach travelStartAt liegen",
+            tooLongMessage = "Reisezeit darf maximal 16 Stunden betragen"
+        )
+        validateTravelPair(
+            start = entry.returnStartAt,
+            arrive = entry.returnArriveAt,
+            invalidOrderMessage = "returnArriveAt muss nach returnStartAt liegen",
+            tooLongMessage = "Rückfahrt darf maximal 16 Stunden betragen"
+        )
+    }
 
-            if (travelDuration <= 0) {
-                throw IllegalArgumentException("travelArriveAt muss nach travelStartAt liegen")
-            }
+    private fun validateTravelPair(
+        start: Long?,
+        arrive: Long?,
+        invalidOrderMessage: String,
+        tooLongMessage: String
+    ) {
+        if (start == null || arrive == null) {
+            return
+        }
 
-            if (travelDuration > MAX_TRAVEL_DURATION_MILLIS) {
-                throw IllegalArgumentException("Reisezeit darf maximal 16 Stunden betragen")
-            }
+        var travelDuration = arrive - start
+        if (travelDuration < 0) {
+            // Übernachtreise erlaubt: beide Timestamps für dasselbe Datum erzeugt
+            travelDuration += DAY_MILLIS
+        }
+
+        if (travelDuration <= 0) {
+            throw IllegalArgumentException(invalidOrderMessage)
+        }
+
+        if (travelDuration > MAX_TRAVEL_DURATION_MILLIS) {
+            throw IllegalArgumentException(tooLongMessage)
         }
     }
+}
+
+private fun WorkEntry.hasAnyCompleteTravelPair(): Boolean {
+    val hasOutboundPair = travelStartAt != null && travelArriveAt != null
+    val hasReturnPair = returnStartAt != null && returnArriveAt != null
+    return hasOutboundPair || hasReturnPair
 }

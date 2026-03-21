@@ -17,7 +17,9 @@ class WorkEntryExtensionsTest {
     private fun baseEntry(
         travelPaidMinutes: Int? = null,
         travelStartAt: Long? = null,
-        travelArriveAt: Long? = null
+        travelArriveAt: Long? = null,
+        returnStartAt: Long? = null,
+        returnArriveAt: Long? = null
     ) = WorkEntry(
         date = date,
         dayType = DayType.WORK,
@@ -27,7 +29,9 @@ class WorkEntryExtensionsTest {
         breakMinutes = 60,
         travelPaidMinutes = travelPaidMinutes,
         travelStartAt = travelStartAt,
-        travelArriveAt = travelArriveAt
+        travelArriveAt = travelArriveAt,
+        returnStartAt = returnStartAt,
+        returnArriveAt = returnArriveAt
     )
 
     @Test
@@ -52,10 +56,19 @@ class WorkEntryExtensionsTest {
     fun `withTravelCleared loescht Timestamps`() {
         val start = epochOf(LocalTime.of(7, 0))
         val arrive = epochOf(LocalTime.of(9, 0))
-        val entry = baseEntry(travelStartAt = start, travelArriveAt = arrive)
+        val returnStart = epochOf(LocalTime.of(17, 0))
+        val returnArrive = epochOf(LocalTime.of(18, 0))
+        val entry = baseEntry(
+            travelStartAt = start,
+            travelArriveAt = arrive,
+            returnStartAt = returnStart,
+            returnArriveAt = returnArrive
+        )
         val cleared = entry.withTravelCleared(now)
         assertNull(cleared.travelStartAt)
         assertNull(cleared.travelArriveAt)
+        assertNull(cleared.returnStartAt)
+        assertNull(cleared.returnArriveAt)
     }
 
     @Test
@@ -85,9 +98,15 @@ class WorkEntryExtensionsTest {
 
     @Test
     fun `withConfirmedOffDay clearTravel nutzt null`() {
-        val entry = baseEntry(travelPaidMinutes = 90)
+        val entry = baseEntry(
+            travelPaidMinutes = 90,
+            returnStartAt = epochOf(LocalTime.of(17, 0)),
+            returnArriveAt = epochOf(LocalTime.of(18, 0))
+        )
         val offDay = entry.withConfirmedOffDay(source = "TEST", now = now, fallbackDayLocationLabel = "")
         assertNull(offDay.travelPaidMinutes)
+        assertNull(offDay.returnStartAt)
+        assertNull(offDay.returnArriveAt)
     }
 
     @Test
@@ -158,6 +177,8 @@ class WorkEntryExtensionsTest {
             dayLocationLabel = "Baustelle",
             travelStartAt = epochOf(LocalTime.of(7, 0)),
             travelArriveAt = epochOf(LocalTime.of(8, 30)),
+            returnStartAt = epochOf(LocalTime.of(17, 0)),
+            returnArriveAt = epochOf(LocalTime.of(18, 0)),
             travelPaidMinutes = 90,
             mealIsArrivalDeparture = true,
             mealBreakfastIncluded = true,
@@ -172,6 +193,8 @@ class WorkEntryExtensionsTest {
         assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
         assertNull(result.travelStartAt)
         assertNull(result.travelArriveAt)
+        assertNull(result.returnStartAt)
+        assertNull(result.returnArriveAt)
         assertNull(result.travelPaidMinutes)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)

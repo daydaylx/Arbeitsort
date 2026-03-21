@@ -14,6 +14,8 @@ fun WorkEntry.withTravelCleared(now: Long): WorkEntry {
     return copy(
         travelStartAt = null,
         travelArriveAt = null,
+        returnStartAt = null,
+        returnArriveAt = null,
         travelLabelStart = null,
         travelLabelEnd = null,
         travelFromLabel = null,

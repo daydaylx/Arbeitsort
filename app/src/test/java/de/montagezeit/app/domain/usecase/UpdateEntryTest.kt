@@ -92,6 +92,23 @@ class UpdateEntryTest {
     }
 
     @Test
+    fun `invoke erlaubt uebernacht rueckfahrt`() = runTest {
+        val date = LocalDate.of(2026, 2, 1)
+        val entry = validEntry(
+            date = date,
+            returnStartAt = epochOf(date, LocalTime.of(23, 0)),
+            returnArriveAt = epochOf(date, LocalTime.of(1, 0))
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertEquals(entry.returnStartAt, result.returnStartAt)
+        assertEquals(entry.returnArriveAt, result.returnArriveAt)
+        coVerify { workEntryDao.upsert(result) }
+    }
+
+    @Test
     fun `invoke speichert OFF-Tag ohne dayLocationLabel`() = runTest {
         val entry = WorkEntry(
             date = LocalDate.now(),
@@ -150,6 +167,23 @@ class UpdateEntryTest {
     }
 
     @Test
+    fun `invoke lehnt zu lange rueckfahrt ab`() = runTest {
+        val date = LocalDate.of(2026, 2, 1)
+        val entry = validEntry(
+            date = date,
+            returnStartAt = epochOf(date, LocalTime.of(2, 0)),
+            returnArriveAt = epochOf(date, LocalTime.of(19, 0))
+        )
+
+        try {
+            updateEntry.invoke(entry)
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Rückfahrt darf maximal 16 Stunden betragen", e.message)
+        }
+    }
+
+    @Test
     fun `OFF Eintrag mit leerem dayLocationLabel wird gespeichert`() = runTest {
         val entry = WorkEntry(
             date = LocalDate.now(),
@@ -201,6 +235,22 @@ class UpdateEntryTest {
     }
 
     @Test
+    fun `bei gesetzter rueckfahrt wird travelPaidMinutes genullt`() = runTest {
+        val date = LocalDate.now()
+        val entry = validEntry(
+            date = date,
+            returnStartAt = epochOf(date, LocalTime.of(17, 0)),
+            returnArriveAt = epochOf(date, LocalTime.of(18, 0)),
+            travelPaidMinutes = 120
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertNull(result.travelPaidMinutes)
+    }
+
+    @Test
     fun `bei null Timestamps bleibt travelPaidMinutes unberuehrt`() = runTest {
         val entry = validEntry(
             travelStartAt = null,
@@ -219,6 +269,8 @@ class UpdateEntryTest {
         note: String? = null,
         travelStartAt: Long? = null,
         travelArriveAt: Long? = null,
+        returnStartAt: Long? = null,
+        returnArriveAt: Long? = null,
         travelPaidMinutes: Int? = null,
         createdAt: Long = System.currentTimeMillis(),
         updatedAt: Long = System.currentTimeMillis()
@@ -232,6 +284,8 @@ class UpdateEntryTest {
             breakMinutes = 60,
             travelStartAt = travelStartAt,
             travelArriveAt = travelArriveAt,
+            returnStartAt = returnStartAt,
+            returnArriveAt = returnArriveAt,
             travelPaidMinutes = travelPaidMinutes,
             note = note,
             createdAt = createdAt,
