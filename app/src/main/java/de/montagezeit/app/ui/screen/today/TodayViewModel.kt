@@ -299,8 +299,6 @@ class TodayViewModel @Inject constructor(
         observeTodayDate()
         loadTodayEntry()
         observeEntryUpdates()
-        loadStatistics()
-        loadWeekOverview()
     }
 
     private fun loadTodayEntry() {
@@ -345,14 +343,6 @@ class TodayViewModel @Inject constructor(
                     loadWeekOverviewInternal()
                 }
         }
-    }
-
-    private fun loadStatistics() {
-        viewModelScope.launch { loadStatisticsInternal() }
-    }
-
-    private fun loadWeekOverview() {
-        viewModelScope.launch { loadWeekOverviewInternal() }
     }
 
     private suspend fun loadStatisticsInternal() {
@@ -497,10 +487,6 @@ class TodayViewModel @Inject constructor(
                 _uiState.value = TodayUiState.Success(entry)
             }
             return
-        }
-
-        if (!isDateInCurrentWeek) {
-            loadWeekOverview()
         }
 
         viewModelScope.launch {
@@ -716,7 +702,7 @@ class TodayViewModel @Inject constructor(
     }
 
     private companion object {
-        private const val ENTRY_UPDATE_DEBOUNCE_MS = 150L
+        private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L
 
         private data class EntryRefreshKey(
             val selectedDate: LocalDate,

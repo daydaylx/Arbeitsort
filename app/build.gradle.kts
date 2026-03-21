@@ -87,11 +87,9 @@ android {
     }
 
     lint {
-        // Core Library Desugaring ermöglicht java.time.* auf API 24+
-        // Lint erkennt Desugaring nicht automatisch und meldet false positives für
-        // java.time-APIs. Desugaring ist in compileOptions aktiviert und desugar_jdk_libs
-        // ist als Dependency eingebunden, daher ist NewApi hier sicher zu deaktivieren.
-        disable += "NewApi"
+        // Lint-Baseline fängt bekannte java.time-False-Positives durch Core Library
+        // Desugaring ab. Neue NewApi-Verstöße werden weiterhin erkannt.
+        baseline = file("lint-baseline.xml")
         warningsAsErrors = false
         abortOnError = true
     }
