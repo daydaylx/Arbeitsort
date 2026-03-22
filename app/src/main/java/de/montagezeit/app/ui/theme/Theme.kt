@@ -42,7 +42,8 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = NeutralVariant40,
     inverseSurface = Neutral90,
     inverseOnSurface = Neutral20,
-    inversePrimary = Teal40
+    inversePrimary = Teal40,
+    scrim = Neutral6
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -72,7 +73,8 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = NeutralVariant80,
     inverseSurface = Neutral20,
     inverseOnSurface = Neutral99,
-    inversePrimary = Teal80
+    inversePrimary = Teal80,
+    scrim = Neutral10
 )
 
 @Composable
@@ -95,7 +97,9 @@ fun MontageZeitTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.surface.toArgb()
+            window.navigationBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

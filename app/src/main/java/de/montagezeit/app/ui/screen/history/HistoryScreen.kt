@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -29,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.DatePickerDialog
@@ -38,6 +40,7 @@ import de.montagezeit.app.ui.util.asString
 import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
+import de.montagezeit.app.ui.components.*
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -62,9 +65,14 @@ fun HistoryScreen(
     val msgFailed = stringResource(R.string.history_toast_batch_failed)
 
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
                 title = { Text(stringResource(R.string.history_title)) },
                 actions = {
                     IconButton(
@@ -87,35 +95,39 @@ fun HistoryScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+        MZPageBackground(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues
         ) {
-            when (uiState) {
-                is HistoryUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                
-                is HistoryUiState.Success -> {
-                    val successState = uiState as HistoryUiState.Success
-                    HistoryContent(
-                        weeks = successState.weeks,
-                        months = successState.months,
-                        entriesByDate = successState.entriesByDate,
-                        onEntryClick = onOpenEditSheet,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                
-                is HistoryUiState.Error -> {
-                    ErrorContent(
-                        message = (uiState as HistoryUiState.Error).message.asString(context),
-                        onRetry = { viewModel.loadHistory() },
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (uiState) {
+                    is HistoryUiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    is HistoryUiState.Success -> {
+                        val successState = uiState as HistoryUiState.Success
+                        HistoryContent(
+                            weeks = successState.weeks,
+                            months = successState.months,
+                            entriesByDate = successState.entriesByDate,
+                            travelLegsByDate = successState.travelLegsByDate,
+                            onEntryClick = onOpenEditSheet,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    is HistoryUiState.Error -> {
+                        ErrorContent(
+                            message = (uiState as HistoryUiState.Error).message.asString(context),
+                            onRetry = { viewModel.loadHistory() },
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
             }
         }
@@ -147,6 +159,7 @@ fun HistoryContent(
     weeks: List<WeekGroup>,
     months: List<MonthGroup>,
     entriesByDate: Map<LocalDate, WorkEntry>,
+    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
     onEntryClick: (java.time.LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -157,11 +170,20 @@ fun HistoryContent(
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
+    val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }
 
     Column(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        HistoryDayOverviewCard(
+            date = selectedDate,
+            entry = selectedEntry,
+            travelLegs = selectedTravelLegs,
+            onPickDate = { showDatePicker = true },
+            onOpenEntry = { onEntryClick(selectedDate) }
+        )
+
         HistoryMiniFilterBar(
             showCalendar = showCalendar,
             calendarMode = calendarMode,
@@ -173,39 +195,34 @@ fun HistoryContent(
             onPickDate = { showDatePicker = true }
         )
 
-        HistoryDayOverviewCard(
-            date = selectedDate,
-            entry = selectedEntry,
-            onPickDate = { showDatePicker = true },
-            onOpenEntry = { onEntryClick(selectedDate) }
-        )
-
         when {
             showCalendar -> {
-                if (calendarMode == CalendarMode.MONTH) {
-                    CalendarView(
-                        month = selectedMonth,
-                        entriesByDate = entriesByDate,
-                        onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
-                        onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
-                        onDayClick = { date ->
-                            selectedDate = date
-                            selectedMonth = YearMonth.from(date)
-                            onEntryClick(date)
-                        }
-                    )
-                } else {
-                    WeekCalendarView(
-                        selectedDate = selectedDate,
-                        entriesByDate = entriesByDate,
-                        onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
-                        onNextWeek = { selectedDate = selectedDate.plusDays(7) },
-                        onDayClick = { date ->
-                            selectedDate = date
-                            selectedMonth = YearMonth.from(date)
-                            onEntryClick(date)
-                        }
-                    )
+                MZCard {
+                    if (calendarMode == CalendarMode.MONTH) {
+                        CalendarView(
+                            month = selectedMonth,
+                            entriesByDate = entriesByDate,
+                            onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
+                            onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
+                            onDayClick = { date ->
+                                selectedDate = date
+                                selectedMonth = YearMonth.from(date)
+                                onEntryClick(date)
+                            }
+                        )
+                    } else {
+                        WeekCalendarView(
+                            selectedDate = selectedDate,
+                            entriesByDate = entriesByDate,
+                            onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
+                            onNextWeek = { selectedDate = selectedDate.plusDays(7) },
+                            onDayClick = { date ->
+                                selectedDate = date
+                                selectedMonth = YearMonth.from(date)
+                                onEntryClick(date)
+                            }
+                        )
+                    }
                 }
             }
             weeks.isEmpty() && months.isEmpty() -> {
@@ -232,6 +249,7 @@ fun HistoryContent(
                         ) { month ->
                             MonthGroupCard(
                                 month = month,
+                                travelLegsByDate = travelLegsByDate,
                                 onEntryClick = onEntryClick
                             )
                         }
@@ -242,6 +260,7 @@ fun HistoryContent(
                         ) { week ->
                             WeekGroupCard(
                                 week = week,
+                                travelLegsByDate = travelLegsByDate,
                                 onEntryClick = onEntryClick
                             )
                         }
@@ -277,17 +296,12 @@ private fun HistoryMiniFilterBar(
     onShowMonthsChange: (Boolean) -> Unit,
     onPickDate: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp
-    ) {
+    MZCard {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -344,135 +358,123 @@ private fun HistoryMiniFilterBar(
 private fun HistoryDayOverviewCard(
     date: LocalDate,
     entry: WorkEntry?,
+    travelLegs: List<TravelLeg>,
     onPickDate: () -> Unit,
     onOpenEntry: () -> Unit
 ) {
     val workHours = remember(entry) { entry?.let(TimeCalculator::calculateWorkHours) ?: 0.0 }
-    val totalPaidHours = remember(entry) { entry?.let(TimeCalculator::calculatePaidTotalHours) ?: 0.0 }
-    val travelMinutes = remember(entry) { entry?.let(TimeCalculator::calculateTravelMinutes) ?: 0 }
+    val totalPaidHours = remember(entry, travelLegs) {
+        entry?.let { TimeCalculator.calculatePaidTotalHours(it, travelLegs) } ?: 0.0
+    }
+    val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
 
     // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
-
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    MZHeroCard(
+        title = formatOverviewDate(date),
+        subtitle = stringResource(R.string.history_dashboard_subtitle),
+        badge = {
+            entry?.let {
+                MZStatusBadge(
+                    text = when (it.dayType) {
+                        DayType.WORK -> stringResource(R.string.day_type_work)
+                        DayType.OFF -> stringResource(R.string.day_type_off)
+                        DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
+                    },
+                    type = when (it.dayType) {
+                        DayType.WORK -> StatusType.SUCCESS
+                        DayType.OFF -> StatusType.NEUTRAL
+                        DayType.COMP_TIME -> StatusType.INFO
+                    },
+                    showIcon = false
+                )
+            }
+        },
+        action = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                SecondaryActionButton(
+                    onClick = onPickDate,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.history_action_pick_date))
+                }
+                PrimaryActionButton(
+                    onClick = onOpenEntry,
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = stringResource(R.string.history_day_overview_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = formatOverviewDate(date),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (entry == null) {
+                            stringResource(R.string.history_action_add_past_day)
+                        } else {
+                            stringResource(R.string.action_edit_entry)
+                        }
                     )
                 }
-                AssistChip(
-                    onClick = onPickDate,
-                    label = { Text(stringResource(R.string.history_action_pick_date)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = null
-                        )
-                    }
+            }
+        }
+    ) {
+        Text(
+            text = stringResource(R.string.history_day_overview_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.84f)
+        )
+
+        if (entry == null) {
+            Text(
+                text = stringResource(R.string.history_day_overview_no_entry),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DayTypeIndicator(dayType = entry.dayType)
+                Text(
+                    text = when (entry.dayType) {
+                        DayType.WORK -> stringResource(R.string.day_type_work)
+                        DayType.OFF -> stringResource(R.string.day_type_off)
+                        DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            if (entry == null) {
-                Text(
-                    text = stringResource(R.string.history_day_overview_no_entry),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                MZKeyValueRow(
+                    label = stringResource(R.string.history_stat_total),
+                    value = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
+                    emphasize = true
                 )
-                PrimaryActionButton(
-                    onClick = onOpenEntry,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(stringResource(R.string.history_action_add_past_day))
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DayTypeIndicator(dayType = entry.dayType)
-                    Text(
-                        text = when (entry.dayType) {
-                            DayType.WORK -> stringResource(R.string.day_type_work)
-                            DayType.OFF -> stringResource(R.string.day_type_off)
-                            DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
-                        },
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f)
+                if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                    MZKeyValueRow(
+                        label = stringResource(R.string.history_stat_paid),
+                        value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
                     )
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "${stringResource(R.string.history_stat_total)} ${formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat)}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
-                        Text(
-                            text = "${stringResource(R.string.history_stat_paid)} ${formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (travelMinutes > 0) {
+                    MZKeyValueRow(
+                        label = stringResource(R.string.history_stat_travel),
+                        value = formatMinutesAsHoursMinutesPlain(
+                            travelMinutes,
+                            hoursOnlyFormat,
+                            hoursMinutesFormat
                         )
-                    }
-                    if (travelMinutes > 0) {
-                        Text(
-                            text = stringResource(
-                                R.string.history_travel_duration_inline,
-                                formatMinutesAsHoursMinutesPlain(travelMinutes, hoursOnlyFormat, hoursMinutesFormat)
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    )
                 }
-
-                Text(
-                    text = stringResource(
-                        R.string.history_day_location_summary,
-                        stringResource(R.string.day_location_label),
-                        entry.dayLocationLabel.orEmpty()
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                MZKeyValueRow(
+                    label = stringResource(R.string.day_location_label),
+                    value = entry.dayLocationLabel.ifBlank {
+                        stringResource(R.string.today_day_location_unset)
+                    }
                 )
-
-                FilledTonalButton(
-                    onClick = onOpenEntry,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(stringResource(R.string.action_edit_entry))
-                }
             }
         }
     }
@@ -994,6 +996,7 @@ fun EmptyContent(
 @Composable
 fun WeekGroupCard(
     week: WeekGroup,
+    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
     onEntryClick: (java.time.LocalDate) -> Unit
 ) {
     var expanded by rememberSaveable(week.year, week.week) { mutableStateOf(false) }
@@ -1003,13 +1006,10 @@ fun WeekGroupCard(
         append(stringResource(R.string.history_summary_workdays, week.workDaysCount))
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
+    MZCard(
+        modifier = Modifier.animateContentSize()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -1057,14 +1057,8 @@ fun WeekGroupCard(
             }
 
             if (expanded && week.entries.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                MZCard {
                     Column(
-                        modifier = Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Total and average hours
@@ -1161,6 +1155,7 @@ fun WeekGroupCard(
                         key(entry.date) {
                             HistoryEntryItem(
                                 entry = entry,
+                                travelLegs = travelLegsByDate[entry.date].orEmpty(),
                                 onClick = { onEntryClick(entry.date) }
                             )
                         }
@@ -1174,6 +1169,7 @@ fun WeekGroupCard(
 @Composable
 fun MonthGroupCard(
     month: MonthGroup,
+    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
     onEntryClick: (java.time.LocalDate) -> Unit
 ) {
     var expanded by rememberSaveable(month.year, month.month) { mutableStateOf(false) }
@@ -1183,13 +1179,10 @@ fun MonthGroupCard(
         append(stringResource(R.string.history_summary_workdays, month.workDaysCount))
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
+    MZCard(
+        modifier = Modifier.animateContentSize()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -1231,14 +1224,8 @@ fun MonthGroupCard(
             }
 
             if (expanded && month.entries.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                MZCard {
                     Column(
-                        modifier = Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Total and average hours
@@ -1358,6 +1345,7 @@ fun MonthGroupCard(
                         key(entry.date) {
                             HistoryEntryItem(
                                 entry = entry,
+                                travelLegs = travelLegsByDate[entry.date].orEmpty(),
                                 onClick = { onEntryClick(entry.date) }
                             )
                         }
@@ -1384,26 +1372,23 @@ fun MonthGroupCard(
 @Composable
 fun HistoryEntryItem(
     entry: WorkEntry,
+    travelLegs: List<TravelLeg>,
     onClick: () -> Unit
 ) {
-    val travelMinutes = remember(entry) { TimeCalculator.calculateTravelMinutes(entry) }
+    val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
-    val totalPaidHours = remember(entry) { TimeCalculator.calculatePaidTotalHours(entry) }
+    val totalPaidHours = remember(entry, travelLegs) { TimeCalculator.calculatePaidTotalHours(entry, travelLegs) }
 
     // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
 
-    Card(
+    MZCard(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -1427,7 +1412,7 @@ fun HistoryEntryItem(
                         Text(
                             text = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
@@ -1445,7 +1430,7 @@ fun HistoryEntryItem(
                 }
             }
             LocationSummary(entry = entry)
-            TravelSummaryRow(entry = entry)
+            TravelSummaryRow(travelLegs = travelLegs)
         }
     }
 }
@@ -1509,69 +1494,91 @@ fun LocationSummary(entry: WorkEntry) {
                 listOf(stringResource(R.string.history_label_no_checkin))
             }.joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-fun TravelSummaryRow(entry: WorkEntry) {
-    val startAt = entry.travelStartAt
-    val arriveAt = entry.travelArriveAt
-    val labelText = when {
-        !entry.travelLabelStart.isNullOrBlank() && !entry.travelLabelEnd.isNullOrBlank() ->
-            stringResource(
-                R.string.travel_label_from_to,
-                entry.travelLabelStart.orEmpty(),
-                entry.travelLabelEnd.orEmpty()
-            )
-        !entry.travelLabelStart.isNullOrBlank() ->
-            stringResource(R.string.travel_label_from, entry.travelLabelStart.orEmpty())
-        !entry.travelLabelEnd.isNullOrBlank() ->
-            stringResource(R.string.travel_label_to, entry.travelLabelEnd.orEmpty())
-        else -> null
+fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
+    val orderedLegs = remember(travelLegs) {
+        travelLegs
+            .sortedBy(TravelLeg::sortOrder)
+            .filter { leg ->
+                leg.startAt != null ||
+                    leg.arriveAt != null ||
+                    !leg.startLabel.isNullOrBlank() ||
+                    !leg.endLabel.isNullOrBlank() ||
+                    (leg.paidMinutesOverride ?: 0) > 0
+            }
     }
 
-    if (startAt == null && arriveAt == null && labelText == null) return
+    if (orderedLegs.isEmpty()) return
 
-    val timeText = when {
-        startAt != null && arriveAt != null ->
-            stringResource(R.string.travel_time_range, formatTime(startAt), formatTime(arriveAt))
-        startAt != null -> stringResource(R.string.travel_time_start, formatTime(startAt))
-        arriveAt != null -> stringResource(R.string.travel_time_arrive, formatTime(arriveAt))
-        else -> null
-    }
-    val durationText = remember(startAt, arriveAt) {
-        DateTimeUtils.calculateTravelDuration(startAt, arriveAt)?.let { Formatters.formatDuration(it) }
-    }
-    val summaryText = listOfNotNull(
-        timeText,
-        durationText?.let { stringResource(R.string.history_travel_duration_inline, it) }
-    )
-        .joinToString(" · ")
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        orderedLegs.forEach { leg ->
+            val labelText = when {
+                !leg.startLabel.isNullOrBlank() && !leg.endLabel.isNullOrBlank() ->
+                    stringResource(
+                        R.string.travel_label_from_to,
+                        leg.startLabel.orEmpty(),
+                        leg.endLabel.orEmpty()
+                    )
+                !leg.startLabel.isNullOrBlank() ->
+                    stringResource(R.string.travel_label_from, leg.startLabel.orEmpty())
+                !leg.endLabel.isNullOrBlank() ->
+                    stringResource(R.string.travel_label_to, leg.endLabel.orEmpty())
+                else -> null
+            }
+            val timeText = when {
+                leg.startAt != null && leg.arriveAt != null ->
+                    stringResource(R.string.travel_time_range, formatTime(leg.startAt), formatTime(leg.arriveAt))
+                leg.startAt != null -> stringResource(R.string.travel_time_start, formatTime(leg.startAt))
+                leg.arriveAt != null -> stringResource(R.string.travel_time_arrive, formatTime(leg.arriveAt))
+                else -> null
+            }
+            val durationText = remember(leg.startAt, leg.arriveAt, leg.paidMinutesOverride) {
+                when {
+                    leg.startAt != null && leg.arriveAt != null ->
+                        DateTimeUtils.calculateTravelDuration(leg.startAt, leg.arriveAt)?.let(Formatters::formatDuration)
+                    (leg.paidMinutesOverride ?: 0) > 0 ->
+                        Formatters.formatDuration(java.time.Duration.ofMinutes(leg.paidMinutesOverride!!.toLong()))
+                    else -> null
+                }
+            }
+            val summaryText = listOfNotNull(
+                timeText,
+                durationText?.let { stringResource(R.string.history_travel_duration_inline, it) }
+            ).joinToString(" · ")
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.DirectionsCar,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-            modifier = Modifier.size(14.dp)
-        )
-        Column {
-            Text(
-                text = summaryText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
-            labelText?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DirectionsCar,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(14.dp)
+                        .padding(top = 2.dp)
                 )
+                Column {
+                    if (summaryText.isNotBlank()) {
+                        Text(
+                            text = summaryText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                    labelText?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
+                        )
+                    }
+                }
             }
         }
     }

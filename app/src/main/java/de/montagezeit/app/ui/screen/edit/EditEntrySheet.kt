@@ -136,9 +136,9 @@ fun EditEntrySheet(
                         val dummyEntry = de.montagezeit.app.data.local.entity.WorkEntry(
                             date = state.date,
                             dayType = formData.dayType,
-                            workStart = formData.workStart,
-                            workEnd = formData.workEnd,
-                            breakMinutes = formData.breakMinutes,
+                            workStart = if (formData.hasWorkTimes) formData.workStart else null,
+                            workEnd = if (formData.hasWorkTimes) formData.workEnd else null,
+                            breakMinutes = if (formData.hasWorkTimes) formData.breakMinutes else 0,
                             dayLocationLabel = formData.dayLocationLabel.orEmpty(),
                             note = formData.note
                         )
@@ -148,15 +148,16 @@ fun EditEntrySheet(
                             validationErrors = state.validationErrors,
                             dailyTargetHours = screenState.dailyTargetHours,
                             onDayTypeChange = { viewModel.updateDayType(it) },
+                            onHasWorkTimesChange = { viewModel.setHasWorkTimes(it) },
                             onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                             onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
                             onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
-                            onTravelStartChange = { viewModel.updateTravelStart(it) },
-                            onTravelArriveChange = { viewModel.updateTravelArrive(it) },
-                            onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
-                            onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
-                            onReturnStartChange = { viewModel.updateReturnStart(it) },
-                            onReturnArriveChange = { viewModel.updateReturnArrive(it) },
+                            onAddTravelLeg = { viewModel.addTravelLeg() },
+                            onTravelLegStartChange = { index, time -> viewModel.updateTravelLegStart(index, time) },
+                            onTravelLegArriveChange = { index, time -> viewModel.updateTravelLegArrive(index, time) },
+                            onTravelLegStartLabelChange = { index, label -> viewModel.updateTravelLegStartLabel(index, label) },
+                            onTravelLegEndLabelChange = { index, label -> viewModel.updateTravelLegEndLabel(index, label) },
+                            onRemoveTravelLeg = { index -> viewModel.removeTravelLeg(index) },
                             onTravelClear = { viewModel.clearTravel() },
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                             onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
@@ -241,15 +242,16 @@ fun EditEntrySheet(
                             validationErrors = state.validationErrors,
                             dailyTargetHours = screenState.dailyTargetHours,
                             onDayTypeChange = { viewModel.updateDayType(it) },
+                            onHasWorkTimesChange = { viewModel.setHasWorkTimes(it) },
                             onWorkStartChange = { h, m -> viewModel.updateWorkStart(h, m) },
                             onWorkEndChange = { h, m -> viewModel.updateWorkEnd(h, m) },
                             onBreakMinutesChange = { viewModel.updateBreakMinutes(it) },
-                            onTravelStartChange = { viewModel.updateTravelStart(it) },
-                            onTravelArriveChange = { viewModel.updateTravelArrive(it) },
-                            onTravelLabelStartChange = { viewModel.updateTravelLabelStart(it) },
-                            onTravelLabelEndChange = { viewModel.updateTravelLabelEnd(it) },
-                            onReturnStartChange = { viewModel.updateReturnStart(it) },
-                            onReturnArriveChange = { viewModel.updateReturnArrive(it) },
+                            onAddTravelLeg = { viewModel.addTravelLeg() },
+                            onTravelLegStartChange = { index, time -> viewModel.updateTravelLegStart(index, time) },
+                            onTravelLegArriveChange = { index, time -> viewModel.updateTravelLegArrive(index, time) },
+                            onTravelLegStartLabelChange = { index, label -> viewModel.updateTravelLegStartLabel(index, label) },
+                            onTravelLegEndLabelChange = { index, label -> viewModel.updateTravelLegEndLabel(index, label) },
+                            onRemoveTravelLeg = { index -> viewModel.removeTravelLeg(index) },
                             onTravelClear = { viewModel.clearTravel() },
                             onDayLocationChange = { viewModel.updateDayLocationLabel(it) },
                             onMealArrivalDepartureChange = { viewModel.updateMealArrivalDeparture(it) },
@@ -527,15 +529,16 @@ fun EditFormContent(
     validationErrors: List<ValidationError> = emptyList(),
     dailyTargetHours: Double = 8.0,
     onDayTypeChange: (de.montagezeit.app.data.local.entity.DayType) -> Unit,
+    onHasWorkTimesChange: (Boolean) -> Unit,
     onWorkStartChange: (Int, Int) -> Unit,
     onWorkEndChange: (Int, Int) -> Unit,
     onBreakMinutesChange: (Int) -> Unit,
-    onTravelStartChange: (java.time.LocalTime?) -> Unit,
-    onTravelArriveChange: (java.time.LocalTime?) -> Unit,
-    onTravelLabelStartChange: (String) -> Unit,
-    onTravelLabelEndChange: (String) -> Unit,
-    onReturnStartChange: (java.time.LocalTime?) -> Unit,
-    onReturnArriveChange: (java.time.LocalTime?) -> Unit,
+    onAddTravelLeg: () -> Unit,
+    onTravelLegStartChange: (Int, java.time.LocalTime?) -> Unit,
+    onTravelLegArriveChange: (Int, java.time.LocalTime?) -> Unit,
+    onTravelLegStartLabelChange: (Int, String) -> Unit,
+    onTravelLegEndLabelChange: (Int, String) -> Unit,
+    onRemoveTravelLeg: (Int) -> Unit,
     onTravelClear: () -> Unit,
     onDayLocationChange: (String) -> Unit,
     onMealArrivalDepartureChange: (Boolean) -> Unit,
@@ -590,34 +593,33 @@ fun EditFormContent(
     // Work times, travel and location sections are hidden for COMP_TIME days
     // to prevent mixing work-day data with comp-time entries.
     if (!isCompTime) {
-        EditFormSectionCard {
-            WorkTimesSection(
-                workStart = formData.workStart,
-                workEnd = formData.workEnd,
-                breakMinutes = formData.breakMinutes,
-                validationErrors = validationErrors,
-                onStartChange = onWorkStartChange,
-                onEndChange = onWorkEndChange,
-                onBreakChange = onBreakMinutesChange,
-                onApplyDefaults = onApplyDefaultTimes
-            )
+        if (formData.dayType == de.montagezeit.app.data.local.entity.DayType.WORK) {
+            EditFormSectionCard {
+                WorkTimesSection(
+                    enabled = formData.hasWorkTimes,
+                    workStart = formData.workStart,
+                    workEnd = formData.workEnd,
+                    breakMinutes = formData.breakMinutes,
+                    validationErrors = validationErrors,
+                    onEnabledChange = onHasWorkTimesChange,
+                    onStartChange = onWorkStartChange,
+                    onEndChange = onWorkEndChange,
+                    onBreakChange = onBreakMinutesChange,
+                    onApplyDefaults = onApplyDefaultTimes
+                )
+            }
         }
 
         EditFormSectionCard {
-            TravelSection(
-                travelStartTime = formData.travelStartTime,
-                travelArriveTime = formData.travelArriveTime,
-                travelLabelStart = formData.travelLabelStart,
-                travelLabelEnd = formData.travelLabelEnd,
-                returnStartTime = formData.returnStartTime,
-                returnArriveTime = formData.returnArriveTime,
+            TravelLegsSection(
+                travelLegs = formData.travelLegs,
                 validationErrors = validationErrors,
-                onTravelStartChange = onTravelStartChange,
-                onTravelArriveChange = onTravelArriveChange,
-                onTravelLabelStartChange = onTravelLabelStartChange,
-                onTravelLabelEndChange = onTravelLabelEndChange,
-                onReturnStartChange = onReturnStartChange,
-                onReturnArriveChange = onReturnArriveChange,
+                onAddTravelLeg = onAddTravelLeg,
+                onTravelLegStartChange = onTravelLegStartChange,
+                onTravelLegArriveChange = onTravelLegArriveChange,
+                onTravelLegStartLabelChange = onTravelLegStartLabelChange,
+                onTravelLegEndLabelChange = onTravelLegEndLabelChange,
+                onRemoveTravelLeg = onRemoveTravelLeg,
                 onClearTravel = onTravelClear
             )
         }
@@ -772,10 +774,12 @@ fun DayTypeSelector(
 
 @Composable
 fun WorkTimesSection(
+    enabled: Boolean,
     workStart: java.time.LocalTime,
     workEnd: java.time.LocalTime,
     breakMinutes: Int,
     validationErrors: List<ValidationError> = emptyList(),
+    onEnabledChange: (Boolean) -> Unit,
     onStartChange: (Int, Int) -> Unit,
     onEndChange: (Int, Int) -> Unit,
     onBreakChange: (Int) -> Unit,
@@ -790,10 +794,35 @@ fun WorkTimesSection(
     }
     
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_work_times),
-            style = MaterialTheme.typography.titleMedium
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.edit_section_work_times),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.edit_toggle_work_times),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange
+                )
+            }
+        }
+
+        if (!enabled) {
+            Text(
+                text = stringResource(R.string.edit_work_times_disabled_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@Column
+        }
         
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1223,6 +1252,252 @@ fun TravelSection(
             initialTime = returnArriveTime ?: java.time.LocalTime.of(18, 0),
             onTimeSelected = { onReturnArriveChange(it); showReturnArrivePicker = false },
             onDismiss = { showReturnArrivePicker = false }
+        )
+    }
+}
+
+@Composable
+fun TravelLegsSection(
+    travelLegs: List<EditTravelLegForm>,
+    validationErrors: List<ValidationError> = emptyList(),
+    onAddTravelLeg: () -> Unit,
+    onTravelLegStartChange: (Int, java.time.LocalTime?) -> Unit,
+    onTravelLegArriveChange: (Int, java.time.LocalTime?) -> Unit,
+    onTravelLegStartLabelChange: (Int, String) -> Unit,
+    onTravelLegEndLabelChange: (Int, String) -> Unit,
+    onRemoveTravelLeg: (Int) -> Unit,
+    onClearTravel: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.edit_section_travel),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            if (travelLegs.isNotEmpty()) {
+                TextButton(onClick = onClearTravel) {
+                    Text(stringResource(R.string.edit_action_clear_all_travel))
+                }
+            }
+        }
+
+        if (travelLegs.isEmpty()) {
+            Text(
+                text = stringResource(R.string.edit_travel_empty_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        travelLegs.forEachIndexed { index, leg ->
+            TravelLegCard(
+                index = index,
+                leg = leg,
+                validationErrors = validationErrors,
+                onStartChange = { onTravelLegStartChange(index, it) },
+                onArriveChange = { onTravelLegArriveChange(index, it) },
+                onStartLabelChange = { onTravelLegStartLabelChange(index, it) },
+                onEndLabelChange = { onTravelLegEndLabelChange(index, it) },
+                onRemove = { onRemoveTravelLeg(index) }
+            )
+        }
+
+        OutlinedButton(
+            onClick = onAddTravelLeg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(stringResource(R.string.edit_action_add_travel_leg))
+        }
+    }
+}
+
+@Composable
+private fun TravelLegCard(
+    index: Int,
+    leg: EditTravelLegForm,
+    validationErrors: List<ValidationError>,
+    onStartChange: (java.time.LocalTime?) -> Unit,
+    onArriveChange: (java.time.LocalTime?) -> Unit,
+    onStartLabelChange: (String) -> Unit,
+    onEndLabelChange: (String) -> Unit,
+    onRemove: () -> Unit
+) {
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showArrivePicker by remember { mutableStateOf(false) }
+    val hasTravelError = validationErrors.any {
+        it is ValidationError.TravelArriveBeforeStart ||
+            it is ValidationError.TravelTooLong ||
+            it is ValidationError.TravelLegIncomplete ||
+            it is ValidationError.TravelLegMissingTimeWindow
+    }
+    val duration = remember(leg.startTime, leg.arriveTime) {
+        DateTimeUtils.calculateTravelDuration(leg.startTime, leg.arriveTime)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.edit_travel_leg_title, index + 1),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.weight(1f),
+                    colors = if (hasTravelError) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.edit_label_travel_start),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = leg.startTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { showArrivePicker = true },
+                    modifier = Modifier.weight(1f),
+                    colors = if (hasTravelError) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.edit_label_travel_arrival),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = leg.arriveTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
+
+            if (hasTravelError) {
+                validationErrors.firstOrNull {
+                    it is ValidationError.TravelArriveBeforeStart ||
+                        it is ValidationError.TravelTooLong ||
+                        it is ValidationError.TravelLegIncomplete ||
+                        it is ValidationError.TravelLegMissingTimeWindow
+                }?.let { error ->
+                    Text(
+                        text = stringResource(
+                            R.string.edit_error_prefix,
+                            stringResource(error.messageRes)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+
+            duration?.let {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.edit_travel_duration, Formatters.formatDuration(it)),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            if (leg.paidMinutesOverride != null && leg.startTime == null && leg.arriveTime == null) {
+                Text(
+                    text = stringResource(R.string.edit_travel_legacy_override, leg.paidMinutesOverride),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            OutlinedTextField(
+                value = leg.startLabel ?: "",
+                onValueChange = onStartLabelChange,
+                label = { Text(stringResource(R.string.edit_label_from_optional)) },
+                placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = leg.endLabel ?: "",
+                onValueChange = onEndLabelChange,
+                label = { Text(stringResource(R.string.edit_label_to_optional)) },
+                placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+    }
+
+    if (showStartPicker) {
+        TimePickerDialog(
+            initialTime = leg.startTime ?: java.time.LocalTime.of(8, 0),
+            onTimeSelected = { onStartChange(it); showStartPicker = false },
+            onDismiss = { showStartPicker = false }
+        )
+    }
+
+    if (showArrivePicker) {
+        TimePickerDialog(
+            initialTime = leg.arriveTime ?: java.time.LocalTime.of(9, 0),
+            onTimeSelected = { onArriveChange(it); showArrivePicker = false },
+            onDismiss = { showArrivePicker = false }
         )
     }
 }

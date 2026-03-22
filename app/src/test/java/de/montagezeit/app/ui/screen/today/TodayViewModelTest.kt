@@ -1,9 +1,9 @@
 package de.montagezeit.app.ui.screen.today
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.dao.OvertimeEntryRow
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.WeekCalculator
@@ -328,18 +328,16 @@ class TodayViewModelTest {
             weeklyTargetHours = 50.0,
             monthlyTargetHours = 200.0
         )
-        val overtimeEntry = OvertimeEntryRow(
-            date = today,
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 0,  // 9h actual
-            dayType = DayType.WORK,
-            confirmedWorkDay = true,
-            travelStartAt = null,
-            travelArriveAt = null,
-            travelPaidMinutes = 0,
-            returnStartAt = null,
-            returnArriveAt = null
+        val overtimeEntry = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = today,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 0,  // 9h actual
+                dayType = DayType.WORK,
+                confirmedWorkDay = true
+            ),
+            travelLegs = emptyList()
         )
 
         coEvery { workEntryDao.getByDate(any()) } returns null
@@ -350,7 +348,7 @@ class TodayViewModelTest {
         val viewModel = createViewModel(
             workEntryDao = workEntryDao,
             settingsManager = settingsManager,
-            entriesBetween = listOf(overtimeEntry)
+            entriesWithTravel = listOf(overtimeEntry)
         )
 
         val latch = CountDownLatch(1)
@@ -383,7 +381,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(settings)
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
 
         val latch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
@@ -415,7 +417,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(settings)
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
 
         val latch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
@@ -443,7 +449,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(settings)
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
 
         // Verify defaults are used
         assertEquals(8.0, settings.dailyTargetHours, 0.001)
@@ -486,7 +496,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
         val successLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             var loadingSeen = false
@@ -531,7 +545,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
 
         // Initially today
         assertEquals(today, viewModel.selectedDate.value)
@@ -561,7 +579,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = emptyList()
+        )
         val weekLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             viewModel.weekDaysUi.collect { days ->
@@ -735,7 +757,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns listOf(confirmedEntry, unconfirmedEntry)
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = listOf(record(confirmedEntry), record(unconfirmedEntry))
+        )
 
         Thread.sleep(300)
 
@@ -768,7 +794,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns listOf(confirmedEntry)
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = listOf(record(confirmedEntry))
+        )
         Thread.sleep(300)
 
         val stats = viewModel.weekStats.value
@@ -793,7 +823,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = entries.map(::record)
+        )
 
         Thread.sleep(300)
 
@@ -817,7 +851,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = entries.map(::record)
+        )
 
         Thread.sleep(300)
 
@@ -841,7 +879,11 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = entries.map(::record)
+        )
 
         Thread.sleep(300)
 
@@ -925,10 +967,10 @@ class TodayViewModelTest {
         settingsManager: ReminderSettingsManager,
         recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
         resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao),
-        entriesBetween: List<OvertimeEntryRow> = emptyList(),
+        entriesWithTravel: List<WorkEntryWithTravelLegs> = emptyList(),
         deleteDayEntry: DeleteDayEntry = DeleteDayEntry(workEntryDao)
     ): TodayViewModel {
-        coEvery { workEntryDao.getEntriesBetween(any(), any()) } returns entriesBetween
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entriesWithTravel
         return TodayViewModel(
             workEntryDao = workEntryDao,
             recordDailyManualCheckIn = recordDailyManualCheckIn,
@@ -940,4 +982,9 @@ class TodayViewModelTest {
             nonWorkingDayChecker = mockk<NonWorkingDayChecker>(relaxed = true)
         )
     }
+
+    private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(
+        workEntry = entry,
+        travelLegs = emptyList()
+    )
 }

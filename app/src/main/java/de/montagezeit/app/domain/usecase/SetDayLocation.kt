@@ -4,7 +4,6 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
@@ -13,8 +12,7 @@ import java.time.LocalDate
  */
 class SetDayLocation(
     private val workEntryDao: WorkEntryDao,
-    private val reminderSettingsManager: ReminderSettingsManager,
-    private val nonWorkingDayChecker: NonWorkingDayChecker
+    private val reminderSettingsManager: ReminderSettingsManager
 ) {
     suspend operator fun invoke(date: LocalDate, label: String): WorkEntry {
         val now = System.currentTimeMillis()
@@ -28,16 +26,11 @@ class SetDayLocation(
                     updatedAt = now
                 )
             } else {
-                val dayType = if (nonWorkingDayChecker.isNonWorkingDay(date, settings)) {
-                    DayType.OFF
-                } else {
-                    DayType.WORK
-                }
-
+                // Explizites Setzen eines Tagesorts impliziert Arbeitstag, unabhängig von Wochenende/Feiertag
                 WorkEntryFactory.createDefaultEntry(
                     date = date,
                     settings = settings,
-                    dayType = dayType,
+                    dayType = DayType.WORK,
                     dayLocationLabel = label,
                     now = now
                 )

@@ -6,7 +6,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.local.entity.confirmationStateForDayType
 import de.montagezeit.app.data.local.entity.withMealAllowanceCleared
 import de.montagezeit.app.data.preferences.ReminderSettings
@@ -52,16 +54,18 @@ class HistoryViewModel @Inject constructor(
                 val endDate = LocalDate.now()
                 val startDate = endDate.minusDays(365) // Kalenderansicht: letztes Jahr
 
-                val entries = workEntryDao.getByDateRange(startDate, endDate)
+                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
                 val groupedWeeks = groupByWeek(entries)
                 val groupedMonths = groupByMonth(entries)
-                val entriesByDate = entries.associateBy { it.date }
+                val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
+                val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
 
                 withContext(Dispatchers.Main) {
                     _uiState.value = HistoryUiState.Success(
                         weeks = groupedWeeks,
                         months = groupedMonths,
-                        entriesByDate = entriesByDate
+                        entriesByDate = entriesByDate,
+                        travelLegsByDate = travelLegsByDate
                     )
                 }
             } catch (e: Exception) {
@@ -149,24 +153,24 @@ class HistoryViewModel @Inject constructor(
         }
     }
     
-    private fun groupByWeek(entries: List<WorkEntry>): List<WeekGroup> {
+    private fun groupByWeek(entries: List<WorkEntryWithTravelLegs>): List<WeekGroup> {
         val weekFields = WeekFields.of(Locale.GERMAN)
         
         return entries
             .groupBy { entry ->
-                val week = entry.date.get(weekFields.weekOfWeekBasedYear())
-                val year = entry.date.get(weekFields.weekBasedYear())
+                val week = entry.workEntry.date.get(weekFields.weekOfWeekBasedYear())
+                val year = entry.workEntry.date.get(weekFields.weekBasedYear())
                 Pair(year, week)
             }
             .map { (yearWeek, weekEntries) ->
-                val sortedEntries = weekEntries.sortedByDescending { it.date }
+                val sortedEntries = weekEntries.sortedByDescending { it.workEntry.date }
                 val stats = calculateGroupStats(sortedEntries)
-                val weekStart = weekEntries.minOf { it.date }.with(weekFields.dayOfWeek(), 1)
+                val weekStart = weekEntries.minOf { it.workEntry.date }.with(weekFields.dayOfWeek(), 1)
                 WeekGroup(
                     year = yearWeek.first,
                     week = yearWeek.second,
                     weekStart = weekStart,
-                    entries = sortedEntries,
+                    entries = sortedEntries.map { it.workEntry },
                     workDaysCount = stats.workDaysCount,
                     offDaysCount = stats.offDaysCount,
                     totalHours = stats.totalHours,
@@ -177,18 +181,18 @@ class HistoryViewModel @Inject constructor(
             .sortedByDescending { it.year * 100 + it.week }
     }
     
-    private fun groupByMonth(entries: List<WorkEntry>): List<MonthGroup> {
+    private fun groupByMonth(entries: List<WorkEntryWithTravelLegs>): List<MonthGroup> {
         return entries
             .groupBy { entry ->
-                Pair(entry.date.year, entry.date.monthValue)
+                Pair(entry.workEntry.date.year, entry.workEntry.date.monthValue)
             }
             .map { (yearMonth, monthEntries) ->
-                val sortedEntries = monthEntries.sortedByDescending { it.date }
+                val sortedEntries = monthEntries.sortedByDescending { it.workEntry.date }
                 val stats = calculateGroupStats(sortedEntries)
                 MonthGroup(
                     year = yearMonth.first,
                     month = yearMonth.second,
-                    entries = sortedEntries,
+                    entries = sortedEntries.map { it.workEntry },
                     workDaysCount = stats.workDaysCount,
                     offDaysCount = stats.offDaysCount,
                     totalHours = stats.totalHours,
@@ -200,16 +204,16 @@ class HistoryViewModel @Inject constructor(
             .sortedByDescending { it.year * 100 + it.month }
     }
 
-    private fun calculateGroupStats(entries: List<WorkEntry>): HistoryGroupStats {
+    private fun calculateGroupStats(entries: List<WorkEntryWithTravelLegs>): HistoryGroupStats {
         // Nur bestätigte Einträge für Stunden und Tage zählen – konsistent mit CalculateOvertimeForRange
         // und TodayViewModel.calculateWeekStats/calculateMonthStats.
-        val confirmedEntries = entries.filter { it.confirmedWorkDay }
-        val workDaysCount = confirmedEntries.count { it.dayType == DayType.WORK }
-        val offDaysCount = confirmedEntries.count { it.dayType == DayType.OFF }
-        val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
-        val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
+        val confirmedEntries = entries.filter { it.workEntry.confirmedWorkDay }
+        val workDaysCount = confirmedEntries.count { it.workEntry.dayType == DayType.WORK }
+        val offDaysCount = confirmedEntries.count { it.workEntry.dayType == DayType.OFF }
+        val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it.workEntry) }
+        val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it.workEntry, it.orderedTravelLegs) }
         val averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
-        val totalTravelMinutes = confirmedEntries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
+        val totalTravelMinutes = confirmedEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
 
         return HistoryGroupStats(
             workDaysCount = workDaysCount,
@@ -289,7 +293,8 @@ sealed class HistoryUiState {
     data class Success(
         val weeks: List<WeekGroup>,
         val months: List<MonthGroup> = emptyList(),
-        val entriesByDate: Map<LocalDate, WorkEntry> = emptyMap()
+        val entriesByDate: Map<LocalDate, WorkEntry> = emptyMap(),
+        val travelLegsByDate: Map<LocalDate, List<TravelLeg>> = emptyMap()
     ) : HistoryUiState()
     data class Error(val message: UiText) : HistoryUiState()
 }

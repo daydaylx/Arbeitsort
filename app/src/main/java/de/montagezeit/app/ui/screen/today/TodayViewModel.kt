@@ -19,7 +19,6 @@ import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import de.montagezeit.app.domain.util.TimeCalculator
-import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -223,42 +222,76 @@ class TodayViewModel @Inject constructor(
     // B10: Capture the date at dialog-open time so racing selectDate() calls don't affect it
     private val _dailyCheckInDate = MutableStateFlow(LocalDate.now())
 
-    @Suppress("UNCHECKED_CAST")
+    // Hilfs-Typen für typsichere combine()-Gruppen (ersetzt UNCHECKED_CAST-Variante)
+    private data class ScreenCorePart(
+        val uiState: TodayUiState,
+        val selectedEntry: WorkEntry?,
+        val selectedDate: LocalDate,
+        val todayDate: LocalDate,
+        val loadingActions: Set<TodayAction>
+    )
+    private data class ScreenWeekMonthPart(
+        val weekDaysUi: List<WeekDayUi>,
+        val weekStats: WeekStats?,
+        val monthStats: MonthStats?
+    )
+    private data class OvertimeDisplayPart(
+        val isOvertimeConfigured: Boolean,
+        val overtimeYearDisplay: String,
+        val overtimeMonthDisplay: String?,
+        val overtimeYearActualDisplay: String,
+        val overtimeYearTargetDisplay: String
+    )
+    private data class OvertimeCountsPart(
+        val overtimeYearCountedDays: Int,
+        val overtimeYearOffDayTravelDisplay: String,
+        val overtimeYearOffDayTravelDays: Int
+    )
+    private data class DialogCheckInPart(
+        val showDailyCheckInDialog: Boolean,
+        val locationInput: String,
+        val isArrivalDeparture: Boolean,
+        val breakfastIncluded: Boolean,
+        val allowancePreviewCents: Int
+    )
+    private data class DialogLocationDeletePart(
+        val showDayLocationDialog: Boolean,
+        val dayLocationInput: String,
+        val showDeleteDayDialog: Boolean,
+        val loadingActions: Set<TodayAction>
+    )
+
     val screenState: StateFlow<TodayScreenState> = combine(
-        uiState,
-        selectedEntry,
-        selectedDate,
-        _todayDate,
-        weekDaysUi,
-        weekStats,
-        monthStats,
-        isOvertimeConfigured,
-        overtimeYearDisplay,
-        overtimeMonthDisplay,
-        overtimeYearActualDisplay,
-        overtimeYearTargetDisplay,
-        overtimeYearCountedDays,
-        overtimeYearOffDayTravelDisplay,
-        overtimeYearOffDayTravelDays,
-        loadingActions
-    ) { values ->
+        combine(uiState, selectedEntry, selectedDate, _todayDate, loadingActions) { ui, entry, date, today, loading ->
+            ScreenCorePart(ui, entry, date, today, loading)
+        },
+        combine(weekDaysUi, weekStats, monthStats) { days, week, month ->
+            ScreenWeekMonthPart(days, week, month)
+        },
+        combine(isOvertimeConfigured, overtimeYearDisplay, overtimeMonthDisplay, overtimeYearActualDisplay, overtimeYearTargetDisplay) { configured, year, month, actual, target ->
+            OvertimeDisplayPart(configured, year, month, actual, target)
+        },
+        combine(overtimeYearCountedDays, overtimeYearOffDayTravelDisplay, overtimeYearOffDayTravelDays) { days, travel, travelDays ->
+            OvertimeCountsPart(days, travel, travelDays)
+        }
+    ) { core, weekMonth, overtime, overtimeCounts ->
         TodayScreenState(
-            uiState = values[0] as TodayUiState,
-            selectedEntry = values[1] as WorkEntry?,
-            selectedDate = values[2] as LocalDate,
-            todayDate = values[3] as LocalDate,
-            weekDaysUi = values[4] as List<WeekDayUi>,
-            weekStats = values[5] as WeekStats?,
-            monthStats = values[6] as MonthStats?,
-            isOvertimeConfigured = values[7] as Boolean,
-            overtimeYearDisplay = values[8] as String,
-            overtimeMonthDisplay = values[9] as String?,
-            overtimeYearActualDisplay = values[10] as String,
-            overtimeYearTargetDisplay = values[11] as String,
-            overtimeYearCountedDays = values[12] as Int,
-            overtimeYearOffDayTravelDisplay = values[13] as String,
-            overtimeYearOffDayTravelDays = values[14] as Int,
-            loadingActions = values[15] as Set<TodayAction>
+            uiState = core.uiState,
+            selectedEntry = core.selectedEntry,
+            selectedDate = core.selectedDate,
+            todayDate = core.todayDate,
+            weekDaysUi = weekMonth.weekDaysUi,
+            weekStats = weekMonth.weekStats,
+            monthStats = weekMonth.monthStats,
+            isOvertimeConfigured = overtime.isOvertimeConfigured,
+            overtimeYearDisplay = overtime.overtimeYearDisplay,
+            overtimeMonthDisplay = overtime.overtimeMonthDisplay,
+            overtimeYearActualDisplay = overtime.overtimeYearActualDisplay,
+            overtimeYearTargetDisplay = overtime.overtimeYearTargetDisplay,
+            overtimeYearCountedDays = overtimeCounts.overtimeYearCountedDays,
+            overtimeYearOffDayTravelDisplay = overtimeCounts.overtimeYearOffDayTravelDisplay,
+            overtimeYearOffDayTravelDays = overtimeCounts.overtimeYearOffDayTravelDays,
+            loadingActions = core.loadingActions
         )
     }.stateIn(
         scope = viewModelScope,
@@ -266,28 +299,24 @@ class TodayViewModel @Inject constructor(
         initialValue = initialScreenState()
     )
 
-    @Suppress("UNCHECKED_CAST")
     val dialogState: StateFlow<TodayDialogState> = combine(
-        showDailyCheckInDialog,
-        dailyCheckInLocationInput,
-        dailyCheckInIsArrivalDeparture,
-        dailyCheckInBreakfastIncluded,
-        dailyCheckInAllowancePreviewCents,
-        showDayLocationDialog,
-        dayLocationInput,
-        showDeleteDayDialog,
-        loadingActions
-    ) { values ->
+        combine(showDailyCheckInDialog, dailyCheckInLocationInput, dailyCheckInIsArrivalDeparture, dailyCheckInBreakfastIncluded, dailyCheckInAllowancePreviewCents) { show, loc, arrival, breakfast, allowance ->
+            DialogCheckInPart(show, loc, arrival, breakfast, allowance)
+        },
+        combine(showDayLocationDialog, dayLocationInput, showDeleteDayDialog, loadingActions) { showLoc, locInput, showDel, loading ->
+            DialogLocationDeletePart(showLoc, locInput, showDel, loading)
+        }
+    ) { checkIn, locDel ->
         TodayDialogState(
-            showDailyCheckInDialog = values[0] as Boolean,
-            dailyCheckInLocationInput = values[1] as String,
-            dailyCheckInIsArrivalDeparture = values[2] as Boolean,
-            dailyCheckInBreakfastIncluded = values[3] as Boolean,
-            dailyCheckInAllowancePreviewCents = values[4] as Int,
-            showDayLocationDialog = values[5] as Boolean,
-            dayLocationInput = values[6] as String,
-            showDeleteDayDialog = values[7] as Boolean,
-            loadingActions = values[8] as Set<TodayAction>
+            showDailyCheckInDialog = checkIn.showDailyCheckInDialog,
+            dailyCheckInLocationInput = checkIn.locationInput,
+            dailyCheckInIsArrivalDeparture = checkIn.isArrivalDeparture,
+            dailyCheckInBreakfastIncluded = checkIn.breakfastIncluded,
+            dailyCheckInAllowancePreviewCents = checkIn.allowancePreviewCents,
+            showDayLocationDialog = locDel.showDayLocationDialog,
+            dayLocationInput = locDel.dayLocationInput,
+            showDeleteDayDialog = locDel.showDeleteDayDialog,
+            loadingActions = locDel.loadingActions
         )
     }.stateIn(
         scope = viewModelScope,
@@ -370,8 +399,8 @@ class TodayViewModel @Inject constructor(
 
             val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
                 Pair(
-                    workEntryDao.getByDateRange(weekStart, weekEnd),
-                    workEntryDao.getByDateRange(monthStart, monthEnd)
+                    workEntryDao.getByDateRangeWithTravel(weekStart, weekEnd),
+                    workEntryDao.getByDateRangeWithTravel(monthStart, monthEnd)
                 )
             }
 
@@ -381,8 +410,8 @@ class TodayViewModel @Inject constructor(
             val yearStart = now.withDayOfYear(1)
             val (yearEntries, currentMonthEntries) = withContext(Dispatchers.IO) {
                 Pair(
-                    workEntryDao.getEntriesBetween(yearStart, now),
-                    workEntryDao.getEntriesBetween(monthStart, now)
+                    workEntryDao.getByDateRangeWithTravel(yearStart, now),
+                    workEntryDao.getByDateRangeWithTravel(monthStart, now)
                 )
             }
 
@@ -406,74 +435,21 @@ class TodayViewModel @Inject constructor(
         try {
             val selected = _selectedDate.value
             val today = _todayDate.value
-            val weekStart = WeekCalculator.weekStart(selected)
-            val weekDates = WeekCalculator.weekDays(weekStart)
+            val weekDates = de.montagezeit.app.domain.util.WeekCalculator.weekDays(
+                de.montagezeit.app.domain.util.WeekCalculator.weekStart(selected)
+            )
             val entries = withContext(Dispatchers.IO) {
                 workEntryDao.getByDateRange(weekDates.first(), weekDates.last())
             }
-            val entriesByDate = entries.associateBy { it.date }
-            _weekDaysUi.value = weekDates.map { date ->
-                val entry = entriesByDate[date]
-                val status = when {
-                    entry == null -> WeekDayStatus.EMPTY
-                    entry.dayType == DayType.OFF && entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_OFF
-                    entry.dayType == DayType.COMP_TIME -> WeekDayStatus.CONFIRMED_OFF
-                    entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_WORK
-                    entry.morningCapturedAt != null || entry.eveningCapturedAt != null -> WeekDayStatus.PARTIAL
-                    else -> WeekDayStatus.EMPTY
-                }
-                val workHours = if (entry != null && entry.dayType == DayType.WORK) {
-                    val hours = TimeCalculator.calculateWorkHours(entry)
-                    if (hours > 0.0) hours else null
-                } else {
-                    null
-                }
-                WeekDayUi(
-                    date = date,
-                    isToday = date == today,
-                    isSelected = date == selected,
-                    dayLabel = date.shortWeekDayLabel(),
-                    dayNumber = date.dayOfMonth.toString(),
-                    status = status,
-                    workHours = workHours
-                )
-            }
+            _weekDaysUi.value = buildWeekDayUi(
+                selectedDate = selected,
+                todayDate = today,
+                entries = entries
+            )
         } catch (e: Exception) {
             android.util.Log.w("TodayViewModel", "loadWeekOverview failed: ${e.message}")
             _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
         }
-    }
-
-    private fun calculateWeekStats(entries: List<WorkEntry>, targetHours: Double): WeekStats {
-        // Nur bestätigte WORK-Tage zählen – konsistent mit CalculateOvertimeForRange
-        val workEntries = entries.filter { it.dayType == DayType.WORK && it.confirmedWorkDay }
-        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
-        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-        val workDaysCount = workEntries.size
-
-        return WeekStats(
-            totalHours = totalHours,
-            totalPaidHours = totalPaidHours,
-            workDaysCount = workDaysCount,
-            targetHours = targetHours
-        )
-    }
-
-    private fun calculateMonthStats(entries: List<WorkEntry>, targetHours: Double): MonthStats {
-        // Nur bestätigte WORK-Tage zählen – konsistent mit CalculateOvertimeForRange
-        val workEntries = entries.filter { it.dayType == DayType.WORK && it.confirmedWorkDay }
-        val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it) }
-        val totalPaidHours = workEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it) }
-        val workDaysCount = workEntries.size
-        val mealAllowanceTotalCents = workEntries.sumOf { it.mealAllowanceAmountCents }
-
-        return MonthStats(
-            totalHours = totalHours,
-            totalPaidHours = totalPaidHours,
-            workDaysCount = workDaysCount,
-            targetHours = targetHours,
-            mealAllowanceTotalCents = mealAllowanceTotalCents
-        )
     }
 
     fun selectDate(date: LocalDate) {
@@ -518,7 +494,7 @@ class TodayViewModel @Inject constructor(
         _dailyCheckInDate.value = _selectedDate.value
         viewModelScope.launch {
             try {
-                val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
+                val existingEntry = currentSelectedEntryOrNull() ?: workEntryDao.getByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dailyCheckInLocationInput.value = prefill
                 _dailyCheckInIsArrivalDeparture.value = existingEntry?.mealIsArrivalDeparture ?: false
@@ -549,7 +525,7 @@ class TodayViewModel @Inject constructor(
     fun openDayLocationDialog() {
         viewModelScope.launch {
             try {
-                val existingEntry = selectedEntry.value ?: workEntryDao.getByDate(_selectedDate.value)
+                val existingEntry = currentSelectedEntryOrNull() ?: workEntryDao.getByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dayLocationInput.value = prefill
                 _showDayLocationDialog.value = true
@@ -595,7 +571,7 @@ class TodayViewModel @Inject constructor(
     }
 
     fun onResetError() {
-        val currentEntry = selectedEntry.value
+        val currentEntry = currentSelectedEntryOrNull()
         _uiState.value = TodayUiState.Success(currentEntry)
     }
 
@@ -714,6 +690,9 @@ class TodayViewModel @Inject constructor(
     private fun removeLoadingAction(action: TodayAction) {
         _loadingActions.update { it - action }
     }
+
+    private fun currentSelectedEntryOrNull(): WorkEntry? =
+        selectedEntry.value?.takeIf { it.date == _selectedDate.value }
 
     private companion object {
         private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L

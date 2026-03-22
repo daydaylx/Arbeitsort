@@ -125,7 +125,7 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `validate should not check travel times when only travelStart is set`() {
+    fun `validate should return TravelLegIncomplete when only travelStart is set`() {
         val formData = validFormData(
             travelStartTime = LocalTime.of(7, 0),
             travelArriveTime = null
@@ -133,12 +133,12 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertFalse(errors.any { it is ValidationError.TravelArriveBeforeStart })
-        assertTrue(formData.isValid())
+        assertTrue(errors.any { it is ValidationError.TravelLegIncomplete })
+        assertFalse(formData.isValid())
     }
 
     @Test
-    fun `validate should not check travel times when only travelArrive is set`() {
+    fun `validate should return TravelLegIncomplete when only travelArrive is set`() {
         val formData = validFormData(
             travelStartTime = null,
             travelArriveTime = LocalTime.of(8, 0)
@@ -146,8 +146,8 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertFalse(errors.any { it is ValidationError.TravelArriveBeforeStart })
-        assertTrue(formData.isValid())
+        assertTrue(errors.any { it is ValidationError.TravelLegIncomplete })
+        assertFalse(formData.isValid())
     }
 
     @Test

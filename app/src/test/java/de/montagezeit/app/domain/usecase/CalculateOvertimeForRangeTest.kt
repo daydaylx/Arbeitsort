@@ -1,7 +1,9 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.OvertimeEntryRow
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -281,19 +283,21 @@ class CalculateOvertimeForRangeTest {
         workEnd: LocalTime = LocalTime.of(8, 0),
         breakMinutes: Int = 0,
         travelPaidMinutes: Int? = null
-    ): OvertimeEntryRow {
-        return OvertimeEntryRow(
-            date = date,
-            workStart = workStart,
-            workEnd = workEnd,
-            breakMinutes = breakMinutes,
-            dayType = dayType,
-            confirmedWorkDay = confirmedWorkDay,
-            travelStartAt = null,
-            travelArriveAt = null,
-            travelPaidMinutes = travelPaidMinutes,
-            returnStartAt = null,
-            returnArriveAt = null
+    ): WorkEntryWithTravelLegs {
+        return WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                workStart = workStart,
+                workEnd = workEnd,
+                breakMinutes = breakMinutes,
+                dayType = dayType,
+                confirmedWorkDay = confirmedWorkDay
+            ),
+            travelLegs = if (travelPaidMinutes != null && travelPaidMinutes > 0) {
+                listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = travelPaidMinutes))
+            } else {
+                emptyList()
+            }
         )
     }
 }

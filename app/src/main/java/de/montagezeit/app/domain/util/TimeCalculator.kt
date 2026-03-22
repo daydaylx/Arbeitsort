@@ -1,6 +1,7 @@
 package de.montagezeit.app.domain.util
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.util.Locale
 
@@ -14,8 +15,10 @@ object TimeCalculator {
     fun calculateWorkMinutes(entry: WorkEntry): Int {
         if (entry.dayType == DayType.OFF || entry.dayType == DayType.COMP_TIME) return 0
 
-        val startMinutes = entry.workStart.hour * 60 + entry.workStart.minute
-        val endMinutes = entry.workEnd.hour * 60 + entry.workEnd.minute
+        val workStart = entry.workStart ?: return 0
+        val workEnd = entry.workEnd ?: return 0
+        val startMinutes = workStart.hour * 60 + workStart.minute
+        val endMinutes = workEnd.hour * 60 + workEnd.minute
         val duration = endMinutes - startMinutes
 
         // Clamp to 0 if end is before start
@@ -26,49 +29,20 @@ object TimeCalculator {
         return if (netWork < 0) 0 else netWork
     }
 
-    /**
-     * Gibt die Hinfahrt-Minuten zurück, oder null wenn kein vollständiges Zeitpaar vorhanden.
-     */
-    private fun calculateOutboundMinutes(entry: WorkEntry): Int? {
-        val start = entry.travelStartAt
-        val arrive = entry.travelArriveAt
-        if (start != null && arrive != null) {
-            var diffMs = arrive - start
-            if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
-            return (diffMs / 60_000L).toInt().coerceAtLeast(0)
-        }
-        return null
+    fun calculateTravelMinutes(travelLegs: List<TravelLeg>): Int {
+        return travelLegs.sumOf(::calculateTravelLegMinutes)
     }
 
     /**
-     * Gibt die Rückfahrt-Minuten zurück, oder null wenn kein vollständiges Zeitpaar vorhanden.
+     * Kompatibilitäts-Overload für bestehende Call-Sites.
      */
-    private fun calculateReturnMinutes(entry: WorkEntry): Int? {
-        val start = entry.returnStartAt
-        val arrive = entry.returnArriveAt
-        if (start != null && arrive != null) {
-            var diffMs = arrive - start
-            if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
-            return (diffMs / 60_000L).toInt().coerceAtLeast(0)
+    @Suppress("UNUSED_PARAMETER")
+    fun calculateTravelMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
+        return if (travelLegs.isNotEmpty()) {
+            calculateTravelMinutes(travelLegs)
+        } else {
+            calculateLegacyTravelMinutes(entry)
         }
-        return null
-    }
-
-    /**
-     * Gibt die bezahlten Reiseminuten zurück (Hinfahrt + Rückfahrt).
-     * Nutzt bevorzugt die manuell gepflegten Travel-Timestamps.
-     * travelPaidMinutes bleibt nur Fallback, wenn KEINE Timestamps für Hin- oder Rückfahrt vorliegen.
-     *
-     * Bei Mitternachtsüberschreitung: Wenn arrive < start (zeitlich), werden 24h addiert.
-     */
-    fun calculateTravelMinutes(entry: WorkEntry): Int {
-        val outbound = calculateOutboundMinutes(entry)
-        val returnTrip = calculateReturnMinutes(entry)
-
-        if (outbound == null && returnTrip == null) {
-            return entry.travelPaidMinutes?.coerceAtLeast(0) ?: 0
-        }
-        return (outbound ?: 0) + (returnTrip ?: 0)
     }
 
     /**
@@ -76,8 +50,8 @@ object TimeCalculator {
      * Arbeitszeit + Reisezeit.
      * Hinweis: An OFF-Tagen ist die Arbeitszeit 0, daher ist die Gesamtzeit = Reisezeit.
      */
-    fun calculatePaidTotalMinutes(entry: WorkEntry): Int {
-        return calculateWorkMinutes(entry) + calculateTravelMinutes(entry)
+    fun calculatePaidTotalMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
+        return calculateWorkMinutes(entry) + calculateTravelMinutes(entry, travelLegs)
     }
 
     /**
@@ -90,8 +64,8 @@ object TimeCalculator {
     /**
      * Berechnet die gesamte bezahlte Zeit in Stunden.
      */
-    fun calculatePaidTotalHours(entry: WorkEntry): Double {
-        return calculatePaidTotalMinutes(entry) / 60.0
+    fun calculatePaidTotalHours(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Double {
+        return calculatePaidTotalMinutes(entry, travelLegs) / 60.0
     }
     
     /**
@@ -106,5 +80,33 @@ object TimeCalculator {
      */
     fun formatMinutesAsHours(minutes: Int): String {
         return formatHours(minutes / 60.0)
+    }
+
+    private fun calculateTravelLegMinutes(leg: TravelLeg): Int {
+        val start = leg.startAt
+        val arrive = leg.arriveAt
+        if (start != null && arrive != null) {
+            var diffMs = arrive - start
+            if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
+            return (diffMs / 60_000L).toInt().coerceAtLeast(0)
+        }
+        return leg.paidMinutesOverride?.coerceAtLeast(0) ?: 0
+    }
+
+    private fun calculateLegacyTravelMinutes(entry: WorkEntry): Int {
+        val outbound = calculateLegacyWindowMinutes(entry.travelStartAt, entry.travelArriveAt)
+        val returnMinutes = calculateLegacyWindowMinutes(entry.returnStartAt, entry.returnArriveAt)
+        return if (outbound > 0 || returnMinutes > 0) {
+            outbound + returnMinutes
+        } else {
+            entry.travelPaidMinutes?.coerceAtLeast(0) ?: 0
+        }
+    }
+
+    private fun calculateLegacyWindowMinutes(startAt: Long?, arriveAt: Long?): Int {
+        if (startAt == null || arriveAt == null) return 0
+        var diffMs = arriveAt - startAt
+        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
+        return (diffMs / 60_000L).toInt().coerceAtLeast(0)
     }
 }

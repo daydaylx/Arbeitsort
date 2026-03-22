@@ -37,15 +37,19 @@ class CsvExporterLogicTest {
             append(";")
             append(CsvCellEncoder.encode(entry.dayLocationLabel))
             append(";")
-            append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
+            append(if (isWorkDay) entry.workStart?.format(timeFormatter).orEmpty() else "")
             append(";")
-            append(if (isWorkDay) entry.workEnd.format(timeFormatter) else "")
+            append(if (isWorkDay) entry.workEnd?.format(timeFormatter).orEmpty() else "")
             append(";")
             append(if (isWorkDay) entry.breakMinutes.toString() else "")
             append(";")
             append(workMinutes)
             append(";")
             append(travelMinutes)
+            append(";")
+            append(0)
+            append(";")
+            append("")
             append(";")
             append(paidTotalMinutes)
             append(";")
@@ -82,7 +86,7 @@ class CsvExporterLogicTest {
     fun `normal entry produces correct CSV line`() {
         val line = buildCsvLine(entry())
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(16, cols.size)
+        assertEquals(18, cols.size)
         assertEquals("2024-06-10", cols[0])
         assertEquals("WORK", cols[1])
         assertEquals("Dresden", cols[3])
@@ -132,7 +136,7 @@ class CsvExporterLogicTest {
     fun `null note produces empty note field`() {
         val line = buildCsvLine(entry(note = null))
         val cols = line.trimEnd('\n').split(";")
-        assertEquals("", cols[15])
+        assertEquals("", cols[17])
     }
 
     @Test
@@ -159,12 +163,12 @@ class CsvExporterLogicTest {
         )
         val line = buildCsvLine(entryWithMeal)
         val cols = line.trimEnd('\n').split(";")
-        assertEquals(16, cols.size)
-        assertEquals("1", cols[10])
-        assertEquals("1", cols[11])
-        assertEquals("1400", cols[12])
-        assertEquals("820", cols[13])
-        assertEquals("8,20 €", cols[14])
+        assertEquals(18, cols.size)
+        assertEquals("1", cols[12])
+        assertEquals("1", cols[13])
+        assertEquals("1400", cols[14])
+        assertEquals("820", cols[15])
+        assertEquals("8,20 €", cols[16])
     }
 
     @Test

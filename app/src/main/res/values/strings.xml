@@ -56,6 +56,7 @@
 
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
+    <string name="overview_title">Übersicht</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
@@ -64,6 +65,7 @@
     <string name="today_stats_title">Statistik</string>
     <string name="today_stats_week">Woche</string>
     <string name="today_stats_month">Monat</string>
+    <string name="today_stats_year">Jahr</string>
     <string name="today_stats_hours">%1$.1f Std. von %2$.1f Std.</string>
     <string name="today_stats_over">%1$.1f Std. über Ziel</string>
     <string name="today_stats_under">%1$.1f Std. unter Ziel</string>
@@ -74,6 +76,10 @@
     <string name="today_confirmed">Heute bestätigt</string>
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
+    <string name="today_dashboard_subtitle_done">Alles für heute ist erfasst.</string>
+    <string name="today_dashboard_subtitle_open">Heute ist schon etwas da, aber noch nicht komplett bestätigt.</string>
+    <string name="today_dashboard_subtitle_empty">Starte hier deinen Tag und trage die wichtigsten Infos direkt ein.</string>
+    <string name="today_dashboard_empty_hint">Noch kein Eintrag für diesen Tag. Unten kannst du direkt Arbeit oder frei erfassen.</string>
     <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
     <string name="today_error_unknown">Unbekannter Fehler</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
@@ -109,6 +115,7 @@
     <string name="overtime_offday_travel_year">OFF-Reisezeit Jahr: %1$s (%2$d Tage)</string>
     <string name="overtime_not_configured">Nicht konfiguriert</string>
     <string name="action_change_location">Arbeitsort ändern</string>
+    <string name="today_week_section_title">Deine Woche im Blick</string>
     <string name="day_location_dialog_title">Arbeitsort ändern</string>
     <string name="day_location_dialog_label">Arbeitsort</string>
     <string name="day_location_dialog_placeholder">z.B. Baustelle Nord</string>
@@ -120,6 +127,38 @@
     <string name="travel_time_start">Start %1$s</string>
     <string name="travel_time_arrive">Ankunft %1$s</string>
     <string name="travel_duration_label">Dauer %1$s</string>
+    <string name="overview_dashboard_title">Deine Zahlen im Blick</string>
+    <string name="overview_dashboard_subtitle">Wechsle zwischen Tag, Woche, Monat und Jahr und sieh sofort deine wichtigsten Werte.</string>
+    <string name="overview_selected_day_label">Bezugstag</string>
+    <string name="overview_selected_status_label">Status / Ort</string>
+    <string name="overview_status_empty">Kein Eintrag</string>
+    <string name="overview_status_confirmed">Bestätigt</string>
+    <string name="overview_status_unconfirmed">Nicht bestätigt</string>
+    <string name="overview_selected_total_label">Ausgewählter Tag gesamt</string>
+    <string name="overview_reference_title">Bezug und Zeitraum</string>
+    <string name="overview_reference_caption">Die Kennzahlen richten sich nach diesem Datum.</string>
+    <string name="overview_reference_previous">Vorheriger Zeitraum</string>
+    <string name="overview_reference_next">Nächster Zeitraum</string>
+    <string name="overview_reference_pick_date">Datum wählen</string>
+    <string name="overview_date_range">%1$s bis %2$s</string>
+    <string name="overview_week_title">Woche %1$d</string>
+    <string name="overview_year_title">Jahr %1$d</string>
+    <string name="overview_period_selector_title">Zeitraum wählen</string>
+    <string name="overview_period_day">Tag</string>
+    <string name="overview_period_week">Woche</string>
+    <string name="overview_period_month">Monat</string>
+    <string name="overview_period_year">Jahr</string>
+    <string name="overview_kpi_target">Sollstunden</string>
+    <string name="overview_kpi_actual">Ist-Stunden</string>
+    <string name="overview_kpi_travel">Fahrstunden</string>
+    <string name="overview_kpi_meal">Verpflegungspauschale</string>
+    <string name="overview_counted_days_label">Gezählte Tage</string>
+    <string name="overview_kpi_target_caption">Ziel aus deinen Einstellungen</string>
+    <string name="overview_kpi_actual_caption">Gezählte Stunden im Zeitraum</string>
+    <string name="overview_kpi_travel_caption">Davon bezahlte Reisezeit</string>
+    <string name="overview_kpi_meal_caption">Summe der Pauschalen</string>
+    <string name="overview_quick_actions_title">Schnellzugriffe</string>
+    <string name="overview_action_edit_selected">Ausgewählten Tag bearbeiten</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_cancel_anyway">Trotzdem abbrechen</string>
     <string name="action_apply">Übernehmen</string>
@@ -136,6 +175,8 @@
     
     <!-- Settings Screen -->
     <string name="settings_title">Einstellungen</string>
+    <string name="settings_dashboard_title">App einrichten</string>
+    <string name="settings_dashboard_subtitle">Hier findest du die wichtigsten Grundeinstellungen für Arbeitszeit, Erinnerungen und Export.</string>
     <string name="settings_setup_title">Einrichtung</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_battery_optimization">Akku-Optimierung</string>
@@ -346,8 +387,10 @@
     <string name="history_day_type_comp_time_short">Ü</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
     <string name="history_summary_workdays">%1$d Arbeitstage</string>
+    <string name="history_dashboard_subtitle">Tag auswählen, prüfen und bei Bedarf direkt bearbeiten.</string>
     <string name="history_stat_total">Gesamt:</string>
     <string name="history_stat_paid">Bezahlt:</string>
+    <string name="history_stat_target">Ziel:</string>
     <string name="history_stat_average">Durchschnitt:</string>
     <string name="history_stat_days">Tage:</string>
     <string name="history_stat_travel">Reisezeit:</string>
@@ -400,6 +443,8 @@
     <string name="edit_day_type_comp_time">Ü-Abbau</string>
     <string name="edit_comp_time_info">Ü-Abbau: −%1$d Std.</string>
     <string name="edit_section_work_times">Arbeitszeiten</string>
+    <string name="edit_toggle_work_times">Erfassen</string>
+    <string name="edit_work_times_disabled_hint">Arbeitszeiten sind für diesen Tag deaktiviert.</string>
     <string name="edit_label_start">Beginn</string>
     <string name="edit_label_end">Ende</string>
     <string name="edit_error_prefix">⚠ %1$s</string>
@@ -416,6 +461,11 @@
     <string name="edit_label_to_optional">Nach (Optional)</string>
     <string name="edit_placeholder_destination">Zielort</string>
     <string name="edit_action_clear_travel_data">Reisedaten löschen</string>
+    <string name="edit_action_clear_all_travel">Alle löschen</string>
+    <string name="edit_action_add_travel_leg">Fahrt hinzufügen</string>
+    <string name="edit_travel_empty_hint">Noch keine Fahrten erfasst.</string>
+    <string name="edit_travel_leg_title">Fahrt %1$d</string>
+    <string name="edit_travel_legacy_override">Altbestand ohne Zeitfenster: %1$d min</string>
     <string name="edit_section_location">Standort</string>
     <string name="edit_label_day_location_required">Arbeitsort (Pflicht)</string>
     <string name="edit_placeholder_work_location">z.B. Baustelle Nord</string>
@@ -428,6 +478,10 @@
     <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
     <string name="edit_validation_travel_arrive_before_start">Ankunftszeit muss nach Abfahrtszeit liegen</string>
     <string name="edit_validation_travel_too_long">Reisezeit darf maximal 16 Stunden betragen</string>
+    <string name="edit_validation_missing_work_or_travel">Für Arbeitstage ist Arbeitszeit oder mindestens eine Fahrt erforderlich</string>
+    <string name="edit_validation_travel_incomplete">Eine Fahrt benötigt Start- und Ankunftszeit</string>
+    <string name="edit_validation_travel_missing_time_window">Eine Fahrt ohne Zeitfenster kann nicht gespeichert werden</string>
+    <string name="edit_validation_travel_not_allowed_comp_time">Fahrten sind bei Ü-Abbau nicht erlaubt</string>
     <string name="edit_label_outbound">Hinfahrt</string>
     <string name="edit_label_return">Rückfahrt</string>
     <string name="edit_label_return_start">Abfahrt</string>

@@ -7,7 +7,9 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
@@ -21,29 +23,23 @@ abstract class WorkEntryDao {
     @Query("SELECT * FROM work_entries WHERE date = :date")
     abstract fun getByDateFlow(date: LocalDate): Flow<WorkEntry?>
 
+    @Transaction
+    @Query("SELECT * FROM work_entries WHERE date = :date")
+    abstract suspend fun getByDateWithTravel(date: LocalDate): WorkEntryWithTravelLegs?
+
+    @Transaction
+    @Query("SELECT * FROM work_entries WHERE date = :date")
+    abstract fun getByDateWithTravelFlow(date: LocalDate): Flow<WorkEntryWithTravelLegs?>
+
     @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     abstract suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
 
-    @Query(
-        """
-        SELECT
-            date,
-            workStart,
-            workEnd,
-            breakMinutes,
-            dayType,
-            confirmedWorkDay,
-            travelStartAt,
-            travelArriveAt,
-            travelPaidMinutes,
-            returnStartAt,
-            returnArriveAt
-        FROM work_entries
-        WHERE date >= :startDate AND date <= :endDate
-        ORDER BY date ASC
-        """
-    )
-    abstract suspend fun getEntriesBetween(startDate: LocalDate, endDate: LocalDate): List<OvertimeEntryRow>
+    @Transaction
+    @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    abstract suspend fun getByDateRangeWithTravel(
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): List<WorkEntryWithTravelLegs>
 
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
     abstract suspend fun getAll(): List<WorkEntry>
@@ -67,6 +63,27 @@ abstract class WorkEntryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun upsertAll(entries: List<WorkEntry>)
 
+    @Query("SELECT * FROM travel_legs WHERE workEntryDate = :date ORDER BY sortOrder ASC")
+    abstract suspend fun getTravelLegsByDate(date: LocalDate): List<TravelLeg>
+
+    @Query("SELECT * FROM travel_legs WHERE workEntryDate = :date ORDER BY sortOrder ASC")
+    abstract fun getTravelLegsByDateFlow(date: LocalDate): Flow<List<TravelLeg>>
+
+    @Query(
+        """
+        SELECT * FROM travel_legs
+        WHERE workEntryDate >= :startDate AND workEntryDate <= :endDate
+        ORDER BY workEntryDate ASC, sortOrder ASC
+        """
+    )
+    abstract suspend fun getTravelLegsByDateRange(startDate: LocalDate, endDate: LocalDate): List<TravelLeg>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsertTravelLegs(legs: List<TravelLeg>)
+
+    @Query("DELETE FROM travel_legs WHERE workEntryDate = :date")
+    abstract suspend fun deleteTravelLegsByDate(date: LocalDate)
+
     @Query("DELETE FROM work_entries WHERE date = :date")
     abstract suspend fun deleteByDate(date: LocalDate)
 
@@ -75,18 +92,21 @@ abstract class WorkEntryDao {
         val existing = getByDate(date)
         upsert(modify(existing))
     }
+
+    @Transaction
+    open suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>) {
+        upsert(entry)
+        deleteTravelLegsByDate(entry.date)
+        if (legs.isNotEmpty()) {
+            upsertTravelLegs(
+                legs.mapIndexed { index, leg ->
+                    leg.copy(
+                        workEntryDate = entry.date,
+                        sortOrder = index
+                    )
+                }
+            )
+        }
+    }
 }
 
-data class OvertimeEntryRow(
-    val date: LocalDate,
-    val workStart: LocalTime,
-    val workEnd: LocalTime,
-    val breakMinutes: Int,
-    val dayType: DayType,
-    val confirmedWorkDay: Boolean,
-    val travelStartAt: Long?,
-    val travelArriveAt: Long?,
-    val travelPaidMinutes: Int?,
-    val returnStartAt: Long?,
-    val returnArriveAt: Long?
-)

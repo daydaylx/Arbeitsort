@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,8 +41,11 @@ fun PrimaryActionButton(
     } else {
         Modifier
     }
-    val resolvedShape = shape ?: ButtonDefaults.shape
-    val resolvedColors = colors ?: ButtonDefaults.buttonColors()
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    val resolvedColors = colors ?: ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
+    )
 
     Button(
         onClick = onClick,
@@ -91,8 +95,10 @@ fun SecondaryActionButton(
     } else {
         Modifier
     }
-    val resolvedShape = shape ?: ButtonDefaults.outlinedShape
-    val resolvedColors = colors ?: ButtonDefaults.outlinedButtonColors()
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    val resolvedColors = colors ?: ButtonDefaults.outlinedButtonColors(
+        contentColor = MaterialTheme.colorScheme.onSurface
+    )
 
     OutlinedButton(
         onClick = onClick,
@@ -141,7 +147,7 @@ fun TertiaryActionButton(
     } else {
         Modifier
     }
-    val resolvedShape = shape ?: ButtonDefaults.textShape
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
     val resolvedColors = colors ?: ButtonDefaults.textButtonColors()
 
     TextButton(

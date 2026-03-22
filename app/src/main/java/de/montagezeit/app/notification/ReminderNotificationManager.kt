@@ -23,11 +23,9 @@ import javax.inject.Singleton
 object ReminderActions {
     // Morning Actions
     const val ACTION_MORNING_CHECK_IN = "action_morning_check_in"
-    const val LEGACY_ACTION_MORNING_CHECK_IN_WITH_LOCATION = "action_morning_check_in_with_location"
 
     // Evening Actions
     const val ACTION_EVENING_CHECK_IN = "action_evening_check_in"
-    const val LEGACY_ACTION_EVENING_CHECK_IN_WITH_LOCATION = "action_evening_check_in_with_location"
     
     // Daily Confirmation Actions
     const val ACTION_CONFIRM_WORK_DAY = "action_confirm_work_day"

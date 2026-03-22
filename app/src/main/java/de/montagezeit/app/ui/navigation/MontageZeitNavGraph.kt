@@ -1,7 +1,10 @@
 package de.montagezeit.app.ui.navigation
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -9,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -19,12 +23,14 @@ import androidx.navigation.compose.rememberNavController
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
+import de.montagezeit.app.ui.screen.overview.OverviewScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreenV2
 import de.montagezeit.app.ui.screen.today.TodayScreenV2
 import java.time.LocalDate
 
 sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
     object Today : Screen("today", R.string.today_title, Icons.Default.Today)
+    object Overview : Screen("overview", R.string.overview_title, Icons.Default.Dashboard)
     object History : Screen("history", R.string.history_title, Icons.Default.History)
     object Settings : Screen("settings", R.string.settings_title, Icons.Default.Settings)
 }
@@ -60,22 +66,52 @@ fun MontageZeitNavGraph(
     
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                listOf(Screen.Today, Screen.History, Screen.Settings).forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(stringResource(screen.labelRes)) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+            Surface(
+                tonalElevation = 0.dp,
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .navigationBarsPadding(),
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
                     )
+                ) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        listOf(Screen.Today, Screen.Overview, Screen.History, Screen.Settings).forEach { screen ->
+                            NavigationBarItem(
+                                icon = { Icon(screen.icon, contentDescription = null) },
+                                label = { Text(stringResource(screen.labelRes)) },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -89,8 +125,22 @@ fun MontageZeitNavGraph(
                 TodayScreenV2(
                     onOpenEditSheet = { date ->
                         openEditSheet(date)
+                    }
+                )
+            }
+
+            composable(Screen.Overview.route) {
+                OverviewScreen(
+                    onOpenToday = {
+                        navController.navigate(Screen.Today.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
-                    onOpenWeekView = {
+                    onOpenHistory = {
                         navController.navigate(Screen.History.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
@@ -98,6 +148,18 @@ fun MontageZeitNavGraph(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onOpenSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onOpenEditSheet = { date ->
+                        openEditSheet(date)
                     }
                 )
             }

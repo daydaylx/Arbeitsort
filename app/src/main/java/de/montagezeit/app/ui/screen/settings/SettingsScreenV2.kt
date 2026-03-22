@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -108,8 +109,13 @@ fun SettingsScreenV2(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
                 title = {
                     Text(
                         text = stringResource(R.string.settings_title),
@@ -119,68 +125,69 @@ fun SettingsScreenV2(
             )
         }
     ) { paddingValues ->
-        if (settings != null) {
-            SettingsContentV2(
-                settings = settings!!,
-                uiState = uiState,
-                onUpdateMorningWindow = { startH, startM, endH, endM ->
-                    viewModel.updateMorningWindow(startH, startM, endH, endM)
-                },
-                onUpdateEveningWindow = { startH, startM, endH, endM ->
-                    viewModel.updateEveningWindow(startH, startM, endH, endM)
-                },
-                onUpdateWorkStart = { viewModel.updateWorkStart(it) },
-                onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
-                onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
-                onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
-                onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
-                onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
-                onUpdateFallbackTime = { viewModel.updateFallbackTime(it) },
-                onUpdateDailyEnabled = { viewModel.updateDailyReminderEnabled(it) },
-                onUpdateDailyTime = { viewModel.updateDailyReminderTime(it) },
-                onUpdateAutoOffWeekends = { viewModel.updateAutoOffWeekends(it) },
-                onUpdateAutoOffHolidays = { viewModel.updateAutoOffHolidays(it) },
-                onAddHolidayDate = { viewModel.addHolidayDate(it) },
-                onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
-                onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
-                onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
-                onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
-                onOpenExportPreview = { start, end ->
-                    previewRange = start to end
-                    showPreviewSheet = true
-                },
-                onUpdatePdfSettings = { name, company, project, personnel ->
-                    viewModel.updatePdfSettings(name, company, project, personnel)
-                },
-                onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
-                onUpdateWeeklyTargetHours = { viewModel.updateWeeklyTargetHours(it) },
-                onUpdateMonthlyTargetHours = { viewModel.updateMonthlyTargetHours(it) },
-                onResetExportState = { viewModel.resetExportState() },
-                hasNotificationPermission = hasNotificationPermission,
-                isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-                onRequestNotificationPermission = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                },
-                onOpenNotificationSettings = { openNotificationSettings(context) },
-                onOpenBatterySettings = { openBatterySettings(context) },
-                onSendTestReminder = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    viewModel.sendTestReminder()
-                },
-                modifier = Modifier
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                MZLoadingState(message = stringResource(R.string.loading))
+        MZPageBackground(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues
+        ) {
+            if (settings != null) {
+                SettingsContentV2(
+                    settings = settings!!,
+                    uiState = uiState,
+                    onUpdateMorningWindow = { startH, startM, endH, endM ->
+                        viewModel.updateMorningWindow(startH, startM, endH, endM)
+                    },
+                    onUpdateEveningWindow = { startH, startM, endH, endM ->
+                        viewModel.updateEveningWindow(startH, startM, endH, endM)
+                    },
+                    onUpdateWorkStart = { viewModel.updateWorkStart(it) },
+                    onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
+                    onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
+                    onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
+                    onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
+                    onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
+                    onUpdateFallbackTime = { viewModel.updateFallbackTime(it) },
+                    onUpdateDailyEnabled = { viewModel.updateDailyReminderEnabled(it) },
+                    onUpdateDailyTime = { viewModel.updateDailyReminderTime(it) },
+                    onUpdateAutoOffWeekends = { viewModel.updateAutoOffWeekends(it) },
+                    onUpdateAutoOffHolidays = { viewModel.updateAutoOffHolidays(it) },
+                    onAddHolidayDate = { viewModel.addHolidayDate(it) },
+                    onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
+                    onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
+                    onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
+                    onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
+                    onOpenExportPreview = { start, end ->
+                        previewRange = start to end
+                        showPreviewSheet = true
+                    },
+                    onUpdatePdfSettings = { name, company, project, personnel ->
+                        viewModel.updatePdfSettings(name, company, project, personnel)
+                    },
+                    onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
+                    onUpdateWeeklyTargetHours = { viewModel.updateWeeklyTargetHours(it) },
+                    onUpdateMonthlyTargetHours = { viewModel.updateMonthlyTargetHours(it) },
+                    onResetExportState = { viewModel.resetExportState() },
+                    hasNotificationPermission = hasNotificationPermission,
+                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                    onRequestNotificationPermission = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    onOpenNotificationSettings = { openNotificationSettings(context) },
+                    onOpenBatterySettings = { openBatterySettings(context) },
+                    onSendTestReminder = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.sendTestReminder()
+                    },
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MZLoadingState(message = stringResource(R.string.loading))
+                }
             }
         }
     }
@@ -231,16 +238,48 @@ fun SettingsContentV2(
     onSendTestReminder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var workTimesExpanded by rememberSaveable { mutableStateOf(false) }
+    var workTimesExpanded by rememberSaveable { mutableStateOf(true) }
     var overtimeExpanded by rememberSaveable { mutableStateOf(false) }
-    var remindersExpanded by rememberSaveable { mutableStateOf(false) }
+    var remindersExpanded by rememberSaveable { mutableStateOf(true) }
     var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
     var exportExpanded by rememberSaveable { mutableStateOf(false) }
+    val enabledReminderCount = listOf(
+        settings.morningReminderEnabled,
+        settings.eveningReminderEnabled,
+        settings.fallbackEnabled,
+        settings.dailyReminderEnabled
+    ).count { it }
 
     Column(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        MZHeroCard(
+            title = stringResource(R.string.settings_dashboard_title),
+            subtitle = stringResource(R.string.settings_dashboard_subtitle),
+            badge = {
+                MZStatusBadge(
+                    text = stringResource(R.string.settings_reminders_summary, enabledReminderCount),
+                    type = if (enabledReminderCount > 0) StatusType.SUCCESS else StatusType.WARNING,
+                    showIcon = false
+                )
+            }
+        ) {
+            MZKeyValueRow(
+                label = stringResource(R.string.label_work_start),
+                value = formatTime(settings.workStart)
+            )
+            MZKeyValueRow(
+                label = stringResource(R.string.label_work_end),
+                value = formatTime(settings.workEnd)
+            )
+            MZKeyValueRow(
+                label = stringResource(R.string.settings_export),
+                value = settings.pdfEmployeeName?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.settings_export_name_missing)
+            )
+        }
+
         // Setup Section
         SetupSectionV2(
             hasNotificationPermission = hasNotificationPermission,

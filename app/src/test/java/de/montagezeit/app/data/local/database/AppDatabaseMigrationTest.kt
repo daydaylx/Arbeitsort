@@ -40,7 +40,8 @@ class AppDatabaseMigrationTest {
             "migration_9_10_test.db",
             "migration_10_11_test.db",
             "migration_11_12_test.db",
-            "migration_12_13_test.db"
+            "migration_12_13_test.db",
+            "migration_13_14_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -60,7 +61,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_9_10,
                 AppDatabase.MIGRATION_10_11,
                 AppDatabase.MIGRATION_11_12,
-                AppDatabase.MIGRATION_12_13
+                AppDatabase.MIGRATION_12_13,
+                AppDatabase.MIGRATION_13_14
             )
             .build()
 
@@ -92,8 +94,9 @@ class AppDatabaseMigrationTest {
             assertFalse(hasColumn(db, "work_entries", "needsReview"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigMorning"))
             assertFalse(hasColumn(db, "work_entries", "outsideLeipzigEvening"))
-            assertTrue(hasColumn(db, "work_entries", "returnStartAt"))
-            assertTrue(hasColumn(db, "work_entries", "returnArriveAt"))
+            assertFalse(hasColumn(db, "work_entries", "returnStartAt"))
+            assertFalse(hasColumn(db, "work_entries", "returnArriveAt"))
+            assertTrue(tableExists(db, "travel_legs"))
 
             db.rawQuery(
                 "SELECT dayLocationLabel, morningCapturedAt, eveningCapturedAt FROM work_entries WHERE date = ?",
@@ -673,6 +676,15 @@ class AppDatabaseMigrationTest {
 
     private fun tableExists(db: SupportSQLiteDatabase, tableName: String): Boolean {
         return db.query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            arrayOf(tableName)
+        ).use { cursor ->
+            cursor.moveToFirst()
+        }
+    }
+
+    private fun tableExists(db: SQLiteDatabase, tableName: String): Boolean {
+        return db.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
             arrayOf(tableName)
         ).use { cursor ->

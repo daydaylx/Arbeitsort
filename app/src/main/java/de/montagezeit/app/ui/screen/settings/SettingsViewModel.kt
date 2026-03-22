@@ -183,7 +183,7 @@ class SettingsViewModel @Inject constructor(
                 val endDate = now.withDayOfMonth(now.lengthOfMonth())
                 
                 // Einträge laden
-                val entries = workEntryDao.getByDateRange(startDate, endDate)
+                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
                 
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
@@ -244,7 +244,7 @@ class SettingsViewModel @Inject constructor(
                 val startDate = endDate.minusDays(29)
                 
                 // Einträge laden
-                val entries = workEntryDao.getByDateRange(startDate, endDate)
+                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
                 
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
@@ -301,7 +301,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 
                 // Einträge laden
-                val entries = workEntryDao.getByDateRange(startDate, endDate)
+                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
                 
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(

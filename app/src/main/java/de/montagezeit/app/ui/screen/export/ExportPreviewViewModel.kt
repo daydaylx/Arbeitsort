@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -52,11 +54,11 @@ data class PreviewSummary(
     val paidHours: Double = paidMinutes / 60.0
 }
 
-internal fun calculatePreviewSummary(entries: List<WorkEntry>): PreviewSummary {
-    val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it) }
-    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
-    val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it) }
-    val mealAllowanceCents = entries.sumOf { it.mealAllowanceAmountCents }
+internal fun calculatePreviewSummary(entries: List<WorkEntryWithTravelLegs>): PreviewSummary {
+    val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
+    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) }
+    val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
+    val mealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
     return PreviewSummary(
         workMinutes = workMinutes,
         travelMinutes = travelMinutes,
@@ -76,11 +78,12 @@ internal fun buildExportPreviewTotals(summary: PreviewSummary): ExportPreviewTot
     )
 }
 
-internal fun buildExportPreviewRow(entry: WorkEntry): ExportPreviewRow {
+internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPreviewRow {
+    val entry = record.workEntry
     val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
-    val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
-    val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK
+    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry, record.orderedTravelLegs)
+    val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, record.orderedTravelLegs)
+    val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK && entry.workStart != null && entry.workEnd != null
     val mealLabel = if (entry.mealAllowanceAmountCents > 0) {
         MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
     } else {
@@ -89,13 +92,13 @@ internal fun buildExportPreviewRow(entry: WorkEntry): ExportPreviewRow {
     return ExportPreviewRow(
         date = entry.date,
         dateLabel = PdfUtilities.formatDate(entry.date),
-        startLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workStart) else PREVIEW_DASH,
-        endLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workEnd) else PREVIEW_DASH,
+        startLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workStart).ifBlank { PREVIEW_DASH } else PREVIEW_DASH,
+        endLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workEnd).ifBlank { PREVIEW_DASH } else PREVIEW_DASH,
         breakLabel = if (showWorkSchedule) "${entry.breakMinutes} min" else PREVIEW_DASH,
         workLabel = buildPreviewMinutesLabel(workMinutes),
         travelLabel = buildPreviewMinutesLabel(travelMinutes),
         totalLabel = buildPreviewMinutesLabel(paidMinutes),
-        locationNote = buildPreviewLocationNote(entry),
+        locationNote = buildPreviewLocationNote(entry, record.orderedTravelLegs),
         mealAllowanceLabel = mealLabel
     )
 }
@@ -106,10 +109,11 @@ private fun buildPreviewMinutesLabel(minutes: Int): String {
 
 private const val PREVIEW_DASH = "–"
 
-private fun buildPreviewLocationNote(entry: WorkEntry): String? {
-    val location = PdfUtilities.getLocation(entry).trim().takeIf { it.isNotBlank() }
+private fun buildPreviewLocationNote(entry: WorkEntry, travelLegs: List<TravelLeg>): String? {
+    val location = PdfUtilities.getLocation(entry, travelLegs).trim().takeIf { it.isNotBlank() }
+    val route = PdfUtilities.buildTravelRouteSummary(travelLegs).trim().takeIf { it.isNotBlank() }
     val note = PdfUtilities.getNote(entry).trim().takeIf { it.isNotBlank() }
-    val combined = listOfNotNull(location, note).joinToString(" • ")
+    val combined = listOfNotNull(location, route, note).joinToString(" • ")
     if (combined.isBlank()) return null
     val maxLength = 48
     return if (combined.length > maxLength) {
@@ -188,7 +192,7 @@ class ExportPreviewViewModel @Inject constructor(
         )
         viewModelScope.launch {
             try {
-                val entries = workEntryDao.getByDateRange(range.start, range.end)
+                val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
                 if (entries.isEmpty()) {
                     updateState(
                         PreviewState.Empty(
@@ -241,7 +245,7 @@ class ExportPreviewViewModel @Inject constructor(
             }
             updateState(PreviewState.CreatingPdf)
             try {
-                val entries = workEntryDao.getByDateRange(range.start, range.end)
+                val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
                 if (entries.isEmpty()) {
                     updateState(
                         PreviewState.Error(
@@ -302,17 +306,13 @@ class ExportPreviewViewModel @Inject constructor(
         return "${PdfUtilities.formatDate(range.start)} – ${PdfUtilities.formatDate(range.end)}"
     }
 
-    private fun buildTotals(entries: List<WorkEntry>): ExportPreviewTotals {
+    private fun buildTotals(entries: List<WorkEntryWithTravelLegs>): ExportPreviewTotals {
         val summary = calculatePreviewSummary(entries)
         return buildExportPreviewTotals(summary)
     }
 
-    private fun buildRow(entry: WorkEntry): ExportPreviewRow {
+    private fun buildRow(entry: WorkEntryWithTravelLegs): ExportPreviewRow {
         return buildExportPreviewRow(entry)
-    }
-
-    private fun formatMinutes(minutes: Int): String {
-        return buildPreviewMinutesLabel(minutes)
     }
 
     private data class DateRange(val start: LocalDate, val end: LocalDate)

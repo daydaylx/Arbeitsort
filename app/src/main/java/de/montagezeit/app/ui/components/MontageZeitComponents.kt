@@ -2,13 +2,20 @@ package de.montagezeit.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -51,14 +60,41 @@ import de.montagezeit.app.ui.common.TertiaryActionButton
 object AccessibilityDefaults {
     const val MinTouchTargetSize = 48
     val MinTouchTargetSpacing = 8.dp
-    val CardPadding = 20.dp
-    val CardCornerRadius = 16.dp
-    val ButtonCornerRadius = 12.dp
-    val ButtonHeight = 56.dp
-    val PrimaryButtonHeight = 56.dp
-    val SecondaryButtonHeight = 56.dp
+    val CardPadding = 22.dp
+    val CardCornerRadius = 24.dp
+    val ButtonCornerRadius = 18.dp
+    val ButtonHeight = 54.dp
+    val PrimaryButtonHeight = 54.dp
+    val SecondaryButtonHeight = 54.dp
     val TertiaryButtonHeight = 48.dp
     val IconButtonSize = 48.dp
+}
+
+@Composable
+fun MZPageBackground(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val base = MaterialTheme.colorScheme.background
+    val topGlow = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+    val bottomGlow = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                colors = listOf(topGlow, base, bottomGlow)
+            )
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(contentPadding)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content
+        )
+    }
 }
 
 /**
@@ -67,7 +103,7 @@ object AccessibilityDefaults {
 @Composable
 fun MZCard(
     modifier: Modifier = Modifier,
-    elevation: Dp = 2.dp,
+    elevation: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -75,6 +111,10 @@ fun MZCard(
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
         ),
         shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
     ) {
@@ -141,7 +181,7 @@ fun MZStatusCard(
                 )
             }
 
-            androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(vertical = 10.dp))
 
             Column {
                 content()
@@ -156,6 +196,10 @@ fun MZStatusCard(
             modifier = modifier.fillMaxWidth(),
             enabled = true,
             colors = cardColors,
+            border = BorderStroke(
+                width = 1.dp,
+                color = contentColor.copy(alpha = 0.15f)
+            ),
             shape = cardShape,
             content = cardContent
         )
@@ -163,9 +207,75 @@ fun MZStatusCard(
         Card(
             modifier = modifier.fillMaxWidth(),
             colors = cardColors,
+            border = BorderStroke(
+                width = 1.dp,
+                color = contentColor.copy(alpha = 0.15f)
+            ),
             shape = cardShape,
             content = cardContent
         )
+    }
+}
+
+@Composable
+fun MZHeroCard(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    badge: (@Composable () -> Unit)? = null,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit = {}
+) {
+    val backgroundBrush = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer
+        )
+    )
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(28.dp))
+                .background(backgroundBrush)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
+                    )
+                }
+
+                badge?.invoke()
+            }
+
+            content()
+
+            action?.invoke()
+        }
     }
 }
 
@@ -196,7 +306,7 @@ fun MZStatusBadge(
     Surface(
         color = backgroundColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier
     ) {
         Row(
@@ -387,6 +497,35 @@ fun MZSectionHeader(
             color = MaterialTheme.colorScheme.onSurface
         )
         action?.invoke()
+    }
+}
+
+@Composable
+fun MZKeyValueRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    emphasize: Boolean = false
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = if (emphasize) {
+                MaterialTheme.typography.titleSmall
+            } else {
+                MaterialTheme.typography.bodyMedium
+            },
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

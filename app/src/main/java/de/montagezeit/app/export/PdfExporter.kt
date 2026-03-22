@@ -13,7 +13,7 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
@@ -130,7 +130,7 @@ class PdfExporter @Inject constructor(
      * @return Uri der erstellten Datei oder null bei Fehler
      */
     fun exportToPdf(
-        entries: List<WorkEntry>,
+        entries: List<WorkEntryWithTravelLegs>,
         employeeName: String,
         company: String? = null,
         project: String? = null,
@@ -336,7 +336,7 @@ class PdfExporter @Inject constructor(
         canvas: Canvas,
         pdfDocument: PdfDocument,
         currentPage: PdfDocument.Page,
-        entries: List<WorkEntry>,
+        entries: List<WorkEntryWithTravelLegs>,
         startY: Float
     ): TableDrawResult {
         var y = startY
@@ -344,7 +344,9 @@ class PdfExporter @Inject constructor(
         var activePage = currentPage
         var activeCanvas = canvas
         
-        entries.forEach { entry ->
+        entries.forEach { record ->
+            val entry = record.workEntry
+            val travelLegs = record.orderedTravelLegs
             // Prüfen, ob eine neue Seite benötigt wird
             if (y + ROW_HEIGHT > PAGE_HEIGHT - MARGIN) {
                 pdfDocument.finishPage(activePage)
@@ -368,14 +370,14 @@ class PdfExporter @Inject constructor(
             val isWorkDay = entry.dayType == DayType.WORK
             val dash = string(R.string.pdf_export_placeholder_dash)
             activeCanvas.drawText(
-                if (isWorkDay) PdfUtilities.formatTime(entry.workStart) else dash,
+                if (isWorkDay) PdfUtilities.formatTime(entry.workStart).ifBlank { dash } else dash,
                 xPos, y + 15, paintTableText
             )
             xPos += COL_START
 
             // Ende – nur für WORK-Tage
             activeCanvas.drawText(
-                if (isWorkDay) PdfUtilities.formatTime(entry.workEnd) else dash,
+                if (isWorkDay) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash,
                 xPos, y + 15, paintTableText
             )
             xPos += COL_END
@@ -389,7 +391,7 @@ class PdfExporter @Inject constructor(
             
             // Arbeitszeit
             val workHours = TimeCalculator.calculateWorkHours(entry)
-            val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
+            val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
             val travelHours = travelMinutes / 60.0
             val totalHours = workHours + travelHours
             val workText = string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours))
@@ -397,9 +399,9 @@ class PdfExporter @Inject constructor(
             xPos += COL_WORK_TIME
 
             // Reise (von–bis)
-            val travelWindow = PdfUtilities.formatTravelWindow(entry.travelStartAt, entry.travelArriveAt)
+            val travelWindow = PdfUtilities.buildTravelRouteSummary(travelLegs)
             val travelWindowText = if (travelWindow.isNotBlank()) {
-                travelWindow
+                travelWindow.take(18)
             } else {
                 string(R.string.pdf_export_placeholder_dash)
             }
@@ -422,7 +424,7 @@ class PdfExporter @Inject constructor(
             xPos += COL_TOTAL_TIME
 
             // Ort
-            val location = PdfUtilities.getLocation(entry)
+            val location = PdfUtilities.getLocation(entry, travelLegs)
             activeCanvas.drawText(location.take(8), xPos, y + 15, paintTableText)
             xPos += COL_LOCATION
 
@@ -453,7 +455,7 @@ class PdfExporter @Inject constructor(
     /**
      * Zeichnet den Summenblock
      */
-    private fun drawSummary(canvas: Canvas, entries: List<WorkEntry>, y: Float): Float {
+    private fun drawSummary(canvas: Canvas, entries: List<WorkEntryWithTravelLegs>, y: Float): Float {
         var yPos = y + 20
         
         val workDays = PdfUtilities.filterWorkDays(entries).size
@@ -489,7 +491,7 @@ class PdfExporter @Inject constructor(
         )
         yPos += 25
 
-        val totalMealAllowanceCents = entries.sumOf { it.mealAllowanceAmountCents }
+        val totalMealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
         canvas.drawText(
             string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),
             MARGIN.toFloat(),

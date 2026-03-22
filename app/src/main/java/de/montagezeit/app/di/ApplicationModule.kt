@@ -65,10 +65,9 @@ object ApplicationModule {
     @Provides
     fun provideSetDayLocation(
         workEntryDao: WorkEntryDao,
-        reminderSettingsManager: ReminderSettingsManager,
-        nonWorkingDayChecker: NonWorkingDayChecker
+        reminderSettingsManager: ReminderSettingsManager
     ): SetDayLocation {
-        return SetDayLocation(workEntryDao, reminderSettingsManager, nonWorkingDayChecker)
+        return SetDayLocation(workEntryDao, reminderSettingsManager)
     }
 
     @Provides

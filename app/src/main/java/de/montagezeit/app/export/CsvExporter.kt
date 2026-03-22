@@ -5,9 +5,10 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.export.PdfUtilities.buildTravelRouteSummary
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -48,7 +49,7 @@ class CsvExporter @Inject constructor(
      * @param entries Liste der zu exportierenden Einträge
      * @return Uri zur CSV-Datei bei Erfolg, null bei Fehler
      */
-    fun exportToCsv(entries: List<WorkEntry>): Uri? {
+    fun exportToCsv(entries: List<WorkEntryWithTravelLegs>): Uri? {
         // Validate input
         if (entries.isEmpty()) {
             android.util.Log.w("CsvExporter", "No entries to export")
@@ -90,13 +91,16 @@ class CsvExporter @Inject constructor(
 
                 // Header: workStart/workEnd/breakMinutes nur für WORK-Tage befüllt
                 // confirmedWorkDay: 1 wenn Tag fachlich bestätigt, 0 sonst
-                val header = "date;dayType;confirmedWorkDay;dayLocation;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
+                val header = "date;dayType;confirmedWorkDay;dayLocation;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;travelLegCount;travelRouteSummary;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
-                entries.forEach { entry ->
+                entries.forEach { record ->
+                    val entry = record.workEntry
+                    val travelLegs = record.orderedTravelLegs
                     val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-                    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
-                    val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
+                    val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
+                    val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, travelLegs)
+                    val travelRouteSummary = buildTravelRouteSummary(travelLegs)
 
                     val dayTypeLabel = when (entry.dayType) {
                         DayType.COMP_TIME -> "Ü-Abbau"
@@ -113,15 +117,19 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(CsvCellEncoder.encode(entry.dayLocationLabel))
                         append(";")
-                        append(if (isWorkDay) entry.workStart.format(timeFormatter) else "")
+                        append(if (isWorkDay) entry.workStart?.format(timeFormatter).orEmpty() else "")
                         append(";")
-                        append(if (isWorkDay) entry.workEnd.format(timeFormatter) else "")
+                        append(if (isWorkDay) entry.workEnd?.format(timeFormatter).orEmpty() else "")
                         append(";")
                         append(if (isWorkDay) entry.breakMinutes.toString() else "")
                         append(";")
                         append(workMinutes)
                         append(";")
                         append(travelMinutes)
+                        append(";")
+                        append(travelLegs.size)
+                        append(";")
+                        append(CsvCellEncoder.encode(travelRouteSummary))
                         append(";")
                         append(paidTotalMinutes)
                         append(";")

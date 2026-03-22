@@ -37,7 +37,7 @@ class WorkEntryExtensionsTest {
     @Test
     fun `withTravelCleared setzt travelPaidMinutes auf null`() {
         val entry = baseEntry(travelPaidMinutes = 120)
-        val cleared = entry.withTravelCleared(now)
+        val cleared = entry.withTravelCleared()
         assertNull(
             "withTravelCleared muss travelPaidMinutes auf null setzen, nicht 0",
             cleared.travelPaidMinutes
@@ -47,7 +47,7 @@ class WorkEntryExtensionsTest {
     @Test
     fun `withTravelCleared setzt travelPaidMinutes nicht auf 0`() {
         val entry = baseEntry(travelPaidMinutes = 60)
-        val cleared = entry.withTravelCleared(now)
+        val cleared = entry.withTravelCleared()
         assertNull(cleared.travelPaidMinutes)
         assertEquals(0 != cleared.travelPaidMinutes, true)
     }
@@ -64,7 +64,7 @@ class WorkEntryExtensionsTest {
             returnStartAt = returnStart,
             returnArriveAt = returnArrive
         )
-        val cleared = entry.withTravelCleared(now)
+        val cleared = entry.withTravelCleared()
         assertNull(cleared.travelStartAt)
         assertNull(cleared.travelArriveAt)
         assertNull(cleared.returnStartAt)
@@ -74,10 +74,13 @@ class WorkEntryExtensionsTest {
     @Test
     fun `nach withTravelCleared koennen neue Timestamps wirken`() {
         val entry = baseEntry(travelPaidMinutes = 60)
-        val cleared = entry.withTravelCleared(now)
+        val cleared = entry.withTravelCleared()
         val start = epochOf(LocalTime.of(7, 0))
         val arrive = epochOf(LocalTime.of(9, 0))
-        val withTimestamps = cleared.copy(travelStartAt = start, travelArriveAt = arrive)
+        val withTimestamps = cleared.also {
+            it.travelStartAt = start
+            it.travelArriveAt = arrive
+        }
         val travelMin = de.montagezeit.app.domain.util.TimeCalculator.calculateTravelMinutes(withTimestamps)
         assertEquals("Nach withTravelCleared müssen Timestamps ausgewertet werden, nicht blockiert", 120, travelMin)
     }

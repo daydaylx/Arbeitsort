@@ -2,6 +2,7 @@ package de.montagezeit.app.ui.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.ui.screen.export.buildExportPreviewRow
 import de.montagezeit.app.ui.screen.export.buildExportPreviewTotals
 import de.montagezeit.app.ui.screen.export.calculatePreviewSummary
@@ -13,10 +14,15 @@ import java.time.LocalTime
 
 class ExportPreviewViewModelTest {
 
+    private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(
+        workEntry = entry,
+        travelLegs = emptyList()
+    )
+
     @Test
     fun `calculatePreviewSummary sums work travel and paid minutes`() {
         val entries = listOf(
-            WorkEntry(
+            record(WorkEntry(
                 date = LocalDate.of(2026, 1, 10),
                 dayType = DayType.WORK,
                 workStart = LocalTime.of(8, 0),
@@ -26,8 +32,8 @@ class ExportPreviewViewModelTest {
                 mealAllowanceAmountCents = 820,
                 confirmedWorkDay = true,
                 confirmationAt = System.currentTimeMillis()
-            ),
-            WorkEntry(
+            )),
+            record(WorkEntry(
                 date = LocalDate.of(2026, 1, 11),
                 dayType = DayType.WORK,
                 workStart = LocalTime.of(7, 30),
@@ -37,7 +43,7 @@ class ExportPreviewViewModelTest {
                 mealAllowanceAmountCents = 2220,
                 confirmedWorkDay = true,
                 confirmationAt = System.currentTimeMillis()
-            )
+            ))
         )
 
         val summary = calculatePreviewSummary(entries)
@@ -54,16 +60,16 @@ class ExportPreviewViewModelTest {
         val totals = buildExportPreviewTotals(
             calculatePreviewSummary(
                 listOf(
-                    WorkEntry(
+                    record(WorkEntry(
                         date = LocalDate.of(2026, 1, 10),
                         dayType = DayType.WORK,
                         mealAllowanceAmountCents = 820
-                    ),
-                    WorkEntry(
+                    )),
+                    record(WorkEntry(
                         date = LocalDate.of(2026, 1, 11),
                         dayType = DayType.WORK,
                         mealAllowanceAmountCents = 2220
-                    )
+                    ))
                 )
             )
         )
@@ -84,8 +90,8 @@ class ExportPreviewViewModelTest {
             mealAllowanceAmountCents = 0
         )
 
-        assertEquals("8,20 €", buildExportPreviewRow(entryWithMeal).mealAllowanceLabel)
-        assertNull(buildExportPreviewRow(entryWithoutMeal).mealAllowanceLabel)
+        assertEquals("8,20 €", buildExportPreviewRow(record(entryWithMeal)).mealAllowanceLabel)
+        assertNull(buildExportPreviewRow(record(entryWithoutMeal)).mealAllowanceLabel)
     }
 
     @Test
@@ -95,7 +101,7 @@ class ExportPreviewViewModelTest {
             dayType = DayType.OFF
         )
 
-        val row = buildExportPreviewRow(offEntry)
+        val row = buildExportPreviewRow(record(offEntry))
 
         assertEquals("–", row.startLabel)
         assertEquals("–", row.endLabel)

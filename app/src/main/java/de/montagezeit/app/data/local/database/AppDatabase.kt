@@ -8,11 +8,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import de.montagezeit.app.data.local.converters.LocalDateConverter
 import de.montagezeit.app.data.local.converters.LocalTimeConverter
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
-    entities = [WorkEntry::class],
-    version = 13,
+    entities = [WorkEntry::class, TravelLeg::class],
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(
@@ -391,6 +392,217 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 13→14: Travel normalisiert in Child-Tabelle `travel_legs`,
+        // Work-Block wird nullable, Legacy-Travel-Spalten werden entfernt.
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `travel_legs` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `workEntryDate` TEXT NOT NULL,
+                        `sortOrder` INTEGER NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `startAt` INTEGER,
+                        `arriveAt` INTEGER,
+                        `startLabel` TEXT,
+                        `endLabel` TEXT,
+                        `paidMinutesOverride` INTEGER,
+                        `source` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`workEntryDate`) REFERENCES `work_entries`(`date`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_travel_legs_workEntryDate ON travel_legs(workEntryDate)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_travel_legs_workEntryDate_sortOrder " +
+                        "ON travel_legs(workEntryDate, sortOrder)"
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `travel_legs` (
+                        workEntryDate,
+                        sortOrder,
+                        category,
+                        startAt,
+                        arriveAt,
+                        startLabel,
+                        endLabel,
+                        paidMinutesOverride,
+                        source,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        0,
+                        'OUTBOUND',
+                        travelStartAt,
+                        travelArriveAt,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        NULL,
+                        travelSource,
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt),
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt)
+                    FROM work_entries
+                    WHERE travelStartAt IS NOT NULL
+                        OR travelArriveAt IS NOT NULL
+                        OR travelLabelStart IS NOT NULL
+                        OR travelLabelEnd IS NOT NULL
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `travel_legs` (
+                        workEntryDate,
+                        sortOrder,
+                        category,
+                        startAt,
+                        arriveAt,
+                        startLabel,
+                        endLabel,
+                        paidMinutesOverride,
+                        source,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        1,
+                        'RETURN',
+                        returnStartAt,
+                        returnArriveAt,
+                        NULL,
+                        NULL,
+                        NULL,
+                        travelSource,
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt),
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt)
+                    FROM work_entries
+                    WHERE returnStartAt IS NOT NULL
+                        OR returnArriveAt IS NOT NULL
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `travel_legs` (
+                        workEntryDate,
+                        sortOrder,
+                        category,
+                        startAt,
+                        arriveAt,
+                        startLabel,
+                        endLabel,
+                        paidMinutesOverride,
+                        source,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        2,
+                        'OTHER',
+                        NULL,
+                        NULL,
+                        travelLabelStart,
+                        travelLabelEnd,
+                        travelPaidMinutes,
+                        travelSource,
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt),
+                        COALESCE(travelUpdatedAt, updatedAt, createdAt)
+                    FROM work_entries
+                    WHERE travelPaidMinutes IS NOT NULL
+                        AND travelPaidMinutes > 0
+                        AND NOT (travelStartAt IS NOT NULL AND travelArriveAt IS NOT NULL)
+                        AND NOT (returnStartAt IS NOT NULL AND returnArriveAt IS NOT NULL)
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `work_entries_new` (
+                        `date` TEXT NOT NULL,
+                        `workStart` TEXT,
+                        `workEnd` TEXT,
+                        `breakMinutes` INTEGER NOT NULL,
+                        `dayType` TEXT NOT NULL,
+                        `dayLocationLabel` TEXT NOT NULL,
+                        `morningCapturedAt` INTEGER,
+                        `eveningCapturedAt` INTEGER,
+                        `confirmedWorkDay` INTEGER NOT NULL,
+                        `confirmationAt` INTEGER,
+                        `confirmationSource` TEXT,
+                        `mealIsArrivalDeparture` INTEGER NOT NULL,
+                        `mealBreakfastIncluded` INTEGER NOT NULL,
+                        `mealAllowanceBaseCents` INTEGER NOT NULL,
+                        `mealAllowanceAmountCents` INTEGER NOT NULL,
+                        `note` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`date`)
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO `work_entries_new` (
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        morningCapturedAt,
+                        eveningCapturedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        mealIsArrivalDeparture,
+                        mealBreakfastIncluded,
+                        mealAllowanceBaseCents,
+                        mealAllowanceAmountCents,
+                        note,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        date,
+                        workStart,
+                        workEnd,
+                        breakMinutes,
+                        dayType,
+                        dayLocationLabel,
+                        morningCapturedAt,
+                        eveningCapturedAt,
+                        confirmedWorkDay,
+                        confirmationAt,
+                        confirmationSource,
+                        mealIsArrivalDeparture,
+                        mealBreakfastIncluded,
+                        mealAllowanceBaseCents,
+                        mealAllowanceAmountCents,
+                        note,
+                        createdAt,
+                        updatedAt
+                    FROM `work_entries`
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE `work_entries`")
+                db.execSQL("ALTER TABLE `work_entries_new` RENAME TO `work_entries`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -403,7 +615,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_9_10,
             MIGRATION_10_11,
             MIGRATION_11_12,
-            MIGRATION_12_13
+            MIGRATION_12_13,
+            MIGRATION_13_14
         )
     }
 }

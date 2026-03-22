@@ -59,7 +59,7 @@ class ReminderLaterWorker @AssistedInject constructor(
             settings: ReminderSettings
         ): Boolean {
             val entry = workEntryDao.getByDate(date)
-            val isAutoNonWorkingDay = entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings)
+            val isAutoNonWorkingDay = entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)
 
             return when (reminderType) {
                 ReminderType.MORNING -> !isAutoNonWorkingDay && WindowCheckWorker.shouldShowMorningReminder(entry)

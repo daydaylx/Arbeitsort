@@ -2,6 +2,7 @@ package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
@@ -50,6 +51,11 @@ class PdfUtilitiesAdditionalTest {
         travelArriveAt = travelArriveAt,
         travelPaidMinutes = travelPaidMinutes,
         confirmedWorkDay = confirmedWorkDay
+    )
+
+    private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(
+        workEntry = entry,
+        travelLegs = emptyList()
     )
 
     // -------------------------------------------------------------------------
@@ -128,12 +134,12 @@ class PdfUtilitiesAdditionalTest {
 
     @Test
     fun `sumWorkHours - leere Liste ergibt 0 Stunden`() {
-        assertEquals(0.0, PdfUtilities.sumWorkHours(emptyList()), 0.001)
+        assertEquals(0.0, PdfUtilities.sumWorkHours(emptyList<WorkEntry>()), 0.001)
     }
 
     @Test
     fun `sumWorkHours - Liste mit OFF-Tags ergibt 0 Stunden`() {
-        val offEntry = workEntry(dayType = DayType.OFF)
+        val offEntry = record(workEntry(dayType = DayType.OFF))
         assertEquals(0.0, PdfUtilities.sumWorkHours(listOf(offEntry)), 0.001)
     }
 
@@ -142,7 +148,7 @@ class PdfUtilitiesAdditionalTest {
         val workE = workEntry(dayType = DayType.WORK, confirmedWorkDay = true)
         val offE  = workEntry(dayType = DayType.OFF,  date = LocalDate.of(2026, 1, 16))
         // workE: 8:00–19:00 – 60 min Pause = 10.0 h; offE: 0 h
-        val sum = PdfUtilities.sumWorkHours(listOf(workE, offE))
+        val sum = PdfUtilities.sumWorkHours(listOf(record(workE), record(offE)))
         assertEquals(10.0, sum, 0.01)
     }
 
@@ -152,12 +158,12 @@ class PdfUtilitiesAdditionalTest {
 
     @Test
     fun `sumTravelMinutes - leere Liste ergibt 0`() {
-        assertEquals(0, PdfUtilities.sumTravelMinutes(emptyList()))
+        assertEquals(0, PdfUtilities.sumTravelMinutes(emptyList<WorkEntry>()))
     }
 
     @Test
     fun `sumTravelMinutes - Entry ohne travelPaidMinutes ergibt 0`() {
-        val entry = workEntry(travelPaidMinutes = null)
+        val entry = record(workEntry(travelPaidMinutes = null))
         assertEquals(0, PdfUtilities.sumTravelMinutes(listOf(entry)))
     }
 
@@ -167,14 +173,14 @@ class PdfUtilitiesAdditionalTest {
 
     @Test
     fun `filterWorkDays - leere Liste ergibt leere Liste`() {
-        assertTrue(PdfUtilities.filterWorkDays(emptyList()).isEmpty())
+        assertTrue(PdfUtilities.filterWorkDays(emptyList<WorkEntry>()).isEmpty())
     }
 
     @Test
     fun `filterWorkDays - nur OFF-Tags ergibt leere Liste`() {
         val entries = listOf(
-            workEntry(dayType = DayType.OFF, date = LocalDate.of(2026, 1, 15)),
-            workEntry(dayType = DayType.OFF, date = LocalDate.of(2026, 1, 16))
+            record(workEntry(dayType = DayType.OFF, date = LocalDate.of(2026, 1, 15))),
+            record(workEntry(dayType = DayType.OFF, date = LocalDate.of(2026, 1, 16)))
         )
         assertTrue(PdfUtilities.filterWorkDays(entries).isEmpty())
     }
@@ -182,9 +188,9 @@ class PdfUtilitiesAdditionalTest {
     @Test
     fun `filterWorkDays - alle WORK-Tags bleiben erhalten`() {
         val entries = listOf(
-            workEntry(date = LocalDate.of(2026, 1, 15)),
-            workEntry(date = LocalDate.of(2026, 1, 16)),
-            workEntry(date = LocalDate.of(2026, 1, 17))
+            record(workEntry(date = LocalDate.of(2026, 1, 15))),
+            record(workEntry(date = LocalDate.of(2026, 1, 16))),
+            record(workEntry(date = LocalDate.of(2026, 1, 17)))
         )
         assertEquals(3, PdfUtilities.filterWorkDays(entries).size)
     }

@@ -43,8 +43,6 @@ class ReminderFlagsStore @Inject constructor(
         val KEY_EVENING_DATES  = stringSetPreferencesKey("evening_reminded_dates")
         val KEY_FALLBACK_DATES = stringSetPreferencesKey("fallback_reminded_dates")
         val KEY_DAILY_DATES    = stringSetPreferencesKey("daily_reminded_dates")
-        @Deprecated("Use KEY_MIGRATION_DONE_V2")
-        val KEY_MIGRATION_DONE = stringSetPreferencesKey("_migration_done")
         val KEY_MIGRATION_DONE_V2 = booleanPreferencesKey("_migration_done_v2")
 
         // SP-Präfixe für die Migration
@@ -66,9 +64,7 @@ class ReminderFlagsStore @Inject constructor(
             if (migrationChecked) return@withLock
 
             val current = dataStore.data.first()
-            @Suppress("DEPRECATION")
-            if (current[KEY_MIGRATION_DONE_V2] == true ||
-                current[KEY_MIGRATION_DONE]?.contains("done") == true) {
+            if (current[KEY_MIGRATION_DONE_V2] == true) {
                 migrationChecked = true
                 return@withLock
             }

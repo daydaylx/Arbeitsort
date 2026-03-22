@@ -6,7 +6,6 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,10 +64,6 @@ class ReminderNotificationManagerTest {
         val actionIntent = Shadows.shadowOf(notification.actions.first().actionIntent).savedIntent
 
         assertEquals(ReminderActions.ACTION_MORNING_CHECK_IN, actionIntent.action)
-        assertNotEquals(
-            ReminderActions.LEGACY_ACTION_MORNING_CHECK_IN_WITH_LOCATION,
-            actionIntent.action
-        )
     }
 
     @Test
@@ -79,10 +74,6 @@ class ReminderNotificationManagerTest {
         val actionIntent = Shadows.shadowOf(notification.actions.first().actionIntent).savedIntent
 
         assertEquals(ReminderActions.ACTION_EVENING_CHECK_IN, actionIntent.action)
-        assertNotEquals(
-            ReminderActions.LEGACY_ACTION_EVENING_CHECK_IN_WITH_LOCATION,
-            actionIntent.action
-        )
     }
 
     @Test

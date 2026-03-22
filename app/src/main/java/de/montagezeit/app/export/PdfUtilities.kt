@@ -1,12 +1,12 @@
 package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
-import java.time.Instant
-import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -51,21 +51,38 @@ object PdfUtilities {
      * Formatiert Reisezeit von–bis (HH:mm–HH:mm)
      * Wenn Start/Ende fehlen: leerer String
      */
-    fun formatTravelWindow(startAt: Long?, arriveAt: Long?): String {
-        if (startAt == null || arriveAt == null) {
-            return ""
+    fun buildTravelRouteSummary(travelLegs: List<TravelLeg>): String {
+        if (travelLegs.isEmpty()) return ""
+        val routeLabels = mutableListOf<String>()
+        travelLegs.sortedBy(TravelLeg::sortOrder).forEach { leg ->
+            val startLabel = leg.startLabel?.trim().orEmpty()
+            val endLabel = leg.endLabel?.trim().orEmpty()
+            if (startLabel.isNotEmpty() && routeLabels.lastOrNull() != startLabel) {
+                routeLabels += startLabel
+            }
+            if (endLabel.isNotEmpty() && routeLabels.lastOrNull() != endLabel) {
+                routeLabels += endLabel
+            }
         }
-        val zoneId = ZoneId.systemDefault()
-        val startTime = Instant.ofEpochMilli(startAt).atZone(zoneId).toLocalTime()
-        val arriveTime = Instant.ofEpochMilli(arriveAt).atZone(zoneId).toLocalTime()
-        return "${formatTime(startTime)}–${formatTime(arriveTime)}"
+        return routeLabels.joinToString("→")
+    }
+
+    fun formatTravelWindow(startAt: Long?, arriveAt: Long?): String {
+        if (startAt == null || arriveAt == null) return ""
+        val start = java.time.Instant.ofEpochMilli(startAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime()
+        val arrive = java.time.Instant.ofEpochMilli(arriveAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime()
+        return "${formatTime(start)}–${formatTime(arrive)}"
     }
     
     /**
      * Formatiert LocalTime als String (HH:mm)
      */
-    fun formatTime(time: java.time.LocalTime): String {
-        return time.format(timeFormatter)
+    fun formatTime(time: java.time.LocalTime?): String {
+        return time?.format(timeFormatter) ?: ""
     }
     
     /**
@@ -79,8 +96,11 @@ object PdfUtilities {
      * Holt den Ort für einen WorkEntry.
      * Leere Labels werden übersprungen.
      */
-    fun getLocation(entry: WorkEntry): String {
-        return entry.dayLocationLabel.takeIf { it.isNotBlank() } ?: ""
+    fun getLocation(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): String {
+        return entry.dayLocationLabel.takeIf { it.isNotBlank() }
+            ?: travelLegs.asReversed().firstNotNullOfOrNull { it.endLabel?.takeIf(String::isNotBlank) }
+            ?: travelLegs.firstNotNullOfOrNull { it.startLabel?.takeIf(String::isNotBlank) }
+            ?: ""
     }
     
     /**
@@ -93,21 +113,33 @@ object PdfUtilities {
     /**
      * Berechnet die Summe der Arbeitsstunden für eine Liste von WorkEntries
      */
-    fun sumWorkHours(entries: List<WorkEntry>): Double {
-        return entries.sumOf { calculateWorkHours(it) }
+    fun sumWorkHours(entries: List<WorkEntryWithTravelLegs>): Double {
+        return entries.sumOf { calculateWorkHours(it.workEntry) }
+    }
+
+    fun sumWorkHours(entries: Collection<WorkEntry>): Double {
+        return entries.sumOf(::calculateWorkHours)
     }
     
     /**
      * Berechnet die Summe der Reisezeit in Minuten für eine Liste von WorkEntries
      */
-    fun sumTravelMinutes(entries: List<WorkEntry>): Int {
+    fun sumTravelMinutes(entries: List<WorkEntryWithTravelLegs>): Int {
+        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) }
+    }
+
+    fun sumTravelMinutes(entries: Collection<WorkEntry>): Int {
         return entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
     }
     
     /**
      * Filtert WORK-Tage aus einer Liste von WorkEntries
      */
-    fun filterWorkDays(entries: List<WorkEntry>): List<WorkEntry> {
+    fun filterWorkDays(entries: List<WorkEntryWithTravelLegs>): List<WorkEntryWithTravelLegs> {
+        return entries.filter { it.workEntry.dayType == DayType.WORK }
+    }
+
+    fun filterWorkDays(entries: Collection<WorkEntry>): List<WorkEntry> {
         return entries.filter { it.dayType == DayType.WORK }
     }
 }

@@ -1,8 +1,7 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.OvertimeEntryRow
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.TimeCalculator
 
 data class OvertimeResult(
@@ -16,7 +15,7 @@ data class OvertimeResult(
 
 class CalculateOvertimeForRange {
 
-    operator fun invoke(entries: List<OvertimeEntryRow>, dailyTargetHours: Double): OvertimeResult {
+    operator fun invoke(entries: List<WorkEntryWithTravelLegs>, dailyTargetHours: Double): OvertimeResult {
         if (entries.isEmpty()) {
             return OvertimeResult(
                 totalOvertimeHours = 0.0,
@@ -35,18 +34,17 @@ class CalculateOvertimeForRange {
         var offDayTravelDays = 0
 
         entries.forEach { entry ->
-            if (!entry.confirmedWorkDay) {
+            if (!entry.workEntry.confirmedWorkDay) {
                 return@forEach
             }
-            val workEntry = entry.toWorkEntry()
-            when (entry.dayType) {
+            when (entry.workEntry.dayType) {
                 DayType.WORK -> {
                     countedDays += 1
                     totalTargetHours += dailyTargetHours
-                    totalActualHours += TimeCalculator.calculatePaidTotalHours(workEntry)
+                    totalActualHours += TimeCalculator.calculatePaidTotalHours(entry.workEntry, entry.orderedTravelLegs)
                 }
                 DayType.OFF -> {
-                    val travelHours = TimeCalculator.calculateTravelMinutes(workEntry) / 60.0
+                    val travelHours = TimeCalculator.calculateTravelMinutes(entry.workEntry, entry.orderedTravelLegs) / 60.0
                     if (travelHours > 0.0) {
                         offDayTravelHours += travelHours
                         offDayTravelDays += 1
@@ -70,20 +68,4 @@ class CalculateOvertimeForRange {
             offDayTravelDays = offDayTravelDays
         )
     }
-}
-
-private fun OvertimeEntryRow.toWorkEntry(): WorkEntry {
-    return WorkEntry(
-        date = date,
-        workStart = workStart,
-        workEnd = workEnd,
-        breakMinutes = breakMinutes,
-        dayType = dayType,
-        travelStartAt = travelStartAt,
-        travelArriveAt = travelArriveAt,
-        travelPaidMinutes = travelPaidMinutes,
-        returnStartAt = returnStartAt,
-        returnArriveAt = returnArriveAt,
-        confirmedWorkDay = confirmedWorkDay
-    )
 }

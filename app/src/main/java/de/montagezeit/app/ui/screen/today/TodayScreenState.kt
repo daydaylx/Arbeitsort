@@ -22,7 +22,15 @@ data class TodayScreenState(
     val loadingActions: Set<TodayAction>
 ) {
     val currentEntry: WorkEntry?
-        get() = (uiState as? TodayUiState.Success)?.entry ?: selectedEntry
+        get() {
+            val successEntry = (uiState as? TodayUiState.Success)?.entry
+            return when {
+                successEntry != null -> successEntry
+                uiState is TodayUiState.Success -> null
+                selectedEntry?.date == selectedDate -> selectedEntry
+                else -> null
+            }
+        }
 
     val errorState: TodayUiState.Error?
         get() = uiState as? TodayUiState.Error
