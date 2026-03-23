@@ -7,6 +7,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
@@ -140,6 +141,15 @@ class TodayViewModel @Inject constructor(
             initialValue = null
         )
 
+    /** Tracks the selected date's entry with travel legs reactively. */
+    val selectedEntryWithTravel: StateFlow<WorkEntryWithTravelLegs?> = _selectedDate
+        .flatMapLatest { date -> workEntryDao.getByDateWithTravelFlow(date) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
     private val _weekStats = MutableStateFlow<WeekStats?>(null)
     val weekStats: StateFlow<WeekStats?> = _weekStats.asStateFlow()
 
@@ -233,7 +243,8 @@ class TodayViewModel @Inject constructor(
     private data class ScreenWeekMonthPart(
         val weekDaysUi: List<WeekDayUi>,
         val weekStats: WeekStats?,
-        val monthStats: MonthStats?
+        val monthStats: MonthStats?,
+        val selectedEntryWithTravel: WorkEntryWithTravelLegs?
     )
     private data class OvertimeDisplayPart(
         val isOvertimeConfigured: Boolean,
@@ -265,8 +276,8 @@ class TodayViewModel @Inject constructor(
         combine(uiState, selectedEntry, selectedDate, _todayDate, loadingActions) { ui, entry, date, today, loading ->
             ScreenCorePart(ui, entry, date, today, loading)
         },
-        combine(weekDaysUi, weekStats, monthStats) { days, week, month ->
-            ScreenWeekMonthPart(days, week, month)
+        combine(weekDaysUi, weekStats, monthStats, selectedEntryWithTravel) { days, week, month, entryWithTravel ->
+            ScreenWeekMonthPart(days, week, month, entryWithTravel)
         },
         combine(isOvertimeConfigured, overtimeYearDisplay, overtimeMonthDisplay, overtimeYearActualDisplay, overtimeYearTargetDisplay) { configured, year, month, actual, target ->
             OvertimeDisplayPart(configured, year, month, actual, target)
@@ -278,6 +289,7 @@ class TodayViewModel @Inject constructor(
         TodayScreenState(
             uiState = core.uiState,
             selectedEntry = core.selectedEntry,
+            selectedEntryWithTravel = weekMonth.selectedEntryWithTravel,
             selectedDate = core.selectedDate,
             todayDate = core.todayDate,
             weekDaysUi = weekMonth.weekDaysUi,

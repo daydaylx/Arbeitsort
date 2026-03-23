@@ -34,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -147,6 +148,7 @@ fun TodayScreenV2(
                     else -> {
                         TodayContentV2(
                             entry = screenState.currentEntry,
+                            travelLegs = screenState.currentTravelLegs,
                             selectedDate = screenState.selectedDate,
                             onEditDayLocation = {
                                 viewModel.openDayLocationDialog()
@@ -303,6 +305,7 @@ private fun StickyTodayActionBarV2(
 @Composable
 private fun TodayContentV2(
     entry: WorkEntry?,
+    travelLegs: List<TravelLeg>,
     selectedDate: LocalDate,
     onEditDayLocation: () -> Unit,
     onEditToday: () -> Unit
@@ -322,7 +325,7 @@ private fun TodayContentV2(
         )
 
         if (entry != null && entry.dayType == DayType.WORK) {
-            WorkHoursCardV2(entry = entry)
+            WorkHoursCardV2(entry = entry, travelLegs = travelLegs)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -513,12 +516,12 @@ private fun DayTypeRow(dayType: DayType) {
 }
 
 @Composable
-private fun WorkHoursCardV2(entry: WorkEntry) {
-    val (workMinutes, travelMinutes, totalMinutes) = remember(entry) {
+private fun WorkHoursCardV2(entry: WorkEntry, travelLegs: List<TravelLeg>) {
+    val (workMinutes, travelMinutes, totalMinutes) = remember(entry, travelLegs) {
         Triple(
             TimeCalculator.calculateWorkMinutes(entry),
-            TimeCalculator.calculateTravelMinutes(emptyList()),
-            TimeCalculator.calculatePaidTotalMinutes(entry)
+            TimeCalculator.calculateTravelMinutes(travelLegs),
+            TimeCalculator.calculatePaidTotalMinutes(entry, travelLegs)
         )
     }
 

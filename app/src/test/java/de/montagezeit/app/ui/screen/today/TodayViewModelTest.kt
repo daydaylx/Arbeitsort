@@ -20,6 +20,8 @@ import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -42,6 +44,7 @@ class TodayViewModelTest {
 
     private val testScheduler = TestCoroutineScheduler()
     private val mainDispatcher = UnconfinedTestDispatcher(testScheduler)
+    private val createdViewModels = mutableListOf<TodayViewModel>()
 
     @Before
     fun setup() {
@@ -50,6 +53,8 @@ class TodayViewModelTest {
 
     @After
     fun tearDown() {
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         Dispatchers.resetMain()
         io.mockk.clearAllMocks()
     }
@@ -971,6 +976,7 @@ class TodayViewModelTest {
         deleteDayEntry: DeleteDayEntry = DeleteDayEntry(workEntryDao)
     ): TodayViewModel {
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entriesWithTravel
+        every { workEntryDao.getByDateWithTravelFlow(any()) } returns flowOf(null)
         return TodayViewModel(
             workEntryDao = workEntryDao,
             recordDailyManualCheckIn = recordDailyManualCheckIn,
@@ -980,7 +986,7 @@ class TodayViewModelTest {
             reminderSettingsManager = settingsManager,
             deleteDayEntry = deleteDayEntry,
             nonWorkingDayChecker = mockk<NonWorkingDayChecker>(relaxed = true)
-        )
+        ).also { createdViewModels.add(it) }
     }
 
     private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(

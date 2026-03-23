@@ -1,11 +1,14 @@
 package de.montagezeit.app.ui.screen.today
 
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.time.LocalDate
 
 data class TodayScreenState(
     val uiState: TodayUiState,
     val selectedEntry: WorkEntry?,
+    val selectedEntryWithTravel: WorkEntryWithTravelLegs? = null,
     val selectedDate: LocalDate,
     val todayDate: LocalDate,
     val weekDaysUi: List<WeekDayUi>,
@@ -31,6 +34,9 @@ data class TodayScreenState(
                 else -> null
             }
         }
+
+    val currentTravelLegs: List<TravelLeg>
+        get() = selectedEntryWithTravel?.orderedTravelLegs ?: emptyList()
 
     val errorState: TodayUiState.Error?
         get() = uiState as? TodayUiState.Error
