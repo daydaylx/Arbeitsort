@@ -137,12 +137,14 @@ fun MZCard(
 fun MZCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     elevation: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

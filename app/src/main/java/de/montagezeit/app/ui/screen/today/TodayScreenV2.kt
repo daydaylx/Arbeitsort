@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -341,12 +342,9 @@ fun OvertimeCardV2(
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     MZCard(
-        modifier = Modifier
-            .clickable(
-                enabled = isConfigured,
-                onClick = { isExpanded = !isExpanded }
-            )
-            .animateContentSize()
+        onClick = { isExpanded = !isExpanded },
+        enabled = isConfigured,
+        modifier = Modifier.animateContentSize()
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(title = stringResource(R.string.overtime_title))
@@ -606,6 +604,7 @@ fun StatisticsDashboardCardV2(
     mealAllowanceCents: Int? = null,
     onOpenWeekView: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val status = when {
         isOverTarget -> StatusType.SUCCESS
         isUnderTarget -> StatusType.WARNING
@@ -613,10 +612,10 @@ fun StatisticsDashboardCardV2(
     }
 
     MZCard(
-        modifier = Modifier.clickableWithAccessibility(
-            onClick = onOpenWeekView,
-            contentDescription = stringResource(R.string.cd_open_statistics)
-        )
+        onClick = onOpenWeekView,
+        modifier = Modifier.semantics {
+            onClick(label = context.getString(R.string.cd_open_statistics), action = null)
+        }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(
