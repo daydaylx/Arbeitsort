@@ -432,6 +432,13 @@ private fun OverviewPeriodWheel(
     val periodLabels = periods.map { stringResource(it.labelRes) }
     val labelTextSizePx = with(LocalDensity.current) { 13.sp.toPx() }
     val selectedLabelTextSizePx = with(LocalDensity.current) { 14.sp.toPx() }
+    
+    val textPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -535,10 +542,8 @@ private fun OverviewPeriodWheel(
 
                 val textSize = if (isSelected) selectedLabelTextSizePx else labelTextSizePx
                 val textColor = if (isSelected) onPrimaryContainerColor else onSurfaceVariantColor
-                val textPaint = android.graphics.Paint().apply {
-                    isAntiAlias = true
+                textPaint.apply {
                     this.textSize = textSize
-                    textAlign = android.graphics.Paint.Align.CENTER
                     color = textColor.toArgb()
                     isFakeBoldText = isSelected
                 }

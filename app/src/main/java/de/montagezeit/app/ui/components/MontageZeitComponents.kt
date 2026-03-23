@@ -130,6 +130,37 @@ fun MZCard(
 }
 
 /**
+ * Vereinheitlichte Card-Komponente mit klickbarem Verhalten und korrekten Ripple-Effekten
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MZCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    elevation: Dp = 2.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+        ),
+        shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
+    ) {
+        Column(
+            modifier = Modifier.padding(AccessibilityDefaults.CardPadding),
+            content = content
+        )
+    }
+}
+
+/**
  * Card mit farbigem Header für Status-Anzeigen
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -452,12 +483,20 @@ fun MZEmptyState(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         icon?.let {
-            Icon(
-                imageVector = it,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         Text(
