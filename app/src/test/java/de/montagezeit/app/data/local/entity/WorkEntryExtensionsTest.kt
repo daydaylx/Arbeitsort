@@ -6,110 +6,21 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 class WorkEntryExtensionsTest {
 
     private val now = System.currentTimeMillis()
     private val date = LocalDate.now()
 
-    private fun baseEntry(
-        travelPaidMinutes: Int? = null,
-        travelStartAt: Long? = null,
-        travelArriveAt: Long? = null,
-        returnStartAt: Long? = null,
-        returnArriveAt: Long? = null
-    ) = WorkEntry(
-        date = date,
-        dayType = DayType.WORK,
-        dayLocationLabel = "Baustelle",
-        workStart = LocalTime.of(8, 0),
-        workEnd = LocalTime.of(17, 0),
-        breakMinutes = 60,
-        travelPaidMinutes = travelPaidMinutes,
-        travelStartAt = travelStartAt,
-        travelArriveAt = travelArriveAt,
-        returnStartAt = returnStartAt,
-        returnArriveAt = returnArriveAt
-    )
-
     @Test
-    fun `withTravelCleared setzt travelPaidMinutes auf null`() {
-        val entry = baseEntry(travelPaidMinutes = 120)
-        val cleared = entry.withTravelCleared()
-        assertNull(
-            "withTravelCleared muss travelPaidMinutes auf null setzen, nicht 0",
-            cleared.travelPaidMinutes
-        )
-    }
-
-    @Test
-    fun `withTravelCleared setzt travelPaidMinutes nicht auf 0`() {
-        val entry = baseEntry(travelPaidMinutes = 60)
-        val cleared = entry.withTravelCleared()
-        assertNull(cleared.travelPaidMinutes)
-        assertEquals(0 != cleared.travelPaidMinutes, true)
-    }
-
-    @Test
-    fun `withTravelCleared loescht Timestamps`() {
-        val start = epochOf(LocalTime.of(7, 0))
-        val arrive = epochOf(LocalTime.of(9, 0))
-        val returnStart = epochOf(LocalTime.of(17, 0))
-        val returnArrive = epochOf(LocalTime.of(18, 0))
-        val entry = baseEntry(
-            travelStartAt = start,
-            travelArriveAt = arrive,
-            returnStartAt = returnStart,
-            returnArriveAt = returnArrive
-        )
-        val cleared = entry.withTravelCleared()
-        assertNull(cleared.travelStartAt)
-        assertNull(cleared.travelArriveAt)
-        assertNull(cleared.returnStartAt)
-        assertNull(cleared.returnArriveAt)
-    }
-
-    @Test
-    fun `nach withTravelCleared koennen neue Timestamps wirken`() {
-        val entry = baseEntry(travelPaidMinutes = 60)
-        val cleared = entry.withTravelCleared()
-        val start = epochOf(LocalTime.of(7, 0))
-        val arrive = epochOf(LocalTime.of(9, 0))
-        val withTimestamps = cleared.also {
-            it.travelStartAt = start
-            it.travelArriveAt = arrive
-        }
-        val travelMin = de.montagezeit.app.domain.util.TimeCalculator.calculateTravelMinutes(withTimestamps)
-        assertEquals("Nach withTravelCleared müssen Timestamps ausgewertet werden, nicht blockiert", 120, travelMin)
-    }
-
-    @Test
-    fun `createConfirmedOffDayEntry hat travelPaidMinutes null`() {
-        val entry = createConfirmedOffDayEntry(
+    fun `withTravelCleared gibt denselben WorkEntry zurück (Reise liegt in TravelLegs)`() {
+        val entry = WorkEntry(
             date = date,
-            source = "TEST",
-            now = now,
-            fallbackDayLocationLabel = ""
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle"
         )
-        assertNull(
-            "createConfirmedOffDayEntry darf travelPaidMinutes nicht auf 0 setzen",
-            entry.travelPaidMinutes
-        )
-    }
-
-    @Test
-    fun `withConfirmedOffDay clearTravel nutzt null`() {
-        val entry = baseEntry(
-            travelPaidMinutes = 90,
-            returnStartAt = epochOf(LocalTime.of(17, 0)),
-            returnArriveAt = epochOf(LocalTime.of(18, 0))
-        )
-        val offDay = entry.withConfirmedOffDay(source = "TEST", now = now, fallbackDayLocationLabel = "")
-        assertNull(offDay.travelPaidMinutes)
-        assertNull(offDay.returnStartAt)
-        assertNull(offDay.returnArriveAt)
+        val cleared = entry.withTravelCleared()
+        assertEquals(entry, cleared)
     }
 
     @Test
@@ -173,16 +84,11 @@ class WorkEntryExtensionsTest {
     }
 
     @Test
-    fun `transitionToDayType clears travel and meal data for comp time`() {
+    fun `transitionToDayType clears meal data for comp time`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 3, 12),
             dayType = DayType.WORK,
             dayLocationLabel = "Baustelle",
-            travelStartAt = epochOf(LocalTime.of(7, 0)),
-            travelArriveAt = epochOf(LocalTime.of(8, 30)),
-            returnStartAt = epochOf(LocalTime.of(17, 0)),
-            returnArriveAt = epochOf(LocalTime.of(18, 0)),
-            travelPaidMinutes = 90,
             mealIsArrivalDeparture = true,
             mealBreakfastIncluded = true,
             mealAllowanceBaseCents = 1400,
@@ -194,11 +100,6 @@ class WorkEntryExtensionsTest {
         assertEquals(DayType.COMP_TIME, result.dayType)
         assertTrue(result.confirmedWorkDay)
         assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
-        assertNull(result.travelStartAt)
-        assertNull(result.travelArriveAt)
-        assertNull(result.returnStartAt)
-        assertNull(result.returnArriveAt)
-        assertNull(result.travelPaidMinutes)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceAmountCents)
@@ -221,7 +122,4 @@ class WorkEntryExtensionsTest {
         assertNull(result.confirmationAt)
         assertNull(result.confirmationSource)
     }
-
-    private fun epochOf(time: LocalTime): Long =
-        date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }

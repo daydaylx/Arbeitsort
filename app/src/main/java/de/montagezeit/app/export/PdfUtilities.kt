@@ -128,9 +128,6 @@ object PdfUtilities {
         return entries.sumOf { TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) }
     }
 
-    fun sumTravelMinutes(entries: Collection<WorkEntry>): Int {
-        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it) }
-    }
     
     /**
      * Filtert WORK-Tage aus einer Liste von WorkEntries

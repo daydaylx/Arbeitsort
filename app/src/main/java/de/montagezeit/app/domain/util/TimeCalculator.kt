@@ -33,16 +33,9 @@ object TimeCalculator {
         return travelLegs.sumOf(::calculateTravelLegMinutes)
     }
 
-    /**
-     * Kompatibilitäts-Overload für bestehende Call-Sites.
-     */
     @Suppress("UNUSED_PARAMETER")
     fun calculateTravelMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
-        return if (travelLegs.isNotEmpty()) {
-            calculateTravelMinutes(travelLegs)
-        } else {
-            calculateLegacyTravelMinutes(entry)
-        }
+        return calculateTravelMinutes(travelLegs)
     }
 
     /**
@@ -93,20 +86,4 @@ object TimeCalculator {
         return leg.paidMinutesOverride?.coerceAtLeast(0) ?: 0
     }
 
-    private fun calculateLegacyTravelMinutes(entry: WorkEntry): Int {
-        val outbound = calculateLegacyWindowMinutes(entry.travelStartAt, entry.travelArriveAt)
-        val returnMinutes = calculateLegacyWindowMinutes(entry.returnStartAt, entry.returnArriveAt)
-        return if (outbound > 0 || returnMinutes > 0) {
-            outbound + returnMinutes
-        } else {
-            entry.travelPaidMinutes?.coerceAtLeast(0) ?: 0
-        }
-    }
-
-    private fun calculateLegacyWindowMinutes(startAt: Long?, arriveAt: Long?): Int {
-        if (startAt == null || arriveAt == null) return 0
-        var diffMs = arriveAt - startAt
-        if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
-        return (diffMs / 60_000L).toInt().coerceAtLeast(0)
-    }
 }

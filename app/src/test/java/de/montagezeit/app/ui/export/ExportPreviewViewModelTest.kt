@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.export
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.ui.screen.export.buildExportPreviewRow
@@ -14,10 +15,12 @@ import java.time.LocalTime
 
 class ExportPreviewViewModelTest {
 
-    private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(
-        workEntry = entry,
-        travelLegs = emptyList()
-    )
+    private fun record(entry: WorkEntry, travelMinutes: Int = 0): WorkEntryWithTravelLegs {
+        val legs = if (travelMinutes > 0) listOf(
+            TravelLeg(workEntryDate = entry.date, sortOrder = 0, paidMinutesOverride = travelMinutes)
+        ) else emptyList()
+        return WorkEntryWithTravelLegs(workEntry = entry, travelLegs = legs)
+    }
 
     @Test
     fun `calculatePreviewSummary sums work travel and paid minutes`() {
@@ -28,22 +31,20 @@ class ExportPreviewViewModelTest {
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(18, 0),
                 breakMinutes = 60,
-                travelPaidMinutes = 60,
                 mealAllowanceAmountCents = 820,
                 confirmedWorkDay = true,
                 confirmationAt = System.currentTimeMillis()
-            )),
+            ), travelMinutes = 60),
             record(WorkEntry(
                 date = LocalDate.of(2026, 1, 11),
                 dayType = DayType.WORK,
                 workStart = LocalTime.of(7, 30),
                 workEnd = LocalTime.of(16, 0),
                 breakMinutes = 30,
-                travelPaidMinutes = 30,
                 mealAllowanceAmountCents = 2220,
                 confirmedWorkDay = true,
                 confirmationAt = System.currentTimeMillis()
-            ))
+            ), travelMinutes = 30)
         )
 
         val summary = calculatePreviewSummary(entries)

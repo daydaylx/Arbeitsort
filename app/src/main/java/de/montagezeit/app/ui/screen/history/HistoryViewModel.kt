@@ -13,8 +13,8 @@ import de.montagezeit.app.data.local.entity.confirmationStateForDayType
 import de.montagezeit.app.data.local.entity.withMealAllowanceCleared
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
-import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -204,24 +204,17 @@ class HistoryViewModel @Inject constructor(
             .sortedByDescending { it.year * 100 + it.month }
     }
 
-    private fun calculateGroupStats(entries: List<WorkEntryWithTravelLegs>): HistoryGroupStats {
-        // Nur bestätigte Einträge für Stunden und Tage zählen – konsistent mit CalculateOvertimeForRange
-        // und TodayViewModel.calculateWeekStats/calculateMonthStats.
-        val confirmedEntries = entries.filter { it.workEntry.confirmedWorkDay }
-        val workDaysCount = confirmedEntries.count { it.workEntry.dayType == DayType.WORK }
-        val offDaysCount = confirmedEntries.count { it.workEntry.dayType == DayType.OFF }
-        val totalHours = confirmedEntries.sumOf { TimeCalculator.calculateWorkHours(it.workEntry) }
-        val totalPaidHours = confirmedEntries.sumOf { TimeCalculator.calculatePaidTotalHours(it.workEntry, it.orderedTravelLegs) }
-        val averageHoursPerDay = if (workDaysCount > 0) totalHours / workDaysCount else 0.0
-        val totalTravelMinutes = confirmedEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
+    private val aggregateWorkStats = AggregateWorkStats()
 
+    private fun calculateGroupStats(entries: List<WorkEntryWithTravelLegs>): HistoryGroupStats {
+        val stats = aggregateWorkStats(entries)
         return HistoryGroupStats(
-            workDaysCount = workDaysCount,
-            offDaysCount = offDaysCount,
-            totalHours = totalHours,
-            totalPaidHours = totalPaidHours,
-            averageHoursPerDay = averageHoursPerDay,
-            totalTravelMinutes = totalTravelMinutes
+            workDaysCount = stats.workDays,
+            offDaysCount = stats.offDays,
+            totalHours = stats.totalWorkMinutes / 60.0,
+            totalPaidHours = stats.totalPaidMinutes / 60.0,
+            averageHoursPerDay = stats.averageWorkHoursPerDay,
+            totalTravelMinutes = stats.totalTravelMinutes
         )
     }
 

@@ -2,8 +2,8 @@ package de.montagezeit.app.ui.screen.overview
 
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
-import de.montagezeit.app.domain.util.TimeCalculator
 import java.time.LocalDate
 import java.time.temporal.WeekFields
 
@@ -52,19 +52,15 @@ internal fun buildOverviewMetrics(
     entries: List<WorkEntryWithTravelLegs>,
     settings: ReminderSettings
 ): OverviewMetrics {
-    val confirmedEntries = entries.filter { it.workEntry.confirmedWorkDay }
+    val stats = AggregateWorkStats()(entries)
     val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours)
 
     return OverviewMetrics(
         overtimeHours = overtime.totalOvertimeHours,
         targetHours = targetHoursForPeriod(period, settings),
-        actualHours = confirmedEntries.sumOf {
-            TimeCalculator.calculatePaidTotalHours(it.workEntry, it.orderedTravelLegs)
-        },
-        travelHours = confirmedEntries.sumOf {
-            TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) / 60.0
-        },
-        mealAllowanceCents = confirmedEntries.sumOf { it.workEntry.mealAllowanceAmountCents },
+        actualHours = stats.totalPaidMinutes / 60.0,
+        travelHours = stats.totalTravelMinutes / 60.0,
+        mealAllowanceCents = stats.mealAllowanceCents,
         countedDays = overtime.countedDays
     )
 }

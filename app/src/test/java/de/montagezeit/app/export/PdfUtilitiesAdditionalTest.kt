@@ -36,9 +36,6 @@ class PdfUtilitiesAdditionalTest {
         date: LocalDate = LocalDate.of(2026, 1, 15),
         dayType: DayType = DayType.WORK,
         morningCapturedAt: Long? = null,
-        travelStartAt: Long? = null,
-        travelArriveAt: Long? = null,
-        travelPaidMinutes: Int? = null,
         confirmedWorkDay: Boolean = false
     ) = WorkEntry(
         date = date,
@@ -47,9 +44,6 @@ class PdfUtilitiesAdditionalTest {
         workEnd = LocalTime.of(19, 0),
         breakMinutes = 60,
         morningCapturedAt = morningCapturedAt,
-        travelStartAt = travelStartAt,
-        travelArriveAt = travelArriveAt,
-        travelPaidMinutes = travelPaidMinutes,
         confirmedWorkDay = confirmedWorkDay
     )
 
@@ -158,12 +152,12 @@ class PdfUtilitiesAdditionalTest {
 
     @Test
     fun `sumTravelMinutes - leere Liste ergibt 0`() {
-        assertEquals(0, PdfUtilities.sumTravelMinutes(emptyList<WorkEntry>()))
+        assertEquals(0, PdfUtilities.sumTravelMinutes(emptyList<WorkEntryWithTravelLegs>()))
     }
 
     @Test
-    fun `sumTravelMinutes - Entry ohne travelPaidMinutes ergibt 0`() {
-        val entry = record(workEntry(travelPaidMinutes = null))
+    fun `sumTravelMinutes - Entry ohne TravelLegs ergibt 0`() {
+        val entry = record(workEntry())
         assertEquals(0, PdfUtilities.sumTravelMinutes(listOf(entry)))
     }
 

@@ -3,6 +3,7 @@ package de.montagezeit.app.ui.screen.today
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import java.time.LocalDate
@@ -46,33 +47,22 @@ fun buildWeekDayUi(
 }
 
 fun calculateWeekStats(entries: List<WorkEntryWithTravelLegs>, targetHours: Double): WeekStats {
-    val workEntries = entries.filter { it.workEntry.dayType == DayType.WORK && it.workEntry.confirmedWorkDay }
-    val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it.workEntry) }
-    val totalPaidHours = workEntries.sumOf {
-        TimeCalculator.calculatePaidTotalHours(it.workEntry, it.orderedTravelLegs)
-    }
-
+    val stats = AggregateWorkStats()(entries)
     return WeekStats(
-        totalHours = totalHours,
-        totalPaidHours = totalPaidHours,
-        workDaysCount = workEntries.size,
+        totalHours = stats.totalWorkMinutes / 60.0,
+        totalPaidHours = stats.totalPaidMinutes / 60.0,
+        workDaysCount = stats.workDays,
         targetHours = targetHours
     )
 }
 
 fun calculateMonthStats(entries: List<WorkEntryWithTravelLegs>, targetHours: Double): MonthStats {
-    val workEntries = entries.filter { it.workEntry.dayType == DayType.WORK && it.workEntry.confirmedWorkDay }
-    val totalHours = workEntries.sumOf { TimeCalculator.calculateWorkHours(it.workEntry) }
-    val totalPaidHours = workEntries.sumOf {
-        TimeCalculator.calculatePaidTotalHours(it.workEntry, it.orderedTravelLegs)
-    }
-    val mealAllowanceTotalCents = workEntries.sumOf { it.workEntry.mealAllowanceAmountCents }
-
+    val stats = AggregateWorkStats()(entries)
     return MonthStats(
-        totalHours = totalHours,
-        totalPaidHours = totalPaidHours,
-        workDaysCount = workEntries.size,
+        totalHours = stats.totalWorkMinutes / 60.0,
+        totalPaidHours = stats.totalPaidMinutes / 60.0,
+        workDaysCount = stats.workDays,
         targetHours = targetHours,
-        mealAllowanceTotalCents = mealAllowanceTotalCents
+        mealAllowanceTotalCents = stats.mealAllowanceCents
     )
 }

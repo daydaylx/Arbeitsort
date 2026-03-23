@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.util
 
-import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.TravelLeg
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -14,65 +14,60 @@ class TimeCalculatorMidnightTest {
     private fun epochOf(time: LocalTime): Long =
         date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    private fun entryWithTravel(start: LocalTime, arrive: LocalTime) = WorkEntry(
-        date = date,
-        travelStartAt = epochOf(start),
-        travelArriveAt = epochOf(arrive)
+    private fun legWithTimestamps(start: LocalTime, arrive: LocalTime) = TravelLeg(
+        workEntryDate = date,
+        sortOrder = 0,
+        startAt = epochOf(start),
+        arriveAt = epochOf(arrive)
     )
 
     @Test
     fun `normal travel within day returns correct minutes`() {
-        val entry = entryWithTravel(LocalTime.of(8, 0), LocalTime.of(17, 0))
-        assertEquals(540, TimeCalculator.calculateTravelMinutes(entry))
+        val leg = legWithTimestamps(LocalTime.of(8, 0), LocalTime.of(17, 0))
+        assertEquals(540, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
     fun `overnight travel crossing midnight returns correct minutes`() {
         // 23:00 → 01:00 = 120 min
-        val entry = entryWithTravel(LocalTime.of(23, 0), LocalTime.of(1, 0))
-        assertEquals(120, TimeCalculator.calculateTravelMinutes(entry))
+        val leg = legWithTimestamps(LocalTime.of(23, 0), LocalTime.of(1, 0))
+        assertEquals(120, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
     fun `short overnight travel crossing midnight returns correct minutes`() {
         // 23:50 → 00:10 = 20 min
-        val entry = entryWithTravel(LocalTime.of(23, 50), LocalTime.of(0, 10))
-        assertEquals(20, TimeCalculator.calculateTravelMinutes(entry))
+        val leg = legWithTimestamps(LocalTime.of(23, 50), LocalTime.of(0, 10))
+        assertEquals(20, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
-    fun `calculated timestamps take priority over travelPaidMinutes`() {
-        val entry = WorkEntry(
-            date = date,
-            travelStartAt = epochOf(LocalTime.of(8, 0)),
-            travelArriveAt = epochOf(LocalTime.of(9, 0)),
-            travelPaidMinutes = 999
+    fun `timestamp leg takes priority over paidMinutesOverride`() {
+        val leg = TravelLeg(
+            workEntryDate = date,
+            sortOrder = 0,
+            startAt = epochOf(LocalTime.of(8, 0)),
+            arriveAt = epochOf(LocalTime.of(9, 0)),
+            paidMinutesOverride = 999
         )
-        assertEquals(60, TimeCalculator.calculateTravelMinutes(entry))
+        // When startAt and arriveAt are set, timestamps are used (paidMinutesOverride ignored)
+        assertEquals(60, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
-    fun `negative travelPaidMinutes are clamped to zero`() {
-        val entry = WorkEntry(
-            date = date,
-            travelPaidMinutes = -15
-        )
-        assertEquals(0, TimeCalculator.calculateTravelMinutes(entry))
+    fun `negative paidMinutesOverride is clamped to zero`() {
+        val leg = TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = -15)
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
-    fun `travelPaidMinutes remain fallback without complete timestamps`() {
-        val entry = WorkEntry(
-            date = date,
-            travelStartAt = epochOf(LocalTime.of(8, 0)),
-            travelPaidMinutes = 45
-        )
-        assertEquals(45, TimeCalculator.calculateTravelMinutes(entry))
+    fun `paidMinutesOverride used when no timestamps set`() {
+        val leg = TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = 45)
+        assertEquals(45, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
-    fun `no travel fields returns zero`() {
-        val entry = WorkEntry(date = date)
-        assertEquals(0, TimeCalculator.calculateTravelMinutes(entry))
+    fun `no travel legs returns zero`() {
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(emptyList()))
     }
 }

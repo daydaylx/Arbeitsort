@@ -2,6 +2,8 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import io.mockk.*
@@ -13,47 +15,59 @@ import java.time.LocalDate
 import org.junit.Assert.*
 
 class SetTravelEventTest {
-    
+
     private lateinit var workEntryDao: WorkEntryDao
     private lateinit var setTravelEvent: SetTravelEvent
-    
+
     @Before
     fun setup() {
         workEntryDao = mockk(relaxed = true)
         setTravelEvent = SetTravelEvent(workEntryDao)
     }
-    
+
     @After
     fun tearDown() {
         unmockkAll()
     }
-    
+
     @Test
-    fun `invoke - START - Neuer Eintrag - Erstellt Entry mit travelStartAt`() = runTest {
-        // Arrange
+    fun `invoke - START - Neuer Eintrag - Erstellt TravelLeg mit startAt`() = runTest {
         val date = LocalDate.now()
         val timestamp = 1000000L
         val label = "Dresden"
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry = null)
-        
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, label)
-        
-        // Assert
-        assertEquals(date, result.date)
-        assertEquals(timestamp, result.travelStartAt)
-        assertEquals(label, result.travelLabelStart)
-        assertNull(result.travelArriveAt)
-        assertNull(result.travelLabelEnd)
-        assertNotNull(result.createdAt)
-        
-        coVerify { workEntryDao.upsert(result) }
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns emptyList()
+
+        setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, label)
+
+        coVerify {
+            workEntryDao.replaceEntryWithTravelLegs(
+                any(),
+                match { legs ->
+                    legs.size == 1 &&
+                    legs[0].startAt == timestamp &&
+                    legs[0].startLabel == label &&
+                    legs[0].source == TravelSource.MANUAL
+                }
+            )
+        }
     }
-    
+
     @Test
-    fun `invoke - START - Existierender Eintrag - Aktualisiert travelStartAt`() = runTest {
-        // Arrange
+    fun `invoke - START - Erstellt WorkEntry wenn keiner existiert`() = runTest {
+        val date = LocalDate.now()
+        val timestamp = 1000000L
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns emptyList()
+
+        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, null)
+
+        assertEquals(date, result.date)
+        assertNotNull(result.createdAt)
+    }
+
+    @Test
+    fun `invoke - START - Existierender Eintrag - Erhöht updatedAt`() = runTest {
         val date = LocalDate.now()
         val existingEntry = WorkEntry(
             date = date,
@@ -62,137 +76,101 @@ class SetTravelEventTest {
             updatedAt = 1000000L
         )
         val timestamp = 2000000L
-        val label = "Dresden"
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry)
-        
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, label)
-        
-        // Assert
-        assertEquals(timestamp, result.travelStartAt)
-        assertEquals(label, result.travelLabelStart)
-        assertNull(result.travelPaidMinutes)
-        assertEquals(TravelSource.MANUAL, result.travelSource)
-        assertNotNull(result.travelUpdatedAt)
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns emptyList()
+
+        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, null)
+
         assertEquals(existingEntry.createdAt, result.createdAt)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
-        
-        coVerify { workEntryDao.upsert(result) }
     }
-    
+
     @Test
-    fun `invoke - ARRIVE - Neuer Eintrag - Erstellt Entry mit travelArriveAt`() = runTest {
-        // Arrange
+    fun `invoke - ARRIVE - Erstellt TravelLeg mit arriveAt`() = runTest {
         val date = LocalDate.now()
         val timestamp = 2000000L
-        val label = "Dresden"
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry = null)
-        
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, label)
-        
-        // Assert
-        assertEquals(date, result.date)
-        assertEquals(timestamp, result.travelArriveAt)
-        assertEquals(label, result.travelLabelEnd)
-        assertNull(result.travelStartAt)
-        assertNull(result.travelLabelStart)
-        
-        coVerify { workEntryDao.upsert(result) }
+        val label = "Berlin"
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns emptyList()
+
+        setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, label)
+
+        coVerify {
+            workEntryDao.replaceEntryWithTravelLegs(
+                any(),
+                match { legs ->
+                    legs.size == 1 &&
+                    legs[0].arriveAt == timestamp &&
+                    legs[0].endLabel == label &&
+                    legs[0].source == TravelSource.MANUAL
+                }
+            )
+        }
     }
-    
+
     @Test
-    fun `invoke - ARRIVE - Existierender Eintrag - Aktualisiert travelArriveAt`() = runTest {
-        // Arrange
+    fun `invoke - ARRIVE - Behält vorhandene startAt eines existierenden Legs`() = runTest {
         val date = LocalDate.now()
-        val existingEntry = WorkEntry(
-            date = date,
-            dayType = DayType.WORK,
-            travelStartAt = 1000000L,
-            travelLabelStart = "Dresden",
-            createdAt = 1000000L,
-            updatedAt = 1000000L
+        val existingLeg = TravelLeg(
+            workEntryDate = date,
+            sortOrder = 0,
+            category = TravelLegCategory.OUTBOUND,
+            startAt = 1000000L,
+            startLabel = "Dresden",
+            source = TravelSource.MANUAL
         )
         val timestamp = 2000000L
-        val label = "Dresden"
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry)
-        
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, label)
-        
-        // Assert
-        assertEquals(timestamp, result.travelArriveAt)
-        assertEquals(label, result.travelLabelEnd)
-        assertNull(result.travelPaidMinutes)
-        assertEquals(TravelSource.MANUAL, result.travelSource)
-        assertNotNull(result.travelUpdatedAt)
-        assertEquals(existingEntry.travelStartAt, result.travelStartAt) // Behält Start
-        assertEquals(existingEntry.travelLabelStart, result.travelLabelStart) // Behält Start Label
-        
-        coVerify { workEntryDao.upsert(result) }
+        coEvery { workEntryDao.getByDate(date) } returns WorkEntry(date = date)
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns listOf(existingLeg)
+
+        setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, timestamp, "Berlin")
+
+        coVerify {
+            workEntryDao.replaceEntryWithTravelLegs(
+                any(),
+                match { legs ->
+                    legs.size == 1 &&
+                    legs[0].startAt == existingLeg.startAt &&
+                    legs[0].arriveAt == timestamp
+                }
+            )
+        }
     }
-    
+
     @Test
-    fun `invoke - Ohne Label - Setzt null für Label`() = runTest {
-        // Arrange
+    fun `invoke - Neues Leg bekommt OUTBOUND als Kategorie`() = runTest {
         val date = LocalDate.now()
-        val timestamp = 1000000L
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry = null)
-        
-        // Act
-        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, timestamp, null)
-        
-        // Assert
-        assertEquals(timestamp, result.travelStartAt)
-        assertNull(result.travelLabelStart)
-        
-        coVerify { workEntryDao.upsert(result) }
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns emptyList()
+
+        setTravelEvent.invoke(date, SetTravelEvent.TravelType.START, 1000000L, null)
+
+        coVerify {
+            workEntryDao.replaceEntryWithTravelLegs(
+                any(),
+                match { legs -> legs[0].category == TravelLegCategory.OUTBOUND }
+            )
+        }
     }
-    
+
     @Test
-    fun `clearTravelEvents - Löscht alle Travel-Informationen`() = runTest {
-        // Arrange
+    fun `clearTravelEvents - Loescht alle TravelLegs`() = runTest {
         val date = LocalDate.now()
-        val existingEntry = WorkEntry(
-            date = date,
-            dayType = DayType.WORK,
-            travelStartAt = 1000000L,
-            travelArriveAt = 2000000L,
-            travelLabelStart = "Dresden",
-            travelLabelEnd = "Berlin",
-            createdAt = 1000000L,
-            updatedAt = 1000000L
-        )
-        coEvery { workEntryDao.upsert(any()) } just Runs
-        stubReadModifyWrite(workEntryDao, existingEntry)
-        
-        // Act
+        val existingEntry = WorkEntry(date = date, dayType = DayType.WORK, createdAt = 1000000L, updatedAt = 1000000L)
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+
         val result = setTravelEvent.clearTravelEvents(date)
-        
-        // Assert
-        assertNull(result.travelStartAt)
-        assertNull(result.travelArriveAt)
-        assertNull(result.travelLabelStart)
-        assertNull(result.travelLabelEnd)
-        assertNull(result.travelSource)
-        assertNotNull(result.travelUpdatedAt)
+
         assertEquals(existingEntry.dayType, result.dayType)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
-        
-        coVerify { workEntryDao.upsert(result) }
+        coVerify { workEntryDao.replaceEntryWithTravelLegs(result, emptyList()) }
     }
-    
+
     @Test(expected = IllegalArgumentException::class)
     fun `clearTravelEvents - Nicht existierender Eintrag - Wirft Exception`() = runTest {
-        // Arrange
         val date = LocalDate.now()
-        stubReadModifyWrite(workEntryDao, existingEntry = null)
-        
-        // Act
+        coEvery { workEntryDao.getByDate(date) } returns null
+
         setTravelEvent.clearTravelEvents(date)
     }
 }

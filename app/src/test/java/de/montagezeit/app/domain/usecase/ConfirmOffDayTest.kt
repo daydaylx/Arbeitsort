@@ -17,7 +17,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -51,7 +50,6 @@ class ConfirmOffDayTest {
 
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("", result.dayLocationLabel)
-        assertNull(result.travelPaidMinutes)
         assertEquals(true, result.confirmedWorkDay)
         assertNotNull(result.confirmationAt)
         assertEquals("TEST", result.confirmationSource)
@@ -65,13 +63,7 @@ class ConfirmOffDayTest {
         val existing = WorkEntry(
             date = date,
             dayType = DayType.WORK,
-            dayLocationLabel = "Berlin",
-            travelStartAt = 1000L,
-            travelArriveAt = 2000L,
-            travelFromLabel = "A",
-            travelToLabel = "B",
-            travelDistanceKm = 12.3,
-            travelPaidMinutes = 45
+            dayLocationLabel = "Berlin"
         )
 
         coEvery { workEntryDao.upsert(any()) } returns Unit
@@ -81,12 +73,6 @@ class ConfirmOffDayTest {
 
         assertEquals(DayType.OFF, result.dayType)
         assertEquals("Berlin", result.dayLocationLabel)
-        assertNull(result.travelStartAt)
-        assertNull(result.travelArriveAt)
-        assertNull(result.travelFromLabel)
-        assertNull(result.travelToLabel)
-        assertNull(result.travelDistanceKm)
-        assertNull(result.travelPaidMinutes)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)

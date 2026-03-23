@@ -1,9 +1,12 @@
 package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import org.junit.Assert.*
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalTime
 
 /**
@@ -253,50 +256,46 @@ class PdfUtilitiesTest {
     
     @Test
     fun `sumTravelMinutes - mehrere Einträge`() {
-        val entries = listOf(
-            WorkEntry(
-                date = java.time.LocalDate.of(2026, 1, 15),
+        fun entryWithTravel(date: LocalDate, travelMinutes: Int) = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
                 dayType = DayType.WORK,
                 workStart = LocalTime.of(8, 0),
                 workEnd = LocalTime.of(19, 0),
                 breakMinutes = 60,
-                travelPaidMinutes = 60,
-                confirmedWorkDay = true,
-                confirmationAt = System.currentTimeMillis()
+                confirmedWorkDay = true
             ),
-            WorkEntry(
-                date = java.time.LocalDate.of(2026, 1, 16),
-                dayType = DayType.WORK,
-                workStart = LocalTime.of(8, 0),
-                workEnd = LocalTime.of(19, 0),
-                breakMinutes = 60,
-                travelPaidMinutes = 30,
-                confirmedWorkDay = true,
-                confirmationAt = System.currentTimeMillis()
-            )
+            travelLegs = listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = travelMinutes))
         )
-        
+        val entries = listOf(
+            entryWithTravel(LocalDate.of(2026, 1, 15), 60),
+            entryWithTravel(LocalDate.of(2026, 1, 16), 30)
+        )
+
         val sum = PdfUtilities.sumTravelMinutes(entries)
-        
+
         assertEquals(90, sum)
     }
     
     @Test
     fun `sumTravelMinutes - ohne Reisezeit`() {
         val entries = listOf(
-            WorkEntry(
-                date = java.time.LocalDate.of(2026, 1, 15),
-                dayType = DayType.WORK,
-                workStart = LocalTime.of(8, 0),
-                workEnd = LocalTime.of(19, 0),
-                breakMinutes = 60,
-                confirmedWorkDay = true,
-                confirmationAt = System.currentTimeMillis()
+            WorkEntryWithTravelLegs(
+                workEntry = WorkEntry(
+                    date = java.time.LocalDate.of(2026, 1, 15),
+                    dayType = DayType.WORK,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(19, 0),
+                    breakMinutes = 60,
+                    confirmedWorkDay = true,
+                    confirmationAt = System.currentTimeMillis()
+                ),
+                travelLegs = emptyList()
             )
         )
-        
+
         val sum = PdfUtilities.sumTravelMinutes(entries)
-        
+
         assertEquals(0, sum)
     }
     

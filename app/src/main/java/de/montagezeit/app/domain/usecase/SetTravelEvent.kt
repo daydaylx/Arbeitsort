@@ -5,9 +5,6 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.local.entity.copyWithLegacyTravel
-import de.montagezeit.app.data.local.entity.withLegacyTravelFrom
-import de.montagezeit.app.data.local.entity.withTravelCleared
 import java.time.LocalDate
 
 /**
@@ -43,34 +40,8 @@ class SetTravelEvent(
         label: String? = null
     ): WorkEntry {
         val now = System.currentTimeMillis()
-        var entry: WorkEntry? = null
-        workEntryDao.readModifyWrite(date) { existingEntry ->
-            val baseEntry = existingEntry?.copy(updatedAt = now)?.withLegacyTravelFrom(existingEntry)
-                ?: WorkEntry(
-                    date = date,
-                    createdAt = now,
-                    updatedAt = now
-                )
-            val updatedEntry = when (type) {
-                TravelType.START -> baseEntry.copyWithLegacyTravel(
-                    travelStartAt = timestamp,
-                    travelLabelStart = label,
-                    travelPaidMinutes = null,
-                    travelSource = TravelSource.MANUAL,
-                    travelUpdatedAt = now
-                )
-                TravelType.ARRIVE -> baseEntry.copyWithLegacyTravel(
-                    travelArriveAt = timestamp,
-                    travelLabelEnd = label,
-                    travelPaidMinutes = null,
-                    travelSource = TravelSource.MANUAL,
-                    travelUpdatedAt = now
-                )
-            }
-            entry = updatedEntry
-            updatedEntry
-        }
-        val updatedEntry = requireNotNull(entry)
+        val baseEntry = workEntryDao.getByDate(date)?.copy(updatedAt = now)
+            ?: WorkEntry(date = date, createdAt = now, updatedAt = now)
         val existingLegs = workEntryDao.getTravelLegsByDate(date)
         val baseLeg = existingLegs.firstOrNull() ?: TravelLeg(
             workEntryDate = date,
@@ -94,8 +65,8 @@ class SetTravelEvent(
             )
         }
         val remainingLegs = existingLegs.drop(1)
-        workEntryDao.replaceEntryWithTravelLegs(updatedEntry, listOf(updatedLeg) + remainingLegs)
-        return updatedEntry
+        workEntryDao.replaceEntryWithTravelLegs(baseEntry, listOf(updatedLeg) + remainingLegs)
+        return baseEntry
     }
     
     /**
@@ -106,16 +77,10 @@ class SetTravelEvent(
      */
     suspend fun clearTravelEvents(date: LocalDate): WorkEntry {
         val now = System.currentTimeMillis()
-        var updated: WorkEntry? = null
-        workEntryDao.readModifyWrite(date) { current ->
-            val existing = current ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
-            existing.withTravelCleared()
-                .copy(updatedAt = now)
-                .copyWithLegacyTravel(travelUpdatedAt = now)
-                .also { updated = it }
-        }
-        val clearedEntry = requireNotNull(updated)
-        workEntryDao.replaceEntryWithTravelLegs(clearedEntry, emptyList())
-        return clearedEntry
+        val existing = workEntryDao.getByDate(date)
+            ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
+        val cleared = existing.copy(updatedAt = now)
+        workEntryDao.replaceEntryWithTravelLegs(cleared, emptyList())
+        return cleared
     }
 }

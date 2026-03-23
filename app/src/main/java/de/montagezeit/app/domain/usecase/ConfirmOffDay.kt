@@ -52,6 +52,6 @@ class ConfirmOffDay(
             updatedEntry
         }
 
-        return result!!
+        return requireNotNull(result) { "readModifyWrite hat kein Ergebnis geliefert" }
     }
 }

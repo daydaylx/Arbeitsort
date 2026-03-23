@@ -8,53 +8,6 @@ data class DayTypeConfirmationState(
     val confirmationSource: String?
 )
 
-fun WorkEntry.copyWithLegacyTravel(
-    travelStartAt: Long? = this.travelStartAt,
-    travelArriveAt: Long? = this.travelArriveAt,
-    travelLabelStart: String? = this.travelLabelStart,
-    travelLabelEnd: String? = this.travelLabelEnd,
-    travelFromLabel: String? = this.travelFromLabel,
-    travelToLabel: String? = this.travelToLabel,
-    travelDistanceKm: Double? = this.travelDistanceKm,
-    travelPaidMinutes: Int? = this.travelPaidMinutes,
-    travelSource: TravelSource? = this.travelSource,
-    travelUpdatedAt: Long? = this.travelUpdatedAt,
-    returnStartAt: Long? = this.returnStartAt,
-    returnArriveAt: Long? = this.returnArriveAt
-): WorkEntry {
-    return copy().also {
-        it.travelStartAt = travelStartAt
-        it.travelArriveAt = travelArriveAt
-        it.travelLabelStart = travelLabelStart
-        it.travelLabelEnd = travelLabelEnd
-        it.travelFromLabel = travelFromLabel
-        it.travelToLabel = travelToLabel
-        it.travelDistanceKm = travelDistanceKm
-        it.travelPaidMinutes = travelPaidMinutes
-        it.travelSource = travelSource
-        it.travelUpdatedAt = travelUpdatedAt
-        it.returnStartAt = returnStartAt
-        it.returnArriveAt = returnArriveAt
-    }
-}
-
-fun WorkEntry.withLegacyTravelFrom(source: WorkEntry): WorkEntry {
-    return copyWithLegacyTravel(
-        travelStartAt = source.travelStartAt,
-        travelArriveAt = source.travelArriveAt,
-        travelLabelStart = source.travelLabelStart,
-        travelLabelEnd = source.travelLabelEnd,
-        travelFromLabel = source.travelFromLabel,
-        travelToLabel = source.travelToLabel,
-        travelDistanceKm = source.travelDistanceKm,
-        travelPaidMinutes = source.travelPaidMinutes,
-        travelSource = source.travelSource,
-        travelUpdatedAt = source.travelUpdatedAt,
-        returnStartAt = source.returnStartAt,
-        returnArriveAt = source.returnArriveAt
-    )
-}
-
 fun WorkEntry.withMealAllowanceCleared(): WorkEntry {
     return copy(
         mealIsArrivalDeparture = false,
@@ -64,22 +17,7 @@ fun WorkEntry.withMealAllowanceCleared(): WorkEntry {
     )
 }
 
-fun WorkEntry.withTravelCleared(): WorkEntry {
-    return copyWithLegacyTravel(
-        travelStartAt = null,
-        travelArriveAt = null,
-        travelLabelStart = null,
-        travelLabelEnd = null,
-        travelFromLabel = null,
-        travelToLabel = null,
-        travelDistanceKm = null,
-        travelPaidMinutes = null,
-        travelSource = null,
-        travelUpdatedAt = null,
-        returnStartAt = null,
-        returnArriveAt = null
-    )
-}
+fun WorkEntry.withTravelCleared(): WorkEntry = this
 
 fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeConfirmationState {
     return when {

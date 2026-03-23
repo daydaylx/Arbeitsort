@@ -3,8 +3,6 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.local.entity.copyWithLegacyTravel
-import de.montagezeit.app.data.local.entity.withLegacyTravelFrom
 
 /**
  * UseCase für manuelle Bearbeitung eines WorkEntry
@@ -27,14 +25,9 @@ class UpdateEntry(
 
         val now = System.currentTimeMillis()
         val hasWorkBlock = entry.workStart != null && entry.workEnd != null
-        val hasLegacyTravelWindow =
-            (entry.travelStartAt != null && entry.travelArriveAt != null) ||
-                (entry.returnStartAt != null && entry.returnArriveAt != null)
         val entryToSave = entry.copy(
             breakMinutes = if (hasWorkBlock) entry.breakMinutes else 0,
             updatedAt = now
-        ).withLegacyTravelFrom(entry).copyWithLegacyTravel(
-            travelPaidMinutes = if (hasLegacyTravelWindow) null else entry.travelPaidMinutes
         )
 
         workEntryDao.upsert(entryToSave)
@@ -50,26 +43,10 @@ class UpdateEntry(
      * - COMP_TIME: keine Pflichtfelder für Ort oder Zeiten
      */
     private fun validateEntry(entry: WorkEntry) {
-        // COMP_TIME: keine Validierung von Ort oder Arbeitszeiten erforderlich
-        if (entry.dayType == DayType.COMP_TIME) {
-            return
-        }
+        if (entry.dayType == DayType.COMP_TIME) return
 
         val hasWorkBlock = entry.workStart != null && entry.workEnd != null
-        if (entry.dayType == DayType.WORK) {
-            if (!hasWorkBlock) {
-                validateLegacyTravelWindow(
-                    startAt = entry.travelStartAt,
-                    arriveAt = entry.travelArriveAt,
-                    tooLongMessage = "Reisezeit darf maximal 16 Stunden betragen"
-                )
-                validateLegacyTravelWindow(
-                    startAt = entry.returnStartAt,
-                    arriveAt = entry.returnArriveAt,
-                    tooLongMessage = "Rückfahrt darf maximal 16 Stunden betragen"
-                )
-                return
-            }
+        if (entry.dayType == DayType.WORK && hasWorkBlock) {
             val workStart = requireNotNull(entry.workStart)
             val workEnd = requireNotNull(entry.workEnd)
             if (workEnd <= workStart) {
@@ -83,27 +60,6 @@ class UpdateEntry(
             if (entry.breakMinutes > workDurationMinutes) {
                 throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")
             }
-        }
-
-        validateLegacyTravelWindow(
-            startAt = entry.travelStartAt,
-            arriveAt = entry.travelArriveAt,
-            tooLongMessage = "Reisezeit darf maximal 16 Stunden betragen"
-        )
-        validateLegacyTravelWindow(
-            startAt = entry.returnStartAt,
-            arriveAt = entry.returnArriveAt,
-            tooLongMessage = "Rückfahrt darf maximal 16 Stunden betragen"
-        )
-    }
-
-    private fun validateLegacyTravelWindow(startAt: Long?, arriveAt: Long?, tooLongMessage: String) {
-        if (startAt == null || arriveAt == null) return
-
-        var diffMinutes = ((arriveAt - startAt) / 60_000L).toInt()
-        if (diffMinutes < 0) diffMinutes += 24 * 60
-        if (diffMinutes > 16 * 60) {
-            throw IllegalArgumentException(tooLongMessage)
         }
     }
 }
