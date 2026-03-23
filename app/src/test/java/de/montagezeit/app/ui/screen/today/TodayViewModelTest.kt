@@ -358,9 +358,9 @@ class TodayViewModelTest {
 
         val latch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.overtimeYearDisplay.collect { display ->
+            viewModel.screenState.collect { state ->
                 // 9h actual - 10h target (from settings) = -1h overtime
-                if (display == "-1,00h") {
+                if (state.overtimeYearDisplay == "-1,00h") {
                     latch.countDown()
                 }
             }

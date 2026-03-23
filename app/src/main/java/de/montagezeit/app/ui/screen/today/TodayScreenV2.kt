@@ -255,47 +255,43 @@ private fun StickyTodayActionBarV2(
     }
     val showOffdayAction = true
 
-    Surface(
-        color = MaterialTheme.colorScheme.background
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+            shadowElevation = 8.dp,
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (showOffdayAction) {
-                        SecondaryActionButton(
-                            onClick = onConfirmOffDay,
-                            isLoading = isConfirmOffdayLoading,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.action_confirm_offday))
-                        }
-                    }
-
-                    PrimaryActionButton(
-                        onClick = onOpenDailyCheckInDialog,
-                        isLoading = isDailyCheckInLoading,
-                        modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                if (showOffdayAction) {
+                    SecondaryActionButton(
+                        onClick = onConfirmOffDay,
+                        isLoading = isConfirmOffdayLoading,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.action_daily_manual_check_in))
+                        Text(stringResource(R.string.action_confirm_offday))
                     }
+                }
+
+                PrimaryActionButton(
+                    onClick = onOpenDailyCheckInDialog,
+                    isLoading = isDailyCheckInLoading,
+                    modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.action_daily_manual_check_in))
                 }
             }
         }
@@ -345,10 +341,12 @@ fun OvertimeCardV2(
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     MZCard(
-        modifier = Modifier.clickable(
-            enabled = isConfigured,
-            onClick = { isExpanded = !isExpanded }
-        )
+        modifier = Modifier
+            .clickable(
+                enabled = isConfigured,
+                onClick = { isExpanded = !isExpanded }
+            )
+            .animateContentSize()
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(title = stringResource(R.string.overtime_title))
@@ -478,38 +476,48 @@ private fun StatusCardV2(
 
 @Composable
 private fun DayTypeRow(dayType: DayType) {
-    val (icon, text, color) = when (dayType) {
-        DayType.WORK -> Triple(
+    val (icon, text, color, containerColor) = when (dayType) {
+        DayType.WORK -> listOf(
             Icons.Default.Work,
             stringResource(R.string.day_type_work),
-            MaterialTheme.colorScheme.primary
+            MaterialTheme.colorScheme.onPrimaryContainer,
+            MaterialTheme.colorScheme.primaryContainer
         )
-        DayType.OFF -> Triple(
+        DayType.OFF -> listOf(
             Icons.Default.FreeBreakfast,
             stringResource(R.string.day_type_off),
-            MaterialTheme.colorScheme.secondary
+            MaterialTheme.colorScheme.onSecondaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer
         )
-        DayType.COMP_TIME -> Triple(
+        DayType.COMP_TIME -> listOf(
             Icons.Default.Bedtime,
             stringResource(R.string.day_type_comp_time),
-            MaterialTheme.colorScheme.tertiary
+            MaterialTheme.colorScheme.onTertiaryContainer,
+            MaterialTheme.colorScheme.tertiaryContainer
         )
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(20.dp)
-        )
+        Surface(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = containerColor as Color,
+            contentColor = color as Color
+        ) {
+            Box(modifier = Modifier.padding(6.dp)) {
+                Icon(
+                    imageVector = icon as androidx.compose.ui.graphics.vector.ImageVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
         Text(
-            text = text,
+            text = text as String,
             style = MaterialTheme.typography.bodyMedium,
-            color = color,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium
         )
     }

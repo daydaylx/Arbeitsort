@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -103,7 +107,7 @@ fun MZPageBackground(
 @Composable
 fun MZCard(
     modifier: Modifier = Modifier,
-    elevation: Dp = 0.dp,
+    elevation: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -114,7 +118,7 @@ fun MZCard(
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
         ),
         shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
     ) {
@@ -196,6 +200,7 @@ fun MZStatusCard(
             modifier = modifier.fillMaxWidth(),
             enabled = true,
             colors = cardColors,
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             border = BorderStroke(
                 width = 1.dp,
                 color = contentColor.copy(alpha = 0.15f)
@@ -207,6 +212,7 @@ fun MZStatusCard(
         Card(
             modifier = modifier.fillMaxWidth(),
             colors = cardColors,
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             border = BorderStroke(
                 width = 1.dp,
                 color = contentColor.copy(alpha = 0.15f)
@@ -229,16 +235,19 @@ fun MZHeroCard(
     val backgroundBrush = Brush.linearGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.secondaryContainer
-        )
+            MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
     )
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
         ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -509,13 +518,27 @@ fun MZKeyValueRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        val dotColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        Spacer(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .drawBehind {
+                    drawLine(
+                        color = dotColor,
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, 0f),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()), 0f)
+                    )
+                }
         )
         Text(
             text = value,
