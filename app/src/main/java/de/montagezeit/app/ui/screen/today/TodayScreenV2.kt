@@ -517,7 +517,7 @@ private fun WorkHoursCardV2(entry: WorkEntry) {
     val (workMinutes, travelMinutes, totalMinutes) = remember(entry) {
         Triple(
             TimeCalculator.calculateWorkMinutes(entry),
-            TimeCalculator.calculateTravelMinutes(entry),
+            TimeCalculator.calculateTravelMinutes(emptyList()),
             TimeCalculator.calculatePaidTotalMinutes(entry)
         )
     }

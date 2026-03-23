@@ -125,7 +125,7 @@ object PdfUtilities {
      * Berechnet die Summe der Reisezeit in Minuten für eine Liste von WorkEntries
      */
     fun sumTravelMinutes(entries: List<WorkEntryWithTravelLegs>): Int {
-        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) }
+        return entries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
     }
 
     

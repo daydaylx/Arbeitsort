@@ -33,18 +33,13 @@ object TimeCalculator {
         return travelLegs.sumOf(::calculateTravelLegMinutes)
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun calculateTravelMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
-        return calculateTravelMinutes(travelLegs)
-    }
-
     /**
      * Berechnet die gesamte bezahlte Zeit in Minuten.
      * Arbeitszeit + Reisezeit.
      * Hinweis: An OFF-Tagen ist die Arbeitszeit 0, daher ist die Gesamtzeit = Reisezeit.
      */
     fun calculatePaidTotalMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
-        return calculateWorkMinutes(entry) + calculateTravelMinutes(entry, travelLegs)
+        return calculateWorkMinutes(entry) + calculateTravelMinutes(travelLegs)
     }
 
     /**

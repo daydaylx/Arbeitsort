@@ -17,8 +17,6 @@ fun WorkEntry.withMealAllowanceCleared(): WorkEntry {
     )
 }
 
-fun WorkEntry.withTravelCleared(): WorkEntry = this
-
 fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeConfirmationState {
     return when {
         dayType == DayType.COMP_TIME -> DayTypeConfirmationState(
@@ -51,7 +49,6 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 confirmationSource = DayType.COMP_TIME.name,
                 updatedAt = now
             )
-            .withTravelCleared()
             .withMealAllowanceCleared()
 
         DayType.OFF -> {
@@ -66,7 +63,6 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 confirmationSource = confirmationState.confirmationSource,
                 updatedAt = now
             )
-                .withTravelCleared()
                 .withMealAllowanceCleared()
         }
 
@@ -97,7 +93,6 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
         dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { "" } },
         updatedAt = now
     )
-        .withTravelCleared()
         .withMealAllowanceCleared()
 }
 

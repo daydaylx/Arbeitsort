@@ -13,17 +13,6 @@ class WorkEntryExtensionsTest {
     private val date = LocalDate.now()
 
     @Test
-    fun `withTravelCleared gibt denselben WorkEntry zurück (Reise liegt in TravelLegs)`() {
-        val entry = WorkEntry(
-            date = date,
-            dayType = DayType.WORK,
-            dayLocationLabel = "Baustelle"
-        )
-        val cleared = entry.withTravelCleared()
-        assertEquals(entry, cleared)
-    }
-
-    @Test
     fun `confirmationStateForDayType sets fresh comp time confirmation`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 3, 12),

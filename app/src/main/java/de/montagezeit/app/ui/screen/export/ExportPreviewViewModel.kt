@@ -56,7 +56,7 @@ data class PreviewSummary(
 
 internal fun calculatePreviewSummary(entries: List<WorkEntryWithTravelLegs>): PreviewSummary {
     val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
-    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it.workEntry, it.orderedTravelLegs) }
+    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
     val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
     val mealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
     return PreviewSummary(
@@ -81,7 +81,7 @@ internal fun buildExportPreviewTotals(summary: PreviewSummary): ExportPreviewTot
 internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPreviewRow {
     val entry = record.workEntry
     val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-    val travelMinutes = TimeCalculator.calculateTravelMinutes(entry, record.orderedTravelLegs)
+    val travelMinutes = TimeCalculator.calculateTravelMinutes(record.orderedTravelLegs)
     val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, record.orderedTravelLegs)
     val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK && entry.workStart != null && entry.workEnd != null
     val mealLabel = if (entry.mealAllowanceAmountCents > 0) {

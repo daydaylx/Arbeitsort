@@ -51,7 +51,7 @@ class TodayViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        io.mockk.unmockkAll()
+        io.mockk.clearAllMocks()
     }
 
     @Test

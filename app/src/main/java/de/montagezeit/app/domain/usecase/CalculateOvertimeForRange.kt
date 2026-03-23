@@ -44,7 +44,7 @@ class CalculateOvertimeForRange {
                     totalActualHours += TimeCalculator.calculatePaidTotalHours(entry.workEntry, entry.orderedTravelLegs)
                 }
                 DayType.OFF -> {
-                    val travelHours = TimeCalculator.calculateTravelMinutes(entry.workEntry, entry.orderedTravelLegs) / 60.0
+                    val travelHours = TimeCalculator.calculateTravelMinutes(entry.orderedTravelLegs) / 60.0
                     if (travelHours > 0.0) {
                         offDayTravelHours += travelHours
                         offDayTravelDays += 1

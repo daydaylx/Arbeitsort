@@ -21,7 +21,7 @@ class CsvExporterLogicTest {
 
     private fun buildCsvLine(entry: WorkEntry): String {
         val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-        val travelMinutes = TimeCalculator.calculateTravelMinutes(entry)
+        val travelMinutes = TimeCalculator.calculateTravelMinutes(emptyList())
         val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
         val isWorkDay = entry.dayType == DayType.WORK
         val dayTypeLabel = when (entry.dayType) {
