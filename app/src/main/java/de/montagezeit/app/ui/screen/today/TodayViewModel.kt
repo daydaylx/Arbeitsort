@@ -73,7 +73,7 @@ data class WeekStats(
         get() = totalHours > targetHours
 
     val isUnderTarget: Boolean
-        get() = totalHours < targetHours * 0.9 // 10% Toleranz
+        get() = totalHours < targetHours
 }
 
 data class MonthStats(
@@ -90,7 +90,7 @@ data class MonthStats(
         get() = totalHours > targetHours
 
     val isUnderTarget: Boolean
-        get() = totalHours < targetHours * 0.9 // 10% Toleranz
+        get() = totalHours < targetHours
 }
 
 enum class TodayAction {
@@ -407,7 +407,7 @@ class TodayViewModel @Inject constructor(
             val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
 
             val settings = reminderSettingsManager.settings.first()
-            _isOvertimeConfigured.value = true
+            _isOvertimeConfigured.value = settings.dailyTargetHours > 0
 
             val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
                 Pair(
@@ -604,8 +604,10 @@ class TodayViewModel @Inject constructor(
                     )
                     workEntryDao.upsert(entry)
                 }
-            } finally {
-                onDone()
+                onDone() // Nur bei Erfolg
+            } catch (e: Exception) {
+                _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
+                // onDone() wird NICHT aufgerufen → kein Edit-Sheet bei fehlgeschlagenem DB-Write
             }
         }
     }

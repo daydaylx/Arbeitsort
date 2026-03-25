@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.screen.history
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +50,21 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 private const val MONTH_PREVIEW_COUNT = 5
+
+private val localDateSaver = Saver<LocalDate, String>(
+    save = { it.toString() },
+    restore = { LocalDate.parse(it) }
+)
+
+private val yearMonthSaver = Saver<YearMonth, String>(
+    save = { it.toString() },
+    restore = { YearMonth.parse(it) }
+)
+
+private val calendarModeSaver = Saver<CalendarMode, String>(
+    save = { it.name },
+    restore = { CalendarMode.valueOf(it) }
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +170,7 @@ fun HistoryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HistoryContent(
     weeks: List<WeekGroup>,
@@ -163,12 +180,12 @@ fun HistoryContent(
     onEntryClick: (java.time.LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showMonths by remember { mutableStateOf(false) }
-    var showCalendar by remember { mutableStateOf(false) }
-    var calendarMode by remember { mutableStateOf(CalendarMode.MONTH) }
-    var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showMonths by rememberSaveable { mutableStateOf(false) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
+    var calendarMode by rememberSaveable(stateSaver = calendarModeSaver) { mutableStateOf(CalendarMode.MONTH) }
+    var selectedMonth by rememberSaveable(stateSaver = yearMonthSaver) { mutableStateOf(YearMonth.now()) }
+    var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
     val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
     val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }
 
@@ -226,12 +243,24 @@ fun HistoryContent(
                 }
             }
             weeks.isEmpty() && months.isEmpty() -> {
-                EmptyContent(
+                MZEmptyState(
                     modifier = Modifier.fillMaxWidth(),
-                    onAddPastDay = { showDatePicker = true },
-                    showAddButton = true,
                     title = stringResource(R.string.history_empty_title),
-                    subtitle = stringResource(R.string.history_empty_subtitle)
+                    subtitle = stringResource(R.string.history_empty_subtitle),
+                    icon = Icons.Default.History,
+                    action = {
+                        PrimaryActionButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(stringResource(R.string.history_action_add_past_day))
+                        }
+                    }
                 )
             }
             else -> {
@@ -243,26 +272,36 @@ fun HistoryContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (showMonths) {
-                        items(
-                            items = months,
-                            key = { month -> "${month.year}-${month.month}" }
-                        ) { month ->
-                            MonthGroupCard(
-                                month = month,
-                                travelLegsByDate = travelLegsByDate,
-                                onEntryClick = onEntryClick
-                            )
+                        months.forEach { month ->
+                            stickyHeader(key = "header-${month.year}-${month.month}") {
+                                MonthGroupHeader(month = month)
+                            }
+                            items(
+                                items = month.entries,
+                                key = { entry -> entry.date }
+                            ) { entry ->
+                                HistoryEntryItem(
+                                    entry = entry,
+                                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
+                                    onClick = { onEntryClick(entry.date) }
+                                )
+                            }
                         }
                     } else {
-                        items(
-                            items = weeks,
-                            key = { week -> "${week.year}-${week.week}" }
-                        ) { week ->
-                            WeekGroupCard(
-                                week = week,
-                                travelLegsByDate = travelLegsByDate,
-                                onEntryClick = onEntryClick
-                            )
+                        weeks.forEach { week ->
+                            stickyHeader(key = "header-${week.year}-${week.week}") {
+                                WeekGroupHeader(week = week)
+                            }
+                            items(
+                                items = week.entries,
+                                key = { entry -> entry.date }
+                            ) { entry ->
+                                HistoryEntryItem(
+                                    entry = entry,
+                                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
+                                    onClick = { onEntryClick(entry.date) }
+                                )
+                            }
                         }
                     }
                 }
@@ -448,15 +487,23 @@ private fun HistoryDayOverviewCard(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                MZKeyValueRow(
-                    label = stringResource(R.string.history_stat_total),
-                    value = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
-                    emphasize = true
-                )
-                if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                if (entry.dayType == DayType.WORK) {
+                    MZKeyValueRow(
+                        label = stringResource(R.string.history_stat_work),
+                        value = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
+                        emphasize = true
+                    )
+                    if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                        MZKeyValueRow(
+                            label = stringResource(R.string.history_stat_paid),
+                            value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
+                        )
+                    }
+                } else if (totalPaidHours > 0.01) {
                     MZKeyValueRow(
                         label = stringResource(R.string.history_stat_paid),
-                        value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
+                        value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat),
+                        emphasize = true
                     )
                 }
                 if (travelMinutes > 0) {
@@ -994,377 +1041,85 @@ fun EmptyContent(
 }
 
 @Composable
-fun WeekGroupCard(
-    week: WeekGroup,
-    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
-    onEntryClick: (java.time.LocalDate) -> Unit
+fun WeekGroupHeader(
+    week: WeekGroup
 ) {
-    var expanded by rememberSaveable(week.year, week.week) { mutableStateOf(false) }
     val summaryText = buildString {
         append(stringResource(R.string.history_hours_decimal, week.totalHours))
         append(" · ")
         append(stringResource(R.string.history_summary_workdays, week.workDaysCount))
     }
 
-    MZCard(
-        modifier = Modifier.animateContentSize()
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    val weekEnd = week.weekStart.plusDays(6)
-                    Text(
-                        text = stringResource(
-                            R.string.history_week_label,
-                            week.week,
-                            formatShortDate(week.weekStart),
-                            formatShortDate(weekEnd)
-                        ),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                        Text(
-                            text = year,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = summaryText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    imageVector = if (expanded) {
-                        Icons.Default.KeyboardArrowUp
-                    } else {
-                        Icons.Default.KeyboardArrowDown
-                    },
-                    contentDescription = if (expanded) {
-                        stringResource(R.string.history_cd_collapse_week)
-                    } else {
-                        stringResource(R.string.history_cd_expand_week)
-                    }
+            val weekEnd = week.weekStart.plusDays(6)
+            Text(
+                text = stringResource(
+                    R.string.history_week_label,
+                    week.week,
+                    formatShortDate(week.weekStart),
+                    formatShortDate(weekEnd)
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                Text(
+                    text = year,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            if (expanded && week.entries.isNotEmpty()) {
-                MZCard {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Total and average hours
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.history_stat_total),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.history_hours_decimal, week.totalHours),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-
-                        if (kotlin.math.abs(week.totalPaidHours - week.totalHours) > 0.01) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.history_stat_paid),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Text(
-                                    text = stringResource(R.string.history_hours_decimal, week.totalPaidHours),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-
-                        if (week.workDaysCount > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.history_stat_average),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Text(
-                                    text = stringResource(R.string.history_average_hours_per_day, week.averageHoursPerDay),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-
-                        // Days breakdown
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.history_stat_days),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = if (week.offDaysCount > 0) {
-                                    stringResource(
-                                        R.string.history_days_breakdown_work_with_off,
-                                        week.workDaysCount,
-                                        week.offDaysCount
-                                    )
-                                } else {
-                                    stringResource(
-                                        R.string.history_days_breakdown_work_only,
-                                        week.workDaysCount
-                                    )
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (expanded) {
-                Divider()
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    week.entries.forEach { entry ->
-                        key(entry.date) {
-                            HistoryEntryItem(
-                                entry = entry,
-                                travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                onClick = { onEntryClick(entry.date) }
-                            )
-                        }
-                    }
-                }
-            }
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-fun MonthGroupCard(
-    month: MonthGroup,
-    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
-    onEntryClick: (java.time.LocalDate) -> Unit
+fun MonthGroupHeader(
+    month: MonthGroup
 ) {
-    var expanded by rememberSaveable(month.year, month.month) { mutableStateOf(false) }
     val summaryText = buildString {
         append(stringResource(R.string.history_hours_decimal, month.totalHours))
         append(" · ")
         append(stringResource(R.string.history_summary_workdays, month.workDaysCount))
     }
 
-    MZCard(
-        modifier = Modifier.animateContentSize()
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = month.displayText,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                        Text(
-                            text = year,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = summaryText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    imageVector = if (expanded) {
-                        Icons.Default.KeyboardArrowUp
-                    } else {
-                        Icons.Default.KeyboardArrowDown
-                    },
-                    contentDescription = if (expanded) {
-                        stringResource(R.string.history_cd_collapse_month)
-                    } else {
-                        stringResource(R.string.history_cd_expand_month)
-                    }
+            Text(
+                text = month.displayText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                Text(
+                    text = year,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            if (expanded && month.entries.isNotEmpty()) {
-                MZCard {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Total and average hours
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.history_stat_total),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.history_hours_decimal, month.totalHours),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-
-                        if (kotlin.math.abs(month.totalPaidHours - month.totalHours) > 0.01) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.history_stat_paid),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Text(
-                                    text = stringResource(R.string.history_hours_decimal, month.totalPaidHours),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-
-                        if (month.workDaysCount > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.history_stat_average),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Text(
-                                    text = stringResource(R.string.history_average_hours_per_day, month.averageHoursPerDay),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-
-                        if (month.totalTravelMinutes > 0) {
-                            val hoursOnlyFormat = stringResource(R.string.history_hours_only)
-                            val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.history_stat_travel),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Text(
-                                    text = formatMinutesAsHoursMinutesPlain(month.totalTravelMinutes, hoursOnlyFormat, hoursMinutesFormat),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-
-                        // Days breakdown
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.history_stat_days),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = if (month.offDaysCount > 0) {
-                                    stringResource(
-                                        R.string.history_days_breakdown_work_with_off,
-                                        month.workDaysCount,
-                                        month.offDaysCount
-                                    )
-                                } else {
-                                    stringResource(
-                                        R.string.history_days_breakdown_work_only,
-                                        month.workDaysCount
-                                    )
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (expanded) {
-                Divider()
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val entriesToShow = month.entries.take(MONTH_PREVIEW_COUNT)
-                    val remainingCount = month.entries.size - entriesToShow.size
-
-                    entriesToShow.forEach { entry ->
-                        key(entry.date) {
-                            HistoryEntryItem(
-                                entry = entry,
-                                travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                onClick = { onEntryClick(entry.date) }
-                            )
-                        }
-                    }
-
-                    if (remainingCount > 0) {
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.history_remaining_days,
-                                remainingCount,
-                                remainingCount
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 12.dp, top = 4.dp)
-                        )
-                    }
-                }
-            }
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1384,8 +1139,7 @@ fun HistoryEntryItem(
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
 
     MZCard(
-        modifier = Modifier
-            .clickable(onClick = onClick)
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1409,13 +1163,14 @@ fun HistoryEntryItem(
 
                 if (entry.dayType == DayType.WORK || travelMinutes > 0) {
                     Column(horizontalAlignment = Alignment.End) {
+                        val displayHours = if (workHours > 0.0) workHours else totalPaidHours
                         Text(
-                            text = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
+                            text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                        if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
                             Text(
                                 text = stringResource(
                                     R.string.history_entry_total_paid,

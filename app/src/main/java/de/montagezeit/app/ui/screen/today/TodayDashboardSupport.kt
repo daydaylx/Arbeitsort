@@ -24,7 +24,7 @@ fun buildWeekDayUi(
             entry.dayType == DayType.OFF && entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_OFF
             entry.dayType == DayType.COMP_TIME -> WeekDayStatus.CONFIRMED_OFF
             entry.confirmedWorkDay -> WeekDayStatus.CONFIRMED_WORK
-            entry.morningCapturedAt != null || entry.eveningCapturedAt != null -> WeekDayStatus.PARTIAL
+            entry.morningCapturedAt != null || entry.eveningCapturedAt != null -> WeekDayStatus.PARTIAL // Eintrag vorhanden, aber noch nicht bestätigt
             else -> WeekDayStatus.EMPTY
         }
         val workHours = if (entry != null && entry.dayType == DayType.WORK) {

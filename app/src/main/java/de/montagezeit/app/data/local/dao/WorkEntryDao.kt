@@ -41,6 +41,13 @@ abstract class WorkEntryDao {
         endDate: LocalDate
     ): List<WorkEntryWithTravelLegs>
 
+    @Transaction
+    @Query("SELECT * FROM work_entries WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    abstract fun getByDateRangeWithTravelFlow(
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): Flow<List<WorkEntryWithTravelLegs>>
+
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
     abstract suspend fun getAll(): List<WorkEntry>
 

@@ -17,6 +17,7 @@ import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,44 +40,41 @@ class HistoryViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
-    
+
+    private var observeEntriesJob: Job? = null
+
     init {
         loadHistory()
     }
-    
+
+    /** Startet den reaktiven DB-Observer. Bei Fehler → Retry via loadHistory(). */
     fun loadHistory() {
-        viewModelScope.launch(Dispatchers.IO) {
-            withContext(Dispatchers.Main) {
-                _uiState.value = HistoryUiState.Loading
-            }
-
+        observeEntriesJob?.cancel()
+        _uiState.value = HistoryUiState.Loading
+        observeEntriesJob = viewModelScope.launch {
+            val endDate = LocalDate.now()
+            val startDate = endDate.minusDays(365)
             try {
-                val endDate = LocalDate.now()
-                val startDate = endDate.minusDays(365) // Kalenderansicht: letztes Jahr
-
-                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
-                val groupedWeeks = groupByWeek(entries)
-                val groupedMonths = groupByMonth(entries)
-                val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
-                val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
-
-                withContext(Dispatchers.Main) {
-                    _uiState.value = HistoryUiState.Success(
-                        weeks = groupedWeeks,
-                        months = groupedMonths,
-                        entriesByDate = entriesByDate,
-                        travelLegsByDate = travelLegsByDate
-                    )
-                }
+                workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
+                    .collect { entries ->
+                        val groupedWeeks = groupByWeek(entries)
+                        val groupedMonths = groupByMonth(entries)
+                        val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
+                        val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
+                        _uiState.value = HistoryUiState.Success(
+                            weeks = groupedWeeks,
+                            months = groupedMonths,
+                            entriesByDate = entriesByDate,
+                            travelLegsByDate = travelLegsByDate
+                        )
+                    }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _uiState.value = HistoryUiState.Error(
-                        message = e.message
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let(UiText::DynamicString)
-                            ?: UiText.StringResource(R.string.history_error_unknown)
-                    )
-                }
+                _uiState.value = HistoryUiState.Error(
+                    message = e.message
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let(UiText::DynamicString)
+                        ?: UiText.StringResource(R.string.history_error_unknown)
+                )
             }
         }
     }
@@ -139,11 +137,15 @@ class HistoryViewModel @Inject constructor(
                 }
                 if (entriesToUpsert.isNotEmpty()) {
                     workEntryDao.upsertAll(entriesToUpsert)
+                    if (request.dayType == DayType.COMP_TIME) {
+                        for (entry in entriesToUpsert) {
+                            workEntryDao.deleteTravelLegsByDate(entry.date)
+                        }
+                    }
                 }
 
                 withContext(Dispatchers.Main) {
                     onResult(true)
-                    loadHistory()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

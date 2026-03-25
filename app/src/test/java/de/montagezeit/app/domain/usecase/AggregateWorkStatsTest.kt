@@ -88,15 +88,16 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `Reisezeit auf OFF-Tag fliesst in totalTravelMinutes ein`() {
+    fun `Reisezeit auf OFF-Tag fliesst NICHT in totalTravelMinutes ein`() {
+        // OFF-Reise wird separat in CalculateOvertimeForRange.offDayTravelHours erfasst
         val result = useCase(
             listOf(
                 entry(LocalDate.of(2026, 1, 8), DayType.OFF, travelMinutes = 120)
             )
         )
         assertEquals(0, result.totalWorkMinutes)
-        assertEquals(120, result.totalTravelMinutes)
-        assertEquals(120, result.totalPaidMinutes)
+        assertEquals(0, result.totalTravelMinutes)
+        assertEquals(0, result.totalPaidMinutes)
     }
 
     @Test
@@ -178,8 +179,8 @@ class AggregateWorkStatsTest {
         assertEquals(1, result.workDays)
         assertEquals(1, result.offDays)
         assertEquals(480, result.totalWorkMinutes)
-        assertEquals(120, result.totalTravelMinutes) // 30 + 90
-        assertEquals(600, result.totalPaidMinutes)
+        assertEquals(30, result.totalTravelMinutes)  // nur WORK-Tag-Reise (OFF-Reise 90 min ignoriert)
+        assertEquals(510, result.totalPaidMinutes)
         assertEquals(820, result.mealAllowanceCents)
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -45,10 +46,10 @@ fun MontageZeitNavGraph(
     val currentDestination = navBackStackEntry?.destination
     
     // Edit Sheet State
-    var showEditSheet by remember { mutableStateOf(false) }
-    var editDate by remember { mutableStateOf<String?>(null) }
-    var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
-    var onEditSheetDismissed by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var showEditSheet by rememberSaveable { mutableStateOf(false) }
+    var editDate by rememberSaveable { mutableStateOf<String?>(null) }
+    var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }      // transient, kein Saveable nötig
+    var onEditSheetDismissed by remember { mutableStateOf<(() -> Unit)?>(null) } // Lambda, kein Saveable
     val currentOnEditSheetDismissed by rememberUpdatedState(onEditSheetDismissed)
 
     fun openEditSheet(date: LocalDate, onDismissed: (() -> Unit)? = null) {
@@ -125,6 +126,11 @@ fun MontageZeitNavGraph(
                 TodayScreenV2(
                     onOpenEditSheet = { date ->
                         openEditSheet(date)
+                    },
+                    onOpenWeekView = {
+                        navController.navigate(Screen.Overview.route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -195,11 +201,10 @@ fun MontageZeitNavGraph(
                 onEditSheetDismissed = null
             },
             onCopyToNewDate = { newDate, formData ->
-                // Schließe aktuelles Sheet und öffne neues mit kopierten Daten
-                showEditSheet = false
+                // Sheet bleibt offen — Datum + Daten aktualisieren ohne Flash
                 editDate = newDate.toString()
                 copiedFormData = formData
-                showEditSheet = true
+                onEditSheetDismissed = null
             },
             onNavigateDate = { newDate ->
                 editDate = newDate.toString()

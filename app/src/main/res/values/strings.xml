@@ -389,6 +389,7 @@
     <string name="history_summary_workdays">%1$d Arbeitstage</string>
     <string name="history_dashboard_subtitle">Tag auswählen, prüfen und bei Bedarf direkt bearbeiten.</string>
     <string name="history_stat_total">Gesamt:</string>
+    <string name="history_stat_work">Arbeit:</string>
     <string name="history_stat_paid">Bezahlt:</string>
     <string name="history_stat_target">Ziel:</string>
     <string name="history_stat_average">Durchschnitt:</string>

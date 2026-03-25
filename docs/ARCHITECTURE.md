@@ -20,9 +20,9 @@ Layer:
 
 ### 2.1 Persistence
 
-- Datenbank: `AppDatabase` (`version = 12`)
-- Haupttabelle: `work_entries`
-- Migrationen: `MIGRATION_1_2` bis `MIGRATION_11_12`
+- Datenbank: `AppDatabase` (`version = 14`)
+- Haupttabellen: `work_entries`, `travel_legs` (normalisiert in v13→14)
+- Migrationen: `MIGRATION_1_2` bis `MIGRATION_13_14`
 
 ### 2.2 Reminder & Scheduling
 
