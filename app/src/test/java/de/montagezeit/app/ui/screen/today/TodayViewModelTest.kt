@@ -945,6 +945,29 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun `monthStats mealAllowanceTotalCents sums mealAllowanceAmountCents of all month entries`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        val entries = listOf(
+            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
+            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2220),
+            WorkEntry(date = now.minusDays(2), dayType = DayType.OFF, mealAllowanceAmountCents = 0)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager, entriesWithTravel = entries.map { record(it) })
+
+        Thread.sleep(300)
+
+        assertEquals(5020, viewModel.monthStats.value?.mealAllowanceTotalCents)
+    }
+
+    @Test
     fun `monthStats mealAllowanceTotalCents is zero when all entries have no allowance`() {
         val now = LocalDate.now()
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
@@ -957,10 +980,9 @@ class TodayViewModelTest {
 
         coEvery { workEntryDao.getByDate(any()) } returns null
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(workEntryDao, settingsManager, entriesWithTravel = entries.map { record(it) })
 
         Thread.sleep(300)
 

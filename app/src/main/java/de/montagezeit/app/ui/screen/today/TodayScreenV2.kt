@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -256,43 +255,47 @@ private fun StickyTodayActionBarV2(
     }
     val showOffdayAction = true
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+    Surface(
+        color = MaterialTheme.colorScheme.background
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                )
             ) {
-                if (showOffdayAction) {
-                    SecondaryActionButton(
-                        onClick = onConfirmOffDay,
-                        isLoading = isConfirmOffdayLoading,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.action_confirm_offday))
-                    }
-                }
-
-                PrimaryActionButton(
-                    onClick = onOpenDailyCheckInDialog,
-                    isLoading = isDailyCheckInLoading,
-                    modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(stringResource(R.string.action_daily_manual_check_in))
+                    if (showOffdayAction) {
+                        SecondaryActionButton(
+                            onClick = onConfirmOffDay,
+                            isLoading = isConfirmOffdayLoading,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.action_confirm_offday))
+                        }
+                    }
+
+                    PrimaryActionButton(
+                        onClick = onOpenDailyCheckInDialog,
+                        isLoading = isDailyCheckInLoading,
+                        modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.action_daily_manual_check_in))
+                    }
                 }
             }
         }
@@ -342,9 +345,10 @@ fun OvertimeCardV2(
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     MZCard(
-        onClick = { isExpanded = !isExpanded },
-        enabled = isConfigured,
-        modifier = Modifier.animateContentSize()
+        modifier = Modifier.clickable(
+            enabled = isConfigured,
+            onClick = { isExpanded = !isExpanded }
+        )
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(title = stringResource(R.string.overtime_title))
@@ -474,48 +478,38 @@ private fun StatusCardV2(
 
 @Composable
 private fun DayTypeRow(dayType: DayType) {
-    val (icon, text, color, containerColor) = when (dayType) {
-        DayType.WORK -> listOf(
+    val (icon, text, color) = when (dayType) {
+        DayType.WORK -> Triple(
             Icons.Default.Work,
             stringResource(R.string.day_type_work),
-            MaterialTheme.colorScheme.onPrimaryContainer,
-            MaterialTheme.colorScheme.primaryContainer
+            MaterialTheme.colorScheme.primary
         )
-        DayType.OFF -> listOf(
+        DayType.OFF -> Triple(
             Icons.Default.FreeBreakfast,
             stringResource(R.string.day_type_off),
-            MaterialTheme.colorScheme.onSecondaryContainer,
-            MaterialTheme.colorScheme.secondaryContainer
+            MaterialTheme.colorScheme.secondary
         )
-        DayType.COMP_TIME -> listOf(
+        DayType.COMP_TIME -> Triple(
             Icons.Default.Bedtime,
             stringResource(R.string.day_type_comp_time),
-            MaterialTheme.colorScheme.onTertiaryContainer,
-            MaterialTheme.colorScheme.tertiaryContainer
+            MaterialTheme.colorScheme.tertiary
         )
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Surface(
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = containerColor as Color,
-            contentColor = color as Color
-        ) {
-            Box(modifier = Modifier.padding(6.dp)) {
-                Icon(
-                    imageVector = icon as androidx.compose.ui.graphics.vector.ImageVector,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(20.dp)
+        )
         Text(
-            text = text as String,
+            text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = color,
             fontWeight = FontWeight.Medium
         )
     }
@@ -604,7 +598,6 @@ fun StatisticsDashboardCardV2(
     mealAllowanceCents: Int? = null,
     onOpenWeekView: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     val status = when {
         isOverTarget -> StatusType.SUCCESS
         isUnderTarget -> StatusType.WARNING
@@ -612,10 +605,10 @@ fun StatisticsDashboardCardV2(
     }
 
     MZCard(
-        onClick = onOpenWeekView,
-        modifier = Modifier.semantics {
-            onClick(label = context.getString(R.string.cd_open_statistics), action = null)
-        }
+        modifier = Modifier.clickableWithAccessibility(
+            onClick = onOpenWeekView,
+            contentDescription = stringResource(R.string.cd_open_statistics)
+        )
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(

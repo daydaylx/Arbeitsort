@@ -156,17 +156,29 @@ class TodayViewModel @Inject constructor(
     private val _monthStats = MutableStateFlow<MonthStats?>(null)
     val monthStats: StateFlow<MonthStats?> = _monthStats.asStateFlow()
 
-    private data class OvertimeState(
-        val isConfigured: Boolean = true,
-        val yearDisplay: String = formatSignedHours(0.0),
-        val monthDisplay: String? = formatSignedHours(0.0),
-        val yearActualDisplay: String = formatHours(0.0),
-        val yearTargetDisplay: String = formatHours(0.0),
-        val yearCountedDays: Int = 0,
-        val yearOffDayTravelDisplay: String = formatHours(0.0),
-        val yearOffDayTravelDays: Int = 0
-    )
-    private val _overtimeState = MutableStateFlow(OvertimeState())
+    private val _isOvertimeConfigured = MutableStateFlow(true)
+    val isOvertimeConfigured: StateFlow<Boolean> = _isOvertimeConfigured.asStateFlow()
+
+    private val _overtimeYearDisplay = MutableStateFlow(formatSignedHours(0.0))
+    val overtimeYearDisplay: StateFlow<String> = _overtimeYearDisplay.asStateFlow()
+
+    private val _overtimeMonthDisplay = MutableStateFlow<String?>(formatSignedHours(0.0))
+    val overtimeMonthDisplay: StateFlow<String?> = _overtimeMonthDisplay.asStateFlow()
+
+    private val _overtimeYearActualDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearActualDisplay: StateFlow<String> = _overtimeYearActualDisplay.asStateFlow()
+
+    private val _overtimeYearTargetDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearTargetDisplay: StateFlow<String> = _overtimeYearTargetDisplay.asStateFlow()
+
+    private val _overtimeYearCountedDays = MutableStateFlow(0)
+    val overtimeYearCountedDays: StateFlow<Int> = _overtimeYearCountedDays.asStateFlow()
+
+    private val _overtimeYearOffDayTravelDisplay = MutableStateFlow(formatHours(0.0))
+    val overtimeYearOffDayTravelDisplay: StateFlow<String> = _overtimeYearOffDayTravelDisplay.asStateFlow()
+
+    private val _overtimeYearOffDayTravelDays = MutableStateFlow(0)
+    val overtimeYearOffDayTravelDays: StateFlow<Int> = _overtimeYearOffDayTravelDays.asStateFlow()
 
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
@@ -234,6 +246,18 @@ class TodayViewModel @Inject constructor(
         val monthStats: MonthStats?,
         val selectedEntryWithTravel: WorkEntryWithTravelLegs?
     )
+    private data class OvertimeDisplayPart(
+        val isOvertimeConfigured: Boolean,
+        val overtimeYearDisplay: String,
+        val overtimeMonthDisplay: String?,
+        val overtimeYearActualDisplay: String,
+        val overtimeYearTargetDisplay: String
+    )
+    private data class OvertimeCountsPart(
+        val overtimeYearCountedDays: Int,
+        val overtimeYearOffDayTravelDisplay: String,
+        val overtimeYearOffDayTravelDays: Int
+    )
     private data class DialogCheckInPart(
         val showDailyCheckInDialog: Boolean,
         val locationInput: String,
@@ -255,8 +279,13 @@ class TodayViewModel @Inject constructor(
         combine(weekDaysUi, weekStats, monthStats, selectedEntryWithTravel) { days, week, month, entryWithTravel ->
             ScreenWeekMonthPart(days, week, month, entryWithTravel)
         },
-        _overtimeState
-    ) { core, weekMonth, overtime ->
+        combine(isOvertimeConfigured, overtimeYearDisplay, overtimeMonthDisplay, overtimeYearActualDisplay, overtimeYearTargetDisplay) { configured, year, month, actual, target ->
+            OvertimeDisplayPart(configured, year, month, actual, target)
+        },
+        combine(overtimeYearCountedDays, overtimeYearOffDayTravelDisplay, overtimeYearOffDayTravelDays) { days, travel, travelDays ->
+            OvertimeCountsPart(days, travel, travelDays)
+        }
+    ) { core, weekMonth, overtime, overtimeCounts ->
         TodayScreenState(
             uiState = core.uiState,
             selectedEntry = core.selectedEntry,
@@ -266,14 +295,14 @@ class TodayViewModel @Inject constructor(
             weekDaysUi = weekMonth.weekDaysUi,
             weekStats = weekMonth.weekStats,
             monthStats = weekMonth.monthStats,
-            isOvertimeConfigured = overtime.isConfigured,
-            overtimeYearDisplay = overtime.yearDisplay,
-            overtimeMonthDisplay = overtime.monthDisplay,
-            overtimeYearActualDisplay = overtime.yearActualDisplay,
-            overtimeYearTargetDisplay = overtime.yearTargetDisplay,
-            overtimeYearCountedDays = overtime.yearCountedDays,
-            overtimeYearOffDayTravelDisplay = overtime.yearOffDayTravelDisplay,
-            overtimeYearOffDayTravelDays = overtime.yearOffDayTravelDays,
+            isOvertimeConfigured = overtime.isOvertimeConfigured,
+            overtimeYearDisplay = overtime.overtimeYearDisplay,
+            overtimeMonthDisplay = overtime.overtimeMonthDisplay,
+            overtimeYearActualDisplay = overtime.overtimeYearActualDisplay,
+            overtimeYearTargetDisplay = overtime.overtimeYearTargetDisplay,
+            overtimeYearCountedDays = overtimeCounts.overtimeYearCountedDays,
+            overtimeYearOffDayTravelDisplay = overtimeCounts.overtimeYearOffDayTravelDisplay,
+            overtimeYearOffDayTravelDays = overtimeCounts.overtimeYearOffDayTravelDays,
             loadingActions = core.loadingActions
         )
     }.stateIn(
@@ -375,34 +404,39 @@ class TodayViewModel @Inject constructor(
             val weekStart = now.with(weekFields.dayOfWeek(), 1)
             val weekEnd = now.with(weekFields.dayOfWeek(), 7)
             val monthStart = now.withDayOfMonth(1)
-            val yearStart = now.withDayOfYear(1)
+            val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
 
             val settings = reminderSettingsManager.settings.first()
+            _isOvertimeConfigured.value = true
 
-            val (weekEntries, monthEntries, yearEntries) = withContext(Dispatchers.IO) {
-                Triple(
+            val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
+                Pair(
                     workEntryDao.getByDateRangeWithTravel(weekStart, weekEnd),
-                    workEntryDao.getByDateRangeWithTravel(monthStart, now.withDayOfMonth(now.lengthOfMonth())),
-                    workEntryDao.getByDateRangeWithTravel(yearStart, now)
+                    workEntryDao.getByDateRangeWithTravel(monthStart, monthEnd)
                 )
             }
 
             _weekStats.value = calculateWeekStats(weekEntries, settings.weeklyTargetHours)
             _monthStats.value = calculateMonthStats(monthEntries, settings.monthlyTargetHours)
 
-            val currentMonthEntries = yearEntries.filter { !it.workEntry.date.isBefore(monthStart) }
+            val yearStart = now.withDayOfYear(1)
+            val (yearEntries, currentMonthEntries) = withContext(Dispatchers.IO) {
+                Pair(
+                    workEntryDao.getByDateRangeWithTravel(yearStart, now),
+                    workEntryDao.getByDateRangeWithTravel(monthStart, now)
+                )
+            }
+
             val yearOvertime = calculateOvertimeForRange(yearEntries, settings.dailyTargetHours)
             val monthOvertime = calculateOvertimeForRange(currentMonthEntries, settings.dailyTargetHours)
 
-            _overtimeState.value = OvertimeState(
-                yearDisplay = formatSignedHours(yearOvertime.totalOvertimeHours),
-                monthDisplay = formatSignedHours(monthOvertime.totalOvertimeHours),
-                yearActualDisplay = formatHours(yearOvertime.totalActualHours),
-                yearTargetDisplay = formatHours(yearOvertime.totalTargetHours),
-                yearCountedDays = yearOvertime.countedDays,
-                yearOffDayTravelDisplay = formatHours(yearOvertime.offDayTravelHours),
-                yearOffDayTravelDays = yearOvertime.offDayTravelDays
-            )
+            _overtimeYearDisplay.value = formatSignedHours(yearOvertime.totalOvertimeHours)
+            _overtimeMonthDisplay.value = formatSignedHours(monthOvertime.totalOvertimeHours)
+            _overtimeYearActualDisplay.value = formatHours(yearOvertime.totalActualHours)
+            _overtimeYearTargetDisplay.value = formatHours(yearOvertime.totalTargetHours)
+            _overtimeYearCountedDays.value = yearOvertime.countedDays
+            _overtimeYearOffDayTravelDisplay.value = formatHours(yearOvertime.offDayTravelHours)
+            _overtimeYearOffDayTravelDays.value = yearOvertime.offDayTravelDays
         } catch (e: Exception) {
             android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
             _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
