@@ -48,8 +48,8 @@ class RecordDailyManualCheckIn(
                 val keepExistingWorkSchedule = existingEntry.dayType == DayType.WORK
                 existingEntry.copy(
                     dayType = DayType.WORK,
-                    workStart = if (keepExistingWorkSchedule) existingEntry.workStart else settings.workStart,
-                    workEnd = if (keepExistingWorkSchedule) existingEntry.workEnd else settings.workEnd,
+                    workStart = if (keepExistingWorkSchedule) existingEntry.workStart ?: settings.workStart else settings.workStart,
+                    workEnd = if (keepExistingWorkSchedule) existingEntry.workEnd ?: settings.workEnd else settings.workEnd,
                     breakMinutes = if (keepExistingWorkSchedule) existingEntry.breakMinutes else settings.breakMinutes,
                     dayLocationLabel = resolvedLabel,
                     mealIsArrivalDeparture = input.isArrivalDeparture,

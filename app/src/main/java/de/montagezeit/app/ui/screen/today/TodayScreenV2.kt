@@ -767,12 +767,12 @@ private fun DailyManualCheckInDialogV2(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { keyboardController?.hide(); onDismiss() },
         title = { Text(stringResource(R.string.daily_check_in_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val keyboardController = LocalSoftwareKeyboardController.current
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,
@@ -857,12 +857,12 @@ private fun DayLocationDialogV2(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { keyboardController?.hide(); onDismiss() },
         title = { Text(stringResource(R.string.day_location_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val keyboardController = LocalSoftwareKeyboardController.current
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,

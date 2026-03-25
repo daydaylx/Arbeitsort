@@ -35,8 +35,8 @@ class ConfirmWorkDay(
                 val keepExistingWorkSchedule = entry.dayType == DayType.WORK
                 entry.copy(
                     dayType = DayType.WORK,
-                    workStart = if (keepExistingWorkSchedule) entry.workStart else workStart,
-                    workEnd = if (keepExistingWorkSchedule) entry.workEnd else workEnd,
+                    workStart = if (keepExistingWorkSchedule) entry.workStart ?: workStart else workStart,
+                    workEnd = if (keepExistingWorkSchedule) entry.workEnd ?: workEnd else workEnd,
                     breakMinutes = if (keepExistingWorkSchedule) entry.breakMinutes else breakMinutes,
                     morningCapturedAt = entry.morningCapturedAt ?: now,
                     dayLocationLabel = dayLocation,

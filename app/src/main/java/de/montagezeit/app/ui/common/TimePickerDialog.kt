@@ -75,7 +75,7 @@ fun TimePickerDialog(
             ) {
                 Text(
                     text = dialogTitle,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 20.dp)

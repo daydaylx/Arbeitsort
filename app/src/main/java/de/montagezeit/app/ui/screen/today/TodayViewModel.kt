@@ -574,6 +574,7 @@ class TodayViewModel @Inject constructor(
                 _uiState.value = TodayUiState.Success(entry)
                 _dailyCheckInLocationInput.value = entry.dayLocationLabel
                 _showDailyCheckInDialog.value = false
+                _snackbarMessage.value = UiText.StringResource(R.string.toast_check_in_day_saved)
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
             } finally {
@@ -619,6 +620,7 @@ class TodayViewModel @Inject constructor(
                 val entry = confirmOffDay(_selectedDate.value, source = "UI")
                 _uiState.value = TodayUiState.Success(entry)
                 _showDailyCheckInDialog.value = false
+                _snackbarMessage.value = UiText.StringResource(R.string.toast_off_day_saved)
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
             } finally {

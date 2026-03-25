@@ -647,8 +647,6 @@ sealed class ValidationError(@StringRes val messageRes: Int) {
     object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
     object TravelArriveBeforeStart : ValidationError(R.string.edit_validation_travel_arrive_before_start)
     object TravelTooLong : ValidationError(R.string.edit_validation_travel_too_long)
-    object ReturnTravelArriveBeforeStart : ValidationError(R.string.edit_validation_return_arrive_before_start)
-    object ReturnTravelTooLong : ValidationError(R.string.edit_validation_return_too_long)
     object TravelLegIncomplete : ValidationError(R.string.edit_validation_travel_incomplete)
     object TravelLegMissingTimeWindow : ValidationError(R.string.edit_validation_travel_missing_time_window)
     object TravelNotAllowedForCompTime : ValidationError(R.string.edit_validation_travel_not_allowed_comp_time)
