@@ -1,6 +1,7 @@
 package de.montagezeit.app
 
 import android.app.Application
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
@@ -38,8 +39,12 @@ class MontageZeitApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         applicationScope.launch {
-            appDatabase.openHelper.writableDatabase
-            reminderScheduler.scheduleAll()
+            try {
+                appDatabase.openHelper.writableDatabase
+                reminderScheduler.scheduleAll()
+            } catch (e: Exception) {
+                Log.e("MontageZeitApp", "Fehler beim App-Start (DB/Reminder)", e)
+            }
         }
     }
 

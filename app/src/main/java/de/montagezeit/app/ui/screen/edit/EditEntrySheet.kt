@@ -821,136 +821,135 @@ fun WorkTimesSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            return@Column
-        }
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = { showStartPicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasWorkTimeError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_start),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = formatTime(workStart),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-            
-            OutlinedButton(
-                onClick = { showEndPicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasWorkTimeError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_end),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = formatTime(workEnd),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-        }
-        
-        if (hasWorkTimeError) {
-            Text(
-                text = stringResource(
-                    R.string.edit_error_prefix,
-                    stringResource(ValidationError.WorkEndBeforeStart.messageRes)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
-        
-        // Break Time
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.edit_label_break_minutes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.edit_break_minutes_value, breakMinutes),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            Slider(
-                value = breakMinutes.toFloat(),
-                onValueChange = { onBreakChange(it.toInt()) },
-                valueRange = 0f..120f,
-                steps = 120,
-                modifier = Modifier.fillMaxWidth(),
-                colors = if (hasBreakError) {
-                    SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.error,
-                        activeTrackColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    SliderDefaults.colors()
+                OutlinedButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.weight(1f),
+                    colors = if (hasWorkTimeError) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.edit_label_start),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = formatTime(workStart),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
-            )
-            
-            if (hasBreakError) {
-                val breakError = validationErrors.firstOrNull { 
-                    it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime 
-                }
-                breakError?.let {
-                    Text(
-                        text = stringResource(
-                            R.string.edit_error_prefix,
-                            stringResource(it.messageRes)
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-            }
-        }
 
-        if (onApplyDefaults != null) {
-            TextButton(
-                onClick = onApplyDefaults,
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
+                OutlinedButton(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.weight(1f),
+                    colors = if (hasWorkTimeError) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    }
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.edit_label_end),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = formatTime(workEnd),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
+
+            if (hasWorkTimeError) {
+                Text(
+                    text = stringResource(
+                        R.string.edit_error_prefix,
+                        stringResource(ValidationError.WorkEndBeforeStart.messageRes)
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = 4.dp)
                 )
-                Text(stringResource(R.string.edit_action_apply_default_times))
+            }
+
+            // Break Time
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.edit_label_break_minutes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.edit_break_minutes_value, breakMinutes),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Slider(
+                    value = breakMinutes.toFloat(),
+                    onValueChange = { onBreakChange(it.toInt()) },
+                    valueRange = 0f..120f,
+                    steps = 120,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = if (hasBreakError) {
+                        SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.error,
+                            activeTrackColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        SliderDefaults.colors()
+                    }
+                )
+
+                if (hasBreakError) {
+                    val breakError = validationErrors.firstOrNull {
+                        it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime
+                    }
+                    breakError?.let {
+                        Text(
+                            text = stringResource(
+                                R.string.edit_error_prefix,
+                                stringResource(it.messageRes)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            if (onApplyDefaults != null) {
+                TextButton(
+                    onClick = onApplyDefaults,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(stringResource(R.string.edit_action_apply_default_times))
+                }
             }
         }
     }
