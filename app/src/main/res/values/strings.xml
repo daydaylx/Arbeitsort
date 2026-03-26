@@ -502,11 +502,11 @@
 
     <!-- Overtime Target Settings -->
     <string name="settings_overtime_targets">Überstunden-Ziele</string>
-    <string name="settings_overtime_targets_summary">Tag: %.1f Std. · Woche: %.1f Std. · Monat: %.1f Std.</string>
+    <string name="settings_overtime_targets_summary">Tag: %1$.1f Std. · Woche: %2$.1f Std. · Monat: %3$.1f Std.</string>
     <string name="overtime_targets_description">Diese Werte werden für die Berechnung von Überstunden verwendet.</string>
     <string name="overtime_targets_inconsistent_hint">Hinweis: Die Werte passen nicht zusammen. Standard wäre z.B. 8h/Tag × 5 Tage = 40h/Woche.</string>
     <string name="label_daily_target">Soll-Stunden pro Tag</string>
     <string name="label_weekly_target">Soll-Stunden pro Woche</string>
     <string name="label_monthly_target">Soll-Stunden pro Monat</string>
-    <string name="error_value_range">Wert muss zwischen %.1f und %.1f liegen</string>
+    <string name="error_value_range">Wert muss zwischen %1$.1f und %2$.1f liegen</string>
 </resources>

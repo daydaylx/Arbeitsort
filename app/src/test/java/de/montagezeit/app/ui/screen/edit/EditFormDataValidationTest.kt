@@ -107,7 +107,7 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertTrue(errors.any { it.isTravelArriveBeforeStartForLeg(0) })
         assertFalse(formData.isValid())
     }
 
@@ -133,7 +133,7 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.TravelLegIncomplete })
+        assertTrue(errors.any { it.isTravelLegIncompleteForLeg(0) })
         assertFalse(formData.isValid())
     }
 
@@ -146,7 +146,7 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.TravelLegIncomplete })
+        assertTrue(errors.any { it.isTravelLegIncompleteForLeg(0) })
         assertFalse(formData.isValid())
     }
 
@@ -162,7 +162,7 @@ class EditFormDataValidationTest {
 
         assertEquals(2, errors.size)
         assertTrue(errors.any { it is ValidationError.NegativeBreakMinutes })
-        assertTrue(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertTrue(errors.any { it.isTravelArriveBeforeStartForLeg(0) })
         assertFalse(formData.isValid())
     }
 
@@ -180,8 +180,89 @@ class EditFormDataValidationTest {
 
         assertEquals(2, errors.size)
         assertTrue(errors.any { it is ValidationError.BreakLongerThanWorkTime })
-        assertTrue(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertTrue(errors.any { it.isTravelArriveBeforeStartForLeg(0) })
         assertFalse(formData.isValid())
+    }
+
+    @Test
+    fun `validate should report equal times on second travel leg with matching index`() {
+        val formData = validFormData(
+            travelLegs = listOf(
+                EditTravelLegForm(
+                    startTime = LocalTime.of(6, 0),
+                    arriveTime = LocalTime.of(7, 0)
+                ),
+                EditTravelLegForm(
+                    startTime = LocalTime.of(18, 0),
+                    arriveTime = LocalTime.of(18, 0)
+                )
+            )
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.any { it.isTravelArriveBeforeStartForLeg(1) })
+        assertFalse(errors.any { it.isTravelArriveBeforeStartForLeg(0) })
+    }
+
+    @Test
+    fun `validate should allow overnight second travel leg`() {
+        val formData = validFormData(
+            travelLegs = listOf(
+                EditTravelLegForm(
+                    startTime = LocalTime.of(6, 0),
+                    arriveTime = LocalTime.of(7, 0)
+                ),
+                EditTravelLegForm(
+                    startTime = LocalTime.of(23, 0),
+                    arriveTime = LocalTime.of(1, 0)
+                )
+            )
+        )
+
+        val errors = formData.validate()
+
+        assertFalse(errors.any { it is ValidationError.TravelArriveBeforeStart })
+        assertTrue(formData.isValid())
+    }
+
+    @Test
+    fun `validate should report incomplete second travel leg with matching index`() {
+        val formData = validFormData(
+            travelLegs = listOf(
+                EditTravelLegForm(
+                    startTime = LocalTime.of(6, 0),
+                    arriveTime = LocalTime.of(7, 0)
+                ),
+                EditTravelLegForm(startTime = LocalTime.of(18, 0))
+            )
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.any { it.isTravelLegIncompleteForLeg(1) })
+        assertFalse(errors.any { it.isTravelLegIncompleteForLeg(0) })
+    }
+
+    @Test
+    fun `validate should report too long second travel leg with matching index`() {
+        val formData = validFormData(
+            travelLegs = listOf(
+                EditTravelLegForm(
+                    startTime = LocalTime.of(6, 0),
+                    arriveTime = LocalTime.of(7, 0)
+                ),
+                EditTravelLegForm(
+                    startTime = LocalTime.of(0, 0),
+                    arriveTime = LocalTime.of(17, 0)
+                )
+            )
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.any { it.isTravelTooLongForLeg(1) })
+        assertFalse(errors.any { it.isTravelTooLongForLeg(0) })
     }
 
     @Test
@@ -243,7 +324,7 @@ class EditFormDataValidationTest {
         )
         assertEquals(
             R.string.edit_validation_travel_arrive_before_start,
-            ValidationError.TravelArriveBeforeStart.messageRes
+            ValidationError.TravelArriveBeforeStart(0).messageRes
         )
     }
 
@@ -342,6 +423,7 @@ class EditFormDataValidationTest {
         workEnd: LocalTime = LocalTime.of(17, 0),
         breakMinutes: Int = 60,
         dayLocationLabel: String = "Baustelle A",
+        travelLegs: List<EditTravelLegForm> = emptyList(),
         travelStartTime: LocalTime? = null,
         travelArriveTime: LocalTime? = null
     ): EditFormData {
@@ -351,8 +433,21 @@ class EditFormDataValidationTest {
             workEnd = workEnd,
             breakMinutes = breakMinutes,
             dayLocationLabel = dayLocationLabel,
+            travelLegs = travelLegs,
             travelStartTime = travelStartTime,
             travelArriveTime = travelArriveTime
         )
+    }
+
+    private fun ValidationError.isTravelArriveBeforeStartForLeg(index: Int): Boolean {
+        return this is ValidationError.TravelArriveBeforeStart && legIndex == index
+    }
+
+    private fun ValidationError.isTravelLegIncompleteForLeg(index: Int): Boolean {
+        return this is ValidationError.TravelLegIncomplete && legIndex == index
+    }
+
+    private fun ValidationError.isTravelTooLongForLeg(index: Int): Boolean {
+        return this is ValidationError.TravelTooLong && legIndex == index
     }
 }

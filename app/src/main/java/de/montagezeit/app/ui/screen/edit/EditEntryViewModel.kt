@@ -516,30 +516,30 @@ data class EditFormData(
             }
         }
 
-        relevantTravelLegs.forEach { leg ->
+        relevantTravelLegs.forEachIndexed { index, leg ->
             val hasStart = leg.startTime != null
             val hasArrive = leg.arriveTime != null
             val hasOverride = leg.paidMinutesOverride != null
 
             if (hasStart.xor(hasArrive)) {
-                errors += ValidationError.TravelLegIncomplete
-                return@forEach
+                errors += ValidationError.TravelLegIncomplete(index)
+                return@forEachIndexed
             }
             if (!hasStart && !hasArrive && !hasOverride) {
-                errors += ValidationError.TravelLegMissingTimeWindow
-                return@forEach
+                errors += ValidationError.TravelLegMissingTimeWindow(index)
+                return@forEachIndexed
             }
             if (hasStart && hasArrive) {
                 val startTime = leg.startTime
                 val arriveTime = leg.arriveTime
                 if (arriveTime == startTime) {
-                    errors += ValidationError.TravelArriveBeforeStart
+                    errors += ValidationError.TravelArriveBeforeStart(index)
                 } else {
                     var diffMinutes =
                         (requireNotNull(arriveTime).toSecondOfDay() - requireNotNull(startTime).toSecondOfDay()) / 60
                     if (diffMinutes < 0) diffMinutes += 24 * 60
                     if (diffMinutes > 16 * 60) {
-                        errors += ValidationError.TravelTooLong
+                        errors += ValidationError.TravelTooLong(index)
                     }
                 }
             }
@@ -645,10 +645,10 @@ sealed class ValidationError(@StringRes val messageRes: Int) {
     object WorkEndBeforeStart : ValidationError(R.string.edit_validation_work_end_before_start)
     object NegativeBreakMinutes : ValidationError(R.string.edit_validation_negative_break)
     object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
-    object TravelArriveBeforeStart : ValidationError(R.string.edit_validation_travel_arrive_before_start)
-    object TravelTooLong : ValidationError(R.string.edit_validation_travel_too_long)
-    object TravelLegIncomplete : ValidationError(R.string.edit_validation_travel_incomplete)
-    object TravelLegMissingTimeWindow : ValidationError(R.string.edit_validation_travel_missing_time_window)
+    data class TravelArriveBeforeStart(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_arrive_before_start)
+    data class TravelTooLong(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_too_long)
+    data class TravelLegIncomplete(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_incomplete)
+    data class TravelLegMissingTimeWindow(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_missing_time_window)
     object TravelNotAllowedForCompTime : ValidationError(R.string.edit_validation_travel_not_allowed_comp_time)
 }
 

@@ -972,290 +972,6 @@ TimePickerDialog(
 }
 
 @Composable
-fun TravelSection(
-    travelStartTime: java.time.LocalTime?,
-    travelArriveTime: java.time.LocalTime?,
-    travelLabelStart: String?,
-    travelLabelEnd: String?,
-    returnStartTime: java.time.LocalTime?,
-    returnArriveTime: java.time.LocalTime?,
-    validationErrors: List<ValidationError> = emptyList(),
-    onTravelStartChange: (java.time.LocalTime?) -> Unit,
-    onTravelArriveChange: (java.time.LocalTime?) -> Unit,
-    onTravelLabelStartChange: (String) -> Unit,
-    onTravelLabelEndChange: (String) -> Unit,
-    onReturnStartChange: (java.time.LocalTime?) -> Unit,
-    onReturnArriveChange: (java.time.LocalTime?) -> Unit,
-    onClearTravel: () -> Unit
-) {
-    var showStartPicker by remember { mutableStateOf(false) }
-    var showArrivePicker by remember { mutableStateOf(false) }
-    var showReturnStartPicker by remember { mutableStateOf(false) }
-    var showReturnArrivePicker by remember { mutableStateOf(false) }
-    val hasTravelData = travelStartTime != null ||
-        travelArriveTime != null ||
-        !travelLabelStart.isNullOrBlank() ||
-        !travelLabelEnd.isNullOrBlank() ||
-        returnStartTime != null ||
-        returnArriveTime != null
-    val outboundDuration = remember(travelStartTime, travelArriveTime) {
-        DateTimeUtils.calculateTravelDuration(travelStartTime, travelArriveTime)
-    }
-    val outboundDurationText = outboundDuration?.let { Formatters.formatDuration(it) }
-    val returnDuration = remember(returnStartTime, returnArriveTime) {
-        DateTimeUtils.calculateTravelDuration(returnStartTime, returnArriveTime)
-    }
-    val returnDurationText = returnDuration?.let { Formatters.formatDuration(it) }
-    val hasTravelError = validationErrors.any { it is ValidationError.TravelArriveBeforeStart }
-    val hasReturnError = validationErrors.any { it is ValidationError.ReturnTravelArriveBeforeStart }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_travel),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Text(
-            text = stringResource(R.string.edit_label_outbound),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = { showStartPicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasTravelError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_travel_start),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = travelStartTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-
-            OutlinedButton(
-                onClick = { showArrivePicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasTravelError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_travel_arrival),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = travelArriveTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-        }
-
-        if (hasTravelError) {
-            Text(
-                text = stringResource(
-                    R.string.edit_error_prefix,
-                    stringResource(ValidationError.TravelArriveBeforeStart.messageRes)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
-
-        outboundDurationText?.let {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = stringResource(R.string.edit_travel_duration, it),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-
-        OutlinedTextField(
-            value = travelLabelStart ?: "",
-            onValueChange = onTravelLabelStartChange,
-            label = { Text(stringResource(R.string.edit_label_from_optional)) },
-            placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        OutlinedTextField(
-            value = travelLabelEnd ?: "",
-            onValueChange = onTravelLabelEndChange,
-            label = { Text(stringResource(R.string.edit_label_to_optional)) },
-            placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        Divider()
-
-        Text(
-            text = stringResource(R.string.edit_label_return),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = { showReturnStartPicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasReturnError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_return_start),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = returnStartTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-
-            OutlinedButton(
-                onClick = { showReturnArrivePicker = true },
-                modifier = Modifier.weight(1f),
-                colors = if (hasReturnError) {
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                }
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.edit_label_return_arrival),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = returnArriveTime?.let { formatTime(it) } ?: stringResource(R.string.edit_time_pick),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-        }
-
-        if (hasReturnError) {
-            Text(
-                text = stringResource(
-                    R.string.edit_error_prefix,
-                    stringResource(ValidationError.ReturnTravelArriveBeforeStart.messageRes)
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
-
-        returnDurationText?.let {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = stringResource(R.string.edit_travel_duration, it),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-
-        if (hasTravelData) {
-            DestructiveActionButton(
-                onClick = onClearTravel,
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
-                )
-                Text(stringResource(R.string.edit_action_clear_travel_data))
-            }
-        }
-    }
-
-    if (showStartPicker) {
-        TimePickerDialog(
-            initialTime = travelStartTime ?: java.time.LocalTime.of(8, 0),
-            onTimeSelected = { onTravelStartChange(it); showStartPicker = false },
-            onDismiss = { showStartPicker = false }
-        )
-    }
-
-    if (showArrivePicker) {
-        TimePickerDialog(
-            initialTime = travelArriveTime ?: java.time.LocalTime.of(9, 0),
-            onTimeSelected = { onTravelArriveChange(it); showArrivePicker = false },
-            onDismiss = { showArrivePicker = false }
-        )
-    }
-
-    if (showReturnStartPicker) {
-        TimePickerDialog(
-            initialTime = returnStartTime ?: java.time.LocalTime.of(17, 0),
-            onTimeSelected = { onReturnStartChange(it); showReturnStartPicker = false },
-            onDismiss = { showReturnStartPicker = false }
-        )
-    }
-
-    if (showReturnArrivePicker) {
-        TimePickerDialog(
-            initialTime = returnArriveTime ?: java.time.LocalTime.of(18, 0),
-            onTimeSelected = { onReturnArriveChange(it); showReturnArrivePicker = false },
-            onDismiss = { showReturnArrivePicker = false }
-        )
-    }
-}
-
-@Composable
 fun TravelLegsSection(
     travelLegs: List<EditTravelLegForm>,
     validationErrors: List<ValidationError> = emptyList(),
@@ -1333,12 +1049,10 @@ private fun TravelLegCard(
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showArrivePicker by remember { mutableStateOf(false) }
-    val hasTravelError = validationErrors.any {
-        it is ValidationError.TravelArriveBeforeStart ||
-            it is ValidationError.TravelTooLong ||
-            it is ValidationError.TravelLegIncomplete ||
-            it is ValidationError.TravelLegMissingTimeWindow
+    val legErrors = remember(validationErrors, index) {
+        validationErrors.filter { error -> error.matchesTravelLeg(index) }
     }
+    val hasTravelError = legErrors.isNotEmpty()
     val duration = remember(leg.startTime, leg.arriveTime) {
         DateTimeUtils.calculateTravelDuration(leg.startTime, leg.arriveTime)
     }
@@ -1421,12 +1135,7 @@ private fun TravelLegCard(
             }
 
             if (hasTravelError) {
-                validationErrors.firstOrNull {
-                    it is ValidationError.TravelArriveBeforeStart ||
-                        it is ValidationError.TravelTooLong ||
-                        it is ValidationError.TravelLegIncomplete ||
-                        it is ValidationError.TravelLegMissingTimeWindow
-                }?.let { error ->
+                legErrors.firstOrNull()?.let { error ->
                     Text(
                         text = stringResource(
                             R.string.edit_error_prefix,
@@ -1498,6 +1207,16 @@ private fun TravelLegCard(
             onTimeSelected = { onArriveChange(it); showArrivePicker = false },
             onDismiss = { showArrivePicker = false }
         )
+    }
+}
+
+private fun ValidationError.matchesTravelLeg(index: Int): Boolean {
+    return when (this) {
+        is ValidationError.TravelArriveBeforeStart -> legIndex == index
+        is ValidationError.TravelTooLong -> legIndex == index
+        is ValidationError.TravelLegIncomplete -> legIndex == index
+        is ValidationError.TravelLegMissingTimeWindow -> legIndex == index
+        else -> false
     }
 }
 
