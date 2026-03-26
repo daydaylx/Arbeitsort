@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
-import de.montagezeit.app.handler.CheckInActionService
+import de.montagezeit.app.service.CheckInActionService
 import de.montagezeit.app.work.ReminderType
 import java.time.LocalDate
 import javax.inject.Inject

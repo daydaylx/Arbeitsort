@@ -1,4 +1,4 @@
-package de.montagezeit.app.handler
+package de.montagezeit.app.service
 
 import android.app.Notification
 import android.app.NotificationChannel
