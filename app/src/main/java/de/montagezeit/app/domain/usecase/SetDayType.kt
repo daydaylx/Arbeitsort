@@ -39,13 +39,9 @@ class SetDayType(
             } else {
                 WorkEntry(
                     date = date,
-                    dayType = dayType,
-                    confirmedWorkDay = dayType == DayType.COMP_TIME,
-                    confirmationAt = if (dayType == DayType.COMP_TIME) now else null,
-                    confirmationSource = if (dayType == DayType.COMP_TIME) "COMP_TIME" else null,
                     createdAt = now,
                     updatedAt = now
-                )
+                ).transitionToDayType(dayType = dayType, now = now)
             }
 
             result = updatedEntry

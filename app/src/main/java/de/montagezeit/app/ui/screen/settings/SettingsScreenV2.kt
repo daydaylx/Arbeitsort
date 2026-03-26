@@ -250,6 +250,7 @@ fun SettingsContentV2(
         settings.fallbackEnabled,
         settings.dailyReminderEnabled
     ).count { it }
+    val reminderError = (uiState as? SettingsUiState.ReminderError)?.message
 
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -335,6 +336,7 @@ fun SettingsContentV2(
             onUpdateFallbackTime = onUpdateFallbackTime,
             onUpdateDailyEnabled = onUpdateDailyEnabled,
             onUpdateDailyTime = onUpdateDailyTime,
+            reminderError = reminderError,
             expanded = remindersExpanded,
             onExpandedChange = { remindersExpanded = it }
         )
@@ -682,6 +684,7 @@ fun ReminderSettingsSectionV2(
     onUpdateFallbackTime: (LocalTime) -> Unit,
     onUpdateDailyEnabled: (Boolean) -> Unit,
     onUpdateDailyTime: (LocalTime) -> Unit,
+    reminderError: de.montagezeit.app.ui.util.UiText?,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit
 ) {
@@ -700,6 +703,15 @@ fun ReminderSettingsSectionV2(
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
+        if (reminderError != null) {
+            MZStatusBadge(
+                text = reminderError.asString(LocalContext.current),
+                type = StatusType.ERROR,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Divider()
+        }
+
         // Morning Window
         SettingsToggleRowV2(
             title = stringResource(R.string.reminder_morning),
@@ -1136,6 +1148,7 @@ fun ExportSectionV2(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            is SettingsUiState.ReminderError -> Unit
         }
     }
 
@@ -1524,4 +1537,3 @@ private fun openBatterySettings(context: Context) {
         context.startActivity(fallbackIntent)
     }
 }
-

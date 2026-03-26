@@ -77,6 +77,15 @@ fun TodayScreenV2(
             viewModel.onConfirmOffDay()
         }
     }
+    val onDeleteDay = remember { { viewModel.openDeleteDayDialog() } }
+    val onBackToToday = remember { { viewModel.selectDate(LocalDate.now()) } }
+    val onSelectDay = remember { { date: LocalDate -> viewModel.selectDate(date) } }
+    val onEditDayLocation = remember { { viewModel.openDayLocationDialog() } }
+    val onEditToday = remember(screenState.selectedDate) {
+        {
+            viewModel.ensureTodayEntryThen { onOpenEditSheet(screenState.selectedDate) }
+        }
+    }
 
     TodayTransientEffects(
         viewModel = viewModel,
@@ -103,7 +112,7 @@ fun TodayScreenV2(
                 },
                 actions = {
                     if (screenState.currentEntry != null) {
-                        IconButton(onClick = { viewModel.openDeleteDayDialog() }) {
+                        IconButton(onClick = onDeleteDay) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = stringResource(R.string.action_delete_day)
@@ -111,7 +120,7 @@ fun TodayScreenV2(
                         }
                     }
                     if (screenState.isViewingPastDay) {
-                        TextButton(onClick = { viewModel.selectDate(LocalDate.now()) }) {
+                        TextButton(onClick = onBackToToday) {
                             Text(stringResource(R.string.week_back_to_today))
                         }
                     }
@@ -169,13 +178,9 @@ fun TodayScreenV2(
                             overtimeYearCountedDays = screenState.overtimeYearCountedDays,
                             overtimeYearOffDayTravelDisplay = screenState.overtimeYearOffDayTravelDisplay,
                             overtimeYearOffDayTravelDays = screenState.overtimeYearOffDayTravelDays,
-                            onSelectDay = { viewModel.selectDate(it) },
-                            onEditDayLocation = { viewModel.openDayLocationDialog() },
-                            onEditToday = {
-                                viewModel.ensureTodayEntryThen {
-                                    onOpenEditSheet(screenState.selectedDate)
-                                }
-                            },
+                            onSelectDay = onSelectDay,
+                            onEditDayLocation = onEditDayLocation,
+                            onEditToday = onEditToday,
                             onOpenWeekView = onOpenWeekView
                         )
                     }
@@ -934,4 +939,3 @@ private fun formatMinutes(minutes: Int): String {
         stringResource(R.string.format_hours_short_minutes, h, m)
     }
 }
-

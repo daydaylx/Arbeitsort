@@ -2,12 +2,14 @@ package de.montagezeit.app.ui.screen.today
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.WeekCalculator
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
@@ -60,16 +62,13 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `ensureTodayEntryThen creates entry when missing`() {
+    fun `ensureTodayEntryThen opens callback without creating entry when missing`() {
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings()
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.upsert(any()) } returns Unit
-        every { settingsManager.settings } returns flowOf(settings)
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
         val latch = CountDownLatch(1)
@@ -77,25 +76,15 @@ class TodayViewModelTest {
         viewModel.ensureTodayEntryThen { latch.countDown() }
 
         assertTrue(latch.await(2, TimeUnit.SECONDS))
-        coVerify(exactly = 1) {
-            workEntryDao.upsert(match {
-                it.date == LocalDate.now() &&
-                    it.workStart == settings.workStart &&
-                    it.workEnd == settings.workEnd &&
-                    it.breakMinutes == settings.breakMinutes
-            })
-        }
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
     }
 
     @Test
-    fun `ensureTodayEntryThen skips upsert when entry exists`() {
-        val today = LocalDate.now()
-        val existing = WorkEntry(date = today)
+    fun `ensureTodayEntryThen does not touch dao when entry exists`() {
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
-        coEvery { workEntryDao.getByDate(any()) } returns existing
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(existing)
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
@@ -242,6 +231,39 @@ class TodayViewModelTest {
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
         assertEquals("", viewModel.dailyCheckInLocationInput.value)
         collectJob.cancel()
+    }
+
+    @Test
+    fun `onResetError retries loading selected date`() = runTest {
+        val today = LocalDate.now()
+        val recoveredEntry = WorkEntry(
+            date = today,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Wieder geladen"
+        )
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
+        val settingsManager = mockk<ReminderSettingsManager>()
+        var calls = 0
+
+        coEvery { workEntryDao.getByDate(any()) } answers {
+            calls += 1
+            if (calls == 1) throw IllegalStateException("boom")
+            recoveredEntry
+        }
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        every { workEntryDao.getByDateWithTravelFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns emptyList()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(workEntryDao, settingsManager)
+
+        waitUntil { viewModel.uiState.value is TodayUiState.Error }
+
+        viewModel.onResetError()
+
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(recoveredEntry) }
+        assertEquals(TodayUiState.Success(recoveredEntry), viewModel.uiState.value)
     }
 
     @Test
@@ -394,7 +416,8 @@ class TodayViewModelTest {
 
         val latch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.weekStats.collect { stats ->
+            viewModel.screenState.collect { screenState ->
+                val stats = screenState.weekStats
                 // Verify weekStats uses the custom 37.5h target from settings
                 if (stats?.targetHours == 37.5) {
                     latch.countDown()
@@ -430,7 +453,8 @@ class TodayViewModelTest {
 
         val latch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.monthStats.collect { stats ->
+            viewModel.screenState.collect { screenState ->
+                val stats = screenState.monthStats
                 // Verify monthStats uses the custom 150.0h target from settings
                 if (stats?.targetHours == 150.0) {
                     latch.countDown()
@@ -469,7 +493,8 @@ class TodayViewModelTest {
         val monthLatch = CountDownLatch(1)
 
         val weekJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.weekStats.collect { stats ->
+            viewModel.screenState.collect { screenState ->
+                val stats = screenState.weekStats
                 if (stats?.targetHours == 40.0) {
                     weekLatch.countDown()
                 }
@@ -477,7 +502,8 @@ class TodayViewModelTest {
         }
 
         val monthJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.monthStats.collect { stats ->
+            viewModel.screenState.collect { screenState ->
+                val stats = screenState.monthStats
                 if (stats?.targetHours == 160.0) {
                     monthLatch.countDown()
                 }
@@ -615,10 +641,11 @@ class TodayViewModelTest {
     fun `confirmDeleteDay removes entry and exposes it for undo`() {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
+        val existingSnapshot = DeletedDaySnapshot(existingEntry, emptyList())
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
-        coEvery { workEntryDao.getByDate(today) } returns existingEntry
+        coEvery { workEntryDao.getByDateWithTravel(today) } returns record(existingEntry)
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         coEvery { workEntryDao.deleteByDate(today) } returns Unit
@@ -636,7 +663,7 @@ class TodayViewModelTest {
         viewModel.confirmDeleteDay()
 
         assertTrue(deletedLatch.await(2, TimeUnit.SECONDS))
-        assertEquals(existingEntry, viewModel.deletedEntryForUndo.value)
+        assertEquals(existingSnapshot, viewModel.deletedEntryForUndo.value)
         assertTrue(viewModel.uiState.value is TodayUiState.Success)
         assertEquals(null, (viewModel.uiState.value as TodayUiState.Success).entry)
         coVerify(exactly = 1) { workEntryDao.deleteByDate(today) }
@@ -647,14 +674,23 @@ class TodayViewModelTest {
     fun `undoDeleteDay re-inserts the deleted entry`() {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
+        val travelLegs = listOf(
+            TravelLeg(
+                workEntryDate = today,
+                sortOrder = 0,
+                startLabel = "A",
+                endLabel = "B"
+            )
+        )
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
+        coEvery { workEntryDao.getByDateWithTravel(today) } returns record(existingEntry, travelLegs)
         coEvery { workEntryDao.getByDate(today) } returns existingEntry
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         coEvery { workEntryDao.deleteByDate(today) } returns Unit
-        coEvery { workEntryDao.upsert(existingEntry) } returns Unit
+        coEvery { workEntryDao.replaceEntryWithTravelLegs(existingEntry, travelLegs) } returns Unit
         every { settingsManager.settings } returns flowOf(ReminderSettings())
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
@@ -671,7 +707,7 @@ class TodayViewModelTest {
         viewModel.undoDeleteDay()
 
         assertEquals(null, viewModel.deletedEntryForUndo.value)
-        coVerify(exactly = 1) { workEntryDao.upsert(existingEntry) }
+        coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(existingEntry, travelLegs) }
         assertTrue(viewModel.uiState.value is TodayUiState.Success)
         assertEquals(existingEntry, (viewModel.uiState.value as TodayUiState.Success).entry)
         collectJob.cancel()
@@ -683,7 +719,7 @@ class TodayViewModelTest {
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
 
-        coEvery { workEntryDao.getByDate(today) } returns null
+        coEvery { workEntryDao.getByDateWithTravel(today) } returns null
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         every { settingsManager.settings } returns flowOf(ReminderSettings())
@@ -768,9 +804,9 @@ class TodayViewModelTest {
             entriesWithTravel = listOf(record(confirmedEntry), record(unconfirmedEntry))
         )
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.weekStats != null }
 
-        val stats = viewModel.weekStats.value
+        val stats = viewModel.screenState.value.weekStats
         assertEquals(
             "Nur bestätigte WORK-Tage dürfen in Wochenwerte einfließen",
             1,
@@ -804,9 +840,9 @@ class TodayViewModelTest {
             settingsManager,
             entriesWithTravel = listOf(record(confirmedEntry))
         )
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.weekStats != null }
 
-        val stats = viewModel.weekStats.value
+        val stats = viewModel.screenState.value.weekStats
         assertEquals(1, stats?.workDaysCount)
         assertEquals(8.0, stats?.totalHours ?: 0.0, 0.01)
     }
@@ -834,9 +870,9 @@ class TodayViewModelTest {
             entriesWithTravel = entries.map(::record)
         )
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.monthStats != null }
 
-        assertEquals(5020, viewModel.monthStats.value?.mealAllowanceTotalCents)
+        assertEquals(5020, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     @Test
@@ -862,10 +898,10 @@ class TodayViewModelTest {
             entriesWithTravel = entries.map(::record)
         )
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.monthStats != null }
 
         // Only the WORK entry's allowance should be counted
-        assertEquals(2800, viewModel.monthStats.value?.mealAllowanceTotalCents)
+        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     @Test
@@ -890,9 +926,9 @@ class TodayViewModelTest {
             entriesWithTravel = entries.map(::record)
         )
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.monthStats != null }
 
-        assertEquals(2800, viewModel.monthStats.value?.mealAllowanceTotalCents)
+        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     @Test
@@ -962,9 +998,9 @@ class TodayViewModelTest {
 
         val viewModel = createViewModel(workEntryDao, settingsManager, entriesWithTravel = entries.map { record(it) })
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.monthStats != null }
 
-        assertEquals(5020, viewModel.monthStats.value?.mealAllowanceTotalCents)
+        assertEquals(5020, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     @Test
@@ -984,9 +1020,9 @@ class TodayViewModelTest {
 
         val viewModel = createViewModel(workEntryDao, settingsManager, entriesWithTravel = entries.map { record(it) })
 
-        Thread.sleep(300)
+        waitUntil { viewModel.screenState.value.monthStats != null }
 
-        assertEquals(0, viewModel.monthStats.value?.mealAllowanceTotalCents)
+        assertEquals(0, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     private fun createViewModel(
@@ -1008,11 +1044,26 @@ class TodayViewModelTest {
             reminderSettingsManager = settingsManager,
             deleteDayEntry = deleteDayEntry,
             nonWorkingDayChecker = mockk<NonWorkingDayChecker>(relaxed = true)
-        ).also { createdViewModels.add(it) }
+        ).also {
+            createdViewModels.add(it)
+            it.viewModelScope.launch { it.screenState.collect {} }
+            it.viewModelScope.launch { it.dialogState.collect {} }
+        }
     }
 
-    private fun record(entry: WorkEntry) = WorkEntryWithTravelLegs(
+    private fun record(
+        entry: WorkEntry,
+        travelLegs: List<TravelLeg> = emptyList()
+    ) = WorkEntryWithTravelLegs(
         workEntry = entry,
-        travelLegs = emptyList()
+        travelLegs = travelLegs
     )
+
+    private fun waitUntil(timeoutMs: Long = 2_000L, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (!condition() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(25)
+        }
+        assertTrue(condition())
+    }
 }

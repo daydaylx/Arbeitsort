@@ -18,3 +18,6 @@ fun UiText.asString(context: Context): String {
         is UiText.DynamicString -> value
     }
 }
+
+fun Throwable.toUiText(@StringRes fallbackRes: Int): UiText =
+    UiText.StringResource(fallbackRes)

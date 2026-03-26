@@ -22,7 +22,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +46,8 @@ class EditEntryViewModel @Inject constructor(
 
     private val _screenState = MutableStateFlow(EditScreenState())
     val screenState: StateFlow<EditScreenState> = _screenState.asStateFlow()
+
+    private var loadEntryJob: Job? = null
 
     init {
         loadEntry(currentDate)
@@ -73,8 +77,9 @@ class EditEntryViewModel @Inject constructor(
     }
 
     private fun loadEntry(date: LocalDate) {
-        viewModelScope.launch {
-            _screenState.update { it.copy(uiState = EditUiState.Loading, isSaving = false) }
+        loadEntryJob?.cancel()
+        loadEntryJob = viewModelScope.launch {
+            _screenState.update { it.copy(uiState = EditUiState.Loading, isSaving = false, originalFormData = null) }
 
             try {
                 val settings = reminderSettingsManager.settings.first()
@@ -92,6 +97,7 @@ class EditEntryViewModel @Inject constructor(
                     _screenState.update {
                         it.copy(
                             formData = formData,
+                            originalFormData = formData,
                             uiState = EditUiState.Success(record.workEntry),
                             isSaving = false,
                             dailyTargetHours = dailyTargetHours
@@ -110,15 +116,19 @@ class EditEntryViewModel @Inject constructor(
                         workEnd = settings.workEnd,
                         breakMinutes = settings.breakMinutes
                     )
+                    val finalFormData = formData.copy(dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null })
                     _screenState.update {
                         it.copy(
-                            formData = formData.copy(dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null }),
+                            formData = finalFormData,
+                            originalFormData = finalFormData,
                             uiState = EditUiState.NewEntry(date),
                             isSaving = false,
                             dailyTargetHours = dailyTargetHours
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _screenState.update {
                     it.copy(
@@ -225,6 +235,7 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun copyFromPreviousDay(onResult: (Boolean) -> Unit) {
+        if (_screenState.value.isSaving) { onResult(false); return }
         viewModelScope.launch(Dispatchers.IO) {
             val previousDate = currentDate.minusDays(1)
             val record = workEntryDao.getByDateWithTravel(previousDate)
@@ -313,13 +324,9 @@ class EditEntryViewModel @Inject constructor(
             val baseEntry = originalEntry?.transitionToDayType(dayType = data.dayType, now = now)
                 ?: WorkEntry(
                     date = date,
-                    dayType = data.dayType,
-                    confirmedWorkDay = data.dayType == DayType.COMP_TIME,
-                    confirmationAt = if (data.dayType == DayType.COMP_TIME) now else null,
-                    confirmationSource = if (data.dayType == DayType.COMP_TIME) DayType.COMP_TIME.name else null,
                     createdAt = now,
                     updatedAt = now
-                )
+                ).transitionToDayType(dayType = data.dayType, now = now)
 
             val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
             val entryToSave = baseEntry.copy(
@@ -359,7 +366,7 @@ class EditEntryViewModel @Inject constructor(
             try {
                 _screenState.update { it.copy(isSaving = true) }
                 workEntryDao.replaceEntryWithTravelLegs(entryToSave, legsToSave)
-                _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
+                _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved, originalFormData = data) }
             } catch (e: Exception) {
                 _screenState.update {
                     it.copy(
@@ -387,6 +394,10 @@ class EditEntryViewModel @Inject constructor(
             }
             else -> Unit
         }
+    }
+
+    fun reloadEntry() {
+        loadEntry(currentDate)
     }
 
     fun copyEntryData(): EditFormData = _screenState.value.formData.copy()
@@ -428,8 +439,12 @@ data class EditScreenState(
     val uiState: EditUiState = EditUiState.Loading,
     val formData: EditFormData = EditFormData(),
     val isSaving: Boolean = false,
-    val dailyTargetHours: Double = 8.0
-)
+    val dailyTargetHours: Double = 8.0,
+    val originalFormData: EditFormData? = null
+) {
+    val isDirty: Boolean
+        get() = originalFormData != null && formData != originalFormData
+}
 
 data class EditTravelLegForm(
     val startTime: LocalTime? = null,
@@ -492,7 +507,7 @@ data class EditFormData(
         }
 
         if (dayType == DayType.WORK) {
-            if (dayLocationLabel.isNullOrBlank() && relevantTravelLegs.isEmpty()) {
+            if (dayLocationLabel.isNullOrBlank()) {
                 errors += ValidationError.MissingDayLocation
             }
             if (!hasWorkTimes && relevantTravelLegs.isEmpty()) {

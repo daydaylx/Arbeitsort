@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.montagezeit.app.data.local.database.AppDatabase
 import de.montagezeit.app.work.ReminderScheduler
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +26,12 @@ class MontageZeitApp : Application(), Configuration.Provider {
     @Inject
     lateinit var reminderScheduler: ReminderScheduler
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val applicationScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            CoroutineExceptionHandler { _, e ->
+                Log.e("MontageZeitApp", "Unerwarteter Fehler in applicationScope", e)
+            }
+    )
 
     override val workManagerConfiguration: Configuration
         get() = if (::workerFactory.isInitialized) {

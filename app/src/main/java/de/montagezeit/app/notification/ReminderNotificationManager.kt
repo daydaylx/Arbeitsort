@@ -407,12 +407,14 @@ class ReminderNotificationManager @Inject constructor(
      */
     private fun createOpenAppPendingIntent(date: LocalDate): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
+            action = ReminderActions.ACTION_EDIT_ENTRY
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
             )
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
         }
         return PendingIntent.getActivity(
             context,

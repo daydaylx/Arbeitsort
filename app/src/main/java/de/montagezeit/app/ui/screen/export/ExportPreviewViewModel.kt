@@ -255,7 +255,7 @@ class ExportPreviewViewModel @Inject constructor(
                     )
                     return@launch
                 }
-                val fileUri = pdfExporter.exportToPdf(
+                when (val exportResult = pdfExporter.exportToPdf(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,
                     company = settings.pdfCompany,
@@ -263,17 +263,43 @@ class ExportPreviewViewModel @Inject constructor(
                     personnelNumber = settings.pdfPersonnelNumber,
                     startDate = range.start,
                     endDate = range.end
-                )
-                if (fileUri != null) {
-                    val fileName = fileUri.lastPathSegment ?: "montagezeit_export.pdf"
-                    updateState(PreviewState.PdfReady(fileUri = fileUri, fileName = fileName))
-                } else {
-                    updateState(
-                        PreviewState.Error(
-                            message = UiText.StringResource(R.string.export_preview_error_pdf_create_failed),
-                            canReturn = true
+                )) {
+                    is PdfExporter.PdfExportResult.Success -> {
+                        val fileName = exportResult.fileUri.lastPathSegment ?: "montagezeit_export.pdf"
+                        updateState(PreviewState.PdfReady(fileUri = exportResult.fileUri, fileName = fileName))
+                    }
+                    is PdfExporter.PdfExportResult.ValidationError -> {
+                        updateState(
+                            PreviewState.Error(
+                                message = toUiText(exportResult.message, R.string.export_preview_error_export_failed),
+                                canReturn = true
+                            )
                         )
-                    )
+                    }
+                    is PdfExporter.PdfExportResult.StorageError -> {
+                        updateState(
+                            PreviewState.Error(
+                                message = toUiText(exportResult.message, R.string.export_preview_error_pdf_create_failed),
+                                canReturn = true
+                            )
+                        )
+                    }
+                    is PdfExporter.PdfExportResult.FileWriteError -> {
+                        updateState(
+                            PreviewState.Error(
+                                message = toUiText(exportResult.message, R.string.export_preview_error_pdf_create_failed),
+                                canReturn = true
+                            )
+                        )
+                    }
+                    is PdfExporter.PdfExportResult.UnknownError -> {
+                        updateState(
+                            PreviewState.Error(
+                                message = toUiText(exportResult.message, R.string.export_preview_error_export_failed),
+                                canReturn = true
+                            )
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 updateState(

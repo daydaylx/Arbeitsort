@@ -8,6 +8,7 @@ import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.ui.util.UiText
+import de.montagezeit.app.ui.util.toUiText
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -253,11 +254,3 @@ class OverviewViewModel @Inject constructor(
     }
 }
 
-private fun Throwable.toUiText(@androidx.annotation.StringRes fallbackRes: Int): UiText {
-    val messageValue = message?.trim().orEmpty()
-    return if (messageValue.isNotEmpty()) {
-        UiText.DynamicString(messageValue)
-    } else {
-        UiText.StringResource(fallbackRes)
-    }
-}

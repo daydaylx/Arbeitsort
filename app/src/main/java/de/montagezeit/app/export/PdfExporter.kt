@@ -35,6 +35,14 @@ import javax.inject.Singleton
 class PdfExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+
+    sealed interface PdfExportResult {
+        data class Success(val fileUri: Uri) : PdfExportResult
+        data class ValidationError(val message: String) : PdfExportResult
+        data class StorageError(val message: String) : PdfExportResult
+        data class FileWriteError(val message: String) : PdfExportResult
+        data class UnknownError(val message: String) : PdfExportResult
+    }
     
     // PDF-Konstanten (A4 in Punkten: 595 x 842)
     companion object {
@@ -127,7 +135,7 @@ class PdfExporter @Inject constructor(
      * @param personnelNumber Personalnummer (optional)
      * @param startDate Startdatum des Zeitraums
      * @param endDate Enddatum des Zeitraums
-     * @return Uri der erstellten Datei oder null bei Fehler
+     * @return Ergebnis der PDF-Erstellung
      */
     fun exportToPdf(
         entries: List<WorkEntryWithTravelLegs>,
@@ -137,7 +145,7 @@ class PdfExporter @Inject constructor(
         personnelNumber: String? = null,
         startDate: java.time.LocalDate,
         endDate: java.time.LocalDate
-    ): Uri? {
+    ): PdfExportResult {
         return try {
             // Pflichtfeld-Validierung
             if (employeeName.isBlank()) {
@@ -187,16 +195,16 @@ class PdfExporter @Inject constructor(
             }
         } catch (e: IOException) {
             Log.e("PdfExporter", "PDF export IO error: ${e.javaClass.simpleName}", e)
-            null
+            PdfExportResult.FileWriteError(e.message ?: string(R.string.settings_error_pdf_export_failed))
         } catch (e: IllegalArgumentException) {
             Log.e("PdfExporter", "PDF export validation error: ${e.message}", e)
-            null
+            PdfExportResult.ValidationError(e.message ?: string(R.string.settings_error_pdf_export_failed))
         } catch (e: IllegalStateException) {
             Log.e("PdfExporter", "PDF export state error: ${e.javaClass.simpleName}", e)
-            null
+            PdfExportResult.StorageError(e.message ?: string(R.string.export_preview_error_pdf_create_failed))
         } catch (e: Exception) {
             Log.e("PdfExporter", "PDF export failed (${e.javaClass.simpleName})", e)
-            null
+            PdfExportResult.UnknownError(e.message ?: string(R.string.settings_error_export_failed))
         }
     }
 
@@ -546,52 +554,43 @@ class PdfExporter @Inject constructor(
         pdfDocument: PdfDocument,
         startDate: java.time.LocalDate,
         endDate: java.time.LocalDate
-    ): Uri? {
-        return try {
-            // Cache-Verzeichnis verwenden
-            val cacheDir = File(context.cacheDir, "exports")
-            if (!cacheDir.exists()) {
-                cacheDir.mkdirs()
-            }
-
-            // Speicherplatz-Check BEVOR PDF geschrieben wird
-            val stat = StatFs(cacheDir.absolutePath)
-            val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
-            val minRequiredBytes = 5 * 1024 * 1024L  // 5MB Reserve
-            if (availableBytes < minRequiredBytes) {
-                throw IOException(string(R.string.pdf_export_error_not_enough_storage_mb, 5))
-            }
-
-            // Dateiname mit Zeitraum
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.GERMAN).format(Date())
-            val dateRange = if (startDate == endDate) {
-                startDate.toString()
-            } else {
-                "${startDate}_${endDate}"
-            }
-            val filename = "montagezeit_pdf_${dateRange}_$timestamp.pdf"
-            val file = File(cacheDir, filename)
-
-            // PDF schreiben mit Fehlerbehandlung
-            try {
-                FileOutputStream(file).use { fos ->
-                    pdfDocument.writeTo(fos)
-                }
-            } catch (e: IOException) {
-                file.delete()  // Partielle Datei löschen
-                throw e  // Exception weiterwerfen
-            }
-            
-            // Uri via FileProvider erstellen
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-        } catch (e: Exception) {
-            Log.e("PdfExporter", "PDF export failed", e)
-            null
+    ): PdfExportResult {
+        val cacheDir = File(context.cacheDir, "exports")
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            throw IllegalStateException(string(R.string.pdf_export_error_cache_dir_failed))
         }
+
+        val stat = StatFs(cacheDir.absolutePath)
+        val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
+        val minRequiredBytes = 5 * 1024 * 1024L
+        if (availableBytes < minRequiredBytes) {
+            throw IllegalStateException(string(R.string.pdf_export_error_not_enough_storage_mb, 5))
+        }
+
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.GERMAN).format(Date())
+        val dateRange = if (startDate == endDate) {
+            startDate.toString()
+        } else {
+            "${startDate}_${endDate}"
+        }
+        val filename = "montagezeit_pdf_${dateRange}_$timestamp.pdf"
+        val file = File(cacheDir, filename)
+
+        try {
+            FileOutputStream(file).use { fos ->
+                pdfDocument.writeTo(fos)
+            }
+        } catch (e: IOException) {
+            file.delete()
+            throw e
+        }
+
+        val fileUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        return PdfExportResult.Success(fileUri)
     }
     
     /**

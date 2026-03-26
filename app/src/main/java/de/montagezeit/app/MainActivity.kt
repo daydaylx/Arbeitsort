@@ -43,12 +43,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleEditIntent(intent: Intent?) {
-        if (intent?.action != ReminderActions.ACTION_EDIT_ENTRY) {
+        val dateStr = when {
+            intent == null -> null
+            intent.action == ReminderActions.ACTION_EDIT_ENTRY -> intent.getStringExtra(ReminderActions.EXTRA_DATE)
+            intent.hasExtra(ReminderActions.EXTRA_DATE) -> intent.getStringExtra(ReminderActions.EXTRA_DATE)
+            else -> null
+        }
+        if (dateStr == null) {
             return
         }
-        val dateStr = intent.getStringExtra(ReminderActions.EXTRA_DATE)
         editRequestDate.value = try {
-            if (dateStr != null) LocalDate.parse(dateStr).toString() else LocalDate.now().toString()
+            LocalDate.parse(dateStr).toString()
         } catch (e: Exception) {
             LocalDate.now().toString()
         }

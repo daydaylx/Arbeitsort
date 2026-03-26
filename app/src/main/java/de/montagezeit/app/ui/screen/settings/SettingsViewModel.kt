@@ -39,10 +39,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
+            if (!isValidWindow(startTime, endTime)) {
+                _uiState.value = SettingsUiState.ReminderError(
+                    UiText.StringResource(R.string.error_time_range_invalid)
+                )
+                return@launch
+            }
             reminderSettingsManager.updateSettings(
                 morningWindowStart = startTime,
                 morningWindowEnd = endTime
             )
+            _uiState.value = SettingsUiState.Initial
             reminderScheduler.scheduleAll()
         }
     }
@@ -51,10 +58,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
+            if (!isValidWindow(startTime, endTime)) {
+                _uiState.value = SettingsUiState.ReminderError(
+                    UiText.StringResource(R.string.error_time_range_invalid)
+                )
+                return@launch
+            }
             reminderSettingsManager.updateSettings(
                 eveningWindowStart = startTime,
                 eveningWindowEnd = endTime
             )
+            _uiState.value = SettingsUiState.Initial
             reminderScheduler.scheduleAll()
         }
     }
@@ -193,7 +207,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                val fileUri = pdfExporter.exportToPdf(
+                when (val exportResult = pdfExporter.exportToPdf(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,
                     company = settings.pdfCompany,
@@ -201,17 +215,16 @@ class SettingsViewModel @Inject constructor(
                     personnelNumber = settings.pdfPersonnelNumber,
                     startDate = startDate,
                     endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
-                    )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
+                )) {
+                    is PdfExporter.PdfExportResult.Success -> {
+                        _uiState.value = SettingsUiState.ExportSuccess(
+                            fileUri = exportResult.fileUri,
+                            format = ExportFormat.PDF
+                        )
+                    }
+                    else -> {
+                        _uiState.value = mapPdfExportError(exportResult)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = buildExportError(
@@ -254,7 +267,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                val fileUri = pdfExporter.exportToPdf(
+                when (val exportResult = pdfExporter.exportToPdf(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,
                     company = settings.pdfCompany,
@@ -262,17 +275,16 @@ class SettingsViewModel @Inject constructor(
                     personnelNumber = settings.pdfPersonnelNumber,
                     startDate = startDate,
                     endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
-                    )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
+                )) {
+                    is PdfExporter.PdfExportResult.Success -> {
+                        _uiState.value = SettingsUiState.ExportSuccess(
+                            fileUri = exportResult.fileUri,
+                            format = ExportFormat.PDF
+                        )
+                    }
+                    else -> {
+                        _uiState.value = mapPdfExportError(exportResult)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = buildExportError(
@@ -311,7 +323,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 
-                val fileUri = pdfExporter.exportToPdf(
+                when (val exportResult = pdfExporter.exportToPdf(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,
                     company = settings.pdfCompany,
@@ -319,17 +331,16 @@ class SettingsViewModel @Inject constructor(
                     personnelNumber = settings.pdfPersonnelNumber,
                     startDate = startDate,
                     endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
-                    )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
+                )) {
+                    is PdfExporter.PdfExportResult.Success -> {
+                        _uiState.value = SettingsUiState.ExportSuccess(
+                            fileUri = exportResult.fileUri,
+                            format = ExportFormat.PDF
+                        )
+                    }
+                    else -> {
+                        _uiState.value = mapPdfExportError(exportResult)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = buildExportError(
@@ -391,6 +402,30 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
+
+    private fun isValidWindow(start: LocalTime, end: LocalTime): Boolean = end.isAfter(start)
+
+    private fun mapPdfExportError(result: PdfExporter.PdfExportResult): SettingsUiState.ExportError {
+        return when (result) {
+            is PdfExporter.PdfExportResult.Success -> error("Success must be handled separately")
+            is PdfExporter.PdfExportResult.ValidationError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_pdf_export_failed
+            )
+            is PdfExporter.PdfExportResult.StorageError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.export_preview_error_pdf_create_failed
+            )
+            is PdfExporter.PdfExportResult.FileWriteError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_pdf_export_failed
+            )
+            is PdfExporter.PdfExportResult.UnknownError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_export_failed
+            )
+        }
+    }
 }
 
 private fun buildExportError(
@@ -413,4 +448,5 @@ sealed class SettingsUiState {
     object Exporting : SettingsUiState()
     data class ExportSuccess(val fileUri: Uri, val format: ExportFormat) : SettingsUiState()
     data class ExportError(val message: UiText) : SettingsUiState()
+    data class ReminderError(val message: UiText) : SettingsUiState()
 }

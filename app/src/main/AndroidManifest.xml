@@ -42,7 +42,7 @@
         
         <!-- Foreground Service für Check-In Actions -->
         <service
-            android:name=".handler.CheckInActionService"
+            android:name=".service.CheckInActionService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">

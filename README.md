@@ -14,7 +14,7 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 
 - Single-Module-Android-Projekt (`:app`)
 - App-Version: `1.0.2` (`versionCode 3`)
-- Room-Datenbank: Schema `12`, Migrationen `1 -> 12`
+- Room-Datenbank: Schema `14`, Migrationen `1 -> 14`
 
 ## Tech Stack
 

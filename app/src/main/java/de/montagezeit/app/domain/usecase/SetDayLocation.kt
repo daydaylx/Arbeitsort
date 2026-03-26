@@ -15,6 +15,9 @@ class SetDayLocation(
     private val reminderSettingsManager: ReminderSettingsManager
 ) {
     suspend operator fun invoke(date: LocalDate, label: String): WorkEntry {
+        val normalizedLabel = label.trim()
+        require(normalizedLabel.isNotBlank()) { "dayLocationLabel darf nicht leer sein" }
+
         val now = System.currentTimeMillis()
         val settings = reminderSettingsManager.settings.first()
 
@@ -22,7 +25,7 @@ class SetDayLocation(
         workEntryDao.readModifyWrite(date) { existing ->
             val updated = if (existing != null) {
                 existing.copy(
-                    dayLocationLabel = label,
+                    dayLocationLabel = normalizedLabel,
                     updatedAt = now
                 )
             } else {
@@ -31,7 +34,7 @@ class SetDayLocation(
                     date = date,
                     settings = settings,
                     dayType = DayType.WORK,
-                    dayLocationLabel = label,
+                    dayLocationLabel = normalizedLabel,
                     now = now
                 )
             }

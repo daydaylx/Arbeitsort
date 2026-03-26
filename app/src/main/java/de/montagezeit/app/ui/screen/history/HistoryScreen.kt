@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
@@ -73,13 +72,27 @@ fun HistoryScreen(
     onOpenEditSheet: (java.time.LocalDate) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val batchEditState by viewModel.batchEditState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showBatchEditDialog by remember { mutableStateOf(false) }
-    var isBatchEditing by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val msgUpdated = stringResource(R.string.history_toast_batch_updated)
-    val msgFailed = stringResource(R.string.history_toast_batch_failed)
+
+    LaunchedEffect(batchEditState) {
+        when (batchEditState) {
+            is BatchEditState.Success -> {
+                showBatchEditDialog = false
+                snackbarHostState.showSnackbar(msgUpdated)
+                viewModel.onBatchEditResultConsumed()
+            }
+            is BatchEditState.Failure -> {
+                val failure = batchEditState as BatchEditState.Failure
+                snackbarHostState.showSnackbar(failure.message.asString(context))
+                viewModel.onBatchEditResultConsumed()
+            }
+            else -> Unit
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -151,21 +164,11 @@ fun HistoryScreen(
     }
 
     if (showBatchEditDialog) {
+        val isBatchEditing = batchEditState is BatchEditState.InProgress
         BatchEditDialog(
             isSubmitting = isBatchEditing,
             onDismiss = { if (!isBatchEditing) showBatchEditDialog = false },
-            onApply = { request ->
-                isBatchEditing = true
-                viewModel.applyBatchEdit(request) { success ->
-                    isBatchEditing = false
-                    if (success) {
-                        showBatchEditDialog = false
-                        scope.launch { snackbarHostState.showSnackbar(msgUpdated) }
-                    } else {
-                        scope.launch { snackbarHostState.showSnackbar(msgFailed) }
-                    }
-                }
-            }
+            onApply = { request -> viewModel.applyBatchEdit(request) }
         )
     }
 }
@@ -283,7 +286,7 @@ fun HistoryContent(
                                 HistoryEntryItem(
                                     entry = entry,
                                     travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                    onClick = { onEntryClick(entry.date) }
+                                    onEntryClick = onEntryClick
                                 )
                             }
                         }
@@ -299,7 +302,7 @@ fun HistoryContent(
                                 HistoryEntryItem(
                                     entry = entry,
                                     travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                    onClick = { onEntryClick(entry.date) }
+                                    onEntryClick = onEntryClick
                                 )
                             }
                         }
@@ -819,7 +822,7 @@ fun BatchEditDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
-    var applyDayType by remember { mutableStateOf(true) }
+    var applyDayType by remember { mutableStateOf(false) }
     var selectedDayType by remember { mutableStateOf(DayType.WORK) }
     var applyDefaults by remember { mutableStateOf(false) }
     var applyNote by remember { mutableStateOf(false) }
@@ -1128,7 +1131,7 @@ fun MonthGroupHeader(
 fun HistoryEntryItem(
     entry: WorkEntry,
     travelLegs: List<TravelLeg>,
-    onClick: () -> Unit
+    onEntryClick: (LocalDate) -> Unit
 ) {
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
@@ -1139,7 +1142,7 @@ fun HistoryEntryItem(
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
 
     MZCard(
-        onClick = onClick
+        onClick = { onEntryClick(entry.date) }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

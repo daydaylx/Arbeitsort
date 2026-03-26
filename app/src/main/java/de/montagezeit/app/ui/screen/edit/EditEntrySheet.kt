@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.edit
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +26,7 @@ import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
+import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
@@ -54,6 +56,7 @@ fun EditEntrySheet(
     var showCopyDatePicker by remember { mutableStateOf(false) }
     var showNavigateDatePicker by remember { mutableStateOf(false) }
     var showDeleteDayConfirmDialog by remember { mutableStateOf(false) }
+    var showDiscardChangesDialog by remember { mutableStateOf(false) }
     val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     LaunchedEffect(date) {
@@ -72,9 +75,22 @@ fun EditEntrySheet(
             onDismiss()
         }
     }
-    
+
+    val isDirty = screenState.isDirty
+    val handleDismiss: () -> Unit = {
+        if (isDirty && !isSaving) {
+            showDiscardChangesDialog = true
+        } else {
+            onDismiss()
+        }
+    }
+
+    BackHandler(enabled = isDirty && !isSaving) {
+        showDiscardChangesDialog = true
+    }
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
@@ -229,9 +245,9 @@ fun EditEntrySheet(
                     }
 
                     is EditUiState.Error -> {
-                        Text(
-                            text = state.message.asString(context),
-                            color = MaterialTheme.colorScheme.error
+                        MZErrorState(
+                            message = state.message.asString(context),
+                            onRetry = { viewModel.reloadEntry() }
                         )
                     }
 
@@ -357,6 +373,16 @@ fun EditEntrySheet(
                         }
                     }
                 }
+            )
+        }
+
+        if (showDiscardChangesDialog) {
+            DiscardChangesDialog(
+                onDiscard = {
+                    showDiscardChangesDialog = false
+                    onDismiss()
+                },
+                onKeepEditing = { showDiscardChangesDialog = false }
             )
         }
     }
@@ -1364,6 +1390,33 @@ private fun DeleteDayConfirmDialog(
 }
 
 
+
+@Composable
+private fun DiscardChangesDialog(
+    onDiscard: () -> Unit,
+    onKeepEditing: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onKeepEditing,
+        title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
+        text = {
+            Text(
+                text = stringResource(R.string.dialog_discard_changes_message),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            DestructiveActionButton(onClick = onDiscard) {
+                Text(stringResource(R.string.action_discard))
+            }
+        },
+        dismissButton = {
+            TertiaryActionButton(onClick = onKeepEditing) {
+                Text(stringResource(R.string.action_keep_editing))
+            }
+        }
+    )
+}
 
 private fun formatShortDate(date: java.time.LocalDate): String {
     return date.format(editShortDateFormatter)

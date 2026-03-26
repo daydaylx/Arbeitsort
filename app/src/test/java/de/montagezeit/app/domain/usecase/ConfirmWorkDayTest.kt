@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -28,7 +29,7 @@ class ConfirmWorkDayTest {
     )
 
     @Test
-    fun `invoke creates work entry with settings and confirmation metadata`() = runTest {
+    fun `invoke throws when no day location is available`() = runTest {
         val date = LocalDate.now()
         coEvery { workEntryDao.upsert(any()) } returns Unit
         stubReadModifyWrite(workEntryDao, existingEntry = null)
@@ -40,19 +41,14 @@ class ConfirmWorkDayTest {
             )
         )
 
-        val result = useCase(date, source = "TEST")
+        try {
+            useCase(date, source = "TEST")
+            fail("Expected missing day location to fail")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals("Arbeitsort fehlt für bestätigten Arbeitstag", expected.message)
+        }
 
-        assertEquals(DayType.WORK, result.dayType)
-        assertEquals(LocalTime.of(9, 0), result.workStart)
-        assertEquals(LocalTime.of(18, 0), result.workEnd)
-        assertEquals(45, result.breakMinutes)
-        assertEquals("", result.dayLocationLabel)
-        assertNotNull(result.morningCapturedAt)
-        assertEquals(true, result.confirmedWorkDay)
-        assertNotNull(result.confirmationAt)
-        assertEquals("TEST", result.confirmationSource)
-
-        coVerify(exactly = 1) { workEntryDao.upsert(result) }
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
     }
 
     @Test
@@ -80,11 +76,46 @@ class ConfirmWorkDayTest {
     }
 
     @Test
+    fun `invoke keeps configured times and confirmation metadata for located work day`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Werk 9"
+        )
+
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
+        every { reminderSettingsManager.settings } returns flowOf(
+            ReminderSettings(
+                workStart = LocalTime.of(9, 0),
+                workEnd = LocalTime.of(18, 0),
+                breakMinutes = 45
+            )
+        )
+
+        val result = useCase(date, source = "TEST")
+
+        assertEquals(DayType.WORK, result.dayType)
+        assertEquals(LocalTime.of(9, 0), result.workStart)
+        assertEquals(LocalTime.of(18, 0), result.workEnd)
+        assertEquals(45, result.breakMinutes)
+        assertEquals("Werk 9", result.dayLocationLabel)
+        assertNotNull(result.morningCapturedAt)
+        assertEquals(true, result.confirmedWorkDay)
+        assertNotNull(result.confirmationAt)
+        assertEquals("TEST", result.confirmationSource)
+
+        coVerify(exactly = 1) { workEntryDao.upsert(result) }
+    }
+
+    @Test
     fun `invoke keeps existing morning capture timestamp`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
             dayType = DayType.OFF,
+            dayLocationLabel = "Werk 7",
             morningCapturedAt = 1234L
         )
 
