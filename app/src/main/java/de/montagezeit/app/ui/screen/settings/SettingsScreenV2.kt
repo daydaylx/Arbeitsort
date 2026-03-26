@@ -57,6 +57,7 @@ import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
+import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
@@ -267,11 +268,11 @@ fun SettingsContentV2(
         ) {
             MZKeyValueRow(
                 label = stringResource(R.string.label_work_start),
-                value = formatTime(settings.workStart)
+                value = Formatters.formatTime(settings.workStart)
             )
             MZKeyValueRow(
                 label = stringResource(R.string.label_work_end),
-                value = formatTime(settings.workEnd)
+                value = Formatters.formatTime(settings.workEnd)
             )
             MZKeyValueRow(
                 label = stringResource(R.string.settings_export),
@@ -575,8 +576,8 @@ fun WorkTimesSectionV2(
         title = stringResource(R.string.settings_work_times),
         summary = stringResource(
             R.string.settings_work_times_summary,
-            formatTime(workStart),
-            formatTime(workEnd),
+            Formatters.formatTime(workStart),
+            Formatters.formatTime(workEnd),
             breakMinutes
         ),
         expanded = expanded,
@@ -596,7 +597,7 @@ fun WorkTimesSectionV2(
                     onClick = { showStartPicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(formatTime(workStart))
+                    Text(Formatters.formatTime(workStart))
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -609,7 +610,7 @@ fun WorkTimesSectionV2(
                     onClick = { showEndPicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(formatTime(workEnd))
+                    Text(Formatters.formatTime(workEnd))
                 }
             }
         }
@@ -807,6 +808,8 @@ fun TimeRangePickerV2(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
+    val isInvalid = !startTime.isBefore(endTime)
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -825,7 +828,7 @@ fun TimeRangePickerV2(
                 onClick = { showStartPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
-                Text(formatTime(startTime))
+                Text(Formatters.formatTime(startTime))
             }
 
             Text(
@@ -838,8 +841,16 @@ fun TimeRangePickerV2(
                 onClick = { showEndPicker = true },
                 modifier = Modifier.weight(1f)
             ) {
-                Text(formatTime(endTime))
+                Text(Formatters.formatTime(endTime))
             }
+        }
+
+        if (isInvalid) {
+            Text(
+                text = stringResource(R.string.error_time_range_invalid),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 
@@ -987,7 +998,7 @@ fun HolidayRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = formatDate(date),
+            text = Formatters.formatDate(date),
             modifier = Modifier.weight(1f)
         )
         IconButton(
@@ -1294,7 +1305,7 @@ fun SettingsTimeButtonRowV2(
             onClick = onClick,
             enabled = enabled
         ) {
-            Text(formatTime(time))
+            Text(Formatters.formatTime(time))
         }
     }
 }
@@ -1514,10 +1525,3 @@ private fun openBatterySettings(context: Context) {
     }
 }
 
-private fun formatTime(time: LocalTime): String {
-    return time.format(DateTimeFormatter.ofPattern("HH:mm"))
-}
-
-private fun formatDate(date: LocalDate): String {
-    return date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-}

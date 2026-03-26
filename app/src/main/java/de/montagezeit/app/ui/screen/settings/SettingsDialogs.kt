@@ -23,8 +23,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun PdfSettingsDialog(
@@ -47,7 +47,7 @@ fun PdfSettingsDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = employeeName,
-                    onValueChange = { employeeName = it },
+                    onValueChange = { if (it.length <= 100) employeeName = it },
                     label = { Text(stringResource(R.string.pdf_settings_employee_name_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_employee_name_placeholder)) },
                     singleLine = true,
@@ -57,7 +57,7 @@ fun PdfSettingsDialog(
 
                 OutlinedTextField(
                     value = company,
-                    onValueChange = { company = it },
+                    onValueChange = { if (it.length <= 100) company = it },
                     label = { Text(stringResource(R.string.pdf_settings_company_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_company_placeholder)) },
                     singleLine = true,
@@ -66,7 +66,7 @@ fun PdfSettingsDialog(
 
                 OutlinedTextField(
                     value = project,
-                    onValueChange = { project = it },
+                    onValueChange = { if (it.length <= 100) project = it },
                     label = { Text(stringResource(R.string.pdf_settings_project_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_project_placeholder)) },
                     singleLine = true,
@@ -75,7 +75,7 @@ fun PdfSettingsDialog(
 
                 OutlinedTextField(
                     value = personnelNumber,
-                    onValueChange = { personnelNumber = it },
+                    onValueChange = { if (it.length <= 100) personnelNumber = it },
                     label = { Text(stringResource(R.string.pdf_settings_personnel_number_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_personnel_number_placeholder)) },
                     singleLine = true,
@@ -136,7 +136,7 @@ fun PdfCustomRangeDialog(
                     onClick = { showStartDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(formatDialogDate(startDate))
+                    Text(Formatters.formatDate(startDate))
                 }
 
                 Text(
@@ -147,7 +147,7 @@ fun PdfCustomRangeDialog(
                     onClick = { showEndDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(formatDialogDate(endDate))
+                    Text(Formatters.formatDate(endDate))
                 }
 
                 AnimatedVisibility(visible = startDate.isAfter(endDate)) {
@@ -206,6 +206,3 @@ fun PdfCustomRangeDialog(
     }
 }
 
-private fun formatDialogDate(date: LocalDate): String {
-    return date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-}

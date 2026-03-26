@@ -87,6 +87,7 @@ import de.montagezeit.app.ui.components.MZPageBackground
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.StatusType
+import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -291,7 +292,7 @@ private fun OverviewHeroCard(
     ) {
         MZKeyValueRow(
             label = stringResource(R.string.overview_selected_day_label),
-            value = selectedDate.format(overviewDateFormatter),
+            value = Formatters.formatDateLong(selectedDate),
             emphasize = true
         )
         MZKeyValueRow(
@@ -302,7 +303,7 @@ private fun OverviewHeroCard(
         entry?.let {
             MZKeyValueRow(
                 label = stringResource(R.string.overview_selected_total_label),
-                value = formatHoursValue(TimeCalculator.calculatePaidTotalHours(it))
+                value = Formatters.formatHours(TimeCalculator.calculatePaidTotalHours(it))
             )
         }
     }
@@ -351,7 +352,7 @@ private fun OverviewReferenceDateCard(
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = selectedDate.format(overviewDateFormatter),
+                    text = Formatters.formatDateLong(selectedDate),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -630,7 +631,7 @@ private fun OverviewOvertimeCard(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "${formatHoursValue(metrics.actualHours)} / ${formatHoursValue(metrics.targetHours)}",
+            text = "${Formatters.formatHours(metrics.actualHours)} / ${Formatters.formatHours(metrics.targetHours)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
         )
@@ -650,14 +651,14 @@ private fun OverviewMetricsGrid(metrics: OverviewMetrics) {
         ) {
             OverviewMetricCard(
                 title = stringResource(R.string.overview_kpi_target),
-                value = formatHoursValue(metrics.targetHours),
+                value = Formatters.formatHours(metrics.targetHours),
                 caption = stringResource(R.string.overview_kpi_target_caption),
                 icon = Icons.Default.Schedule,
                 modifier = Modifier.weight(1f)
             )
             OverviewMetricCard(
                 title = stringResource(R.string.overview_kpi_actual),
-                value = formatHoursValue(metrics.actualHours),
+                value = Formatters.formatHours(metrics.actualHours),
                 caption = stringResource(R.string.overview_kpi_actual_caption),
                 icon = Icons.Default.CheckCircle,
                 modifier = Modifier.weight(1f)
@@ -670,7 +671,7 @@ private fun OverviewMetricsGrid(metrics: OverviewMetrics) {
         ) {
             OverviewMetricCard(
                 title = stringResource(R.string.overview_kpi_travel),
-                value = formatHoursValue(metrics.travelHours),
+                value = Formatters.formatHours(metrics.travelHours),
                 caption = stringResource(R.string.overview_kpi_travel_caption),
                 icon = Icons.Default.DirectionsCar,
                 modifier = Modifier.weight(1f)
@@ -785,7 +786,7 @@ private fun formatPeriodTitle(period: OverviewPeriod, selectedDate: LocalDate): 
 private fun formatPeriodSubtitle(period: OverviewPeriod, selectedDate: LocalDate): String {
     val range = period.rangeFor(selectedDate)
     return when (period) {
-        OverviewPeriod.DAY -> selectedDate.format(overviewDateFormatter)
+        OverviewPeriod.DAY -> Formatters.formatDateLong(selectedDate)
         OverviewPeriod.WEEK -> stringResource(
             R.string.overview_date_range,
             range.startDate.format(shortDateFormatter),
@@ -808,12 +809,8 @@ private fun formatWheelCenterValue(period: OverviewPeriod, selectedDate: LocalDa
         OverviewPeriod.YEAR -> selectedDate.year.toString()
     }
 
-private fun formatHoursValue(hours: Double): String =
-    String.format(Locale.GERMAN, "%.1f Std.", hours)
-
 private fun formatSignedHoursValue(hours: Double): String =
     String.format(Locale.GERMAN, "%+.1f Std.", hours)
 
-private val overviewDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
 private val shortDateFormatter = DateTimeFormatter.ofPattern("dd. MMM yyyy", Locale.GERMAN)
 private val monthTitleFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)

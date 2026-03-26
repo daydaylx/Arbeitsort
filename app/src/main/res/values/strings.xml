@@ -235,6 +235,7 @@
     <string name="label_work_end">Arbeitsende</string>
     <string name="label_break">Pause</string>
     <string name="label_time_range">Zeitraum</string>
+    <string name="error_time_range_invalid">Ende muss nach dem Start liegen</string>
     <string name="label_time">Uhrzeit</string>
     <string name="label_auto_off_weekends">Wochenenden automatisch frei</string>
     <string name="label_auto_off_holidays">Feiertage automatisch frei</string>

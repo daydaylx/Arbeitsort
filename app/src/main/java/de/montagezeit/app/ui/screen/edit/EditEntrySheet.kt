@@ -557,7 +557,7 @@ fun EditFormContent(
     val isCompTime = formData.dayType == de.montagezeit.app.data.local.entity.DayType.COMP_TIME
 
     Text(
-        text = formatDate(entry.date),
+        text = Formatters.formatDateLong(entry.date),
         style = MaterialTheme.typography.headlineSmall
     )
 
@@ -844,7 +844,7 @@ fun WorkTimesSection(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = formatTime(workStart),
+                            text = Formatters.formatTime(workStart),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -867,7 +867,7 @@ fun WorkTimesSection(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = formatTime(workEnd),
+                            text = Formatters.formatTime(workEnd),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1105,7 +1105,7 @@ private fun TravelLegCard(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = leg.startTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            text = leg.startTime?.let { Formatters.formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1128,7 +1128,7 @@ private fun TravelLegCard(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = leg.arriveTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            text = leg.arriveTime?.let { Formatters.formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1176,7 +1176,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.startLabel ?: "",
-                onValueChange = onStartLabelChange,
+                onValueChange = { if (it.length <= 100) onStartLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_from_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1185,7 +1185,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.endLabel ?: "",
-                onValueChange = onEndLabelChange,
+                onValueChange = { if (it.length <= 100) onEndLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_to_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1234,9 +1234,10 @@ fun LocationLabelsSection(
 
         OutlinedTextField(
             value = dayLocationLabel ?: "",
-            onValueChange = onDayLocationChange,
+            onValueChange = { if (it.length <= 100) onDayLocationChange(it) },
             label = { Text(stringResource(R.string.edit_label_day_location_required)) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
+            isError = dayLocationLabel?.isBlank() == true,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -1256,7 +1257,7 @@ fun NoteSection(
         
         OutlinedTextField(
             value = note ?: "",
-            onValueChange = onNoteChange,
+            onValueChange = { if (it.length <= 500) onNoteChange(it) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_note)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -1364,22 +1365,8 @@ private fun DeleteDayConfirmDialog(
 
 
 
-private fun formatDate(date: java.time.LocalDate): String {
-    return date.format(editFullDateFormatter)
-}
-
 private fun formatShortDate(date: java.time.LocalDate): String {
     return date.format(editShortDateFormatter)
 }
 
-private fun formatTime(time: java.time.LocalTime): String {
-    return time.format(editTimeFormatter)
-}
-
-// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
-
-// Removed: formatDuration - now using Formatters.formatDuration
-
-private val editFullDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
 private val editShortDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
-private val editTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

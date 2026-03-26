@@ -136,6 +136,7 @@ class SettingsViewModel @Inject constructor(
     fun addHolidayDate(date: LocalDate) {
         viewModelScope.launch {
             val settings = reminderSettingsManager.settings.first()
+            if (date in settings.holidayDates) return@launch
             val updated = settings.holidayDates + date
             reminderSettingsManager.updateSettings(holidayDates = updated)
         }

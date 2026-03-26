@@ -621,8 +621,8 @@ fun WeekCalendarView(
                 text = stringResource(
                     R.string.history_week_header,
                     weekNumber,
-                    formatShortDate(weekStart),
-                    formatShortDate(weekEnd)
+                    Formatters.formatDate(weekStart),
+                    Formatters.formatDate(weekEnd)
                 ),
                 style = MaterialTheme.typography.titleSmall
             )
@@ -840,13 +840,13 @@ fun BatchEditDialog(
                         onClick = { showStartPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(formatShortDate(startDate))
+                        Text(Formatters.formatDate(startDate))
                     }
                     SecondaryActionButton(
                         onClick = { showEndPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(formatShortDate(endDate))
+                        Text(Formatters.formatDate(endDate))
                     }
                 }
 
@@ -1063,8 +1063,8 @@ fun WeekGroupHeader(
                 text = stringResource(
                     R.string.history_week_label,
                     week.week,
-                    formatShortDate(week.weekStart),
-                    formatShortDate(weekEnd)
+                    Formatters.formatDate(week.weekStart),
+                    Formatters.formatDate(weekEnd)
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
@@ -1404,10 +1404,6 @@ private fun formatEntryDate(date: java.time.LocalDate): String {
     return date.format(historyEntryDateFormatter)
 }
 
-private fun formatShortDate(date: java.time.LocalDate): String {
-    return date.format(historyShortDateFormatter)
-}
-
 private fun formatOverviewDate(date: java.time.LocalDate): String {
     return date.format(historyOverviewDateFormatter)
 }
@@ -1415,12 +1411,8 @@ private fun formatOverviewDate(date: java.time.LocalDate): String {
 private fun formatTime(timestamp: Long): String {
     val instant = java.time.Instant.ofEpochMilli(timestamp)
     val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-    return time.format(historyTimeFormatter)
+    return Formatters.formatTime(time)
 }
-
-// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
-
-// Removed: formatDuration - now using Formatters.formatDuration
 
 @Composable
 private fun formatWorkHours(hours: Double): String {
@@ -1488,6 +1480,4 @@ private fun formatMinutesAsHoursMinutesPlain(totalMinutes: Int, hoursOnlyFormat:
 
 private val historyMonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
 private val historyEntryDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
-private val historyShortDateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
 private val historyOverviewDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale.GERMAN)
-private val historyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

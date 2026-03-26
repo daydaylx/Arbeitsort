@@ -1,4 +1,4 @@
-package de.montagezeit.app.logging
+package de.montagezeit.app.data.logging
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext

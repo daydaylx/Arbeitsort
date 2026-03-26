@@ -43,6 +43,7 @@ import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
+import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -476,7 +477,7 @@ private fun StatusCardV2(
     }
 
     MZHeroCard(
-        title = remember(date) { date.format(todayCurrentDateFormatter) },
+        title = remember(date) { Formatters.formatDateLong(date) },
         subtitle = subtitle,
         badge = {
             MZStatusBadge(
@@ -775,9 +776,10 @@ private fun DailyManualCheckInDialogV2(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = input,
-                    onValueChange = onInputChange,
+                    onValueChange = { if (it.length <= 100) onInputChange(it) },
                     label = { Text(stringResource(R.string.daily_check_in_dialog_label)) },
                     placeholder = { Text(stringResource(R.string.daily_check_in_dialog_placeholder)) },
+                    isError = input.isNotEmpty() && input.isBlank(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
@@ -865,9 +867,10 @@ private fun DayLocationDialogV2(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = input,
-                    onValueChange = onInputChange,
+                    onValueChange = { if (it.length <= 100) onInputChange(it) },
                     label = { Text(stringResource(R.string.day_location_dialog_label)) },
                     placeholder = { Text(stringResource(R.string.day_location_dialog_placeholder)) },
+                    isError = input.isNotEmpty() && input.isBlank(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
@@ -932,4 +935,3 @@ private fun formatMinutes(minutes: Int): String {
     }
 }
 
-private val todayCurrentDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
