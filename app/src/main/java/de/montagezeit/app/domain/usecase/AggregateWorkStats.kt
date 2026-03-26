@@ -23,9 +23,7 @@ class AggregateWorkStats {
         val workDays = confirmed.count { it.workEntry.dayType == DayType.WORK }
         val offDays = confirmed.count { it.workEntry.dayType == DayType.OFF || it.workEntry.dayType == DayType.COMP_TIME }
         val totalWorkMinutes = confirmed.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
-        val totalTravelMinutes = confirmed
-            .filter { it.workEntry.dayType == DayType.WORK }
-            .sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
+        val totalTravelMinutes = confirmed.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
         val mealAllowanceCents = confirmed
             .filter { it.workEntry.dayType == DayType.WORK }
             .sumOf { it.workEntry.mealAllowanceAmountCents }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install_on_device.sh
-# Installiert Android SDK (falls nötig), baut die APK und spielt sie per adb auf.
+# Installiert Android SDK (falls nötig), baut eine update-faehige APK und spielt sie per adb auf.
 set -e
 
 ANDROID_SDK="$HOME/Android/Sdk"
@@ -43,9 +43,21 @@ cd "$(dirname "$0")"
 echo "sdk.dir=$ANDROID_SDK" > local.properties
 
 export ANDROID_HOME="$ANDROID_SDK"
-./gradlew assembleDebug
 
+BUILD_TASK="assembleDebug"
 APK="app/build/outputs/apk/debug/app-debug.apk"
+
+if [ -f "keystore.properties" ]; then
+    echo "  -> Release-Signatur gefunden, baue Release-APK fuer update-faehige Installation..."
+    BUILD_TASK="assembleRelease"
+    APK="app/build/outputs/apk/release/app-release.apk"
+else
+    echo "  -> Keine Release-Signatur gefunden, baue Debug-APK."
+    echo "     Update ohne Datenverlust funktioniert damit nur, wenn die installierte App mit demselben Debug-Key signiert ist."
+fi
+
+./gradlew "$BUILD_TASK"
+
 if [ ! -f "$APK" ]; then
     echo "FEHLER: APK nicht gefunden nach Build!"
     exit 1
@@ -68,7 +80,7 @@ if [ -z "$DEVICE" ]; then
 fi
 
 echo "  → Gerät gefunden: $DEVICE"
-echo "  → Installiere APK (ohne Datenverlust)..."
+echo "  → Installiere APK als Update (ohne Datenverlust bei gleicher Signatur)..."
 adb -s "$DEVICE" install -r "$APK"
 echo ""
-echo "✓ Fertig! App wurde aktualisiert. Daten bleiben erhalten."
+echo "✓ Fertig! App wurde aktualisiert. Daten bleiben erhalten, solange App-ID und Signatur zur bestehenden Installation passen."

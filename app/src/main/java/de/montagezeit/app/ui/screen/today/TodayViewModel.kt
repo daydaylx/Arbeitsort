@@ -67,13 +67,13 @@ data class WeekStats(
     val targetHours: Double
 ) {
     val progress: Float
-        get() = (totalHours / targetHours).coerceIn(0.0, 1.0).toFloat()
+        get() = (totalPaidHours / targetHours).coerceIn(0.0, 1.0).toFloat()
 
     val isOverTarget: Boolean
-        get() = totalHours > targetHours
+        get() = totalPaidHours > targetHours
 
     val isUnderTarget: Boolean
-        get() = totalHours < targetHours
+        get() = totalPaidHours < targetHours
 }
 
 data class MonthStats(
@@ -84,13 +84,13 @@ data class MonthStats(
     val mealAllowanceTotalCents: Int = 0
 ) {
     val progress: Float
-        get() = (totalHours / targetHours).coerceIn(0.0, 1.0).toFloat()
+        get() = (totalPaidHours / targetHours).coerceIn(0.0, 1.0).toFloat()
 
     val isOverTarget: Boolean
-        get() = totalHours > targetHours
+        get() = totalPaidHours > targetHours
 
     val isUnderTarget: Boolean
-        get() = totalHours < targetHours
+        get() = totalPaidHours < targetHours
 }
 
 enum class TodayAction {

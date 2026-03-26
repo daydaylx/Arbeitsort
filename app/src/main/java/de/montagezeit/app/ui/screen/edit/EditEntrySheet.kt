@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -68,8 +67,10 @@ fun EditEntrySheet(
         }
     }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { uiState }.collect { if (it is EditUiState.Saved) onDismiss() }
+    LaunchedEffect(uiState, onDismiss) {
+        if (uiState is EditUiState.Saved) {
+            onDismiss()
+        }
     }
     
     ModalBottomSheet(

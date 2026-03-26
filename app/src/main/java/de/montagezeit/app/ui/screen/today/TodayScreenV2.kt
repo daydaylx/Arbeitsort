@@ -627,7 +627,7 @@ private fun StatisticsDashboardV2(
         weekStats != null -> {
             StatisticsDashboardCardV2(
                 label = stringResource(R.string.today_stats_week),
-                totalHours = weekStats.totalHours,
+                totalPaidHours = weekStats.totalPaidHours,
                 targetHours = weekStats.targetHours,
                 workDaysCount = weekStats.workDaysCount,
                 progress = weekStats.progress,
@@ -640,7 +640,7 @@ private fun StatisticsDashboardV2(
         monthStats != null -> {
             StatisticsDashboardCardV2(
                 label = stringResource(R.string.today_stats_month),
-                totalHours = monthStats.totalHours,
+                totalPaidHours = monthStats.totalPaidHours,
                 targetHours = monthStats.targetHours,
                 workDaysCount = monthStats.workDaysCount,
                 progress = monthStats.progress,
@@ -656,7 +656,7 @@ private fun StatisticsDashboardV2(
 @Composable
 private fun StatisticsDashboardCardV2(
     label: String,
-    totalHours: Double,
+    totalPaidHours: Double,
     targetHours: Double,
     workDaysCount: Int,
     progress: Float,
@@ -697,7 +697,7 @@ private fun StatisticsDashboardCardV2(
                     Text(
                         text = stringResource(
                             R.string.today_stats_hours,
-                            totalHours,
+                            totalPaidHours,
                             targetHours
                         ),
                         style = MaterialTheme.typography.titleMedium
