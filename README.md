@@ -18,17 +18,17 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 
 ## Tech Stack
 
-- Kotlin 1.9.20, Coroutines, Flow
+- Kotlin 2.1.10, Coroutines, Flow
 - Jetpack Compose (Material3), Navigation Compose
 - Room 2.6.1
 - WorkManager 2.9.0
-- Hilt 2.48 (`hilt-work`, `hilt-navigation-compose`)
+- Hilt 2.56.2 (`hilt-work`, `hilt-navigation-compose`)
 - DataStore Preferences
 
 Build-Umgebung:
 - JDK 17
 - `minSdk 24`
-- `compileSdk 34`
+- `compileSdk 35`
 - `targetSdk 34`
 
 ## Kernfunktionen
@@ -90,7 +90,7 @@ Build-Umgebung:
 - `RecordDailyManualCheckIn` setzt den Tag direkt auf abgeschlossen:
   - `dayType = WORK`
   - `confirmedWorkDay = true`
-  - Arbeitszeit-Defaults aus den Settings
+  - Bestehende Arbeitszeiten bleiben erhalten; sonst werden Settings-Defaults gesetzt
   - Verpflegungspauschale wird aus den Dialogoptionen berechnet
 
 ### DayType
@@ -133,6 +133,12 @@ Optional auf Gerät/Emulator:
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+## Entwicklungs-Workflow
+
+- `CONTRIBUTING.md` beschreibt den lokalen Setup- und Review-Workflow.
+- `README_ANDROID_DEV.md` beschreibt Geräte-Deployment, `adb`-Flows und VS-Code-Tasks.
+- `AGENTS.md` bündelt die repo-spezifischen Arbeitsregeln für Coding-Agents.
 
 ## APK-Update ohne Datenverlust
 

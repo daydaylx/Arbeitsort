@@ -45,12 +45,11 @@ class RecordDailyManualCheckIn(
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(input.date) { existingEntry ->
             val updatedEntry = if (existingEntry != null) {
-                val keepExistingWorkSchedule = existingEntry.dayType == DayType.WORK
                 existingEntry.copy(
                     dayType = DayType.WORK,
-                    workStart = if (keepExistingWorkSchedule) existingEntry.workStart ?: settings.workStart else settings.workStart,
-                    workEnd = if (keepExistingWorkSchedule) existingEntry.workEnd ?: settings.workEnd else settings.workEnd,
-                    breakMinutes = if (keepExistingWorkSchedule) existingEntry.breakMinutes else settings.breakMinutes,
+                    workStart = existingEntry.workStart ?: settings.workStart,
+                    workEnd = existingEntry.workEnd ?: settings.workEnd,
+                    breakMinutes = existingEntry.breakMinutes.takeIf { it > 0 } ?: settings.breakMinutes,
                     dayLocationLabel = resolvedLabel,
                     mealIsArrivalDeparture = input.isArrivalDeparture,
                     mealBreakfastIncluded = input.breakfastIncluded,

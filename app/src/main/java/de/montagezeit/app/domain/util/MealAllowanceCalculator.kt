@@ -34,10 +34,9 @@ object MealAllowanceCalculator {
     }
 
     fun formatEuro(cents: Int): String {
-        val absCents = kotlin.math.abs(cents)
-        val euros = absCents / 100
-        val remainder = absCents % 100
-        val prefix = if (cents < 0) "-" else ""
-        return "$prefix%d,%02d €".format(euros, remainder)
+        require(cents >= 0) { "cents must be non-negative" }
+        val euros = cents / 100
+        val remainder = cents % 100
+        return "%d,%02d €".format(euros, remainder)
     }
 }

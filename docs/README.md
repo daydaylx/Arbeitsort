@@ -22,6 +22,8 @@ Diese Dateien sind Arbeits- oder Hintergrundmaterial, aber keine Source of Truth
 | [`CONCEPT.md`](CONCEPT.md) | Produkt-Konzept / MVP-Tech-Spec |
 | [`REMINDERS.md`](REMINDERS.md) | Reminder-System Dokumentation |
 | [`UI_IMPLEMENTATION_SUMMARY.md`](UI_IMPLEMENTATION_SUMMARY.md) | UI-Implementierungs-Zusammenfassung |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Lokaler Setup-, Hook- und Contributing-Workflow |
+| [`../README_ANDROID_DEV.md`](../README_ANDROID_DEV.md) | Android-Geraete-Workflow, `adb`-Nutzung und VS-Code-Tasks |
 
 ---
 
@@ -40,6 +42,7 @@ Dokumente aus Code-Audits und Qualitätsprüfungen. Sie sind hilfreich fuer Kont
 | Dokument | Beschreibung |
 |----------|--------------|
 | [`AGENTS.md`](../AGENTS.md) | Repository Guidelines (Coding Style, Testing, Commit-Konventionen) |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Entwickler-Workflow und lokale Qualitaetschecks |
 
 ### 📦 Archiv (Historisch)
 

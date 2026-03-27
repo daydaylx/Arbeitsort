@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
@@ -51,8 +52,21 @@ class OverviewViewModel @Inject constructor(
 
     private data class SelectedEntrySnapshot(
         val requestedDate: LocalDate? = null,
-        val entry: WorkEntry? = null
-    )
+        val entryWithTravel: WorkEntryWithTravelLegs? = null
+    ) {
+        val entry: WorkEntry?
+            get() = entryWithTravel?.workEntry
+
+        val updatedAt: Long?
+            get() {
+                val entryUpdatedAt = entry?.updatedAt ?: Long.MIN_VALUE
+                val travelUpdatedAt = entryWithTravel
+                    ?.orderedTravelLegs
+                    ?.maxOfOrNull { it.updatedAt }
+                    ?: Long.MIN_VALUE
+                return maxOf(entryUpdatedAt, travelUpdatedAt).takeIf { it != Long.MIN_VALUE }
+            }
+    }
 
     private data class EntryRefreshKey(
         val selectedDate: LocalDate,
@@ -62,7 +76,8 @@ class OverviewViewModel @Inject constructor(
     private data class SelectionPart(
         val selectedDate: LocalDate,
         val selectedPeriod: OverviewPeriod,
-        val selectedEntry: WorkEntry?
+        val selectedEntry: WorkEntry?,
+        val selectedEntryWithTravel: WorkEntryWithTravelLegs?
     )
 
     private data class LoadingPart(
@@ -73,10 +88,10 @@ class OverviewViewModel @Inject constructor(
 
     private val selectedEntrySnapshot: StateFlow<SelectedEntrySnapshot> = _selectedDate
         .flatMapLatest { date ->
-            workEntryDao.getByDateFlow(date).map { entry ->
+            workEntryDao.getByDateWithTravelFlow(date).map { entryWithTravel ->
                 SelectedEntrySnapshot(
                     requestedDate = date,
-                    entry = entry
+                    entryWithTravel = entryWithTravel
                 )
             }
         }
@@ -91,7 +106,8 @@ class OverviewViewModel @Inject constructor(
             SelectionPart(
                 selectedDate = selectedDate,
                 selectedPeriod = selectedPeriod,
-                selectedEntry = entrySnapshot.entry
+                selectedEntry = entrySnapshot.entry,
+                selectedEntryWithTravel = entrySnapshot.entryWithTravel
             )
         },
         combine(_metrics, _isLoading, _errorMessage) { metrics, isLoading, errorMessage ->
@@ -106,6 +122,7 @@ class OverviewViewModel @Inject constructor(
             selectedDate = selection.selectedDate,
             selectedPeriod = selection.selectedPeriod,
             selectedEntry = selection.selectedEntry,
+            selectedEntryWithTravel = selection.selectedEntryWithTravel,
             metrics = loading.metrics,
             isLoading = loading.isLoading,
             errorMessage = loading.errorMessage
@@ -117,6 +134,7 @@ class OverviewViewModel @Inject constructor(
             selectedDate = LocalDate.now(),
             selectedPeriod = OverviewPeriod.WEEK,
             selectedEntry = null,
+            selectedEntryWithTravel = null,
             metrics = null,
             isLoading = true,
             errorMessage = null
@@ -186,7 +204,7 @@ class OverviewViewModel @Inject constructor(
         viewModelScope.launch {
             combine(_selectedDate, selectedEntrySnapshot) { selectedDate, snapshot ->
                 val updatedAt = if (snapshot.requestedDate == selectedDate) {
-                    snapshot.entry?.updatedAt
+                    snapshot.updatedAt
                 } else {
                     null
                 }
@@ -253,4 +271,3 @@ class OverviewViewModel @Inject constructor(
         private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L
     }
 }
-

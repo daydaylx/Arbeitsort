@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.screen
 
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.ui.screen.overview.OverviewMetrics
 import de.montagezeit.app.ui.screen.overview.OverviewPeriod
 import de.montagezeit.app.ui.screen.overview.OverviewScreenState
@@ -101,5 +102,27 @@ class ScreenStateEntryBindingTest {
         )
 
         assertEquals(currentEntry, state.currentEntry)
+    }
+
+    @Test
+    fun `overview screen exposes travel data only for matching selected date`() {
+        val selectedDate = LocalDate.of(2026, 3, 21)
+        val staleEntryWithTravel = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(date = selectedDate.minusDays(1)),
+            travelLegs = emptyList()
+        )
+
+        val state = OverviewScreenState(
+            selectedDate = selectedDate,
+            selectedPeriod = OverviewPeriod.DAY,
+            selectedEntry = staleEntryWithTravel.workEntry,
+            selectedEntryWithTravel = staleEntryWithTravel,
+            metrics = OverviewMetrics(),
+            isLoading = false,
+            errorMessage = null
+        )
+
+        assertNull(state.currentEntryWithTravel)
+        assertEquals(0, state.currentTravelLegs.size)
     }
 }

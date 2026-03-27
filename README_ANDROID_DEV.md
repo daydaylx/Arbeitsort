@@ -1,13 +1,38 @@
 # Android Development Guide - MontageZeit
 
-Schnellstart-Anleitung für Android-Entwicklung und Testing auf echten Geräten.
+Schnellstart-Anleitung fuer Android-Entwicklung, lokale Checks und Testing auf echten Geraeten.
 
 ## Voraussetzungen
 
-- Java 17+ installiert
-- Android SDK mit Platform Tools (adb)
-- Gradle Wrapper (./gradlew)
-- USB-Debugging auf dem Gerät aktiviert
+- JDK 17 installiert
+- Android SDK mit Platform Tools (`adb`)
+- Gradle Wrapper (`./gradlew`)
+- USB-Debugging auf dem Geraet aktiviert
+- Optional: `lefthook` fuer lokale Git-Hooks
+
+## Projekt-Setup
+
+```bash
+./gradlew assembleDebug
+./scripts/setup_hooks.sh
+```
+
+Wenn `lefthook` lokal noch fehlt, gibt das Setup-Skript den naechsten Schritt aus.
+
+## Lokale Qualitaetschecks
+
+Diese Kommandos entsprechen dem empfohlenen lokalen Standard:
+
+```bash
+./gradlew lint
+./gradlew :app:testDebugUnitTest
+./gradlew assembleDebug
+```
+
+Mit installierten Hooks laufen:
+
+- bei `git commit`: schnelle Staged-Diff-Checks
+- bei `git push`: `lint`, `:app:testDebugUnitTest` und `assembleDebug`
 
 ## 1-Befehl Deployment
 
@@ -15,16 +40,19 @@ Schnellstart-Anleitung für Android-Entwicklung und Testing auf echten Geräten.
 ./scripts/android_debug_run.sh [DEVICE_SERIAL]
 ```
 
-**Führt automatisch aus:**
-- Build der Debug-APK
-- Installation auf dem Gerät
-- App-Start
-- Live-Logcat-Stream
+Das Skript fuehrt automatisch aus:
 
-**Beispiel:**
+- Build und Installation der Debug-APK
+- App-Start
+- Logcat-Stream fuer den laufenden App-Prozess
+
+Beispiel:
+
 ```bash
-./scripts/android_debug_run.sh RFCY210JHMJ
+./scripts/android_debug_run.sh emulator-5554
 ```
+
+Wenn genau ein Geraet verbunden ist, kann die Seriennummer entfallen. Bei mehreren verbundenen Geraeten entweder eine Seriennummer uebergeben oder `ANDROID_DEVICE_SERIAL` setzen.
 
 ## Manuelle Schritte
 
@@ -35,50 +63,59 @@ Schnellstart-Anleitung für Android-Entwicklung und Testing auf echten Geräten.
 ```
 
 Alternative (nur Build ohne Install):
+
 ```bash
 ./gradlew :app:assembleDebug
-# APK liegt dann unter: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### 2. App Starten
+### 2. App starten
 
 ```bash
-adb -s RFCY210JHMJ shell am start -n "de.montagezeit.app/de.montagezeit.app.MainActivity"
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+adb -s "$DEVICE_SERIAL" shell am start -n "de.montagezeit.app/de.montagezeit.app.MainActivity"
 ```
 
-### 3. Logs Überwachen
+### 3. Logs ueberwachen
 
-**Mit PID-Filter (empfohlen):**
+Mit PID-Filter (empfohlen):
+
 ```bash
-PID=$(adb -s RFCY210JHMJ shell pidof de.montagezeit.app)
-adb -s RFCY210JHMJ logcat --pid=$PID -v time
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+PID=$(adb -s "$DEVICE_SERIAL" shell pidof de.montagezeit.app)
+adb -s "$DEVICE_SERIAL" logcat --pid="$PID" -v time
 ```
 
-**Oder per Package-Name:**
+Oder per Package-Name:
+
 ```bash
-adb -s RFCY210JHMJ logcat -v time | grep montagezeit
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+adb -s "$DEVICE_SERIAL" logcat -v time | grep montagezeit
 ```
 
-### 4. App-Daten Löschen (bei DB-Schema-Änderungen)
+### 4. App-Daten loeschen (bei DB-Schema-Aenderungen)
 
 ```bash
-adb -s RFCY210JHMJ shell pm clear de.montagezeit.app
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+adb -s "$DEVICE_SERIAL" shell pm clear de.montagezeit.app
 ```
 
 ## VS Code Integration
 
 Tasks sind in `.vscode/tasks.json` definiert.
 
-**Verfügbare Tasks:**
-- `Android: Build Debug APK` - Nur kompilieren
-- `Android: Install Debug APK` - Build + Installation (Standard)
-- `Android: Launch App` - App starten
-- `Android: View Logcat` - Logs anzeigen
-- `Android: Clear App Data` - Daten löschen
-- `Android: Full Debug Run` - Kompletter Workflow
-- `Android: Device List` - Verbundene Geräte auflisten
+Verfuegbare Tasks:
 
-**Ausführen:** `Ctrl+Shift+B` → Task auswählen
+- `Android: Build Debug APK`
+- `Android: Install Debug APK`
+- `Android: Launch App`
+- `Android: View Logcat`
+- `Android: Clear App Data`
+- `Android: Full Debug Run`
+- `Android: Device List`
+
+Ausfuehren: `Ctrl+Shift+B` und Task auswaehlen.
+
+Die repo-getrackten Tasks verwenden ebenfalls die automatische Geraete-Aufloesung. Bei mehreren verbundenen Geraeten `ANDROID_DEVICE_SERIAL` in der Shell oder im VS-Code-Environment setzen.
 
 ## Wichtige Dateipfade
 
@@ -88,29 +125,36 @@ Tasks sind in `.vscode/tasks.json` definiert.
 | Build Logs | `debug_artifacts/build_*.txt` |
 | Logcat Dumps | `debug_artifacts/logcat_*.txt` |
 | Gradle Wrapper | `./gradlew` |
+| Hook Setup | `./scripts/setup_hooks.sh` |
+| Device Resolver | `./scripts/resolve_android_device.sh` |
 
 ## Troubleshooting
 
-### Gerät nicht gefunden
+### Geraet nicht gefunden
 
 ```bash
 adb start-server
 adb devices -l
 ```
 
-Falls "unauthorized":
-1. Telefon entsperren
-2. USB-Debugging-Prompt akzeptieren
-3. `adb devices` erneut ausführen
+Falls `unauthorized`:
+
+1. Telefon entsperren.
+2. USB-Debugging-Prompt akzeptieren.
+3. `adb devices` erneut ausfuehren.
+
+Falls mehrere Geraete verbunden sind:
+
+```bash
+export ANDROID_DEVICE_SERIAL=<serial>
+```
 
 ### App crasht sofort
 
 ```bash
-# Zeige letzte Crash-Logs
-adb -s RFCY210JHMJ logcat -d -v time "*:E" | grep montagezeit | tail -n 50
-
-# Oder speichern
-adb -s RFCY210JHMJ logcat -d > debug_artifacts/full_logcat.txt
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+adb -s "$DEVICE_SERIAL" logcat -d -v time "*:E" | grep montagezeit | tail -n 50
+adb -s "$DEVICE_SERIAL" logcat -d > debug_artifacts/full_logcat.txt
 ```
 
 ### Room Database Schema-Fehler
@@ -119,67 +163,56 @@ adb -s RFCY210JHMJ logcat -d > debug_artifacts/full_logcat.txt
 Room cannot verify the data integrity...
 ```
 
-**Lösung:** App-Daten löschen
+Loesung:
+
 ```bash
-adb -s RFCY210JHMJ shell pm clear de.montagezeit.app
+DEVICE_SERIAL="$(./scripts/resolve_android_device.sh)"
+adb -s "$DEVICE_SERIAL" shell pm clear de.montagezeit.app
 ```
 
-**Produktions-Fix:** Database-Version in `AppDatabase.kt` erhöhen.
-
-### Dependency Injection Fehler
-
-```
-lateinit property has not been initialized
-```
-
-**Ursache:** Hilt-Injektion erfolgt nach `onCreate()`, aber Property wird vorher verwendet.
-
-**Lösung:** Lazy-Initialisierung verwenden:
-```kotlin
-private val myDependency by lazy { /* ... */ }
-```
+Produktions-Fix: Datenbank-Version in `AppDatabase.kt` erhoehen und passende Migration + Tests ergaenzen.
 
 ## Projekt-Struktur
 
-```
+```text
 .
 ├── app/
 │   ├── src/main/
 │   │   ├── java/de/montagezeit/app/
-│   │   │   ├── MontageZeitApp.kt      # Application Entry Point
-│   │   │   ├── MainActivity.kt        # Launch Activity
-│   │   │   ├── data/                  # Room DB, Repositories
-│   │   │   ├── domain/                # Use Cases, Business Logic
-│   │   │   ├── ui/                    # Compose Screens
-│   │   │   └── work/                  # WorkManager, Reminders
+│   │   │   ├── MontageZeitApp.kt
+│   │   │   ├── MainActivity.kt
+│   │   │   ├── data/
+│   │   │   ├── domain/
+│   │   │   ├── ui/
+│   │   │   └── work/
 │   │   └── AndroidManifest.xml
 │   └── build.gradle.kts
 ├── scripts/
-│   └── android_debug_run.sh           # Automatisiertes Deployment
+│   ├── android_debug_run.sh
+│   ├── resolve_android_device.sh
+│   ├── setup_hooks.sh
+│   └── hooks/
 ├── .vscode/
-│   └── tasks.json                     # IDE Tasks
-└── debug_artifacts/                    # Build & Log Outputs
+│   └── tasks.json
+└── debug_artifacts/
 ```
 
 ## Aktuelle Konfiguration
 
-- **Package:** de.montagezeit.app
-- **Version:** 1.0.0 (versionCode 1)
-- **Target SDK:** 34 (Android 14)
-- **Min SDK:** 26 (Android 8.0)
-- **Launch Activity:** de.montagezeit.app.MainActivity
-- **Test Device:** Samsung SM-S931B (Galaxy S24)
-- **Device Serial:** RFCY210JHMJ
+- Package: `de.montagezeit.app`
+- Version: `1.1.1` (`versionCode 5`)
+- Target SDK: `34`
+- Min SDK: `24`
+- Launch Activity: `de.montagezeit.app.MainActivity`
 
-## Bekannte Issues
+## Bekannte Hinweise
 
-1. **libpenguin.so not found** - Harmlos, Samsung-spezifische Library (optional)
-2. **Screen-off pausiert App** - Normal, Android Lifecycle
-3. **Freeccess friert App ein** - Samsung Battery Optimizer, in Settings deaktivierbar
+1. WorkManager-Reminder bleiben fensterbasiert und koennen durch Doze oder Hersteller-Energiesparmechanismen verzoegert werden.
+2. Bei Datenbank-Schema-Aenderungen sind lokale Test- oder Debug-Daten eventuell nicht mehr kompatibel, bis App-Daten geloescht oder eine Migration eingebaut wurde.
 
 ## Weitere Dokumentation
 
+- `README.md` - Produktstatus, Build- und Architektur-Einstieg
 - `docs/ARCHITECTURE.md` - App-Architektur
-- `docs/ASSUMPTIONS.md` - Design-Entscheidungen
-- `docs/QA_CHECKLIST.md` - Test-Szenarien
-- `CLAUDE.md` - Claude-Code Projekthinweise
+- `CONTRIBUTING.md` - Setup, Hooks und Contributing-Workflow
+- `docs/README.md` - Dokumentations-Uebersicht

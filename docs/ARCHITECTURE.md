@@ -51,6 +51,7 @@ Strategie:
     - `dayType = WORK`
     - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
     - `confirmedWorkDay = true` + `confirmation*`
+    - bestehende Arbeitszeiten bleiben bei vorhandenem Eintrag erhalten; sonst gelten Settings-Defaults
 - Optionale Nebenaktion: `ConfirmOffDay`
 - Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
 

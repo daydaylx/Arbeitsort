@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
@@ -23,7 +24,7 @@ val hasReleaseSigning = listOf(
 
 android {
     namespace = "de.montagezeit.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "de.montagezeit.app"
@@ -74,10 +75,6 @@ android {
 
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
     }
 
     packaging {

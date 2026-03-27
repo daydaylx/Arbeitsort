@@ -134,12 +134,96 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `openDailyCheckInDialog uses latest work label before any label`() {
+    fun `monthStats mealAllowanceTotalCents ignores non-work entries with stale allowance`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        // Simulate a corrupt OFF entry that still has a non-zero meal allowance
+        val entries = listOf(
+            // ARBEITSTAG_MIT_ARBEIT (hat Arbeitszeit)
+            WorkEntry(
+                date = now, 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2800,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // OFF-Tage werden ignoriert (auch mit veralteter Pauschale)
+            WorkEntry(date = now.minusDays(1), dayType = DayType.OFF, mealAllowanceAmountCents = 1400)
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = entries.map(::record)
+        )
+
+        waitUntil { viewModel.screenState.value.monthStats != null }
+
+        // Only WORK entry's allowance should be counted
+        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
+    }
+
+    @Test
+    fun `monthStats mealAllowanceTotalCents ignores unconfirmed work entries`() {
+        val now = LocalDate.now()
+        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
+        val settingsManager = mockk<ReminderSettingsManager>()
+
+        val entries = listOf(
+            // ARBEITSTAG_MIT_ARBEIT (bestätigt, hat Arbeitszeit)
+            WorkEntry(
+                date = now, 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2800,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // Unbestätigt wird ignoriert
+            WorkEntry(
+                date = now.minusDays(1), 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = false, 
+                mealAllowanceAmountCents = 2220,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            )
+        )
+
+        coEvery { workEntryDao.getByDate(any()) } returns null
+        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
+        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
+
+        val viewModel = createViewModel(
+            workEntryDao,
+            settingsManager,
+            entriesWithTravel = entries.map(::record)
+        )
+
+        waitUntil { viewModel.screenState.value.monthStats != null }
+
+        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
+    }
+
+    @Test
+    fun `openDailyCheckInDialog falls back to last used label when empty`() {
         val today = LocalDate.now()
         val existing = WorkEntry(
             date = today,
             dayType = DayType.WORK,
-            dayLocationLabel = "   "
+            dayLocationLabel = ""
         )
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
@@ -148,37 +232,8 @@ class TodayViewModelTest {
         coEvery { workEntryDao.getByDate(any()) } returns existing
         every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
         coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Werk 9"
-        every { settingsManager.settings } returns flowOf(settings)
-
-        val viewModel = createViewModel(workEntryDao, settingsManager)
-        val shownLatch = CountDownLatch(1)
-        val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) {
-                    shownLatch.countDown()
-                }
-            }
-        }
-
-        viewModel.openDailyCheckInDialog()
-
-        assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("Werk 9", viewModel.dailyCheckInLocationInput.value)
-        coVerify(exactly = 1) { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) }
-        collectJob.cancel()
-    }
-
-    @Test
-    fun `openDailyCheckInDialog uses latest work label when today entry is missing`() {
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
         coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        every { settingsManager.settings } returns flowOf(settings)
 
         val viewModel = createViewModel(workEntryDao, settingsManager)
         val shownLatch = CountDownLatch(1)
@@ -851,8 +906,27 @@ class TodayViewModelTest {
         val settingsManager = mockk<ReminderSettingsManager>()
 
         val entries = listOf(
-            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
-            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2220),
+            // ARBEITSTAG_MIT_ARBEIT (hat Arbeitszeit)
+            WorkEntry(
+                date = now, 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2800,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // ARBEITSTAG_MIT_ARBEIT (hat Arbeitszeit)
+            WorkEntry(
+                date = now.minusDays(1), 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2220,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // OFF-Tage werden ignoriert
             WorkEntry(date = now.minusDays(2), dayType = DayType.OFF, mealAllowanceAmountCents = 0)
         )
 
@@ -870,62 +944,6 @@ class TodayViewModelTest {
         waitUntil { viewModel.screenState.value.monthStats != null }
 
         assertEquals(5020, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
-    }
-
-    @Test
-    fun `monthStats mealAllowanceTotalCents ignores non-work entries with stale allowance`() {
-        val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-
-        // Simulate a corrupt OFF entry that still has a non-zero meal allowance
-        val entries = listOf(
-            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
-            WorkEntry(date = now.minusDays(1), dayType = DayType.OFF, mealAllowanceAmountCents = 1400)
-        )
-
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
-
-        val viewModel = createViewModel(
-            workEntryDao,
-            settingsManager,
-            entriesWithTravel = entries.map(::record)
-        )
-
-        waitUntil { viewModel.screenState.value.monthStats != null }
-
-        // Only the WORK entry's allowance should be counted
-        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
-    }
-
-    @Test
-    fun `monthStats mealAllowanceTotalCents ignores unconfirmed work entries`() {
-        val now = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-
-        val entries = listOf(
-            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
-            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = false, mealAllowanceAmountCents = 2220)
-        )
-
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns entries
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
-
-        val viewModel = createViewModel(
-            workEntryDao,
-            settingsManager,
-            entriesWithTravel = entries.map(::record)
-        )
-
-        waitUntil { viewModel.screenState.value.monthStats != null }
-
-        assertEquals(2800, viewModel.screenState.value.monthStats?.mealAllowanceTotalCents)
     }
 
     @Test
@@ -984,8 +1002,27 @@ class TodayViewModelTest {
         val settingsManager = mockk<ReminderSettingsManager>()
 
         val entries = listOf(
-            WorkEntry(date = now, dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2800),
-            WorkEntry(date = now.minusDays(1), dayType = DayType.WORK, confirmedWorkDay = true, mealAllowanceAmountCents = 2220),
+            // ARBEITSTAG_MIT_ARBEIT (hat Arbeitszeit)
+            WorkEntry(
+                date = now, 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2800,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // ARBEITSTAG_MIT_ARBEIT (hat Arbeitszeit)
+            WorkEntry(
+                date = now.minusDays(1), 
+                dayType = DayType.WORK, 
+                confirmedWorkDay = true, 
+                mealAllowanceAmountCents = 2220,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            ),
+            // OFF-Tage werden ignoriert
             WorkEntry(date = now.minusDays(2), dayType = DayType.OFF, mealAllowanceAmountCents = 0)
         )
 

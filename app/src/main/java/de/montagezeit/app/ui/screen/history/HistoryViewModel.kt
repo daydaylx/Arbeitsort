@@ -164,7 +164,7 @@ class HistoryViewModel @Inject constructor(
     }
     
     private fun groupByWeek(entries: List<WorkEntryWithTravelLegs>): List<WeekGroup> {
-        val weekFields = WeekFields.of(Locale.GERMAN)
+        val weekFields = WeekFields.ISO
         
         return entries
             .groupBy { entry ->

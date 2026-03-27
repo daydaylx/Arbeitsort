@@ -4,10 +4,15 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,15 +33,20 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,6 +56,9 @@ import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,35 +153,14 @@ fun ExportPreviewBottomSheet(
                 }
 
                 is PreviewState.PdfReady -> {
-                    Text(
-                        stringResource(R.string.export_preview_pdf_ready_title),
-                        style = MaterialTheme.typography.titleMedium
+                    PdfReadyContent(
+                        fileUri = state.fileUri,
+                        fileName = state.fileName,
+                        onOpenPdf = { openPdf(context, state.fileUri) },
+                        onSharePdf = { sharePdf(context, state.fileUri) },
+                        onCopy = { copyExportUri(context, state.fileUri) },
+                        onBackToPreview = { viewModel.returnToPreview() }
                     )
-                    Text(state.fileName, style = MaterialTheme.typography.bodySmall)
-                    PrimaryActionButton(
-                        onClick = { openPdf(context, state.fileUri) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.export_preview_action_open_pdf))
-                    }
-                    SecondaryActionButton(
-                        onClick = { sharePdf(context, state.fileUri) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.action_share))
-                    }
-                    TertiaryActionButton(
-                        onClick = { copyExportUri(context, state.fileUri) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.action_copy))
-                    }
-                    TertiaryActionButton(
-                        onClick = { viewModel.returnToPreview() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.export_preview_action_back_to_preview))
-                    }
                 }
 
                 is PreviewState.Error -> {
@@ -205,6 +198,95 @@ private fun PreviewHeader(text: String) {
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold
     )
+}
+
+@Composable
+private fun PdfReadyContent(
+    fileUri: Uri,
+    fileName: String,
+    onOpenPdf: () -> Unit,
+    onSharePdf: () -> Unit,
+    onCopy: () -> Unit,
+    onBackToPreview: () -> Unit
+) {
+    val context = LocalContext.current
+    val rendererState = rememberPdfRendererState(context, fileUri)
+
+    Text(
+        stringResource(R.string.export_preview_pdf_ready_title),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Text(
+        text = fileName,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PrimaryActionButton(
+            onClick = onOpenPdf,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(stringResource(R.string.export_preview_action_open_pdf))
+        }
+        SecondaryActionButton(
+            onClick = onSharePdf,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(stringResource(R.string.action_share))
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        TertiaryActionButton(
+            onClick = onCopy,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(stringResource(R.string.action_copy))
+        }
+        TertiaryActionButton(
+            onClick = onBackToPreview,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(stringResource(R.string.export_preview_action_back_to_preview))
+        }
+    }
+
+    when (rendererState) {
+        null -> {
+            ErrorCard(stringResource(R.string.export_preview_pdf_render_failed))
+        }
+
+        else -> {
+            Text(
+                text = stringResource(R.string.export_preview_pdf_view_title, rendererState.renderer.pageCount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 240.dp, max = 560.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                itemsIndexed(
+                    items = List(rendererState.renderer.pageCount) { it },
+                    key = { _, pageIndex -> pageIndex }
+                ) { _, pageIndex ->
+                    PdfPageCard(
+                        renderer = rendererState.renderer,
+                        pageIndex = pageIndex
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -347,6 +429,137 @@ private fun ErrorCard(message: String) {
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onErrorContainer
         )
+    }
+}
+
+@Composable
+private fun PdfPageCard(
+    renderer: PdfRenderer,
+    pageIndex: Int
+) {
+    val bitmapState by produceState<PdfPageRenderState>(
+        initialValue = PdfPageRenderState.Loading,
+        renderer,
+        pageIndex
+    ) {
+        value = try {
+            val bitmap = withContext(Dispatchers.IO) {
+                renderPdfPage(renderer, pageIndex)
+            }
+            PdfPageRenderState.Success(bitmap)
+        } catch (_: Exception) {
+            PdfPageRenderState.Error
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.export_preview_pdf_page_label, pageIndex + 1),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            when (val state = bitmapState) {
+                PdfPageRenderState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                PdfPageRenderState.Error -> {
+                    Text(
+                        text = stringResource(R.string.export_preview_pdf_render_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                is PdfPageRenderState.Success -> {
+                    Image(
+                        bitmap = state.bitmap.asImageBitmap(),
+                        contentDescription = stringResource(R.string.export_preview_pdf_page_label, pageIndex + 1),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberPdfRendererState(
+    context: Context,
+    fileUri: Uri
+): PdfRendererState? {
+    val rendererState = remember(context, fileUri) {
+        runCatching {
+            val descriptor = context.contentResolver.openFileDescriptor(fileUri, "r")
+                ?: return@runCatching null
+            PdfRendererState(
+                descriptor = descriptor,
+                renderer = PdfRenderer(descriptor)
+            )
+        }.getOrNull()
+    }
+
+    DisposableEffect(rendererState) {
+        onDispose {
+            rendererState?.close()
+        }
+    }
+
+    return rendererState
+}
+
+private suspend fun renderPdfPage(
+    renderer: PdfRenderer,
+    pageIndex: Int
+): Bitmap {
+    synchronized(renderer) {
+        val page = renderer.openPage(pageIndex)
+        try {
+            val targetWidth = (page.width * 1.8f).roundToInt().coerceAtLeast(1)
+            val scale = targetWidth.toFloat() / page.width.toFloat()
+            val targetHeight = (page.height * scale).roundToInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(android.graphics.Color.WHITE)
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            return bitmap
+        } finally {
+            page.close()
+        }
+    }
+}
+
+private sealed interface PdfPageRenderState {
+    object Loading : PdfPageRenderState
+    object Error : PdfPageRenderState
+    data class Success(val bitmap: Bitmap) : PdfPageRenderState
+}
+
+private data class PdfRendererState(
+    val descriptor: ParcelFileDescriptor,
+    val renderer: PdfRenderer
+) {
+    fun close() {
+        renderer.close()
+        descriptor.close()
     }
 }
 

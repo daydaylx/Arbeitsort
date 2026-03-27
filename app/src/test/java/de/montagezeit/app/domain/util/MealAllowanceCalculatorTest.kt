@@ -2,6 +2,7 @@ package de.montagezeit.app.domain.util
 
 import de.montagezeit.app.data.local.entity.DayType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 
 class MealAllowanceCalculatorTest {
@@ -115,7 +116,12 @@ class MealAllowanceCalculatorTest {
     }
 
     @Test
-    fun `formatEuro formats negative value with minus prefix`() {
-        assertEquals("-5,80 €", MealAllowanceCalculator.formatEuro(-580))
+    fun `formatEuro rejects negative values`() {
+        try {
+            MealAllowanceCalculator.formatEuro(-580)
+            fail("Expected IllegalArgumentException")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals("cents must be non-negative", expected.message)
+        }
     }
 }

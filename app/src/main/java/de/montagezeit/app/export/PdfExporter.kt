@@ -416,7 +416,7 @@ class PdfExporter @Inject constructor(
             // Reise (von–bis)
             val travelWindow = PdfUtilities.buildTravelRouteSummary(travelLegs)
             val travelWindowText = if (travelWindow.isNotBlank()) {
-                travelWindow.take(18)
+                if (travelWindow.length <= 18) travelWindow else travelWindow.take(15) + "..."
             } else {
                 string(R.string.pdf_export_placeholder_dash)
             }

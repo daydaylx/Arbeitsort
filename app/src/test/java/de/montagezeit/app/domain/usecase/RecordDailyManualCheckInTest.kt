@@ -225,4 +225,33 @@ class RecordDailyManualCheckInTest {
         assertEquals(30, result.breakMinutes)
         assertEquals("Neu", result.dayLocationLabel)
     }
+
+    @Test
+    fun `invoke preserves existing work schedule when switching OFF entry to WORK`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.OFF,
+            dayLocationLabel = "Alt",
+            workStart = LocalTime.of(6, 15),
+            workEnd = LocalTime.of(14, 45),
+            breakMinutes = 30
+        )
+        mockReadModifyWrite(date, existing)
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Neu",
+                isArrivalDeparture = false,
+                breakfastIncluded = false
+            )
+        )
+
+        assertEquals(DayType.WORK, result.dayType)
+        assertEquals(LocalTime.of(6, 15), result.workStart)
+        assertEquals(LocalTime.of(14, 45), result.workEnd)
+        assertEquals(30, result.breakMinutes)
+        assertEquals("Neu", result.dayLocationLabel)
+    }
 }
