@@ -225,9 +225,9 @@ class TodayViewModel @Inject constructor(
     private val _showDeleteDayDialog = MutableStateFlow(false)
     val showDeleteDayDialog: StateFlow<Boolean> = _showDeleteDayDialog.asStateFlow()
 
-    /** Holds the last deleted entry until the undo window closes. */
-    private val _deletedEntryForUndo = MutableStateFlow<WorkEntry?>(null)
-    val deletedEntryForUndo: StateFlow<WorkEntry?> = _deletedEntryForUndo.asStateFlow()
+    /** Holds the last deleted entry (including travel legs) until the undo window closes. */
+    private val _deletedEntryForUndo = MutableStateFlow<WorkEntryWithTravelLegs?>(null)
+    val deletedEntryForUndo: StateFlow<WorkEntryWithTravelLegs?> = _deletedEntryForUndo.asStateFlow()
 
     // B10: Capture the date at dialog-open time so racing selectDate() calls don't affect it
     private val _dailyCheckInDate = MutableStateFlow(LocalDate.now())
@@ -361,7 +361,9 @@ class TodayViewModel @Inject constructor(
             while (isActive) {
                 val systemToday = LocalDate.now()
                 if (_todayDate.value != systemToday) {
+                    val wasOnToday = _selectedDate.value == _todayDate.value
                     _todayDate.value = systemToday
+                    if (wasOnToday) _selectedDate.value = systemToday
                     loadStatisticsInternal()
                     loadWeekOverviewInternal()
                 }
@@ -668,6 +670,7 @@ class TodayViewModel @Inject constructor(
                     _uiState.value = TodayUiState.Success(null)
                     _deletedEntryForUndo.value = deleted
                 }
+
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_delete_failed)
             } finally {
@@ -678,13 +681,13 @@ class TodayViewModel @Inject constructor(
 
     // B06: After undo, also navigate back to the restored date
     fun undoDeleteDay() {
-        val entry = _deletedEntryForUndo.value ?: return
+        val entryWithLegs = _deletedEntryForUndo.value ?: return
         _deletedEntryForUndo.value = null
         viewModelScope.launch {
             try {
-                workEntryDao.upsert(entry)
-                _uiState.value = TodayUiState.Success(entry)
-                selectDate(entry.date)
+                workEntryDao.replaceEntryWithTravelLegs(entryWithLegs.workEntry, entryWithLegs.travelLegs)
+                _uiState.value = TodayUiState.Success(entryWithLegs.workEntry)
+                selectDate(entryWithLegs.workEntry.date)
             } catch (e: Exception) {
                 _snackbarMessage.value = e.toUiText(R.string.today_error_delete_failed)
             }

@@ -1432,7 +1432,8 @@ private fun NumericInputRow(
                 value = textValue,
                 onValueChange = { newValue ->
                     textValue = newValue
-                    newValue.toDoubleOrNull()?.let { num ->
+                    // Komma durch Punkt ersetzen für deutsche Tastatur-Layouts
+                    newValue.replace(',', '.').toDoubleOrNull()?.let { num ->
                         if (num in minValue..maxValue) {
                             isError = false
                             onValueChange(num)
@@ -1496,14 +1497,6 @@ private fun openNotificationSettings(context: Context) {
         }
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    context.startActivity(intent)
-}
-
-private fun openAppSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-        data = Uri.parse("package:${context.packageName}")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
     context.startActivity(intent)
 }
 
