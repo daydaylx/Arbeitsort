@@ -50,11 +50,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
-import de.montagezeit.app.ui.common.TimePickerDialog
+import de.montagezeit.app.ui.components.TimePickerDialog
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.screen.export.ExportPreviewBottomSheet
 import de.montagezeit.app.ui.util.Formatters

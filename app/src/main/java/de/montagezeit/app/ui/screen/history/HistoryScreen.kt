@@ -35,7 +35,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.TimeCalculator
-import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString

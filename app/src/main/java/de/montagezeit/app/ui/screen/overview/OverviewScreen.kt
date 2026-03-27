@@ -61,7 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.components.MZCard
 import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZHeroCard

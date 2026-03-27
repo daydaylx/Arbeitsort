@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.common.DatePickerDialog
+import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalDate
 
