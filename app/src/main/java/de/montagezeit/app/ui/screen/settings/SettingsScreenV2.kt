@@ -77,7 +77,15 @@ fun SettingsScreenV2(
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by viewModel.reminderSettings.collectAsStateWithLifecycle(initialValue = null)
+    val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(snackbarMessage) {
+        val message = snackbarMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message.asString(context))
+        viewModel.onSnackbarShown()
+    }
 
     var hasNotificationPermission by remember {
         mutableStateOf(checkNotificationPermission(context))
@@ -123,7 +131,8 @@ fun SettingsScreenV2(
                     )
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         MZPageBackground(
             modifier = Modifier.fillMaxSize(),

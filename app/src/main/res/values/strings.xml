@@ -210,6 +210,7 @@
     <string name="settings_error_no_entries_custom_range">Keine Einträge für den gewählten Zeitraum gefunden.</string>
     <string name="settings_error_pdf_export_failed">PDF-Export fehlgeschlagen</string>
     <string name="settings_error_export_failed">Export fehlgeschlagen</string>
+    <string name="settings_error_invalid_window">Endzeit muss nach der Startzeit liegen</string>
     
     <!-- Status -->
     <string name="status_active">Aktiv</string>

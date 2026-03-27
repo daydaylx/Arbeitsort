@@ -137,7 +137,7 @@ class HistoryViewModel @Inject constructor(
                 }
                 if (entriesToUpsert.isNotEmpty()) {
                     workEntryDao.upsertAll(entriesToUpsert)
-                    if (request.dayType == DayType.COMP_TIME) {
+                    if (request.dayType == DayType.COMP_TIME || request.dayType == DayType.OFF) {
                         for (entry in entriesToUpsert) {
                             workEntryDao.deleteTravelLegsByDate(entry.date)
                         }
