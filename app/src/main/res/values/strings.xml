@@ -188,9 +188,7 @@
     <string name="settings_reminders">Erinnerungen</string>
     <string name="settings_non_working_days">Freie Tage</string>
     <string name="settings_export">Export</string>
-    <string name="settings_cd_collapse_section">Sektion einklappen</string>
-    <string name="settings_cd_expand_section">Sektion ausklappen</string>
-    <string name="cd_expand_section">%s erweitern</string>
+    <string name="cd_expand_section">%s ausklappen</string>
     <string name="cd_collapse_section">%s einklappen</string>
     <string name="settings_section_content_desc">%1$s. %2$s</string>
     <string name="settings_state_expanded">Ausgeklappt</string>
@@ -346,6 +344,8 @@
     <string name="pdf_range_to">Bis</string>
     <string name="error_invalid_date_range">Startdatum muss vor Enddatum liegen</string>
     <string name="cd_remove_holiday">Feiertag entfernen</string>
+    <string name="cd_remove_travel_leg">Fahrt entfernen</string>
+    <string name="common_ellipsis">…</string>
     <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
     <plurals name="settings_summary_holidays_count">
         <item quantity="one">%d Feiertag</item>

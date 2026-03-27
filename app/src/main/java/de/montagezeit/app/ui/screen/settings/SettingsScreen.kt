@@ -553,9 +553,9 @@ private fun CollapsibleSettingsCard(
                         Icons.Default.KeyboardArrowDown
                     },
                     contentDescription = if (expanded) {
-                        stringResource(R.string.settings_cd_collapse_section)
+                        stringResource(R.string.cd_collapse_section, title)
                     } else {
-                        stringResource(R.string.settings_cd_expand_section)
+                        stringResource(R.string.cd_expand_section, title)
                     }
                 )
             }

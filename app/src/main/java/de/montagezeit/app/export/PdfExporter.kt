@@ -416,7 +416,7 @@ class PdfExporter @Inject constructor(
             // Reise (von–bis)
             val travelWindow = PdfUtilities.buildTravelRouteSummary(travelLegs)
             val travelWindowText = if (travelWindow.isNotBlank()) {
-                if (travelWindow.length > 18) travelWindow.take(17) + "…" else travelWindow
+                if (travelWindow.length > 18) travelWindow.take(17) + string(R.string.common_ellipsis) else travelWindow
             } else {
                 string(R.string.pdf_export_placeholder_dash)
             }
@@ -440,7 +440,7 @@ class PdfExporter @Inject constructor(
 
             // Ort
             val location = PdfUtilities.getLocation(entry, travelLegs)
-            activeCanvas.drawText(if (location.length > 8) location.take(7) + "…" else location, xPos, y + 15, paintTableText)
+            activeCanvas.drawText(if (location.length > 8) location.take(7) + string(R.string.common_ellipsis) else location, xPos, y + 15, paintTableText)
             xPos += COL_LOCATION
 
             // Verpflegungspauschale
@@ -449,7 +449,7 @@ class PdfExporter @Inject constructor(
             } else {
                 string(R.string.pdf_export_placeholder_dash)
             }
-            activeCanvas.drawText(if (vpText.length > 8) vpText.take(7) + "…" else vpText, xPos, y + 15, paintTableText)
+            activeCanvas.drawText(if (vpText.length > 8) vpText.take(7) + string(R.string.common_ellipsis) else vpText, xPos, y + 15, paintTableText)
 
             y += ROW_HEIGHT
         }

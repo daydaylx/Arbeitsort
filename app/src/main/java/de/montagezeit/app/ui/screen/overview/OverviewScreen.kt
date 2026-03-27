@@ -227,7 +227,10 @@ private fun OverviewTopRangeBar(
 
         Row(
             modifier = Modifier
-                .clickable(onClick = onOpenPicker)
+                .clickable(
+                    onClick = onOpenPicker,
+                    onClickLabel = stringResource(R.string.overview_range_selector_hint)
+                )
                 .padding(vertical = 8.dp, horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center

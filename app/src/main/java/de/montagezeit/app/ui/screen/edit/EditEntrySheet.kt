@@ -1105,7 +1105,7 @@ private fun TravelLegCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = null
+                        contentDescription = stringResource(R.string.cd_remove_travel_leg)
                     )
                 }
             }
