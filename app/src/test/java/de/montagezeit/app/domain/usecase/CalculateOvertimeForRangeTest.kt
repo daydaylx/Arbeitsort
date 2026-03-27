@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -273,6 +274,16 @@ class CalculateOvertimeForRangeTest {
         // confirmedWorkDay == false → skip
         assertEquals(0.0, result.totalOvertimeHours, 0.0001)
         assertEquals(0, result.countedDays)
+    }
+
+    @Test
+    fun `dailyTargetHours kleiner gleich null wirft exception`() {
+        try {
+            useCase(entries = emptyList(), dailyTargetHours = 0.0)
+            fail("Expected IllegalArgumentException")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals("dailyTargetHours must be > 0", expected.message)
+        }
     }
 
     private fun overtimeEntry(

@@ -79,9 +79,8 @@ object TimeCalculator {
         val start = leg.startAt
         val arrive = leg.arriveAt
         if (start != null && arrive != null) {
-            var diffMs = arrive - start
-            if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000L
-            return (diffMs / 60_000L).toInt().coerceAtLeast(0)
+            val diffMs = arrive - start
+            return if (diffMs < 0) 0 else (diffMs / 60_000L).toInt()
         }
         return leg.paidMinutesOverride?.coerceAtLeast(0) ?: 0
     }

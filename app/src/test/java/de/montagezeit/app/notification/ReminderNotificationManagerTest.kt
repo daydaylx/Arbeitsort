@@ -77,6 +77,18 @@ class ReminderNotificationManagerTest {
     }
 
     @Test
+    fun `showMorningReminder opens app on edit action for notification tap`() {
+        val date = LocalDate.of(2026, 3, 15)
+        manager.showMorningReminder(date)
+
+        val notification = notification(ReminderNotificationIds.MORNING_REMINDER)
+        val contentIntent = Shadows.shadowOf(notification.contentIntent).savedIntent
+
+        assertEquals(ReminderActions.ACTION_EDIT_ENTRY, contentIntent.action)
+        assertEquals(date.toString(), contentIntent.getStringExtra(ReminderActions.EXTRA_DATE))
+    }
+
+    @Test
     fun `cancelMorningReminder removes notification`() {
         manager.showMorningReminder(LocalDate.of(2026, 3, 15))
         manager.cancelMorningReminder()

@@ -1,6 +1,7 @@
 package de.montagezeit.app.logging
 
 import android.content.Context
+import de.montagezeit.app.data.logging.RingBufferLogger
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.edit
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +26,7 @@ import de.montagezeit.app.ui.common.PrimaryActionButton
 import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.common.TertiaryActionButton
 import de.montagezeit.app.ui.common.TimePickerDialog
+import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
@@ -54,6 +56,7 @@ fun EditEntrySheet(
     var showCopyDatePicker by remember { mutableStateOf(false) }
     var showNavigateDatePicker by remember { mutableStateOf(false) }
     var showDeleteDayConfirmDialog by remember { mutableStateOf(false) }
+    var showDiscardChangesDialog by remember { mutableStateOf(false) }
     val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     LaunchedEffect(date) {
@@ -72,9 +75,22 @@ fun EditEntrySheet(
             onDismiss()
         }
     }
-    
+
+    val isDirty = screenState.isDirty
+    val handleDismiss: () -> Unit = {
+        if (isDirty && !isSaving) {
+            showDiscardChangesDialog = true
+        } else {
+            onDismiss()
+        }
+    }
+
+    BackHandler(enabled = isDirty && !isSaving) {
+        showDiscardChangesDialog = true
+    }
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = handleDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
@@ -229,9 +245,9 @@ fun EditEntrySheet(
                     }
 
                     is EditUiState.Error -> {
-                        Text(
-                            text = state.message.asString(context),
-                            color = MaterialTheme.colorScheme.error
+                        MZErrorState(
+                            message = state.message.asString(context),
+                            onRetry = { viewModel.reloadEntry() }
                         )
                     }
 
@@ -357,6 +373,16 @@ fun EditEntrySheet(
                         }
                     }
                 }
+            )
+        }
+
+        if (showDiscardChangesDialog) {
+            DiscardChangesDialog(
+                onDiscard = {
+                    showDiscardChangesDialog = false
+                    onDismiss()
+                },
+                onKeepEditing = { showDiscardChangesDialog = false }
             )
         }
     }
@@ -516,8 +542,8 @@ private fun EditFormSectionCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content
         )
     }
@@ -557,7 +583,7 @@ fun EditFormContent(
     val isCompTime = formData.dayType == de.montagezeit.app.data.local.entity.DayType.COMP_TIME
 
     Text(
-        text = formatDate(entry.date),
+        text = Formatters.formatDateLong(entry.date),
         style = MaterialTheme.typography.headlineSmall
     )
 
@@ -844,7 +870,7 @@ fun WorkTimesSection(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = formatTime(workStart),
+                            text = Formatters.formatTime(workStart),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -867,7 +893,7 @@ fun WorkTimesSection(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = formatTime(workEnd),
+                            text = Formatters.formatTime(workEnd),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1064,8 +1090,8 @@ private fun TravelLegCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1105,7 +1131,7 @@ private fun TravelLegCard(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = leg.startTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            text = leg.startTime?.let { Formatters.formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1128,7 +1154,7 @@ private fun TravelLegCard(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = leg.arriveTime?.let(::formatTime) ?: stringResource(R.string.edit_time_pick),
+                            text = leg.arriveTime?.let { Formatters.formatTime(it) } ?: stringResource(R.string.edit_time_pick),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1176,7 +1202,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.startLabel ?: "",
-                onValueChange = onStartLabelChange,
+                onValueChange = { if (it.length <= 100) onStartLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_from_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1185,7 +1211,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.endLabel ?: "",
-                onValueChange = onEndLabelChange,
+                onValueChange = { if (it.length <= 100) onEndLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_to_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1234,9 +1260,10 @@ fun LocationLabelsSection(
 
         OutlinedTextField(
             value = dayLocationLabel ?: "",
-            onValueChange = onDayLocationChange,
+            onValueChange = { if (it.length <= 100) onDayLocationChange(it) },
             label = { Text(stringResource(R.string.edit_label_day_location_required)) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
+            isError = dayLocationLabel?.isBlank() == true,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -1256,7 +1283,7 @@ fun NoteSection(
         
         OutlinedTextField(
             value = note ?: "",
-            onValueChange = onNoteChange,
+            onValueChange = { if (it.length <= 500) onNoteChange(it) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_note)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -1364,22 +1391,35 @@ private fun DeleteDayConfirmDialog(
 
 
 
-private fun formatDate(date: java.time.LocalDate): String {
-    return date.format(editFullDateFormatter)
+@Composable
+private fun DiscardChangesDialog(
+    onDiscard: () -> Unit,
+    onKeepEditing: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onKeepEditing,
+        title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
+        text = {
+            Text(
+                text = stringResource(R.string.dialog_discard_changes_message),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            DestructiveActionButton(onClick = onDiscard) {
+                Text(stringResource(R.string.action_discard))
+            }
+        },
+        dismissButton = {
+            TertiaryActionButton(onClick = onKeepEditing) {
+                Text(stringResource(R.string.action_keep_editing))
+            }
+        }
+    )
 }
 
 private fun formatShortDate(date: java.time.LocalDate): String {
     return date.format(editShortDateFormatter)
 }
 
-private fun formatTime(time: java.time.LocalTime): String {
-    return time.format(editTimeFormatter)
-}
-
-// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
-
-// Removed: formatDuration - now using Formatters.formatDuration
-
-private val editFullDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
 private val editShortDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
-private val editTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

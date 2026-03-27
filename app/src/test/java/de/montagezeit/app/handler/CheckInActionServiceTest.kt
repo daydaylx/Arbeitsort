@@ -1,6 +1,8 @@
 package de.montagezeit.app.handler
 
+import de.montagezeit.app.service.CheckInActionService
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
 
@@ -9,9 +11,9 @@ class CheckInActionServiceTest {
     private val today = LocalDate.of(2026, 3, 15)
 
     @Test
-    fun `parseDateFromExtra returns now for null input`() {
+    fun `parseDateFromExtra returns null for null input`() {
         val result = CheckInActionService.parseDateFromExtra(null, now = today)
-        assertEquals(today, result)
+        assertNull(result)
     }
 
     @Test
@@ -35,28 +37,28 @@ class CheckInActionServiceTest {
     }
 
     @Test
-    fun `parseDateFromExtra returns now for date 2 days ago (exceeds tolerance)`() {
+    fun `parseDateFromExtra returns null for date 2 days ago (exceeds tolerance)`() {
         val twoDaysAgo = today.minusDays(2)
         val result = CheckInActionService.parseDateFromExtra(twoDaysAgo.toString(), now = today)
-        assertEquals(today, result)
+        assertNull(result)
     }
 
     @Test
-    fun `parseDateFromExtra returns now for date 2 days ahead (exceeds tolerance)`() {
+    fun `parseDateFromExtra returns null for date 2 days ahead (exceeds tolerance)`() {
         val twoDaysAhead = today.plusDays(2)
         val result = CheckInActionService.parseDateFromExtra(twoDaysAhead.toString(), now = today)
-        assertEquals(today, result)
+        assertNull(result)
     }
 
     @Test
-    fun `parseDateFromExtra returns now for malformed string`() {
+    fun `parseDateFromExtra returns null for malformed string`() {
         val result = CheckInActionService.parseDateFromExtra("not-a-date", now = today)
-        assertEquals(today, result)
+        assertNull(result)
     }
 
     @Test
-    fun `parseDateFromExtra returns now for empty string`() {
+    fun `parseDateFromExtra returns null for empty string`() {
         val result = CheckInActionService.parseDateFromExtra("", now = today)
-        assertEquals(today, result)
+        assertNull(result)
     }
 }

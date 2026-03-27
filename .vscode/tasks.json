@@ -32,7 +32,11 @@
     {
       "label": "Android: Launch App",
       "type": "shell",
-      "command": "adb -s RFCY210JHMJ shell am start -n de.montagezeit.app/de.montagezeit.app.MainActivity",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "DEVICE=\"$(./scripts/resolve_android_device.sh)\" && adb -s \"$DEVICE\" shell am start -n de.montagezeit.app/de.montagezeit.app.MainActivity"
+      ],
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
@@ -44,8 +48,8 @@
       "type": "shell",
       "command": "bash",
       "args": [
-        "-c",
-        "PID=$(adb -s RFCY210JHMJ shell pidof de.montagezeit.app 2>/dev/null) && adb -s RFCY210JHMJ logcat --pid=$PID -v time || adb -s RFCY210JHMJ logcat -v time | grep montagezeit"
+        "-lc",
+        "DEVICE=\"$(./scripts/resolve_android_device.sh)\" && PID=$(adb -s \"$DEVICE\" shell pidof de.montagezeit.app 2>/dev/null) && if [ -n \"$PID\" ]; then adb -s \"$DEVICE\" logcat --pid=\"$PID\" -v time; else adb -s \"$DEVICE\" logcat -v time | grep montagezeit; fi"
       ],
       "isBackground": true,
       "presentation": {
@@ -57,7 +61,11 @@
     {
       "label": "Android: Clear App Data",
       "type": "shell",
-      "command": "adb -s RFCY210JHMJ shell pm clear de.montagezeit.app",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "DEVICE=\"$(./scripts/resolve_android_device.sh)\" && adb -s \"$DEVICE\" shell pm clear de.montagezeit.app"
+      ],
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
@@ -68,7 +76,6 @@
       "label": "Android: Full Debug Run",
       "type": "shell",
       "command": "./scripts/android_debug_run.sh",
-      "args": ["RFCY210JHMJ"],
       "isBackground": false,
       "presentation": {
         "reveal": "always",

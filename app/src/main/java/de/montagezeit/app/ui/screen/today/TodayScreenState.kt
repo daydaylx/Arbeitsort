@@ -1,10 +1,13 @@
 package de.montagezeit.app.ui.screen.today
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.time.LocalDate
 
+@Stable
 data class TodayScreenState(
     val uiState: TodayUiState,
     val selectedEntry: WorkEntry?,
@@ -12,16 +15,6 @@ data class TodayScreenState(
     val selectedDate: LocalDate,
     val todayDate: LocalDate,
     val weekDaysUi: List<WeekDayUi>,
-    val weekStats: WeekStats?,
-    val monthStats: MonthStats?,
-    val isOvertimeConfigured: Boolean,
-    val overtimeYearDisplay: String,
-    val overtimeMonthDisplay: String?,
-    val overtimeYearActualDisplay: String,
-    val overtimeYearTargetDisplay: String,
-    val overtimeYearCountedDays: Int,
-    val overtimeYearOffDayTravelDisplay: String,
-    val overtimeYearOffDayTravelDays: Int,
     val loadingActions: Set<TodayAction>
 ) {
     val currentEntry: WorkEntry?
@@ -37,7 +30,10 @@ data class TodayScreenState(
         }
 
     val currentTravelLegs: List<TravelLeg>
-        get() = selectedEntryWithTravel?.orderedTravelLegs ?: emptyList()
+        get() = selectedEntryWithTravel
+            ?.takeIf { it.workEntry.date == selectedDate }
+            ?.orderedTravelLegs
+            ?: emptyList()
 
     val errorState: TodayUiState.Error?
         get() = uiState as? TodayUiState.Error
@@ -58,6 +54,7 @@ data class TodayScreenState(
         get() = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
 }
 
+@Immutable
 data class TodayDialogState(
     val showDailyCheckInDialog: Boolean,
     val dailyCheckInLocationInput: String,

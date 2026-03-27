@@ -1,0 +1,10 @@
+pre-commit:
+  parallel: true
+  commands:
+    staged-diff-check:
+      run: bash scripts/hooks/check_staged_changes.sh
+
+pre-push:
+  commands:
+    local-quality-gate:
+      run: bash scripts/hooks/run_local_quality_gate.sh

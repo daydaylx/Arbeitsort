@@ -21,7 +21,7 @@ Erstellt: 2026-03-14
 | A09 | mittel | Architektur | Cross-Layer-Dependency domain → work | bestätigt | `domain/usecase/SetDayLocation.kt:8,34` + `ui/screen/today/TodayViewModel.kt:479` | Domain/UI importiert direkt aus Work-Package. | Erhöhte Kopplung, erschwerte Tests | klar reproduzierbar | später |
 | A10 | ~~mittel~~ | ~~Zustand~~ | ~~EditEntryViewModel DB auf Main~~ | **verworfen** | — | Room-suspend-DAO wechselt automatisch Thread. | Kein Problem. | — | — |
 | A11 | mittel | Robustheit | RingBufferLogger: Rotation löscht bei Fehler alles | bestätigt | `logging/RingBufferLogger.kt:107-109` | `catch (e: Exception) { logFile.delete() }` | Totaler Logverlust bei transientem Fehler | bedingt reproduzierbar | kurzfristig |
-| A12 | niedrig | UI | Rapid Delete Undo-Snackbar | abgeschwächt | `ui/screen/today/TodayScreenV2.kt:105-117` | LaunchedEffect-Cancellation handhabt dies korrekt. | Kein echtes Problem. | — | — |
+| A12 | niedrig | UI | Rapid Delete Undo-Snackbar | abgeschwächt | `ui/screen/today/TodayScreen.kt:105-117` | LaunchedEffect-Cancellation handhabt dies korrekt. | Kein echtes Problem. | — | — |
 | A13 | niedrig | Logik | SetDayType: shouldClearMealAllowance unnötig komplex | bestätigt | `domain/usecase/SetDayType.kt:39` | Logik korrekt, aber verwirrend. | Wartungskomplexität | n/a | später |
 | A14 | niedrig | Robustheit | PdfExporter: Generischer Exception-Catch → null | bestätigt | `export/PdfExporter.kt:188-190` | Alle Fehler geschluckt. | Stiller Export-Fehler | klar reproduzierbar | später |
 | A15 | niedrig | Tests | CheckInActionServiceTest: Service gemockt | bestätigt | `test/.../CheckInActionServiceTest.kt:41` | `mockk(relaxed = true)` – kein echter Test. | Bugs A02/A07 unentdeckt | n/a | kurzfristig |
@@ -37,7 +37,7 @@ Erstellt: 2026-03-14
 
 | ID | Schweregrad | Kategorie | Titel | Status | Fundort | Beleg | Auswirkung | Reproduzierbarkeit | Empfohlene Priorität |
 |----|-------------|-----------|-------|--------|---------|-------|------------|-------------------|---------------------|
-| B01 | hoch | Recomposition | TodayScreenV2: 25+ separate StateFlow-Collectionen | bestätigt | `ui/screen/today/TodayScreenV2.kt:56-80` | 25 einzelne `collectAsStateWithLifecycle()`-Aufrufe. Jede einzelne Änderung triggert Recomposition des gesamten Screens. | Full-Screen-Recomposition bei jedem StateFlow-Update, Performance-Degradation | klar reproduzierbar | sofort |
+| B01 | hoch | Recomposition | TodayScreen: 25+ separate StateFlow-Collectionen | bestätigt | `ui/screen/today/TodayScreen.kt:56-80` | 25 einzelne `collectAsStateWithLifecycle()`-Aufrufe. Jede einzelne Änderung triggert Recomposition des gesamten Screens. | Full-Screen-Recomposition bei jedem StateFlow-Update, Performance-Degradation | klar reproduzierbar | sofort |
 | B02 | hoch | Race Condition | Alle UseCases: Read-then-Write ohne Transaktion | bestätigt | `SetDayType.kt:35-77`, `RecordDailyManualCheckIn.kt:36-131`, `EditEntryViewModel.kt:293-426` | Pattern: `val entry = dao.getByDate(date); ...; dao.upsert(modified)` – kein Room-@Transaction. Concurrent Writes überschreiben sich gegenseitig. | Datenverlust bei gleichzeitigen Operationen (Worker + UI, oder schnelle Doppel-Taps) | bedingt reproduzierbar | sofort |
 | B03 | hoch | Datenfluss | RecordDailyManualCheckIn: Überschreibt bestätigte Einträge | bestätigt | `domain/usecase/RecordDailyManualCheckIn.kt:48-99` | Kein Guard-Check für `confirmedWorkDay==true`. Ein bereits bestätigter Tag wird bei erneutem Check-In komplett überschrieben. | Bestätigte Daten (inkl. Meal Allowance, Travel) können stillschweigend verloren gehen | klar reproduzierbar | sofort |
 | B04 | hoch | Datenfluss | Notification Check-In: Stale Date nicht validiert | bestätigt | `handler/CheckInActionService.kt:89-91,111-113` | Notification enthält `EXTRA_DATE` vom Erstellungszeitpunkt. Keine Prüfung ob `date == LocalDate.now()`. User kann eine gestrige Notification antippen und Check-In für falsches Datum auslösen. | Check-In für falsches Datum ohne Warnung | klar reproduzierbar | kurzfristig |
@@ -49,13 +49,13 @@ Erstellt: 2026-03-14
 | B10 | mittel | Datenfluss | DailyCheckIn: selectedDate kann sich während Dialog ändern | bestätigt | `ui/screen/today/TodayViewModel.kt:389-465` | Dialog wird für `_selectedDate.value` geöffnet (Zeile 392), Submit nutzt erneut `_selectedDate.value` (Zeile 450). Dazwischen kann User Datum wechseln. | Check-In für falsches Datum | bedingt reproduzierbar | kurzfristig |
 | B11 | mittel | Datenfluss | CSV: Semicolon-Escaping unvollständig | bestätigt | `export/CsvExporter.kt:98,124` | Semicolons → Komma, aber Kommas im Original bleiben. Bei `"Ort A,B;C"` → `"Ort A,B,C"`. | CSV-Import kann Spalten falsch zuordnen | klar reproduzierbar | kurzfristig |
 | B12 | mittel | Datenfluss | Edit: Travel-Timestamps timezone-abhängig | bestätigt | `ui/screen/edit/EditEntryViewModel.kt:464-468` | `date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()` – systemDefault kann sich ändern. | Falsche Travel-Zeiten bei Timezone-Wechsel | bedingt reproduzierbar | später |
-| B13 | mittel | UI/Compose | TextFields ohne IME-Action-Konfiguration | bestätigt | `ui/screen/today/TodayScreenV2.kt:765-771,849-855` | Kein `keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)`. | Kein "Fertig"-Button auf Tastatur, User muss außerhalb tippen | klar reproduzierbar | kurzfristig |
+| B13 | mittel | UI/Compose | TextFields ohne IME-Action-Konfiguration | bestätigt | `ui/screen/today/TodayScreen.kt:765-771,849-855` | Kein `keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)`. | Kein "Fertig"-Button auf Tastatur, User muss außerhalb tippen | klar reproduzierbar | kurzfristig |
 | B14 | mittel | UI/Compose | HistoryScreen: forEach + key() statt LazyColumn items() | bestätigt | `ui/screen/history/HistoryScreen.kt:1473-1480` | `entriesToShow.forEach { entry -> key(entry.date) { ... } }` – umgeht LazyColumn-Recycling. | Unnötige Recompositions, Performance bei langen Listen | klar reproduzierbar | kurzfristig |
-| B15 | mittel | Accessibility | Checkbox-Rows ohne Role.Checkbox Semantik | bestätigt | `ui/screen/today/TodayScreenV2.kt:778-809` | Row ist clickable, aber ohne `semantics { role = Role.Checkbox }`. Screen-Reader können Zusammenhang nicht erkennen. | Accessibility-Problem für Screenreader-User | klar reproduzierbar | kurzfristig |
+| B15 | mittel | Accessibility | Checkbox-Rows ohne Role.Checkbox Semantik | bestätigt | `ui/screen/today/TodayScreen.kt:778-809` | Row ist clickable, aber ohne `semantics { role = Role.Checkbox }`. Screen-Reader können Zusammenhang nicht erkennen. | Accessibility-Problem für Screenreader-User | klar reproduzierbar | kurzfristig |
 | B16 | mittel | Accessibility | WeekOverviewRow: Touch-Target < 48dp | bestätigt | `ui/screen/today/WeekOverviewRow.kt:91-107` | Width 44dp minus Padding → effektiv ~36-40dp. WCAG 2.1 AA fordert min. 48dp. | Schwer zu treffen für motorisch eingeschränkte User | klar reproduzierbar | kurzfristig |
 | B17 | mittel | Concurrency | BootReceiver/TimeChangeReceiver: CoroutineScope ohne Lifecycle-Management | bestätigt | `receiver/BootReceiver.kt:33-40`, `receiver/TimeChangeReceiver.kt:40-51` | `CoroutineScope(Dispatchers.IO)` ohne SupervisorJob, scope kann garbage-collected werden bevor `pendingResult.finish()` läuft. | Receiver-Callback nicht abgeschlossen → System warnt/killt | nur potenziell | später |
 | B18 | mittel | UI/Compose | EditEntrySheet: LaunchedEffect(uiState) zu breit | bestätigt | `ui/screen/edit/EditEntrySheet.kt:70-74` | Watched den gesamten uiState. Re-runs auch bei Success→Success-Wechsel (z.B. validationErrors geändert). | Unnötige Effect-Ausführung, potenzielle Doppel-Dismissals | bedingt reproduzierbar | später |
-| B19 | mittel | UI/Compose | TodayScreenV2: Lambda-Captures nicht memoized | bestätigt | `ui/screen/today/TodayScreenV2.kt:90-97` | Lambdas mit `viewModel`-Capture werden bei jeder Recomposition neu erstellt → bricht Memoization in Child-Composables. | Performance-Regression durch fehlende Referenzstabilität | klar reproduzierbar | später |
+| B19 | mittel | UI/Compose | TodayScreen: Lambda-Captures nicht memoized | bestätigt | `ui/screen/today/TodayScreen.kt:90-97` | Lambdas mit `viewModel`-Capture werden bei jeder Recomposition neu erstellt → bricht Memoization in Child-Composables. | Performance-Regression durch fehlende Referenzstabilität | klar reproduzierbar | später |
 | B20 | niedrig | Datenfluss | Undo-Entry nur in RAM, kein Crash-Recovery | bestätigt | `ui/screen/today/TodayViewModel.kt:206-207,554` | `_deletedEntryForUndo` ist StateFlow in ViewModel. Bei App-Crash → Entry verloren. | Datenverlust bei Crash während Undo-Fenster | bedingt reproduzierbar | später |
 | B21 | niedrig | Build | ProGuard: Overly-broad Keep-Rules | bestätigt | `proguard-rules.pro:27,50-59` | `-keep class dagger.hilt.** { *; }`, `-keep class androidx.work.** { *; }` – hält zu viel, mindert Minification. | Größere APK als nötig | klar reproduzierbar | später |
 | B22 | niedrig | Build | ProGuard: Moshi-Regeln aber Moshi nicht im Projekt | bestätigt | `proguard-rules.pro:77-81` | `-keep class com.squareup.moshi.**` – Moshi nicht in build.gradle.kts. Toter Code. | Kein Laufzeitproblem, nur Noise | klar reproduzierbar | später |
@@ -89,7 +89,7 @@ Erstellt: 2026-03-14
 
 | ID | Ergebnis | Begründung |
 |----|----------|------------|
-| B01 | **bestätigt** | Zählung verifiziert: exakt 25 collectAsStateWithLifecycle()-Aufrufe in TodayScreenV2. |
+| B01 | **bestätigt** | Zählung verifiziert: exakt 25 collectAsStateWithLifecycle()-Aufrufe in TodayScreen. |
 | B02 | **bestätigt** | Kein einziger UseCase nutzt @Transaction. Pattern überall identisch. |
 | B03 | **bestätigt** | RecordDailyManualCheckIn Zeile 48-52: `existingEntry != null` → Modify ohne Guard. |
 | B04 | **bestätigt** | Datum aus Notification-Extra wird nie gegen LocalDate.now() validiert. |
@@ -140,7 +140,7 @@ Erstellt: 2026-03-14
 **Was?** ProGuard-Regel matched nicht auf Kotlin suspend-Extension-Functions.
 **Wodurch?** suspend-Functions kompilieren zu `Object method(..., Continuation)`, nicht `void method(...)`.
 
-### B01 – TodayScreenV2: 25+ StateFlow-Collectionen
+### B01 – TodayScreen: 25+ StateFlow-Collectionen
 **Was?** Jeder einzelne StateFlow wird separat collected. Ein Update an irgendeinem Flow triggert Full-Screen-Recomposition.
 **Warum problematisch?** Compose kann Recomposition-Scopes nur auf Ebene der State-Reads eingrenzen. 25 Reads am Screen-Root = kein Scoping möglich.
 **Wodurch?** ViewModel exponiert 25+ individuelle StateFlows statt konsolidierten UI-State.
@@ -201,7 +201,7 @@ Erstellt: 2026-03-14
 ### Top 15 Probleme
 
 1. **B02** (hoch) – Alle UseCases: Read-then-Write ohne @Transaction → Datenverlust-Risiko
-2. **B01** (hoch) – TodayScreenV2: 25+ StateFlow-Collections → Full-Screen-Recomposition
+2. **B01** (hoch) – TodayScreen: 25+ StateFlow-Collections → Full-Screen-Recomposition
 3. **B03** (hoch) – RecordDailyManualCheckIn überschreibt bestätigte Einträge
 4. **A01** (hoch) – ReminderFlagsStore StringSets wachsen unbegrenzt
 5. **A02** (hoch) – CheckInActionService REMIND_LATER ohne try-finally → Service-Leak

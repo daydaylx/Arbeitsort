@@ -16,6 +16,8 @@ data class OvertimeResult(
 class CalculateOvertimeForRange {
 
     operator fun invoke(entries: List<WorkEntryWithTravelLegs>, dailyTargetHours: Double): OvertimeResult {
+        require(dailyTargetHours > 0) { "dailyTargetHours must be > 0" }
+
         if (entries.isEmpty()) {
             return OvertimeResult(
                 totalOvertimeHours = 0.0,

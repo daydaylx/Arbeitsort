@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,7 +30,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
@@ -50,6 +50,8 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 private const val MONTH_PREVIEW_COUNT = 5
+private val historyWeekFields = WeekFields.ISO
+
 
 private val localDateSaver = Saver<LocalDate, String>(
     save = { it.toString() },
@@ -73,13 +75,27 @@ fun HistoryScreen(
     onOpenEditSheet: (java.time.LocalDate) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val batchEditState by viewModel.batchEditState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showBatchEditDialog by remember { mutableStateOf(false) }
-    var isBatchEditing by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val msgUpdated = stringResource(R.string.history_toast_batch_updated)
-    val msgFailed = stringResource(R.string.history_toast_batch_failed)
+
+    LaunchedEffect(batchEditState) {
+        when (batchEditState) {
+            is BatchEditState.Success -> {
+                showBatchEditDialog = false
+                snackbarHostState.showSnackbar(msgUpdated)
+                viewModel.onBatchEditResultConsumed()
+            }
+            is BatchEditState.Failure -> {
+                val failure = batchEditState as BatchEditState.Failure
+                snackbarHostState.showSnackbar(failure.message.asString(context))
+                viewModel.onBatchEditResultConsumed()
+            }
+            else -> Unit
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -151,21 +167,11 @@ fun HistoryScreen(
     }
 
     if (showBatchEditDialog) {
+        val isBatchEditing = batchEditState is BatchEditState.InProgress
         BatchEditDialog(
             isSubmitting = isBatchEditing,
             onDismiss = { if (!isBatchEditing) showBatchEditDialog = false },
-            onApply = { request ->
-                isBatchEditing = true
-                viewModel.applyBatchEdit(request) { success ->
-                    isBatchEditing = false
-                    if (success) {
-                        showBatchEditDialog = false
-                        scope.launch { snackbarHostState.showSnackbar(msgUpdated) }
-                    } else {
-                        scope.launch { snackbarHostState.showSnackbar(msgFailed) }
-                    }
-                }
-            }
+            onApply = { request -> viewModel.applyBatchEdit(request) }
         )
     }
 }
@@ -188,138 +194,154 @@ fun HistoryContent(
     var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
     val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
     val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }
+    val hasGroupedContent = weeks.isNotEmpty() || months.isNotEmpty()
+    val openEntryForDate: (LocalDate) -> Unit = { date ->
+        selectedDate = date
+        selectedMonth = YearMonth.from(date)
+        onEntryClick(date)
+    }
 
-    Column(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        HistoryDayOverviewCard(
-            date = selectedDate,
-            entry = selectedEntry,
-            travelLegs = selectedTravelLegs,
-            onPickDate = { showDatePicker = true },
-            onOpenEntry = { onEntryClick(selectedDate) }
-        )
+        stickyHeader(key = "history-controls") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(bottom = 8.dp)
+            ) {
+                HistoryMiniFilterBar(
+                    showCalendar = showCalendar,
+                    calendarMode = calendarMode,
+                    showMonths = showMonths,
+                    canToggleMonths = months.isNotEmpty(),
+                    onShowCalendarChange = { showCalendar = it },
+                    onCalendarModeChange = { calendarMode = it },
+                    onShowMonthsChange = { showMonths = it },
+                    onPickDate = { showDatePicker = true }
+                )
+            }
+        }
 
-        HistoryMiniFilterBar(
-            showCalendar = showCalendar,
-            calendarMode = calendarMode,
-            showMonths = showMonths,
-            canToggleMonths = months.isNotEmpty(),
-            onShowCalendarChange = { showCalendar = it },
-            onCalendarModeChange = { calendarMode = it },
-            onShowMonthsChange = { showMonths = it },
-            onPickDate = { showDatePicker = true }
-        )
+        // selected-day was removed to save space
 
         when {
             showCalendar -> {
-                MZCard {
-                    if (calendarMode == CalendarMode.MONTH) {
-                        CalendarView(
-                            month = selectedMonth,
-                            entriesByDate = entriesByDate,
-                            onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
-                            onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
-                            onDayClick = { date ->
-                                selectedDate = date
-                                selectedMonth = YearMonth.from(date)
-                                onEntryClick(date)
-                            }
-                        )
-                    } else {
-                        WeekCalendarView(
-                            selectedDate = selectedDate,
-                            entriesByDate = entriesByDate,
-                            onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
-                            onNextWeek = { selectedDate = selectedDate.plusDays(7) },
-                            onDayClick = { date ->
-                                selectedDate = date
-                                selectedMonth = YearMonth.from(date)
-                                onEntryClick(date)
-                            }
-                        )
-                    }
-                }
-            }
-            weeks.isEmpty() && months.isEmpty() -> {
-                MZEmptyState(
-                    modifier = Modifier.fillMaxWidth(),
-                    title = stringResource(R.string.history_empty_title),
-                    subtitle = stringResource(R.string.history_empty_subtitle),
-                    icon = Icons.Default.History,
-                    action = {
-                        PrimaryActionButton(
-                            onClick = { showDatePicker = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp)
+                item(key = "calendar") {
+                    MZCard {
+                        if (calendarMode == CalendarMode.MONTH) {
+                            CalendarView(
+                                month = selectedMonth,
+                                entriesByDate = entriesByDate,
+                                onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
+                                onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
+                                onDayClick = openEntryForDate
                             )
-                            Text(stringResource(R.string.history_action_add_past_day))
-                        }
-                    }
-                )
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(0.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (showMonths) {
-                        months.forEach { month ->
-                            stickyHeader(key = "header-${month.year}-${month.month}") {
-                                MonthGroupHeader(month = month)
-                            }
-                            items(
-                                items = month.entries,
-                                key = { entry -> entry.date }
-                            ) { entry ->
-                                HistoryEntryItem(
-                                    entry = entry,
-                                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                    onClick = { onEntryClick(entry.date) }
-                                )
-                            }
-                        }
-                    } else {
-                        weeks.forEach { week ->
-                            stickyHeader(key = "header-${week.year}-${week.week}") {
-                                WeekGroupHeader(week = week)
-                            }
-                            items(
-                                items = week.entries,
-                                key = { entry -> entry.date }
-                            ) { entry ->
-                                HistoryEntryItem(
-                                    entry = entry,
-                                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
-                                    onClick = { onEntryClick(entry.date) }
-                                )
-                            }
+                        } else {
+                            WeekCalendarView(
+                                selectedDate = selectedDate,
+                                entriesByDate = entriesByDate,
+                                onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
+                                onNextWeek = { selectedDate = selectedDate.plusDays(7) },
+                                onDayClick = openEntryForDate
+                            )
                         }
                     }
                 }
+            }
+
+            !hasGroupedContent -> {
+                item(key = "empty-state") {
+                    MZEmptyState(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.history_empty_title),
+                        subtitle = stringResource(R.string.history_empty_subtitle),
+                        icon = Icons.Default.History,
+                        action = {
+                            PrimaryActionButton(
+                                onClick = { showDatePicker = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(stringResource(R.string.history_action_add_past_day))
+                            }
+                        }
+                    )
+                }
+            }
+
+            else -> {
+                historyGroupedEntries(
+                    showMonths = showMonths,
+                    weeks = weeks,
+                    months = months,
+                    travelLegsByDate = travelLegsByDate,
+                    onEntryClick = openEntryForDate
+                )
             }
         }
     }
     
     if (showDatePicker) {
         DatePickerDialog(
-            initialDate = java.time.LocalDate.now(),
+            initialDate = selectedDate,
             onDateSelected = { date ->
-                onEntryClick(date)
-                selectedDate = date
-                selectedMonth = YearMonth.from(date)
+                openEntryForDate(date)
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false }
         )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun LazyListScope.historyGroupedEntries(
+    showMonths: Boolean,
+    weeks: List<WeekGroup>,
+    months: List<MonthGroup>,
+    travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
+    onEntryClick: (LocalDate) -> Unit
+) {
+    if (showMonths) {
+        months.forEach { month ->
+            stickyHeader(key = "header-${month.year}-${month.month}") {
+                MonthGroupHeader(month = month)
+            }
+            items(
+                items = month.entries,
+                key = { entry -> entry.date }
+            ) { entry ->
+                HistoryEntryItem(
+                    entry = entry,
+                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
+                    onEntryClick = onEntryClick
+                )
+            }
+        }
+    } else {
+        weeks.forEach { week ->
+            stickyHeader(key = "header-${week.year}-${week.week}") {
+                WeekGroupHeader(week = week)
+            }
+            items(
+                items = week.entries,
+                key = { entry -> entry.date }
+            ) { entry ->
+                HistoryEntryItem(
+                    entry = entry,
+                    travelLegs = travelLegsByDate[entry.date].orEmpty(),
+                    onEntryClick = onEntryClick
+                )
+            }
+        }
     }
 }
 
@@ -393,139 +415,7 @@ private fun HistoryMiniFilterBar(
     }
 }
 
-@Composable
-private fun HistoryDayOverviewCard(
-    date: LocalDate,
-    entry: WorkEntry?,
-    travelLegs: List<TravelLeg>,
-    onPickDate: () -> Unit,
-    onOpenEntry: () -> Unit
-) {
-    val workHours = remember(entry) { entry?.let(TimeCalculator::calculateWorkHours) ?: 0.0 }
-    val totalPaidHours = remember(entry, travelLegs) {
-        entry?.let { TimeCalculator.calculatePaidTotalHours(it, travelLegs) } ?: 0.0
-    }
-    val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
 
-    // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
-    val hoursOnlyFormat = stringResource(R.string.history_hours_only)
-    val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
-    MZHeroCard(
-        title = formatOverviewDate(date),
-        subtitle = stringResource(R.string.history_dashboard_subtitle),
-        badge = {
-            entry?.let {
-                MZStatusBadge(
-                    text = when (it.dayType) {
-                        DayType.WORK -> stringResource(R.string.day_type_work)
-                        DayType.OFF -> stringResource(R.string.day_type_off)
-                        DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
-                    },
-                    type = when (it.dayType) {
-                        DayType.WORK -> StatusType.SUCCESS
-                        DayType.OFF -> StatusType.NEUTRAL
-                        DayType.COMP_TIME -> StatusType.INFO
-                    },
-                    showIcon = false
-                )
-            }
-        },
-        action = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SecondaryActionButton(
-                    onClick = onPickDate,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.history_action_pick_date))
-                }
-                PrimaryActionButton(
-                    onClick = onOpenEntry,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        if (entry == null) {
-                            stringResource(R.string.history_action_add_past_day)
-                        } else {
-                            stringResource(R.string.action_edit_entry)
-                        }
-                    )
-                }
-            }
-        }
-    ) {
-        Text(
-            text = stringResource(R.string.history_day_overview_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.84f)
-        )
-
-        if (entry == null) {
-            Text(
-                text = stringResource(R.string.history_day_overview_no_entry),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DayTypeIndicator(dayType = entry.dayType)
-                Text(
-                    text = when (entry.dayType) {
-                        DayType.WORK -> stringResource(R.string.day_type_work)
-                        DayType.OFF -> stringResource(R.string.day_type_off)
-                        DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
-                    },
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (entry.dayType == DayType.WORK) {
-                    MZKeyValueRow(
-                        label = stringResource(R.string.history_stat_work),
-                        value = formatWorkHoursPlain(workHours, hoursOnlyFormat, hoursMinutesFormat),
-                        emphasize = true
-                    )
-                    if (kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
-                        MZKeyValueRow(
-                            label = stringResource(R.string.history_stat_paid),
-                            value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
-                        )
-                    }
-                } else if (totalPaidHours > 0.01) {
-                    MZKeyValueRow(
-                        label = stringResource(R.string.history_stat_paid),
-                        value = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat),
-                        emphasize = true
-                    )
-                }
-                if (travelMinutes > 0) {
-                    MZKeyValueRow(
-                        label = stringResource(R.string.history_stat_travel),
-                        value = formatMinutesAsHoursMinutesPlain(
-                            travelMinutes,
-                            hoursOnlyFormat,
-                            hoursMinutesFormat
-                        )
-                    )
-                }
-                MZKeyValueRow(
-                    label = stringResource(R.string.day_location_label),
-                    value = entry.dayLocationLabel.ifBlank {
-                        stringResource(R.string.today_day_location_unset)
-                    }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun CalendarView(
@@ -595,10 +485,9 @@ fun WeekCalendarView(
     onDayClick: (LocalDate) -> Unit
 ) {
     val today = LocalDate.now()
-    val weekFields = WeekFields.of(Locale.GERMAN)
-    val weekStart = selectedDate.with(weekFields.dayOfWeek(), 1)
-    val weekEnd = selectedDate.with(weekFields.dayOfWeek(), 7)
-    val weekNumber = selectedDate.get(weekFields.weekOfWeekBasedYear())
+    val weekStart = selectedDate.with(historyWeekFields.dayOfWeek(), 1)
+    val weekEnd = selectedDate.with(historyWeekFields.dayOfWeek(), 7)
+    val weekNumber = selectedDate.get(historyWeekFields.weekOfWeekBasedYear())
     val days = remember(weekStart) {
         (0..6).map { offset ->
             CalendarDay(weekStart.plusDays(offset.toLong()), true)
@@ -621,8 +510,8 @@ fun WeekCalendarView(
                 text = stringResource(
                     R.string.history_week_header,
                     weekNumber,
-                    formatShortDate(weekStart),
-                    formatShortDate(weekEnd)
+                    Formatters.formatDate(weekStart),
+                    Formatters.formatDate(weekEnd)
                 ),
                 style = MaterialTheme.typography.titleSmall
             )
@@ -819,7 +708,7 @@ fun BatchEditDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
-    var applyDayType by remember { mutableStateOf(true) }
+    var applyDayType by remember { mutableStateOf(false) }
     var selectedDayType by remember { mutableStateOf(DayType.WORK) }
     var applyDefaults by remember { mutableStateOf(false) }
     var applyNote by remember { mutableStateOf(false) }
@@ -840,13 +729,13 @@ fun BatchEditDialog(
                         onClick = { showStartPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(formatShortDate(startDate))
+                        Text(Formatters.formatDate(startDate))
                     }
                     SecondaryActionButton(
                         onClick = { showEndPicker = true },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(formatShortDate(endDate))
+                        Text(Formatters.formatDate(endDate))
                     }
                 }
 
@@ -1063,8 +952,8 @@ fun WeekGroupHeader(
                 text = stringResource(
                     R.string.history_week_label,
                     week.week,
-                    formatShortDate(week.weekStart),
-                    formatShortDate(weekEnd)
+                    Formatters.formatDate(week.weekStart),
+                    Formatters.formatDate(weekEnd)
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
@@ -1128,7 +1017,7 @@ fun MonthGroupHeader(
 fun HistoryEntryItem(
     entry: WorkEntry,
     travelLegs: List<TravelLeg>,
-    onClick: () -> Unit
+    onEntryClick: (LocalDate) -> Unit
 ) {
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
@@ -1139,7 +1028,7 @@ fun HistoryEntryItem(
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
 
     MZCard(
-        onClick = onClick
+        onClick = { onEntryClick(entry.date) }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1380,8 +1269,7 @@ enum class CalendarMode {
 
 private fun buildCalendarDays(month: YearMonth): List<CalendarDay> {
     val firstOfMonth = month.atDay(1)
-    val weekFields = WeekFields.of(Locale.GERMAN)
-    val firstDayOfWeek = weekFields.firstDayOfWeek
+    val firstDayOfWeek = historyWeekFields.firstDayOfWeek
     val offset = (firstOfMonth.dayOfWeek.value - firstDayOfWeek.value + 7) % 7
     val startDate = firstOfMonth.minusDays(offset.toLong())
     val totalDays = month.lengthOfMonth()
@@ -1404,10 +1292,6 @@ private fun formatEntryDate(date: java.time.LocalDate): String {
     return date.format(historyEntryDateFormatter)
 }
 
-private fun formatShortDate(date: java.time.LocalDate): String {
-    return date.format(historyShortDateFormatter)
-}
-
 private fun formatOverviewDate(date: java.time.LocalDate): String {
     return date.format(historyOverviewDateFormatter)
 }
@@ -1415,12 +1299,8 @@ private fun formatOverviewDate(date: java.time.LocalDate): String {
 private fun formatTime(timestamp: Long): String {
     val instant = java.time.Instant.ofEpochMilli(timestamp)
     val time = instant.atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-    return time.format(historyTimeFormatter)
+    return Formatters.formatTime(time)
 }
-
-// Removed: calculateTravelDuration - now using DateTimeUtils.calculateTravelDuration
-
-// Removed: formatDuration - now using Formatters.formatDuration
 
 @Composable
 private fun formatWorkHours(hours: Double): String {
@@ -1488,6 +1368,4 @@ private fun formatMinutesAsHoursMinutesPlain(totalMinutes: Int, hoursOnlyFormat:
 
 private val historyMonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
 private val historyEntryDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
-private val historyShortDateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
 private val historyOverviewDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", Locale.GERMAN)
-private val historyTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

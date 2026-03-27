@@ -13,22 +13,22 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 ## Projektstatus
 
 - Single-Module-Android-Projekt (`:app`)
-- App-Version: `1.0.2` (`versionCode 3`)
-- Room-Datenbank: Schema `12`, Migrationen `1 -> 12`
+- App-Version: `1.1.1` (`versionCode 5`)
+- Room-Datenbank: Schema `14`, Migrationen `1 -> 14`
 
 ## Tech Stack
 
-- Kotlin 1.9.20, Coroutines, Flow
+- Kotlin 2.1.10, Coroutines, Flow
 - Jetpack Compose (Material3), Navigation Compose
 - Room 2.6.1
 - WorkManager 2.9.0
-- Hilt 2.48 (`hilt-work`, `hilt-navigation-compose`)
+- Hilt 2.56.2 (`hilt-work`, `hilt-navigation-compose`)
 - DataStore Preferences
 
 Build-Umgebung:
 - JDK 17
 - `minSdk 24`
-- `compileSdk 34`
+- `compileSdk 35`
 - `targetSdk 34`
 
 ## Kernfunktionen
@@ -65,6 +65,7 @@ Build-Umgebung:
 ### Export
 
 - PDF-Export mit Preview-Flow in den Settings
+- CSV-Export als sichtbarer Schnell-Export in den Settings
 - PDF-Stammdaten in den Settings:
   - Mitarbeitername
   - Firma
@@ -72,7 +73,10 @@ Build-Umgebung:
   - Personalnummer
 - CSV-Zellwerte werden mit Quoting fuer `;`, Anfuehrungszeichen und Zeilenumbrueche exportiert
 - Fuehrende Formel-Praefixe (`=`, `+`, `-`, `@`) werden fuer CSV zusaetzlich neutralisiert
-- Ein `CsvExporter` ist im Code vorhanden, ist aktuell aber nicht an den sichtbaren Settings-/Export-Flow angebunden
+- PDF und CSV teilen sich dieselben Export-Zeitraeume:
+  - aktueller Monat
+  - letzte 30 Tage
+  - benutzerdefinierter Zeitraum
 
 ## Aktuelles Verhalten von Today, DayType und Remindern
 
@@ -86,7 +90,7 @@ Build-Umgebung:
 - `RecordDailyManualCheckIn` setzt den Tag direkt auf abgeschlossen:
   - `dayType = WORK`
   - `confirmedWorkDay = true`
-  - Arbeitszeit-Defaults aus den Settings
+  - Bestehende Arbeitszeiten bleiben erhalten; sonst werden Settings-Defaults gesetzt
   - Verpflegungspauschale wird aus den Dialogoptionen berechnet
 
 ### DayType
@@ -129,6 +133,12 @@ Optional auf Gerät/Emulator:
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
+
+## Entwicklungs-Workflow
+
+- `CONTRIBUTING.md` beschreibt den lokalen Setup- und Review-Workflow.
+- `README_ANDROID_DEV.md` beschreibt Geräte-Deployment, `adb`-Flows und VS-Code-Tasks.
+- `AGENTS.md` bündelt die repo-spezifischen Arbeitsregeln für Coding-Agents.
 
 ## APK-Update ohne Datenverlust
 

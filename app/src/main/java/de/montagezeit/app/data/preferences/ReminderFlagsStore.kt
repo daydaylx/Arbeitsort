@@ -43,7 +43,8 @@ class ReminderFlagsStore @Inject constructor(
         val KEY_EVENING_DATES  = stringSetPreferencesKey("evening_reminded_dates")
         val KEY_FALLBACK_DATES = stringSetPreferencesKey("fallback_reminded_dates")
         val KEY_DAILY_DATES    = stringSetPreferencesKey("daily_reminded_dates")
-        val KEY_MIGRATION_DONE_V2 = booleanPreferencesKey("_migration_done_v2")
+        // Der persistierte Key-Name bleibt aus Kompatibilitaetsgruenden unveraendert.
+        val KEY_MIGRATION_DONE = booleanPreferencesKey("_migration_done_v2")
 
         // SP-Präfixe für die Migration
         private const val SP_PREFIX_MORNING  = "morning_reminded_"
@@ -53,7 +54,7 @@ class ReminderFlagsStore @Inject constructor(
     }
 
     // -------------------------------------------------------------------------
-    // Einmalige Migration SharedPreferences → DataStore (A06: Mutex statt @Volatile)
+    // Einmalige Migration SharedPreferences -> DataStore
     // -------------------------------------------------------------------------
     private val migrationMutex = Mutex()
     private var migrationChecked = false
@@ -64,7 +65,7 @@ class ReminderFlagsStore @Inject constructor(
             if (migrationChecked) return@withLock
 
             val current = dataStore.data.first()
-            if (current[KEY_MIGRATION_DONE_V2] == true) {
+            if (current[KEY_MIGRATION_DONE] == true) {
                 migrationChecked = true
                 return@withLock
             }
@@ -74,7 +75,7 @@ class ReminderFlagsStore @Inject constructor(
             if (allEntries.isEmpty()) {
                 // Nichts zu migrieren – Sentinel setzen
                 dataStore.edit { prefs ->
-                    prefs[KEY_MIGRATION_DONE_V2] = true
+                    prefs[KEY_MIGRATION_DONE] = true
                 }
                 migrationChecked = true
                 return@withLock
@@ -100,7 +101,7 @@ class ReminderFlagsStore @Inject constructor(
                 if (eveningDates.isNotEmpty())  prefs[KEY_EVENING_DATES]  = eveningDates
                 if (fallbackDates.isNotEmpty()) prefs[KEY_FALLBACK_DATES] = fallbackDates
                 if (dailyDates.isNotEmpty())    prefs[KEY_DAILY_DATES]    = dailyDates
-                prefs[KEY_MIGRATION_DONE_V2] = true
+                prefs[KEY_MIGRATION_DONE] = true
             }
 
             // Alte SharedPreferences nach erfolgreicher Migration löschen
@@ -109,7 +110,7 @@ class ReminderFlagsStore @Inject constructor(
         }
     }
 
-    // A01: Cleanup – entfernt Einträge älter als RETENTION_DAYS
+    // Entfernt Eintraege aelter als RETENTION_DAYS.
     private fun cleanupOldDates(dates: Set<String>): Set<String> {
         val cutoff = LocalDate.now().minusDays(RETENTION_DAYS)
         return dates.filter { dateStr ->

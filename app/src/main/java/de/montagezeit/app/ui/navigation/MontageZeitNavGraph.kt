@@ -25,8 +25,8 @@ import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
 import de.montagezeit.app.ui.screen.overview.OverviewScreen
-import de.montagezeit.app.ui.screen.settings.SettingsScreenV2
-import de.montagezeit.app.ui.screen.today.TodayScreenV2
+import de.montagezeit.app.ui.screen.settings.SettingsScreen
+import de.montagezeit.app.ui.screen.today.TodayScreen
 import java.time.LocalDate
 
 sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
@@ -123,7 +123,7 @@ fun MontageZeitNavGraph(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Today.route) {
-                TodayScreenV2(
+                TodayScreen(
                     onOpenEditSheet = { date ->
                         openEditSheet(date)
                     },
@@ -179,7 +179,7 @@ fun MontageZeitNavGraph(
             }
             
             composable(Screen.Settings.route) {
-                SettingsScreenV2(
+                SettingsScreen(
                     onOpenEditSheet = { date, onDismissed ->
                         openEditSheet(date, onDismissed)
                     }

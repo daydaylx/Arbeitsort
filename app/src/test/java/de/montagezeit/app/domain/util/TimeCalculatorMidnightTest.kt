@@ -10,16 +10,25 @@ import java.time.ZoneId
 class TimeCalculatorMidnightTest {
 
     private val date = LocalDate.of(2024, 1, 5)
+    private val nextDate = date.plusDays(1)
 
-    private fun epochOf(time: LocalTime): Long =
-        date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    private fun epochOf(day: LocalDate, time: LocalTime): Long =
+        day.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    private fun legWithTimestamps(start: LocalTime, arrive: LocalTime) = TravelLeg(
+    private fun legWithTimestamps(
+        startDay: LocalDate = date,
+        start: LocalTime,
+        arriveDay: LocalDate = startDay,
+        arrive: LocalTime
+    ) = TravelLeg(
         workEntryDate = date,
         sortOrder = 0,
-        startAt = epochOf(start),
-        arriveAt = epochOf(arrive)
+        startAt = epochOf(startDay, start),
+        arriveAt = epochOf(arriveDay, arrive)
     )
+
+    private fun legWithTimestamps(start: LocalTime, arrive: LocalTime): TravelLeg =
+        legWithTimestamps(startDay = date, start = start, arriveDay = date, arrive = arrive)
 
     @Test
     fun `normal travel within day returns correct minutes`() {
@@ -30,14 +39,24 @@ class TimeCalculatorMidnightTest {
     @Test
     fun `overnight travel crossing midnight returns correct minutes`() {
         // 23:00 → 01:00 = 120 min
-        val leg = legWithTimestamps(LocalTime.of(23, 0), LocalTime.of(1, 0))
+        val leg = legWithTimestamps(
+            startDay = date,
+            start = LocalTime.of(23, 0),
+            arriveDay = nextDate,
+            arrive = LocalTime.of(1, 0)
+        )
         assertEquals(120, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
     @Test
     fun `short overnight travel crossing midnight returns correct minutes`() {
         // 23:50 → 00:10 = 20 min
-        val leg = legWithTimestamps(LocalTime.of(23, 50), LocalTime.of(0, 10))
+        val leg = legWithTimestamps(
+            startDay = date,
+            start = LocalTime.of(23, 50),
+            arriveDay = nextDate,
+            arrive = LocalTime.of(0, 10)
+        )
         assertEquals(20, TimeCalculator.calculateTravelMinutes(listOf(leg)))
     }
 
@@ -46,8 +65,8 @@ class TimeCalculatorMidnightTest {
         val leg = TravelLeg(
             workEntryDate = date,
             sortOrder = 0,
-            startAt = epochOf(LocalTime.of(8, 0)),
-            arriveAt = epochOf(LocalTime.of(9, 0)),
+            startAt = epochOf(date, LocalTime.of(8, 0)),
+            arriveAt = epochOf(date, LocalTime.of(9, 0)),
             paidMinutesOverride = 999
         )
         // When startAt and arriveAt are set, timestamps are used (paidMinutesOverride ignored)

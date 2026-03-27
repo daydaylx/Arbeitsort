@@ -157,6 +157,47 @@ class UpdateEntryTest {
         coVerify { workEntryDao.upsert(result) }
     }
 
+    @Test
+    fun `invoke trimmt dayLocationLabel vor dem Speichern`() = runTest {
+        val entry = validEntry().copy(dayLocationLabel = "  Baustelle A  ")
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertEquals("Baustelle A", result.dayLocationLabel)
+        coVerify { workEntryDao.upsert(match { it.dayLocationLabel == "Baustelle A" }) }
+    }
+
+    @Test
+    fun `invoke lehnt WORK Eintrag ohne Arbeitsort ab`() = runTest {
+        val entry = validEntry().copy(dayLocationLabel = "   ")
+
+        val error = try {
+            updateEntry.invoke(entry)
+            throw AssertionError("Expected IllegalArgumentException")
+        } catch (exception: IllegalArgumentException) {
+            exception
+        }
+
+        assertEquals("dayLocationLabel darf bei WORK nicht leer sein", error.message)
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+    }
+
+    @Test
+    fun `invoke lehnt teilweisen Arbeitsblock ab`() = runTest {
+        val entry = validEntry().copy(workEnd = null)
+
+        val error = try {
+            updateEntry.invoke(entry)
+            throw AssertionError("Expected IllegalArgumentException")
+        } catch (exception: IllegalArgumentException) {
+            exception
+        }
+
+        assertEquals("workStart und workEnd muessen zusammen gesetzt werden", error.message)
+        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+    }
+
     private fun validEntry(
         date: LocalDate = LocalDate.now(),
         note: String? = null,

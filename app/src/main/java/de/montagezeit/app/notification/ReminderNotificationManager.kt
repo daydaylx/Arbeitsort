@@ -141,11 +141,8 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Morning-Reminder-Notification an
      */
     fun showMorningReminder(date: LocalDate) {
-        // Erstelle Group Summary Notification (Android 7.0+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
-        }
+        val groupSummary = createGroupSummaryNotification()
+        notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -208,11 +205,8 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Evening-Reminder-Notification an
      */
     fun showEveningReminder(date: LocalDate) {
-        // Erstelle Group Summary Notification (Android 7.0+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
-        }
+        val groupSummary = createGroupSummaryNotification()
+        notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -274,11 +268,8 @@ class ReminderNotificationManager @Inject constructor(
      * Zeigt eine Fallback-Reminder-Notification an
      */
     fun showFallbackReminder(date: LocalDate) {
-        // Erstelle Group Summary Notification (Android 7.0+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
-        }
+        val groupSummary = createGroupSummaryNotification()
+        notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -333,10 +324,8 @@ class ReminderNotificationManager @Inject constructor(
     }
 
     fun showDailyConfirmationNotification(date: LocalDate) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val groupSummary = createGroupSummaryNotification()
-            notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
-        }
+        val groupSummary = createGroupSummaryNotification()
+        notificationManager.notify(GROUP_SUMMARY_ID, groupSummary)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -407,12 +396,14 @@ class ReminderNotificationManager @Inject constructor(
      */
     private fun createOpenAppPendingIntent(date: LocalDate): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
+            action = ReminderActions.ACTION_EDIT_ENTRY
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
             )
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
+            putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
         }
         return PendingIntent.getActivity(
             context,

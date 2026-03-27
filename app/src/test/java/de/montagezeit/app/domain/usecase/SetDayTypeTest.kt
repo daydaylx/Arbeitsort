@@ -34,7 +34,7 @@ class SetDayTypeTest {
     private fun mockReadModifyWrite(date: LocalDate, existingEntry: WorkEntry?) {
         coEvery { workEntryDao.readModifyWrite(date, any()) } coAnswers {
             val modify = secondArg<(WorkEntry?) -> WorkEntry>()
-            val result = modify(existingEntry)
+            modify(existingEntry)
             // The real readModifyWrite calls upsert internally, so we just verify the lambda output
         }
     }
@@ -76,6 +76,8 @@ class SetDayTypeTest {
         assertEquals(newDayType, result.dayType)
         assertEquals(existingEntry.createdAt, result.createdAt)
         assertTrue(result.updatedAt > existingEntry.updatedAt)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.OFF.name, result.confirmationSource)
 
         coVerify { workEntryDao.readModifyWrite(date, any()) }
     }
@@ -99,6 +101,9 @@ class SetDayTypeTest {
         val result = setDayType.invoke(date, DayType.OFF)
 
         assertEquals(DayType.OFF, result.dayType)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.OFF.name, result.confirmationSource)
+        assertNotNull(result.confirmationAt)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)
@@ -224,9 +229,23 @@ class SetDayTypeTest {
         val result = setDayType.invoke(date, DayType.OFF)
 
         assertEquals(DayType.OFF, result.dayType)
-        assertFalse(result.confirmedWorkDay)
-        assertNull(result.confirmationAt)
-        assertNull(result.confirmationSource)
+        assertTrue(result.confirmedWorkDay)
+        assertNotNull(result.confirmationAt)
+        assertEquals(DayType.OFF.name, result.confirmationSource)
         coVerify { workEntryDao.readModifyWrite(date, any()) }
+    }
+
+    @Test
+    fun `invoke - Neuer OFF Eintrag - bestaetigt den freien Tag sofort`() = runTest {
+        val date = LocalDate.now()
+
+        mockReadModifyWrite(date, null)
+
+        val result = setDayType.invoke(date, DayType.OFF)
+
+        assertEquals(DayType.OFF, result.dayType)
+        assertTrue(result.confirmedWorkDay)
+        assertNotNull(result.confirmationAt)
+        assertEquals(DayType.OFF.name, result.confirmationSource)
     }
 }

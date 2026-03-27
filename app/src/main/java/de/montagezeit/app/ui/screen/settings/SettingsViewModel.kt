@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
@@ -26,6 +28,7 @@ class SettingsViewModel @Inject constructor(
     private val reminderSettingsManager: ReminderSettingsManager,
     private val workEntryDao: WorkEntryDao,
     private val pdfExporter: PdfExporter,
+    private val csvExporter: CsvExporter,
     private val reminderScheduler: ReminderScheduler,
     private val notificationManager: ReminderNotificationManager
 ) : ViewModel() {
@@ -46,14 +49,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
-            if (!startTime.isBefore(endTime)) {
-                _snackbarMessage.value = UiText.StringResource(R.string.settings_error_invalid_window)
+            if (!isValidWindow(startTime, endTime)) {
+                _uiState.value = SettingsUiState.ReminderError(
+                    UiText.StringResource(R.string.error_time_range_invalid)
+                )
                 return@launch
             }
             reminderSettingsManager.updateSettings(
                 morningWindowStart = startTime,
                 morningWindowEnd = endTime
             )
+            _uiState.value = SettingsUiState.Initial
             reminderScheduler.scheduleAll()
         }
     }
@@ -62,14 +68,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
-            if (!startTime.isBefore(endTime)) {
-                _snackbarMessage.value = UiText.StringResource(R.string.settings_error_invalid_window)
+            if (!isValidWindow(startTime, endTime)) {
+                _uiState.value = SettingsUiState.ReminderError(
+                    UiText.StringResource(R.string.error_time_range_invalid)
+                )
                 return@launch
             }
             reminderSettingsManager.updateSettings(
                 eveningWindowStart = startTime,
                 eveningWindowEnd = endTime
             )
+            _uiState.value = SettingsUiState.Initial
             reminderScheduler.scheduleAll()
         }
     }
@@ -151,6 +160,7 @@ class SettingsViewModel @Inject constructor(
     fun addHolidayDate(date: LocalDate) {
         viewModelScope.launch {
             val settings = reminderSettingsManager.settings.first()
+            if (date in settings.holidayDates) return@launch
             val updated = settings.holidayDates + date
             reminderSettingsManager.updateSettings(holidayDates = updated)
         }
@@ -174,189 +184,155 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = SettingsUiState.Initial
     }
     
-    /**
-     * Exportiert PDF für den aktuellen Monat
-     */
     fun exportPdfCurrentMonth() {
-        viewModelScope.launch {
-            _uiState.value = SettingsUiState.Exporting
-            
-            try {
-                val settings = reminderSettingsManager.settings.first()
-                
-                // Name-Validierung
-                if (settings.pdfEmployeeName.isNullOrBlank()) {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_name_missing)
-                    )
-                    return@launch
-                }
-                
-                // Zeitraum: Aktueller Monat
-                val now = LocalDate.now()
-                val startDate = now.withDayOfMonth(1)
-                val endDate = now.withDayOfMonth(now.lengthOfMonth())
-                
-                // Einträge laden
-                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
-                
-                if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_no_entries_current_month)
-                    )
-                    return@launch
-                }
-                
-                val fileUri = pdfExporter.exportToPdf(
-                    entries = entries,
-                    employeeName = settings.pdfEmployeeName,
-                    company = settings.pdfCompany,
-                    project = settings.pdfProject,
-                    personnelNumber = settings.pdfPersonnelNumber,
-                    startDate = startDate,
-                    endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
-                    )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = buildExportError(
-                    message = e.message,
-                    fallbackRes = R.string.settings_error_export_failed
-                )
-            }
-        }
+        exportCurrentMonth(ExportFormat.PDF)
     }
-    
-    /**
-     * Exportiert PDF für die letzten 30 Tage
-     */
+
+    fun exportCsvCurrentMonth() {
+        exportCurrentMonth(ExportFormat.CSV)
+    }
+
     fun exportPdfLast30Days() {
-        viewModelScope.launch {
-            _uiState.value = SettingsUiState.Exporting
-            
-            try {
-                val settings = reminderSettingsManager.settings.first()
-                
-                // Name-Validierung
-                if (settings.pdfEmployeeName.isNullOrBlank()) {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_name_missing)
-                    )
-                    return@launch
-                }
-                
-                // Zeitraum: Letzte 30 Tage (inkl. heute)
-                val endDate = LocalDate.now()
-                val startDate = endDate.minusDays(29)
-                
-                // Einträge laden
-                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
-                
-                if (entries.isEmpty()) {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_no_entries_last_30_days)
-                    )
-                    return@launch
-                }
-                
-                val fileUri = pdfExporter.exportToPdf(
-                    entries = entries,
-                    employeeName = settings.pdfEmployeeName,
-                    company = settings.pdfCompany,
-                    project = settings.pdfProject,
-                    personnelNumber = settings.pdfPersonnelNumber,
-                    startDate = startDate,
-                    endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
-                    )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = buildExportError(
-                    message = e.message,
-                    fallbackRes = R.string.settings_error_export_failed
-                )
-            }
-        }
+        exportLast30Days(ExportFormat.PDF)
     }
-    
-    /**
-     * Exportiert PDF für einen benutzerdefinierten Zeitraum
-     */
+
+    fun exportCsvLast30Days() {
+        exportLast30Days(ExportFormat.CSV)
+    }
+
     fun exportPdfCustomRange(startDate: LocalDate, endDate: LocalDate) {
+        exportRange(
+            format = ExportFormat.PDF,
+            startDate = startDate,
+            endDate = endDate,
+            emptyRangeRes = R.string.settings_error_no_entries_custom_range
+        )
+    }
+
+    fun exportCsvCustomRange(startDate: LocalDate, endDate: LocalDate) {
+        exportRange(
+            format = ExportFormat.CSV,
+            startDate = startDate,
+            endDate = endDate,
+            emptyRangeRes = R.string.settings_error_no_entries_custom_range
+        )
+    }
+
+    private fun exportCurrentMonth(format: ExportFormat) {
+        val now = LocalDate.now()
+        exportRange(
+            format = format,
+            startDate = now.withDayOfMonth(1),
+            endDate = now.withDayOfMonth(now.lengthOfMonth()),
+            emptyRangeRes = R.string.settings_error_no_entries_current_month
+        )
+    }
+
+    private fun exportLast30Days(format: ExportFormat) {
+        val endDate = LocalDate.now()
+        exportRange(
+            format = format,
+            startDate = endDate.minusDays(29),
+            endDate = endDate,
+            emptyRangeRes = R.string.settings_error_no_entries_last_30_days
+        )
+    }
+
+    private fun exportRange(
+        format: ExportFormat,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        @StringRes emptyRangeRes: Int
+    ) {
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Exporting
-            
+
             try {
                 val settings = reminderSettingsManager.settings.first()
-                
-                // Name-Validierung
                 if (settings.pdfEmployeeName.isNullOrBlank()) {
                     _uiState.value = SettingsUiState.ExportError(
                         UiText.StringResource(R.string.settings_error_name_missing)
                     )
                     return@launch
                 }
-                
-                // Einträge laden
+                val employeeName = settings.pdfEmployeeName
                 val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
-                
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_no_entries_custom_range)
+                        UiText.StringResource(emptyRangeRes)
                     )
                     return@launch
                 }
-                
-                val fileUri = pdfExporter.exportToPdf(
-                    entries = entries,
-                    employeeName = settings.pdfEmployeeName,
-                    company = settings.pdfCompany,
-                    project = settings.pdfProject,
-                    personnelNumber = settings.pdfPersonnelNumber,
-                    startDate = startDate,
-                    endDate = endDate
-                )
-                
-                if (fileUri != null) {
-                    _uiState.value = SettingsUiState.ExportSuccess(
-                        fileUri = fileUri,
-                        format = ExportFormat.PDF
+
+                _uiState.value = when (format) {
+                    ExportFormat.PDF -> exportPdf(
+                        entries = entries,
+                        employeeName = employeeName,
+                        company = settings.pdfCompany,
+                        project = settings.pdfProject,
+                        personnelNumber = settings.pdfPersonnelNumber,
+                        startDate = startDate,
+                        endDate = endDate
                     )
-                } else {
-                    _uiState.value = SettingsUiState.ExportError(
-                        UiText.StringResource(R.string.settings_error_pdf_export_failed)
-                    )
+                    ExportFormat.CSV -> exportCsv(entries)
                 }
             } catch (e: Exception) {
                 _uiState.value = buildExportError(
                     message = e.message,
-                    fallbackRes = R.string.settings_error_export_failed
+                    fallbackRes = when (format) {
+                        ExportFormat.PDF -> R.string.settings_error_export_failed
+                        ExportFormat.CSV -> R.string.settings_error_csv_export_failed
+                    }
                 )
             }
         }
     }
-    
-    /**
-     * Aktualisiert PDF-Settings
-     */
+
+    private fun exportPdf(
+        entries: List<WorkEntryWithTravelLegs>,
+        employeeName: String,
+        company: String?,
+        project: String?,
+        personnelNumber: String?,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): SettingsUiState {
+        return when (
+            val exportResult = pdfExporter.exportToPdf(
+                entries = entries,
+                employeeName = employeeName,
+                company = company,
+                project = project,
+                personnelNumber = personnelNumber,
+                startDate = startDate,
+                endDate = endDate
+            )
+        ) {
+            is PdfExporter.PdfExportResult.Success -> {
+                SettingsUiState.ExportSuccess(
+                    fileUri = exportResult.fileUri,
+                    format = ExportFormat.PDF
+                )
+            }
+            else -> mapPdfExportError(exportResult)
+        }
+    }
+
+    private fun exportCsv(entries: List<WorkEntryWithTravelLegs>): SettingsUiState {
+        val fileUri = csvExporter.exportToCsv(entries)
+        return if (fileUri != null) {
+            SettingsUiState.ExportSuccess(
+                fileUri = fileUri,
+                format = ExportFormat.CSV
+            )
+        } else {
+            buildExportError(
+                message = null,
+                fallbackRes = R.string.settings_error_csv_export_failed
+            )
+        }
+    }
+
     fun updatePdfSettings(
         employeeName: String?,
         company: String?,
@@ -405,6 +381,30 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
+
+    private fun isValidWindow(start: LocalTime, end: LocalTime): Boolean = end.isAfter(start)
+
+    private fun mapPdfExportError(result: PdfExporter.PdfExportResult): SettingsUiState.ExportError {
+        return when (result) {
+            is PdfExporter.PdfExportResult.Success -> error("Success must be handled separately")
+            is PdfExporter.PdfExportResult.ValidationError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_pdf_export_failed
+            )
+            is PdfExporter.PdfExportResult.StorageError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.export_preview_error_pdf_create_failed
+            )
+            is PdfExporter.PdfExportResult.FileWriteError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_pdf_export_failed
+            )
+            is PdfExporter.PdfExportResult.UnknownError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_export_failed
+            )
+        }
+    }
 }
 
 private fun buildExportError(
@@ -419,7 +419,8 @@ private fun buildExportError(
 }
 
 enum class ExportFormat {
-    PDF
+    PDF,
+    CSV
 }
 
 sealed class SettingsUiState {
@@ -427,4 +428,5 @@ sealed class SettingsUiState {
     object Exporting : SettingsUiState()
     data class ExportSuccess(val fileUri: Uri, val format: ExportFormat) : SettingsUiState()
     data class ExportError(val message: UiText) : SettingsUiState()
+    data class ReminderError(val message: UiText) : SettingsUiState()
 }

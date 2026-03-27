@@ -85,18 +85,18 @@ class CheckInActionService : Service() {
 
         /**
          * Parst ein Datums-String mit Fehlerbehandlung.
-         * Bei Parse-Fehler oder wenn das Datum >1 Tag von [now] abweicht, wird [now] verwendet.
+         * Bei Parse-Fehler oder wenn das Datum >1 Tag von [now] abweicht, wird `null` geliefert.
          */
         internal fun parseDateFromExtra(
             dateStr: String?,
             now: LocalDate = LocalDate.now()
-        ): LocalDate {
-            if (dateStr == null) return now
+        ): LocalDate? {
+            if (dateStr.isNullOrBlank()) return null
             return try {
                 val parsed = LocalDate.parse(dateStr)
-                if (abs(ChronoUnit.DAYS.between(parsed, now)) > 1) now else parsed
+                if (abs(ChronoUnit.DAYS.between(parsed, now)) > 1) null else parsed
             } catch (_: Exception) {
-                now
+                null
             }
         }
     }
@@ -109,7 +109,7 @@ class CheckInActionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ReminderActions.ACTION_MORNING_CHECK_IN -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
 
@@ -132,7 +132,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_EVENING_CHECK_IN -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))
 
@@ -155,7 +155,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_EDIT_ENTRY -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val editIntent = Intent(this, MainActivity::class.java).apply {
                     action = ReminderActions.ACTION_EDIT_ENTRY
                     putExtra(ReminderActions.EXTRA_DATE, date.toString())
@@ -172,7 +172,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_REMIND_LATER -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val minutesLater = intent.getIntExtra(ReminderActions.EXTRA_MINUTES_LATER, -1)
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
                 val delayMinutes = if (minutesLater > 0) minutesLater.toLong() else hoursLater * 60L
@@ -208,7 +208,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_CONFIRM_WORK_DAY -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
@@ -230,7 +230,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_CONFIRM_OFF_DAY -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
@@ -252,7 +252,7 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_REMIND_LATER_CONFIRMATION -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val limiter = confirmationLimiter()
 
                 // Prüfe Reminder Counter (max 2x pro Tag)
@@ -283,14 +283,14 @@ class CheckInActionService : Service() {
             }
 
             ReminderActions.ACTION_MARK_DAY_OFF -> {
-                val date = parseDate(intent)
+                val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
                 startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_mark_day_off)))
 
                 serviceScope.launch {
                     operationMutex.withLock {
                         try {
-                            setDayType(date, DayType.OFF)
+                            confirmOffDay(date, source = "NOTIFICATION")
                             showToast(R.string.toast_day_marked_off)
                             markReminderFlags(date)
                             notificationManager.cancelMorningReminder()
@@ -317,8 +317,14 @@ class CheckInActionService : Service() {
         serviceScope.cancel()
     }
 
-    private fun parseDate(intent: Intent): LocalDate {
-        return parseDateFromExtra(intent.getStringExtra(ReminderActions.EXTRA_DATE))
+    private fun parseActionDate(intent: Intent): LocalDate? {
+        val parsedDate = parseDateFromExtra(intent.getStringExtra(ReminderActions.EXTRA_DATE))
+        if (parsedDate != null) {
+            return parsedDate
+        }
+        showToast(R.string.toast_reminder_action_expired)
+        stopSelf()
+        return null
     }
 
     /**

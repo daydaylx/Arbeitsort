@@ -16,10 +16,15 @@ class TimeCalculatorTest {
     private fun travelLeg(paidMinutes: Int) =
         TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = paidMinutes)
 
-    private fun travelLegWithTimestamps(start: LocalTime, arrive: LocalTime): TravelLeg {
-        val startMs = date.atTime(start).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val arriveMs = date.atTime(arrive).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-        return TravelLeg(workEntryDate = date, sortOrder = 0, startAt = startMs, arriveAt = arriveMs)
+    private fun travelLegWithTimestamps(
+        startDate: LocalDate = date,
+        start: LocalTime,
+        arriveDate: LocalDate = startDate,
+        arrive: LocalTime
+    ): TravelLeg {
+        val startMs = startDate.atTime(start).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val arriveMs = arriveDate.atTime(arrive).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return TravelLeg(workEntryDate = startDate, sortOrder = 0, startAt = startMs, arriveAt = arriveMs)
     }
 
     @Test
@@ -130,10 +135,44 @@ class TimeCalculatorTest {
             workEnd = LocalTime.of(17, 0),
             breakMinutes = 60
         )
-        val legs = listOf(travelLegWithTimestamps(LocalTime.of(7, 0), LocalTime.of(9, 0)))
+        val legs = listOf(
+            travelLegWithTimestamps(
+                start = LocalTime.of(7, 0),
+                arrive = LocalTime.of(9, 0)
+            )
+        )
 
         assertEquals(120, TimeCalculator.calculateTravelMinutes(legs))
         assertEquals(420 + 120, TimeCalculator.calculatePaidTotalMinutes(entry, legs))
+    }
+
+    @Test
+    fun `calculate - Travel from Timestamps across midnight uses actual dates`() {
+        val nextDay = date.plusDays(1)
+        val legs = listOf(
+            travelLegWithTimestamps(
+                startDate = date,
+                start = LocalTime.of(23, 15),
+                arriveDate = nextDay,
+                arrive = LocalTime.of(1, 0)
+            )
+        )
+
+        assertEquals(105, TimeCalculator.calculateTravelMinutes(legs))
+    }
+
+    @Test
+    fun `calculate - Travel from invalid negative timestamp diff returns 0`() {
+        val legs = listOf(
+            travelLegWithTimestamps(
+                startDate = date,
+                start = LocalTime.of(10, 0),
+                arriveDate = date,
+                arrive = LocalTime.of(9, 0)
+            )
+        )
+
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(legs))
     }
 
     @Test
@@ -161,8 +200,6 @@ class TimeCalculatorTest {
 
     @Test
     fun `calculate - INTERSITE Legs summieren korrekt`() {
-        val entry = WorkEntry(date = date, dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 0)
         val legs = listOf(
             TravelLeg(workEntryDate = date, sortOrder = 0,
                 category = TravelLegCategory.OUTBOUND,

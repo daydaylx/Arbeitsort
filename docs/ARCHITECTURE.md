@@ -12,6 +12,7 @@ Diese Datei ist zusammen mit `README.md` die verbindliche Architektur-Referenz.
 MontageZeit ist eine single-module Android App mit offline-first Datenhaltung.
 
 Layer:
+
 - UI: Compose Screens + ViewModels
 - Domain: UseCases + reine Geschäftslogik
 - Data: Room/DAO, DataStore
@@ -23,10 +24,12 @@ Layer:
 - Datenbank: `AppDatabase` (`version = 14`)
 - Haupttabellen: `work_entries`, `travel_legs` (normalisiert in v13→14)
 - Migrationen: `MIGRATION_1_2` bis `MIGRATION_13_14`
+- Backup: `android:allowBackup="false"` und `android:dataExtractionRules="@xml/data_extraction_rules"` schließen alle Domains (Database, SharedPreferences, Files) von Cloud-Backup und Geräteübertragung aus — Daten bleiben ausschließlich lokal.
 
 ### 2.2 Reminder & Scheduling
 
 Dateien:
+
 - `work/ReminderScheduler.kt`
 - `work/WindowCheckWorker.kt`
 - `work/ReminderLaterWorker.kt`
@@ -34,6 +37,7 @@ Dateien:
 - `handler/CheckInActionService.kt`
 
 Strategie:
+
 - Dedizierte WorkManager-Jobs für `MORNING`, `EVENING`, `FALLBACK`, `DAILY`
 - Morning/Evening nutzen konfigurierbare Intervalle (min. 15 Minuten wegen WorkManager-Limit)
 - Fensterprüfung im Worker über `ReminderWindowEvaluator`
@@ -44,9 +48,10 @@ Strategie:
 
 - Primärpfad im Today-Screen: `RecordDailyManualCheckIn`
 - Setzt einen Arbeitstag in einem Schritt auf abgeschlossen:
-  - `dayType = WORK`
-  - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
-  - `confirmedWorkDay = true` + `confirmation*`
+    - `dayType = WORK`
+    - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
+    - `confirmedWorkDay = true` + `confirmation*`
+    - bestehende Arbeitszeiten bleiben bei vorhandenem Eintrag erhalten; sonst gelten Settings-Defaults
 - Optionale Nebenaktion: `ConfirmOffDay`
 - Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
 
@@ -59,12 +64,14 @@ Strategie:
 Diese Pfade bleiben für Notification-Actions/Worker relevant.
 
 **`CheckInEntryBuilder` Verhalten:**
+
 - Behält den bestehenden `dayType` eines existierenden DB-Eintrags.
 - Nur für neue Einträge (kein DB-Eintrag vorhanden) wird `WORK` als Default gesetzt.
 
 ## 3. Datenmodell (WorkEntry)
 
 `WorkEntry` beinhaltet:
+
 - Tagesstatus (`dayType`, `confirmedWorkDay`, `confirmation*`)
 - Arbeitszeit-Defaults (`workStart`, `workEnd`, `breakMinutes`)
 - Daily Location (`dayLocationLabel`)
@@ -73,11 +80,13 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 - Notiz und Meta-Zeitstempel (`note`, `createdAt`, `updatedAt`)
 
 ### DayType Enum
+
 - `WORK` - Arbeitstag
 - `OFF` - Frei/Urlaub
 - `COMP_TIME` - Überstundenabbau (ganzer Tag)
 
 Ergänzende Helper zur Entkopplung von Copy-Bomben:
+
 - `WorkEntry.withTravelCleared(...)`
 - `WorkEntry.withConfirmedOffDay(...)`
 - `createConfirmedOffDayEntry(...)`
@@ -105,6 +114,7 @@ Keine Standort-Berechtigungen mehr (manuelles Check-in System).
 - Robolectric Migrationstests für Room-Migrationen
 
 Mindest-Pipelines:
+
 - `./gradlew assembleDebug`
 - `./gradlew assembleRelease`
 - `./gradlew test`

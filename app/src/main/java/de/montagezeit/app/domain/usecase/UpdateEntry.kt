@@ -23,9 +23,12 @@ class UpdateEntry(
     suspend operator fun invoke(entry: WorkEntry): WorkEntry {
         validateEntry(entry)
 
+        val normalizedLocation = entry.dayLocationLabel.trim()
+
         val now = System.currentTimeMillis()
         val hasWorkBlock = entry.workStart != null && entry.workEnd != null
         val entryToSave = entry.copy(
+            dayLocationLabel = normalizedLocation,
             breakMinutes = if (hasWorkBlock) entry.breakMinutes else 0,
             updatedAt = now
         )
@@ -45,7 +48,17 @@ class UpdateEntry(
     private fun validateEntry(entry: WorkEntry) {
         if (entry.dayType == DayType.COMP_TIME) return
 
-        val hasWorkBlock = entry.workStart != null && entry.workEnd != null
+        if (entry.dayType == DayType.WORK && entry.dayLocationLabel.isBlank()) {
+            throw IllegalArgumentException("dayLocationLabel darf bei WORK nicht leer sein")
+        }
+
+        val hasWorkStart = entry.workStart != null
+        val hasWorkEnd = entry.workEnd != null
+        if (hasWorkStart.xor(hasWorkEnd)) {
+            throw IllegalArgumentException("workStart und workEnd muessen zusammen gesetzt werden")
+        }
+
+        val hasWorkBlock = hasWorkStart && hasWorkEnd
         if (entry.dayType == DayType.WORK && hasWorkBlock) {
             val workStart = requireNotNull(entry.workStart)
             val workEnd = requireNotNull(entry.workEnd)

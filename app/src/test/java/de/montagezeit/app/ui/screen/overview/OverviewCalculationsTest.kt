@@ -94,6 +94,30 @@ class OverviewCalculationsTest {
     }
 
     @Test
+    fun `buildOverviewMetrics excludes off day travel from actual overtime hours`() {
+        val date = LocalDate.of(2026, 3, 19)
+        val offEntry = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                dayType = DayType.OFF,
+                confirmedWorkDay = true
+            ),
+            travelLegs = listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = 120))
+        )
+
+        val metrics = buildOverviewMetrics(
+            period = OverviewPeriod.DAY,
+            entries = listOf(offEntry),
+            settings = settings
+        )
+
+        assertEquals(0.0, metrics.overtimeHours, 0.001)
+        assertEquals(0.0, metrics.actualHours, 0.001)
+        assertEquals(2.0, metrics.travelHours, 0.001)
+        assertEquals(0, metrics.countedDays)
+    }
+
+    @Test
     fun `targetHoursForPeriod uses monthly target for year view`() {
         assertEquals(1920.0, targetHoursForPeriod(OverviewPeriod.YEAR, settings), 0.001)
     }
