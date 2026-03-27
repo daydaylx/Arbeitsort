@@ -2,6 +2,8 @@ package de.montagezeit.app.export
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.storage.StorageManager
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.local.entity.DayType
@@ -78,9 +80,14 @@ class CsvExporter @Inject constructor(
             val file = File(cacheDir, filename)
 
             // Check available disk space (require at least 1MB)
-            val usableSpace = cacheDir.usableSpace
-            if (usableSpace < 1024 * 1024) {
-                android.util.Log.e("CsvExporter", "Insufficient disk space: $usableSpace bytes")
+            val availableBytes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.getSystemService(StorageManager::class.java)
+                    ?.getAllocatableBytes(StorageManager.UUID_DEFAULT) ?: cacheDir.usableSpace
+            } else {
+                cacheDir.usableSpace
+            }
+            if (availableBytes < 1024 * 1024) {
+                android.util.Log.e("CsvExporter", "Insufficient disk space: $availableBytes bytes")
                 return null
             }
 

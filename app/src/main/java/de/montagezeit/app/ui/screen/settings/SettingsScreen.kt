@@ -572,7 +572,7 @@ private fun WorkTimesSection(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     var breakMinutesDraft by rememberSaveable(breakMinutes) {
-        mutableStateOf(breakMinutes.toFloat())
+        mutableFloatStateOf(breakMinutes.toFloat())
     }
 
     fun commitBreakMinutes() {
@@ -1556,7 +1556,6 @@ private fun checkNotificationPermission(context: Context): Boolean {
 }
 
 private fun checkBatteryOptimizations(context: Context): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     return powerManager.isIgnoringBatteryOptimizations(context.packageName)
 }
@@ -1576,17 +1575,10 @@ private fun openNotificationSettings(context: Context) {
 }
 
 private fun openBatterySettings(context: Context) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-    val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-        data = Uri.parse("package:${context.packageName}")
+    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    if (directIntent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(directIntent)
-    } else if (fallbackIntent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(fallbackIntent)
+    if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(intent)
     }
 }

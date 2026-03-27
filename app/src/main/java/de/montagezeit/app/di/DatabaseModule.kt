@@ -24,6 +24,7 @@ object DatabaseModule {
             AppDatabase.DATABASE_NAME
         )
             .addMigrations(*AppDatabase.MIGRATIONS)
+            .setForeignKeyConstraintsEnabled(true)
             .build()
     }
 

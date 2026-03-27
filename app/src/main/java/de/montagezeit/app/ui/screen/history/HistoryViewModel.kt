@@ -19,13 +19,17 @@ import androidx.compose.runtime.Stable
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Month
@@ -34,49 +38,50 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workEntryDao: WorkEntryDao,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
-    
-    private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
     private val _batchEditState = MutableStateFlow<BatchEditState>(BatchEditState.Idle)
     val batchEditState: StateFlow<BatchEditState> = _batchEditState.asStateFlow()
 
-    private var observeEntriesJob: Job? = null
+    // Incrementing this trigger causes flatMapLatest to cancel the previous flow
+    // subscription and start a fresh one — used by loadHistory() for error retry.
+    private val _refreshTrigger = MutableStateFlow(0)
 
-    init {
-        loadHistory()
-    }
-
-    /** Startet den reaktiven DB-Observer. Bei Fehler → Retry via loadHistory(). */
-    fun loadHistory() {
-        observeEntriesJob?.cancel()
-        _uiState.value = HistoryUiState.Loading
-        observeEntriesJob = viewModelScope.launch {
+    val uiState: StateFlow<HistoryUiState> = _refreshTrigger
+        .flatMapLatest {
             val endDate = LocalDate.now()
             val startDate = endDate.minusDays(365)
-            try {
-                workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
-                    .collect { entries ->
-                        val groupedWeeks = groupByWeek(entries)
-                        val groupedMonths = groupByMonth(entries)
-                        val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
-                        val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
-                        _uiState.value = HistoryUiState.Success(
-                            weeks = groupedWeeks,
-                            months = groupedMonths,
-                            entriesByDate = entriesByDate,
-                            travelLegsByDate = travelLegsByDate
-                        )
-                    }
-            } catch (e: Exception) {
-                _uiState.value = HistoryUiState.Error(message = e.toUiText(R.string.history_error_unknown))
-            }
+            workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
+                .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
+                    val groupedWeeks = groupByWeek(entries)
+                    val groupedMonths = groupByMonth(entries)
+                    val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
+                    val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
+                    HistoryUiState.Success(
+                        weeks = groupedWeeks,
+                        months = groupedMonths,
+                        entriesByDate = entriesByDate,
+                        travelLegsByDate = travelLegsByDate
+                    )
+                }
+                .catch { e ->
+                    emit(HistoryUiState.Error(message = e.toUiText(R.string.history_error_unknown)))
+                }
         }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = HistoryUiState.Loading
+        )
+
+    /** Retriggers the DB-Observer flow. Call on error to retry loading. */
+    fun loadHistory() {
+        _refreshTrigger.value++
     }
     
     fun applyBatchEdit(request: BatchEditRequest) {

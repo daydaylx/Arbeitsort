@@ -11,6 +11,18 @@ internal object CheckInEntryBuilder {
         EVENING
     }
 
+    /**
+     * Baut einen WorkEntry für einen Check-in-Snapshot.
+     *
+     * - Ist [existingEntry] null, wird ein neuer Eintrag mit [DayType.WORK] angelegt.
+     * - Ist [existingEntry] nicht null und hat [DayType.WORK], werden die Felder des
+     *   bestehenden Eintrags preserviert und nur der jeweilige Timestamp (morning/evening)
+     *   und [dayLocationLabel] aktualisiert.
+     * - Ist [existingEntry] nicht null und hat einen anderen DayType (z. B. OFF oder COMP_TIME),
+     *   wird eine [IllegalStateException] geworfen.
+     * - [dayLocationLabel] wird über [DayLocationResolver.resolve] aufgelöst:
+     *   nicht-leerer Wert des Eintrags wird übernommen, andernfalls wird `""` gesetzt.
+     */
     fun build(
         date: LocalDate,
         existingEntry: WorkEntry?,

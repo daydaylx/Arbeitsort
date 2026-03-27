@@ -249,4 +249,16 @@ class PdfExporterLogicTest {
         val summary = PdfUtilities.buildTravelRouteSummary(listOf(leg))
         assertEquals(summary, summary.take(18))
     }
+
+    // -------------------------------------------------------------------------
+    // MAX_ENTRIES_PER_PDF – OOM-Schutz
+    // Note: The full end-to-end path (PdfExporter.exportToPdf returning
+    // ValidationError) requires an Android Context and is covered by
+    // ExportPreviewViewModelTest via a mocked PdfExporter.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `MAX_ENTRIES_PER_PDF is set to the expected safety limit`() {
+        assertEquals(180, PdfExporter.MAX_ENTRIES_PER_PDF)
+    }
 }

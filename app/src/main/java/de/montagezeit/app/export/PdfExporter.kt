@@ -46,6 +46,10 @@ class PdfExporter @Inject constructor(
     
     // PDF-Konstanten (A4 in Punkten: 595 x 842)
     companion object {
+        // Safety limit: PdfDocument keeps all page canvases in memory until writeTo().
+        // On low-end devices (< 2 GB RAM), rendering 180+ entries can cause an OOM.
+        const val MAX_ENTRIES_PER_PDF = 180
+
         private const val PAGE_WIDTH = 595
         private const val PAGE_HEIGHT = 842
         private const val MARGIN = 40
@@ -150,6 +154,9 @@ class PdfExporter @Inject constructor(
             // Pflichtfeld-Validierung
             if (employeeName.isBlank()) {
                 throw IllegalArgumentException(string(R.string.pdf_export_error_name_missing))
+            }
+            if (entries.size > MAX_ENTRIES_PER_PDF) {
+                return PdfExportResult.ValidationError(string(R.string.pdf_export_error_too_many_entries))
             }
 
             val pdfDocument = PdfDocument()

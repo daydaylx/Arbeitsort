@@ -127,7 +127,10 @@ class TodayViewModel @Inject constructor(
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
-    // A03: Reactive today date that refreshes on access
+    // Initial value is a snapshot of today. observeTodayDate() is the authoritative
+    // update path: it polls LocalDate.now() in a coroutine loop and updates this
+    // StateFlow whenever the system date advances past midnight, so manual clock
+    // changes and timezone changes are also handled.
     private val _todayDate = MutableStateFlow(LocalDate.now())
 
     /** Always tracks today's entry reactively (for the action bar). */

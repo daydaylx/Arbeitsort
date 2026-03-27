@@ -32,8 +32,6 @@
     <string name="notification_fallback_text">Eintrag unvollständig. Jetzt vervollständigen?</string>
 
     <!-- Daily Reminder -->
-    <string name="notification_daily_title">Tagescheck</string>
-    <string name="notification_daily_text">Tag prüfen: Arbeit oder frei?</string>
     <string name="notification_daily_confirmation_title">Tagescheck</string>
     <string name="notification_daily_confirmation_text">War heute ein Arbeitstag?</string>
     <string name="action_confirm_yes">Arbeit</string>
@@ -60,22 +58,14 @@
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
     <string name="overview_title">Übersicht</string>
-    <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
-    <string name="today_label">Arbeitszeit heute</string>
     <string name="today_stats_title">Statistik</string>
     <string name="today_stats_week">Woche</string>
     <string name="today_stats_month">Monat</string>
     <string name="today_stats_year">Jahr</string>
     <string name="today_stats_hours">%1$.1f Std. von %2$.1f Std.</string>
-    <string name="today_stats_over">%1$.1f Std. über Ziel</string>
-    <string name="today_stats_under">%1$.1f Std. unter Ziel</string>
-    <plurals name="today_workday_count">
-        <item quantity="one">%d Arbeitstag</item>
-        <item quantity="other">%d Arbeitstage</item>
-    </plurals>
     <string name="today_confirmed">Heute bestätigt</string>
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
@@ -129,7 +119,6 @@
     <string name="travel_time_range">%1$s - %2$s</string>
     <string name="travel_time_start">Start %1$s</string>
     <string name="travel_time_arrive">Ankunft %1$s</string>
-    <string name="travel_duration_label">Dauer %1$s</string>
     <string name="overview_dashboard_title">Deine Zahlen im Blick</string>
     <string name="overview_dashboard_subtitle">Wechsle zwischen Tag, Woche, Monat und Jahr und sieh sofort deine wichtigsten Werte.</string>
     <string name="overview_selected_day_label">Bezugstag</string>
@@ -163,14 +152,10 @@
     <string name="overview_quick_actions_title">Schnellzugriffe</string>
     <string name="overview_action_edit_selected">Ausgewählten Tag bearbeiten</string>
     <string name="action_cancel">Abbrechen</string>
-    <string name="action_cancel_anyway">Trotzdem abbrechen</string>
     <string name="action_apply">Übernehmen</string>
-    <string name="action_dismiss">Schließen</string>
-    <string name="confirm_cancel_saving">Der Eintrag wird gerade gespeichert. Wirklich abbrechen?</string>
     
     <!-- New Accessibility Strings -->
-    <string name="loading">Laden...</string>
-    <string name="cd_completed">Abgeschlossen</string>
+    <string name="loading">Laden…</string>
     <string name="work_hours_title">Arbeitszeit</string>
     <string name="total_paid_hours">Gesamt (bezahlt)</string>
     <string name="work_time_breakdown">Arbeit: %1$s</string>
@@ -200,7 +185,6 @@
     <string name="settings_work_times_summary">%1$s – %2$s · %3$d Min Pause</string>
     <string name="settings_break_minutes_value">%1$s: %2$d Min</string>
     <string name="settings_reminders_summary">%1$d/4 aktiv</string>
-    <string name="reminder_disabled_reason">Erinnerungen sind deaktiviert</string>
     <string name="settings_summary_weekends_on">Wochenenden an</string>
     <string name="settings_summary_weekends_off">Wochenenden aus</string>
     <string name="settings_summary_holidays_off">Feiertage aus</string>
@@ -261,19 +245,19 @@
     <string name="export_custom">Benutzerdef.</string>
     <string name="export_format_pdf">PDF</string>
     <string name="export_format_csv">CSV</string>
-    <string name="exporting">Exportiere...</string>
+    <string name="exporting">Exportiere…</string>
     <string name="export_success_title">Export erfolgreich!</string>
     <string name="export_success_format">Format: %1$s</string>
     <string name="share_export">Export teilen</string>
     <string name="export_share_subject">MontageZeit Export</string>
     <string name="export_preview_action_create_pdf">PDF erstellen</string>
-    <string name="export_preview_loading">Lade Vorschau...</string>
+    <string name="export_preview_loading">Lade Vorschau…</string>
     <string name="export_preview_empty_range">Keine Einträge im Zeitraum</string>
     <string name="export_preview_error_range_unavailable">Zeitraum konnte nicht geladen werden.</string>
     <string name="export_preview_error_export_failed">Export fehlgeschlagen</string>
     <string name="export_preview_error_name_missing_profile">Name fehlt. Bitte in den Einstellungen Profil ausfüllen.</string>
     <string name="export_preview_error_pdf_create_failed">PDF konnte nicht erstellt werden. Prüfen Sie den verfügbaren Speicher und versuchen Sie es erneut.</string>
-    <string name="export_preview_creating_pdf">Erstelle PDF...</string>
+    <string name="export_preview_creating_pdf">Erstelle PDF…</string>
     <string name="export_preview_pdf_ready_title">PDF erstellt</string>
     <string name="export_preview_action_open_pdf">PDF öffnen</string>
     <string name="export_preview_action_back_to_preview">Zurück zur Vorschau</string>
@@ -296,6 +280,7 @@
     <string name="export_clipboard_label">Export-Link</string>
     <string name="export_clipboard_copied">Export-Link in die Zwischenablage kopiert.</string>
     <string name="pdf_export_error_name_missing">Name fehlt</string>
+    <string name="pdf_export_error_too_many_entries">Zu viele Einträge für einen einzelnen PDF-Export. Bitte wähle einen kürzeren Zeitraum (max. 180 Tage).</string>
     <string name="pdf_export_error_cache_dir_failed">Exportordner konnte nicht vorbereitet werden.</string>
     <string name="pdf_export_error_not_enough_storage_mb">Nicht genug Speicherplatz verfügbar (benötigt: %1$d MB)</string>
     <string name="pdf_export_title">Arbeitsnachweis – Monatsübersicht</string>
@@ -354,7 +339,6 @@
     <string name="time_picker_title">Zeit wählen</string>
     <string name="time_picker_cd_switch_to_clock">Zu Uhr wechseln</string>
     <string name="time_picker_cd_switch_to_keyboard">Zu Tastatur wechseln</string>
-    <string name="error_work_end_before_start">Feierabend muss nach Arbeitsbeginn liegen</string>
 
     <!-- History Screen -->
     <string name="history_title">Verlauf</string>
@@ -486,7 +470,7 @@
     <string name="edit_placeholder_work_location">z.B. Baustelle Nord</string>
     <string name="edit_section_meal_allowance">Verpflegungspauschale</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
-    <string name="edit_placeholder_note">Zusätzliche Informationen...</string>
+    <string name="edit_placeholder_note">Zusätzliche Informationen…</string>
     <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
     <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
     <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
