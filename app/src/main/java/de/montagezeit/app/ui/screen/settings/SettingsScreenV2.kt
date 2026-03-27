@@ -77,7 +77,15 @@ fun SettingsScreenV2(
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings by viewModel.reminderSettings.collectAsStateWithLifecycle(initialValue = null)
+    val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(snackbarMessage) {
+        val message = snackbarMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message.asString(context))
+        viewModel.onSnackbarShown()
+    }
 
     var hasNotificationPermission by remember {
         mutableStateOf(checkNotificationPermission(context))
@@ -123,7 +131,8 @@ fun SettingsScreenV2(
                     )
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         MZPageBackground(
             modifier = Modifier.fillMaxSize(),
@@ -1423,7 +1432,8 @@ private fun NumericInputRow(
                 value = textValue,
                 onValueChange = { newValue ->
                     textValue = newValue
-                    newValue.toDoubleOrNull()?.let { num ->
+                    // Komma durch Punkt ersetzen für deutsche Tastatur-Layouts
+                    newValue.replace(',', '.').toDoubleOrNull()?.let { num ->
                         if (num in minValue..maxValue) {
                             isError = false
                             onValueChange(num)
@@ -1487,14 +1497,6 @@ private fun openNotificationSettings(context: Context) {
         }
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    context.startActivity(intent)
-}
-
-private fun openAppSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-        data = Uri.parse("package:${context.packageName}")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
     context.startActivity(intent)
 }
 

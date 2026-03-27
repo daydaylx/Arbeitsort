@@ -10,7 +10,9 @@ object TimeCalculator {
     /**
      * Berechnet die Netto-Arbeitszeit in Minuten.
      * (Ende - Start - Pause).
-     * Bei DayType.OFF/COMP_TIME oder ungültigen Zeiten (Ende < Start, Pause > Dauer) wird 0 zurückgegeben.
+     * Nachtschichten (Ende < Start) werden korrekt über Mitternacht berechnet.
+     * Bei DayType.OFF/COMP_TIME oder fehlenden Zeiten wird 0 zurückgegeben.
+     * Wenn Pause > Arbeitszeit, wird 0 zurückgegeben.
      */
     fun calculateWorkMinutes(entry: WorkEntry): Int {
         if (entry.dayType == DayType.OFF || entry.dayType == DayType.COMP_TIME) return 0
@@ -19,10 +21,13 @@ object TimeCalculator {
         val workEnd = entry.workEnd ?: return 0
         val startMinutes = workStart.hour * 60 + workStart.minute
         val endMinutes = workEnd.hour * 60 + workEnd.minute
-        val duration = endMinutes - startMinutes
 
-        // Clamp to 0 if end is before start
-        val rawWork = if (duration < 0) 0 else duration
+        // Nachtschicht-Unterstützung: wenn Ende < Start, über Mitternacht gerechnet
+        val rawWork = if (endMinutes < startMinutes) {
+            (24 * 60 - startMinutes) + endMinutes
+        } else {
+            endMinutes - startMinutes
+        }
         
         // Subtract break, clamp to 0
         val netWork = rawWork - entry.breakMinutes

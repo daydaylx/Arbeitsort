@@ -34,11 +34,22 @@ class SettingsViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Initial)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-    
+
+    private val _snackbarMessage = MutableStateFlow<UiText?>(null)
+    val snackbarMessage: StateFlow<UiText?> = _snackbarMessage.asStateFlow()
+
+    fun onSnackbarShown() {
+        _snackbarMessage.value = null
+    }
+
     fun updateMorningWindow(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
+            if (!startTime.isBefore(endTime)) {
+                _snackbarMessage.value = UiText.StringResource(R.string.settings_error_invalid_window)
+                return@launch
+            }
             reminderSettingsManager.updateSettings(
                 morningWindowStart = startTime,
                 morningWindowEnd = endTime
@@ -51,6 +62,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val startTime = LocalTime.of(startHour, startMinute)
             val endTime = LocalTime.of(endHour, endMinute)
+            if (!startTime.isBefore(endTime)) {
+                _snackbarMessage.value = UiText.StringResource(R.string.settings_error_invalid_window)
+                return@launch
+            }
             reminderSettingsManager.updateSettings(
                 eveningWindowStart = startTime,
                 eveningWindowEnd = endTime
