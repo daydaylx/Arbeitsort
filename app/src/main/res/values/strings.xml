@@ -151,6 +151,22 @@
     <string name="overview_kpi_meal_caption">Summe der Pauschalen</string>
     <string name="overview_quick_actions_title">Schnellzugriffe</string>
     <string name="overview_action_edit_selected">Ausgewählten Tag bearbeiten</string>
+    <string name="overview_balance_title">Saldo im Zeitraum</string>
+    <string name="overview_balance_empty">Noch keine bestätigten Tage im gewählten Zeitraum.</string>
+    <string name="overview_balance_progress">Ist %1$s von %2$s</string>
+    <string name="overview_balance_positive">Über Soll</string>
+    <string name="overview_balance_negative">Unter Soll</string>
+    <string name="overview_balance_even">Im Soll</string>
+    <string name="overview_metrics_title">Kennzahlen</string>
+    <string name="overview_selected_day_title">Ausgewählter Tag</string>
+    <string name="overview_selected_day_empty">Für diesen Tag gibt es noch keinen Eintrag.</string>
+    <string name="overview_selected_day_type_label">Tagtyp</string>
+    <string name="overview_selected_day_note_label">Notiz</string>
+    <string name="overview_selected_day_unconfirmed_hint">Nicht bestätigte Arbeitstage zählen noch nicht in die Kennzahlen.</string>
+    <plurals name="overview_balance_days">
+        <item quantity="one">%d bestätigter Tag</item>
+        <item quantity="other">%d bestätigte Tage</item>
+    </plurals>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     
@@ -262,6 +278,9 @@
     <string name="export_preview_action_open_pdf">PDF öffnen</string>
     <string name="export_preview_action_back_to_preview">Zurück zur Vorschau</string>
     <string name="export_preview_action_back">Zurück</string>
+    <string name="export_preview_pdf_view_title">PDF-Vorschau · %1$d Seiten</string>
+    <string name="export_preview_pdf_page_label">Seite %1$d</string>
+    <string name="export_preview_pdf_render_failed">PDF-Vorschau konnte nicht geladen werden.</string>
     <string name="export_preview_totals_title">Summen</string>
     <string name="export_preview_totals_work_time">Arbeitszeit</string>
     <string name="export_preview_totals_travel_time">Reisezeit</string>
@@ -505,4 +524,9 @@
     <string name="label_weekly_target">Soll-Stunden pro Woche</string>
     <string name="label_monthly_target">Soll-Stunden pro Monat</string>
     <string name="error_value_range">Wert muss zwischen %1$.1f und %2$.1f liegen</string>
+    <!-- Overview Redesign -->
+    <string name="overview_kpi_action_needed">Aktion nötig</string>
+    <string name="overview_kpi_unconfirmed_count">%1$d unbestätigt</string>
+    <string name="overview_kpi_none_unconfirmed">Alles erledigt</string>
+    <string name="overview_range_selector_hint">Zeitraum wählen</string>
 </resources>

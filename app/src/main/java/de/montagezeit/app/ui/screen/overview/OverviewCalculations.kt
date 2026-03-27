@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.overview
 
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
@@ -54,6 +55,9 @@ internal fun buildOverviewMetrics(
 ): OverviewMetrics {
     val stats = AggregateWorkStats()(entries)
     val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours)
+    val unconfirmedCount = entries.count { 
+        it.workEntry.dayType == DayType.WORK && !it.workEntry.confirmedWorkDay 
+    }
 
     return OverviewMetrics(
         overtimeHours = overtime.totalOvertimeHours,
@@ -61,6 +65,7 @@ internal fun buildOverviewMetrics(
         actualHours = overtime.totalActualHours,
         travelHours = stats.totalTravelMinutes / 60.0,
         mealAllowanceCents = stats.mealAllowanceCents,
-        countedDays = overtime.countedDays
+        countedDays = overtime.countedDays,
+        unconfirmedDaysCount = unconfirmedCount
     )
 }

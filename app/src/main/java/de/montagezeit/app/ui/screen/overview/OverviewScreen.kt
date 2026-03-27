@@ -1,13 +1,6 @@
 package de.montagezeit.app.ui.screen.overview
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,71 +13,60 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.common.DatePickerDialog
-import de.montagezeit.app.ui.common.PrimaryActionButton
-import de.montagezeit.app.ui.common.SecondaryActionButton
 import de.montagezeit.app.ui.components.MZCard
 import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZHeroCard
-import de.montagezeit.app.ui.components.MZKeyValueRow
 import de.montagezeit.app.ui.components.MZLoadingState
 import de.montagezeit.app.ui.components.MZPageBackground
-import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.util.Formatters
@@ -93,14 +75,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.roundToInt
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+
+private val overviewWeekFields = WeekFields.ISO
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +91,7 @@ fun OverviewScreen(
     val context = LocalContext.current
     val screenState by viewModel.screenState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showPeriodPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(screenState.errorMessage, screenState.metrics) {
         val error = screenState.errorMessage ?: return@LaunchedEffect
@@ -125,12 +102,12 @@ fun OverviewScreen(
     }
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0f),
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
+                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0f),
+                    scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0f)
                 ),
                 title = {
                     Text(
@@ -168,18 +145,12 @@ fun OverviewScreen(
 
                     metrics != null -> {
                         OverviewContent(
-                            entry = screenState.currentEntry,
                             selectedDate = screenState.selectedDate,
                             selectedPeriod = screenState.selectedPeriod,
                             metrics = metrics,
                             onPreviousRange = viewModel::goToPreviousRange,
                             onNextRange = viewModel::goToNextRange,
-                            onOpenDatePicker = { showDatePicker = true },
-                            onSelectPeriod = viewModel::selectPeriod,
-                            onOpenToday = onOpenToday,
-                            onOpenHistory = onOpenHistory,
-                            onOpenSettings = onOpenSettings,
-                            onOpenEditSheet = { onOpenEditSheet(screenState.selectedDate) }
+                            onOpenPeriodPicker = { showPeriodPicker = true }
                         )
                     }
                 }
@@ -187,32 +158,25 @@ fun OverviewScreen(
         }
     }
 
-    if (showDatePicker) {
-        DatePickerDialog(
-            initialDate = screenState.selectedDate,
-            onDateSelected = { date ->
-                viewModel.selectDate(date)
-                showDatePicker = false
-            },
-            onDismiss = { showDatePicker = false }
+    if (showPeriodPicker) {
+        OverviewPeriodPickerSheet(
+            selectedPeriod = screenState.selectedPeriod,
+            selectedDate = screenState.selectedDate,
+            onPeriodSelected = { viewModel.selectPeriod(it) },
+            onDateSelected = { viewModel.selectDate(it) },
+            onDismiss = { showPeriodPicker = false }
         )
     }
 }
 
 @Composable
 private fun OverviewContent(
-    entry: WorkEntry?,
     selectedDate: LocalDate,
     selectedPeriod: OverviewPeriod,
     metrics: OverviewMetrics,
     onPreviousRange: () -> Unit,
     onNextRange: () -> Unit,
-    onOpenDatePicker: () -> Unit,
-    onSelectPeriod: (OverviewPeriod) -> Unit,
-    onOpenToday: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenEditSheet: () -> Unit
+    onOpenPeriodPicker: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -221,382 +185,91 @@ private fun OverviewContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OverviewHeroCard(
-            entry = entry,
-            selectedDate = selectedDate,
-            selectedPeriod = selectedPeriod
-        )
-
-        OverviewReferenceDateCard(
+        OverviewTopRangeBar(
             selectedDate = selectedDate,
             selectedPeriod = selectedPeriod,
             onPreviousRange = onPreviousRange,
             onNextRange = onNextRange,
-            onOpenDatePicker = onOpenDatePicker
+            onOpenPicker = onOpenPeriodPicker
         )
 
-        OverviewPeriodWheelCard(
+        OverviewHeroSection(
             selectedDate = selectedDate,
             selectedPeriod = selectedPeriod,
-            onSelectPeriod = onSelectPeriod
+            metrics = metrics
         )
 
-        OverviewOvertimeCard(
-            metrics = metrics,
-            selectedDate = selectedDate,
-            selectedPeriod = selectedPeriod
-        )
+        OverviewKpiGrid(metrics = metrics)
 
-        OverviewMetricsGrid(metrics = metrics)
-
-        OverviewQuickActionsCard(
-            onOpenToday = onOpenToday,
-            onOpenHistory = onOpenHistory,
-            onOpenSettings = onOpenSettings,
-            onOpenEditSheet = onOpenEditSheet
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun OverviewHeroCard(
-    entry: WorkEntry?,
-    selectedDate: LocalDate,
-    selectedPeriod: OverviewPeriod
-) {
-    val statusType = when {
-        entry?.confirmedWorkDay == true -> StatusType.SUCCESS
-        entry != null -> StatusType.WARNING
-        else -> StatusType.NEUTRAL
-    }
-    val statusText = when {
-        entry == null -> stringResource(R.string.overview_status_empty)
-        entry.dayType == DayType.WORK && entry.confirmedWorkDay -> stringResource(R.string.overview_status_confirmed)
-        entry.dayType == DayType.WORK -> stringResource(R.string.overview_status_unconfirmed)
-        entry.dayType == DayType.OFF -> stringResource(R.string.day_type_off)
-        else -> stringResource(R.string.day_type_comp_time)
-    }
-
-    MZHeroCard(
-        title = stringResource(R.string.overview_dashboard_title),
-        subtitle = formatPeriodSubtitle(selectedPeriod, selectedDate),
-        badge = {
-            MZStatusBadge(
-                text = statusText,
-                type = statusType,
-                showIcon = false
-            )
-        }
-    ) {
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_selected_day_label),
-            value = Formatters.formatDateLong(selectedDate),
-            emphasize = true
-        )
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_selected_status_label),
-            value = entry?.dayLocationLabel?.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.today_day_location_unset)
-        )
-        entry?.let {
-            MZKeyValueRow(
-                label = stringResource(R.string.overview_selected_total_label),
-                value = Formatters.formatHours(TimeCalculator.calculatePaidTotalHours(it))
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverviewReferenceDateCard(
+private fun OverviewTopRangeBar(
     selectedDate: LocalDate,
     selectedPeriod: OverviewPeriod,
     onPreviousRange: () -> Unit,
     onNextRange: () -> Unit,
-    onOpenDatePicker: () -> Unit
+    onOpenPicker: () -> Unit
 ) {
-    MZCard {
-        MZSectionHeader(
-            title = stringResource(R.string.overview_reference_title),
-            action = {
-                MZStatusBadge(
-                    text = stringResource(selectedPeriod.labelRes),
-                    type = StatusType.INFO,
-                    showIcon = false
-                )
-            }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            IconButton(onClick = onPreviousRange) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.overview_reference_previous)
-                )
-            }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onPreviousRange) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.overview_reference_previous)
+            )
+        }
 
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onOpenPicker)
+                .padding(vertical = 8.dp, horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = formatPeriodTitle(selectedPeriod, selectedDate),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = Formatters.formatDateLong(selectedDate),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = stringResource(R.string.overview_reference_caption),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            IconButton(onClick = onNextRange) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
-                    contentDescription = stringResource(R.string.overview_reference_next)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        SecondaryActionButton(
-            onClick = onOpenDatePicker,
-            modifier = Modifier.fillMaxWidth(),
-            icon = Icons.Default.DateRange
-        ) {
-            Text(stringResource(R.string.overview_reference_pick_date))
-        }
-    }
-}
-
-@Composable
-private fun OverviewPeriodWheelCard(
-    selectedDate: LocalDate,
-    selectedPeriod: OverviewPeriod,
-    onSelectPeriod: (OverviewPeriod) -> Unit
-) {
-    MZCard {
-        MZSectionHeader(title = stringResource(R.string.overview_period_selector_title))
-        Spacer(modifier = Modifier.height(12.dp))
-        OverviewPeriodWheel(
-            selectedDate = selectedDate,
-            selectedPeriod = selectedPeriod,
-            onSelectPeriod = onSelectPeriod
-        )
-    }
-}
-
-@Composable
-private fun OverviewPeriodWheel(
-    selectedDate: LocalDate,
-    selectedPeriod: OverviewPeriod,
-    onSelectPeriod: (OverviewPeriod) -> Unit
-) {
-    val periods = OverviewPeriod.values()
-    val selectedIndex = periods.indexOf(selectedPeriod)
-
-    val targetRotation = -selectedIndex * 90f
-    val animatedRotation by animateFloatAsState(
-        targetValue = targetRotation,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "wheelRotation"
-    )
-
-    var dragAccumDeg by remember { mutableFloatStateOf(0f) }
-    var prevAngleRad by remember { mutableFloatStateOf(0f) }
-
-    // Farben außerhalb des Canvas-Lambda (kein @Composable-Kontext dort)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
-    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val onPrimaryContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
-    val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
-
-    val periodLabels = periods.map { stringResource(it.labelRes) }
-    val labelTextSizePx = with(LocalDensity.current) { 13.sp.toPx() }
-    val selectedLabelTextSizePx = with(LocalDensity.current) { 14.sp.toPx() }
-    
-    val textPaint = remember {
-        android.graphics.Paint().apply {
-            isAntiAlias = true
-            textAlign = android.graphics.Paint.Align.CENTER
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(
-            modifier = Modifier
-                .size(268.dp)
-                .pointerInput(selectedIndex) {
-                    val canvasPx = size.width.toFloat()
-                    val cx = canvasPx / 2f
-                    val cy = canvasPx / 2f
-
-                    coroutineScope {
-                    launch {
-                        detectTapGestures { offset ->
-                            val dx = offset.x - cx
-                            val dy = offset.y - cy
-                            val dist = sqrt(dx * dx + dy * dy)
-                            val innerRpx = canvasPx * 0.26f
-                            val outerRpx = canvasPx * 0.50f
-                            if (dist < innerRpx || dist > outerRpx) return@detectTapGestures
-                            val angleDeg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-                            val adjusted = ((angleDeg - animatedRotation + 90f) % 360f + 360f) % 360f
-                            val tappedIndex = (adjusted / 90f).toInt().coerceIn(0, 3)
-                            onSelectPeriod(periods[tappedIndex])
-                        }
-                    }
-                    launch {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                prevAngleRad = atan2(offset.y - cy, offset.x - cx)
-                                dragAccumDeg = 0f
-                            },
-                            onDrag = { change, _ ->
-                                val cur = atan2(change.position.y - cy, change.position.x - cx)
-                                var delta = Math.toDegrees((cur - prevAngleRad).toDouble()).toFloat()
-                                if (delta > 180f) delta -= 360f
-                                if (delta < -180f) delta += 360f
-                                dragAccumDeg += delta
-                                prevAngleRad = cur
-                                change.consume()
-                            },
-                            onDragEnd = {
-                                val steps = (dragAccumDeg / 90f).roundToInt()
-                                val newIndex = ((selectedIndex + steps) % 4 + 4) % 4
-                                onSelectPeriod(periods[newIndex])
-                                dragAccumDeg = 0f
-                            },
-                            onDragCancel = {
-                                dragAccumDeg = 0f
-                            }
-                        )
-                    }
-                    } // end coroutineScope
-                }
-        ) {
-            val liveRotation = animatedRotation + dragAccumDeg
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val baseOuterR = size.minDimension * 0.46f
-            val innerR = size.minDimension * 0.26f
-            val gapDeg = 7f
-            val sweepDeg = 90f - gapDeg
-
-            val segmentPath = Path()
-
-            periods.forEachIndexed { i, _ ->
-                val isSelected = i == selectedIndex
-                val outerR = if (isSelected) baseOuterR * 1.06f else baseOuterR
-                val startAngle = i * 90f - 90f + liveRotation + gapDeg / 2f
-
-                val outerRect = Rect(cx - outerR, cy - outerR, cx + outerR, cy + outerR)
-                val innerRect = Rect(cx - innerR, cy - innerR, cx + innerR, cy + innerR)
-
-                segmentPath.reset()
-                segmentPath.addArc(outerRect, startAngle, sweepDeg)
-                segmentPath.arcTo(innerRect, startAngle + sweepDeg, -sweepDeg, forceMoveTo = false)
-                segmentPath.close()
-
-                // Füllung
-                drawPath(
-                    path = segmentPath,
-                    color = if (isSelected) primaryContainerColor else surfaceVariantColor.copy(alpha = 0.85f)
-                )
-                // Umrandung
-                drawPath(
-                    path = segmentPath,
-                    color = outlineVariantColor.copy(alpha = 0.5f),
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-
-                // Label-Text mittig im Segment
-                val midAngleDeg = startAngle + sweepDeg / 2f
-                val midAngleRad = (midAngleDeg * PI / 180.0).toFloat()
-                val labelR = (outerR + innerR) / 2f
-                val labelX = cx + labelR * cos(midAngleRad)
-                val labelY = cy + labelR * sin(midAngleRad)
-
-                val textSize = if (isSelected) selectedLabelTextSizePx else labelTextSizePx
-                val textColor = if (isSelected) onPrimaryContainerColor else onSurfaceVariantColor
-                textPaint.apply {
-                    this.textSize = textSize
-                    color = textColor.toArgb()
-                    isFakeBoldText = isSelected
-                }
-                drawContext.canvas.nativeCanvas.drawText(  // nativeCanvas: android.graphics.Canvas
-                    periodLabels[i],
-                    labelX,
-                    labelY + textSize / 3f,
-                    textPaint
-                )
-            }
-        }
-
-        // Center Hub
-        Box(
-            modifier = Modifier
-                .size(116.dp)
-                .clip(CircleShape)
-                .background(primaryColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = stringResource(selectedPeriod.labelRes),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    text = formatWheelCenterValue(selectedPeriod, selectedDate),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(selectedPeriod.labelRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+        }
+
+        IconButton(onClick = onNextRange) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.overview_reference_next)
+            )
         }
     }
 }
 
 @Composable
-private fun OverviewOvertimeCard(
-    metrics: OverviewMetrics,
+private fun OverviewHeroSection(
     selectedDate: LocalDate,
-    selectedPeriod: OverviewPeriod
+    selectedPeriod: OverviewPeriod,
+    metrics: OverviewMetrics
 ) {
-    val status = when {
-        metrics.overtimeHours > 0.05 -> StatusType.SUCCESS
-        metrics.overtimeHours < -0.05 -> StatusType.WARNING
-        else -> StatusType.INFO
-    }
-
+    val balanceBadge = overviewBalanceBadge(metrics.overtimeHours)
     val progressFraction = if (metrics.targetHours > 0.0) {
         (metrics.actualHours / metrics.targetHours).toFloat().coerceIn(0f, 1f)
     } else {
@@ -604,178 +277,224 @@ private fun OverviewOvertimeCard(
     }
 
     MZHeroCard(
-        title = stringResource(R.string.overtime_title),
-        subtitle = formatPeriodTitle(selectedPeriod, selectedDate),
+        title = stringResource(R.string.overview_balance_title),
+        subtitle = formatPeriodSubtitle(selectedPeriod, selectedDate),
         badge = {
             MZStatusBadge(
-                text = stringResource(selectedPeriod.labelRes),
-                type = status,
+                text = balanceBadge.text,
+                type = balanceBadge.type,
                 showIcon = false
             )
         }
     ) {
         Text(
             text = formatSignedHoursValue(metrics.overtimeHours),
-            style = MaterialTheme.typography.displaySmall,
+            style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(
+                R.string.overtime_actual_target,
+                Formatters.formatHours(metrics.actualHours),
+                Formatters.formatHours(metrics.targetHours)
+            ),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
         LinearProgressIndicator(
-            progress = progressFraction,
+            progress = { progressFraction },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp),
+                .height(10.dp),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "${Formatters.formatHours(metrics.actualHours)} / ${Formatters.formatHours(metrics.targetHours)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
-        )
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_counted_days_label),
-            value = metrics.countedDays.toString()
+            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.14f)
         )
     }
 }
 
 @Composable
-private fun OverviewMetricsGrid(metrics: OverviewMetrics) {
+private fun OverviewKpiGrid(metrics: OverviewMetrics) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OverviewMetricCard(
-                title = stringResource(R.string.overview_kpi_target),
-                value = Formatters.formatHours(metrics.targetHours),
-                caption = stringResource(R.string.overview_kpi_target_caption),
-                icon = Icons.Default.Schedule,
-                modifier = Modifier.weight(1f)
+            KpiGridItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.DirectionsCar,
+                label = stringResource(R.string.overview_kpi_travel),
+                value = Formatters.formatHours(metrics.travelHours),
+                tint = MaterialTheme.colorScheme.primary
             )
-            OverviewMetricCard(
-                title = stringResource(R.string.overview_kpi_actual),
-                value = Formatters.formatHours(metrics.actualHours),
-                caption = stringResource(R.string.overview_kpi_actual_caption),
-                icon = Icons.Default.CheckCircle,
-                modifier = Modifier.weight(1f)
+            KpiGridItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Restaurant,
+                label = stringResource(R.string.overview_kpi_meal),
+                value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents),
+                tint = MaterialTheme.colorScheme.secondary
             )
         }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OverviewMetricCard(
-                title = stringResource(R.string.overview_kpi_travel),
-                value = Formatters.formatHours(metrics.travelHours),
-                caption = stringResource(R.string.overview_kpi_travel_caption),
-                icon = Icons.Default.DirectionsCar,
-                modifier = Modifier.weight(1f)
+            KpiGridItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Today,
+                label = stringResource(R.string.overview_counted_days_label),
+                value = stringResource(R.string.overtime_counted_days, metrics.countedDays),
+                tint = MaterialTheme.colorScheme.tertiary
             )
-            OverviewMetricCard(
-                title = stringResource(R.string.overview_kpi_meal),
-                value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents),
-                caption = stringResource(R.string.overview_kpi_meal_caption),
-                icon = Icons.Default.Restaurant,
-                modifier = Modifier.weight(1f)
+            val actionNeeded = metrics.unconfirmedDaysCount > 0
+            KpiGridItem(
+                modifier = Modifier.weight(1f),
+                icon = if (actionNeeded) Icons.Default.ErrorOutline else Icons.Default.CalendarMonth,
+                label = stringResource(R.string.overview_kpi_action_needed),
+                value = if (actionNeeded) {
+                    stringResource(R.string.overview_kpi_unconfirmed_count, metrics.unconfirmedDaysCount)
+                } else {
+                    stringResource(R.string.overview_kpi_none_unconfirmed)
+                },
+                tint = if (actionNeeded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
             )
         }
     }
 }
 
 @Composable
-private fun OverviewMetricCard(
-    title: String,
-    value: String,
-    caption: String,
+private fun KpiGridItem(
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: ImageVector,
+    label: String,
+    value: String,
+    tint: Color
 ) {
     MZCard(modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            icon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
             Text(
-                text = caption,
-                style = MaterialTheme.typography.bodySmall,
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OverviewQuickActionsCard(
-    onOpenToday: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenEditSheet: () -> Unit
+private fun OverviewPeriodPickerSheet(
+    selectedPeriod: OverviewPeriod,
+    selectedDate: LocalDate,
+    onPeriodSelected: (OverviewPeriod) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MZSectionHeader(title = stringResource(R.string.overview_quick_actions_title))
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var showDatePicker by remember { mutableStateOf(false) }
 
-            PrimaryActionButton(
-                onClick = onOpenEditSheet,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.overview_action_edit_selected))
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.overview_range_selector_hint),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            )
+
+            OverviewPeriod.values().forEach { period ->
+                ListItem(
+                    modifier = Modifier.clickable {
+                        onPeriodSelected(period)
+                        scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                    },
+                    headlineContent = { Text(stringResource(period.labelRes)) },
+                    trailingContent = {
+                        RadioButton(
+                            selected = selectedPeriod == period,
+                            onClick = null
+                        )
+                    }
+                )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SecondaryActionButton(
-                    onClick = onOpenToday,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.today_title))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            ListItem(
+                modifier = Modifier.clickable {
+                    showDatePicker = true
+                },
+                headlineContent = { Text(stringResource(R.string.overview_reference_pick_date)) },
+                supportingContent = { Text(Formatters.formatDateLong(selectedDate)) },
+                leadingContent = {
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
                 }
-                SecondaryActionButton(
-                    onClick = onOpenHistory,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.history_title))
-                }
-            }
-
-            SecondaryActionButton(
-                onClick = onOpenSettings,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.settings_title))
-            }
+            )
         }
     }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            initialDate = selectedDate,
+            onDateSelected = { date ->
+                onDateSelected(date)
+                showDatePicker = false
+                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+            },
+            onDismiss = { showDatePicker = false }
+        )
+    }
 }
+
+@Composable
+private fun overviewBalanceBadge(overtimeHours: Double): BadgeSpec =
+    when {
+        overtimeHours > 0.05 -> BadgeSpec(
+            text = stringResource(R.string.overview_balance_positive),
+            type = StatusType.SUCCESS
+        )
+        overtimeHours < -0.05 -> BadgeSpec(
+            text = stringResource(R.string.overview_balance_negative),
+            type = StatusType.WARNING
+        )
+        else -> BadgeSpec(
+            text = stringResource(R.string.overview_balance_even),
+            type = StatusType.INFO
+        )
+    }
+
+private data class BadgeSpec(
+    val text: String,
+    val type: StatusType
+)
 
 @Composable
 private fun formatPeriodTitle(period: OverviewPeriod, selectedDate: LocalDate): String =
     when (period) {
         OverviewPeriod.DAY -> selectedDate.format(shortDateFormatter)
         OverviewPeriod.WEEK -> {
-            val weekNumber = selectedDate.get(WeekFields.of(Locale.GERMAN).weekOfWeekBasedYear())
+            val weekNumber = selectedDate.get(overviewWeekFields.weekOfWeekBasedYear())
             stringResource(R.string.overview_week_title, weekNumber)
         }
         OverviewPeriod.MONTH -> selectedDate.format(monthTitleFormatter)
@@ -800,14 +519,6 @@ private fun formatPeriodSubtitle(period: OverviewPeriod, selectedDate: LocalDate
         )
     }
 }
-
-private fun formatWheelCenterValue(period: OverviewPeriod, selectedDate: LocalDate): String =
-    when (period) {
-        OverviewPeriod.DAY -> selectedDate.format(DateTimeFormatter.ofPattern("dd.MM", Locale.GERMAN))
-        OverviewPeriod.WEEK -> "KW ${selectedDate.get(WeekFields.of(Locale.GERMAN).weekOfWeekBasedYear())}"
-        OverviewPeriod.MONTH -> selectedDate.format(DateTimeFormatter.ofPattern("MMM", Locale.GERMAN))
-        OverviewPeriod.YEAR -> selectedDate.year.toString()
-    }
 
 private fun formatSignedHoursValue(hours: Double): String =
     String.format(Locale.GERMAN, "%+.1f Std.", hours)
