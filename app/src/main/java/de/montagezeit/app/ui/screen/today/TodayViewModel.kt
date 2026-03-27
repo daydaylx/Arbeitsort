@@ -47,6 +47,7 @@ import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
@@ -119,6 +120,7 @@ class TodayViewModel @Inject constructor(
     private val deleteDayEntry: DeleteDayEntry,
     private val nonWorkingDayChecker: NonWorkingDayChecker
 ) : ViewModel() {
+    private val isoWeekFields = WeekFields.ISO
     private val calculateOvertimeForRange = CalculateOvertimeForRange()
 
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
@@ -159,24 +161,6 @@ class TodayViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
-
-    private data class PeriodStats(
-        val weekStats: WeekStats? = null,
-        val monthStats: MonthStats? = null
-    )
-    private val _periodStats = MutableStateFlow(PeriodStats())
-
-    private data class OvertimeState(
-        val isConfigured: Boolean = true,
-        val yearDisplay: String = formatSignedHours(0.0),
-        val monthDisplay: String? = formatSignedHours(0.0),
-        val yearActualDisplay: String = formatHours(0.0),
-        val yearTargetDisplay: String = formatHours(0.0),
-        val yearCountedDays: Int = 0,
-        val offDayTravelDisplay: String = formatHours(0.0),
-        val offDayTravelDays: Int = 0
-    )
-    private val _overtimeState = MutableStateFlow(OvertimeState())
 
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
@@ -242,7 +226,6 @@ class TodayViewModel @Inject constructor(
     )
     private data class ScreenWeekMonthPart(
         val weekDaysUi: List<WeekDayUi>,
-        val periodStats: PeriodStats,
         val selectedEntryWithTravel: WorkEntryWithTravelLegs?
     )
     private data class DialogCheckInPart(
@@ -263,11 +246,10 @@ class TodayViewModel @Inject constructor(
         combine(uiState, selectedEntry, selectedDate, _todayDate, loadingActions) { ui, entry, date, today, loading ->
             ScreenCorePart(ui, entry, date, today, loading)
         },
-        combine(weekDaysUi, _periodStats, selectedEntryWithTravel) { days, stats, entryWithTravel ->
-            ScreenWeekMonthPart(days, stats, entryWithTravel)
-        },
-        _overtimeState
-    ) { core, weekMonth, overtime ->
+        combine(weekDaysUi, selectedEntryWithTravel) { days, entryWithTravel ->
+            ScreenWeekMonthPart(days, entryWithTravel)
+        }
+    ) { core, weekMonth ->
         TodayScreenState(
             uiState = core.uiState,
             selectedEntry = core.selectedEntry,
@@ -275,16 +257,6 @@ class TodayViewModel @Inject constructor(
             selectedDate = core.selectedDate,
             todayDate = core.todayDate,
             weekDaysUi = weekMonth.weekDaysUi,
-            weekStats = weekMonth.periodStats.weekStats,
-            monthStats = weekMonth.periodStats.monthStats,
-            isOvertimeConfigured = overtime.isConfigured,
-            overtimeYearDisplay = overtime.yearDisplay,
-            overtimeMonthDisplay = overtime.monthDisplay,
-            overtimeYearActualDisplay = overtime.yearActualDisplay,
-            overtimeYearTargetDisplay = overtime.yearTargetDisplay,
-            overtimeYearCountedDays = overtime.yearCountedDays,
-            overtimeYearOffDayTravelDisplay = overtime.offDayTravelDisplay,
-            overtimeYearOffDayTravelDays = overtime.offDayTravelDays,
             loadingActions = core.loadingActions
         )
     }.stateIn(
@@ -322,7 +294,6 @@ class TodayViewModel @Inject constructor(
         observeTodayDate()
         loadTodayEntry()
         observeEntryUpdates()
-        loadStatistics()
         loadWeekOverview()
     }
 
@@ -344,7 +315,6 @@ class TodayViewModel @Inject constructor(
                 val systemToday = LocalDate.now()
                 if (_todayDate.value != systemToday) {
                     _todayDate.value = systemToday
-                    loadStatisticsInternal()
                     loadWeekOverviewInternal()
                 }
                 delay(millisUntilNextDay())
@@ -364,69 +334,13 @@ class TodayViewModel @Inject constructor(
                 .debounce(ENTRY_UPDATE_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .collectLatest {
-                    loadStatisticsInternal()
                     loadWeekOverviewInternal()
                 }
         }
     }
 
-    private fun loadStatistics() {
-        viewModelScope.launch { loadStatisticsInternal() }
-    }
-
     private fun loadWeekOverview() {
         viewModelScope.launch { loadWeekOverviewInternal() }
-    }
-
-    private suspend fun loadStatisticsInternal() {
-        try {
-            val now = LocalDate.now()
-            _todayDate.value = now
-            val weekFields = java.time.temporal.WeekFields.of(Locale.GERMAN)
-            val weekStart = now.with(weekFields.dayOfWeek(), 1)
-            val weekEnd = now.with(weekFields.dayOfWeek(), 7)
-            val monthStart = now.withDayOfMonth(1)
-            val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
-
-            val settings = reminderSettingsManager.settings.first()
-
-            val (weekEntries, monthEntries) = withContext(Dispatchers.IO) {
-                Pair(
-                    workEntryDao.getByDateRangeWithTravel(weekStart, weekEnd),
-                    workEntryDao.getByDateRangeWithTravel(monthStart, monthEnd)
-                )
-            }
-
-            _periodStats.value = PeriodStats(
-                weekStats = calculateWeekStats(weekEntries, settings.weeklyTargetHours),
-                monthStats = calculateMonthStats(monthEntries, settings.monthlyTargetHours)
-            )
-
-            val yearStart = now.withDayOfYear(1)
-            val (yearEntries, currentMonthEntries) = withContext(Dispatchers.IO) {
-                Pair(
-                    workEntryDao.getByDateRangeWithTravel(yearStart, now),
-                    workEntryDao.getByDateRangeWithTravel(monthStart, now)
-                )
-            }
-
-            val yearOvertime = calculateOvertimeForRange(yearEntries, settings.dailyTargetHours)
-            val monthOvertime = calculateOvertimeForRange(currentMonthEntries, settings.dailyTargetHours)
-
-            _overtimeState.value = OvertimeState(
-                isConfigured = settings.dailyTargetHours > 0,
-                yearDisplay = formatSignedHours(yearOvertime.totalOvertimeHours),
-                monthDisplay = formatSignedHours(monthOvertime.totalOvertimeHours),
-                yearActualDisplay = formatHours(yearOvertime.totalActualHours),
-                yearTargetDisplay = formatHours(yearOvertime.totalTargetHours),
-                yearCountedDays = yearOvertime.countedDays,
-                offDayTravelDisplay = formatHours(yearOvertime.offDayTravelHours),
-                offDayTravelDays = yearOvertime.offDayTravelDays
-            )
-        } catch (e: Exception) {
-            android.util.Log.w("TodayViewModel", "loadStatistics failed: ${e.message}")
-            _snackbarMessage.value = e.toUiText(R.string.today_error_unknown)
-        }
     }
 
     private suspend fun loadWeekOverviewInternal() {
@@ -711,16 +625,6 @@ class TodayViewModel @Inject constructor(
             selectedDate = LocalDate.now(),
             todayDate = LocalDate.now(),
             weekDaysUi = emptyList(),
-            weekStats = null,
-            monthStats = null,
-            isOvertimeConfigured = true,
-            overtimeYearDisplay = formatSignedHours(0.0),
-            overtimeMonthDisplay = formatSignedHours(0.0),
-            overtimeYearActualDisplay = formatHours(0.0),
-            overtimeYearTargetDisplay = formatHours(0.0),
-            overtimeYearCountedDays = 0,
-            overtimeYearOffDayTravelDisplay = formatHours(0.0),
-            overtimeYearOffDayTravelDays = 0,
             loadingActions = emptySet()
         )
 

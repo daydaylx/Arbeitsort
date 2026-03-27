@@ -289,14 +289,17 @@ private fun SettingsContent(
         }
 
         // Setup Section
-        SetupSection(
-            hasNotificationPermission = hasNotificationPermission,
-            isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-            onRequestNotificationPermission = onRequestNotificationPermission,
-            onOpenNotificationSettings = onOpenNotificationSettings,
-            onOpenBatterySettings = onOpenBatterySettings,
-            onSendTestReminder = onSendTestReminder
-        )
+        val needsSetupAttention = !hasNotificationPermission || !isIgnoringBatteryOptimizations
+        AnimatedVisibility(visible = needsSetupAttention) {
+            SetupSection(
+                hasNotificationPermission = hasNotificationPermission,
+                isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                onRequestNotificationPermission = onRequestNotificationPermission,
+                onOpenNotificationSettings = onOpenNotificationSettings,
+                onOpenBatterySettings = onOpenBatterySettings,
+                onSendTestReminder = onSendTestReminder
+            )
+        }
 
         // Work Times Section
         WorkTimesSection(

@@ -2,8 +2,6 @@ package de.montagezeit.app.ui.screen.today
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
-import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.util.WeekCalculator
 import java.time.LocalDate
@@ -44,25 +42,4 @@ fun buildWeekDayUi(
             workHours = workHours
         )
     }
-}
-
-fun calculateWeekStats(entries: List<WorkEntryWithTravelLegs>, targetHours: Double): WeekStats {
-    val stats = AggregateWorkStats()(entries)
-    return WeekStats(
-        totalHours = stats.totalWorkMinutes / 60.0,
-        totalPaidHours = stats.totalPaidMinutes / 60.0,
-        workDaysCount = stats.workDays,
-        targetHours = targetHours
-    )
-}
-
-fun calculateMonthStats(entries: List<WorkEntryWithTravelLegs>, targetHours: Double): MonthStats {
-    val stats = AggregateWorkStats()(entries)
-    return MonthStats(
-        totalHours = stats.totalWorkMinutes / 60.0,
-        totalPaidHours = stats.totalPaidMinutes / 60.0,
-        workDaysCount = stats.workDays,
-        targetHours = targetHours,
-        mealAllowanceTotalCents = stats.mealAllowanceCents
-    )
 }

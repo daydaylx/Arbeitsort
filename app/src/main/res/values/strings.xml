@@ -529,4 +529,5 @@
     <string name="overview_kpi_unconfirmed_count">%1$d unbestätigt</string>
     <string name="overview_kpi_none_unconfirmed">Alles erledigt</string>
     <string name="overview_range_selector_hint">Zeitraum wählen</string>
+    <string name="today_action_required">Aktion erforderlich</string>
 </resources>

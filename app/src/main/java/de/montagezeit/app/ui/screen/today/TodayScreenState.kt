@@ -15,16 +15,6 @@ data class TodayScreenState(
     val selectedDate: LocalDate,
     val todayDate: LocalDate,
     val weekDaysUi: List<WeekDayUi>,
-    val weekStats: WeekStats?,
-    val monthStats: MonthStats?,
-    val isOvertimeConfigured: Boolean,
-    val overtimeYearDisplay: String,
-    val overtimeMonthDisplay: String?,
-    val overtimeYearActualDisplay: String,
-    val overtimeYearTargetDisplay: String,
-    val overtimeYearCountedDays: Int,
-    val overtimeYearOffDayTravelDisplay: String,
-    val overtimeYearOffDayTravelDays: Int,
     val loadingActions: Set<TodayAction>
 ) {
     val currentEntry: WorkEntry?

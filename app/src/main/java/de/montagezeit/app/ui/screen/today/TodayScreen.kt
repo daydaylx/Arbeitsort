@@ -49,9 +49,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/**
- * Verbesserter TodayScreen mit besserer Accessibility und visuellem Design
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
@@ -127,16 +124,7 @@ fun TodayScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        bottomBar = {
-            StickyTodayActionBar(
-                entry = screenState.currentEntry,
-                isDailyCheckInLoading = screenState.isDailyCheckInLoading,
-                isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
-                onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
-                onConfirmOffDay = onConfirmOffDayAction
-            )
-        }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         MZPageBackground(
             modifier = Modifier.fillMaxSize(),
@@ -168,20 +156,13 @@ fun TodayScreen(
                             travelLegs = screenState.currentTravelLegs,
                             selectedDate = screenState.selectedDate,
                             weekDaysUi = screenState.weekDaysUi,
-                            weekStats = screenState.weekStats,
-                            monthStats = screenState.monthStats,
-                            isOvertimeConfigured = screenState.isOvertimeConfigured,
-                            overtimeYearDisplay = screenState.overtimeYearDisplay,
-                            overtimeMonthDisplay = screenState.overtimeMonthDisplay,
-                            overtimeYearActualDisplay = screenState.overtimeYearActualDisplay,
-                            overtimeYearTargetDisplay = screenState.overtimeYearTargetDisplay,
-                            overtimeYearCountedDays = screenState.overtimeYearCountedDays,
-                            overtimeYearOffDayTravelDisplay = screenState.overtimeYearOffDayTravelDisplay,
-                            overtimeYearOffDayTravelDays = screenState.overtimeYearOffDayTravelDays,
+                            isDailyCheckInLoading = screenState.isDailyCheckInLoading,
+                            isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
                             onSelectDay = onSelectDay,
                             onEditDayLocation = onEditDayLocation,
                             onEditToday = onEditToday,
-                            onOpenWeekView = onOpenWeekView
+                            onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
+                            onConfirmOffDay = onConfirmOffDayAction
                         )
                     }
                 }
@@ -266,82 +247,18 @@ private fun TodayDialogsHost(
 }
 
 @Composable
-private fun StickyTodayActionBar(
-    entry: WorkEntry?,
-    isDailyCheckInLoading: Boolean,
-    isConfirmOffdayLoading: Boolean,
-    onOpenDailyCheckInDialog: () -> Unit,
-    onConfirmOffDay: () -> Unit
-) {
-    val isCompleted = entry?.confirmedWorkDay == true
-    if (isCompleted) {
-        return
-    }
-    val showOffdayAction = entry?.dayType != DayType.COMP_TIME
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (showOffdayAction) {
-                    SecondaryActionButton(
-                        onClick = onConfirmOffDay,
-                        isLoading = isConfirmOffdayLoading,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.action_confirm_offday))
-                    }
-                }
-
-                PrimaryActionButton(
-                    onClick = onOpenDailyCheckInDialog,
-                    isLoading = isDailyCheckInLoading,
-                    modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.action_daily_manual_check_in))
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun TodayContent(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
     selectedDate: LocalDate,
     weekDaysUi: List<WeekDayUi>,
-    weekStats: WeekStats?,
-    monthStats: MonthStats?,
-    isOvertimeConfigured: Boolean,
-    overtimeYearDisplay: String,
-    overtimeMonthDisplay: String?,
-    overtimeYearActualDisplay: String,
-    overtimeYearTargetDisplay: String,
-    overtimeYearCountedDays: Int,
-    overtimeYearOffDayTravelDisplay: String,
-    overtimeYearOffDayTravelDays: Int,
+    isDailyCheckInLoading: Boolean,
+    isConfirmOffdayLoading: Boolean,
     onSelectDay: (LocalDate) -> Unit,
     onEditDayLocation: () -> Unit,
     onEditToday: () -> Unit,
-    onOpenWeekView: () -> Unit
+    onOpenDailyCheckInDialog: () -> Unit,
+    onConfirmOffDay: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -369,99 +286,65 @@ private fun TodayContent(
                 onEditDayLocation = onEditDayLocation
             )
 
-            OvertimeCard(
-                isConfigured = isOvertimeConfigured,
-                yearDisplay = overtimeYearDisplay,
-                monthDisplay = overtimeMonthDisplay,
-                yearActualDisplay = overtimeYearActualDisplay,
-                yearTargetDisplay = overtimeYearTargetDisplay,
-                yearCountedDays = overtimeYearCountedDays,
-                yearOffDayTravelDisplay = overtimeYearOffDayTravelDisplay,
-                yearOffDayTravelDays = overtimeYearOffDayTravelDays
-            )
+            val isCompleted = entry?.confirmedWorkDay == true
+            if (!isCompleted) {
+                TodayActionsCard(
+                    entry = entry,
+                    isDailyCheckInLoading = isDailyCheckInLoading,
+                    isConfirmOffdayLoading = isConfirmOffdayLoading,
+                    onOpenDailyCheckInDialog = onOpenDailyCheckInDialog,
+                    onConfirmOffDay = onConfirmOffDay
+                )
+            }
 
             if (entry != null && (entry.dayType == DayType.WORK || travelLegs.isNotEmpty())) {
                 WorkHoursCard(entry = entry, travelLegs = travelLegs)
-            }
-
-            if (weekStats != null || monthStats != null) {
-                StatisticsDashboard(
-                    weekStats = weekStats,
-                    monthStats = monthStats,
-                    monthMealAllowanceCents = monthStats?.mealAllowanceTotalCents,
-                    onOpenWeekView = onOpenWeekView
-                )
             }
         }
     }
 }
 
 @Composable
-private fun OvertimeCard(
-    isConfigured: Boolean,
-    yearDisplay: String,
-    monthDisplay: String?,
-    yearActualDisplay: String,
-    yearTargetDisplay: String,
-    yearCountedDays: Int,
-    yearOffDayTravelDisplay: String,
-    yearOffDayTravelDays: Int
+private fun TodayActionsCard(
+    entry: WorkEntry?,
+    isDailyCheckInLoading: Boolean,
+    isConfirmOffdayLoading: Boolean,
+    onOpenDailyCheckInDialog: () -> Unit,
+    onConfirmOffDay: () -> Unit
 ) {
-    var isExpanded by rememberSaveable { mutableStateOf(false) }
-    MZCard(
-        modifier = Modifier.clickable(
-            enabled = isConfigured,
-            onClick = { isExpanded = !isExpanded }
-        )
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MZSectionHeader(title = stringResource(R.string.overtime_title))
-            if (!isConfigured) {
-                MZStatusBadge(
-                    text = stringResource(R.string.overtime_not_configured),
-                    type = StatusType.NEUTRAL
-                )
-            } else {
-                MZKeyValueRow(
-                    label = stringResource(R.string.today_stats_month),
-                    value = monthDisplay ?: formatSignedZeroHours(),
-                    emphasize = true
-                )
-                MZKeyValueRow(
-                    label = stringResource(R.string.today_stats_year),
-                    value = yearDisplay,
-                    emphasize = true
-                )
+    val showOffdayAction = entry?.dayType != DayType.COMP_TIME
 
-                AnimatedVisibility(visible = isExpanded) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Divider()
-                        MZKeyValueRow(
-                            label = stringResource(R.string.history_stat_total),
-                            value = yearActualDisplay
-                        )
-                        MZKeyValueRow(
-                            label = stringResource(R.string.history_stat_target),
-                            value = yearTargetDisplay
-                        )
-                        MZKeyValueRow(
-                            label = stringResource(R.string.overtime_counted_days),
-                            value = yearCountedDays.toString()
-                        )
-                        if (yearOffDayTravelDays > 0) {
-                            MZKeyValueRow(
-                                label = stringResource(R.string.history_stat_travel),
-                                value = "$yearOffDayTravelDisplay · $yearOffDayTravelDays"
-                            )
-                        }
+    MZCard {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = stringResource(R.string.today_action_required),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (showOffdayAction) {
+                    SecondaryActionButton(
+                        onClick = onConfirmOffDay,
+                        isLoading = isConfirmOffdayLoading,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.action_confirm_offday))
                     }
+                }
+
+                PrimaryActionButton(
+                    onClick = onOpenDailyCheckInDialog,
+                    isLoading = isDailyCheckInLoading,
+                    modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.action_daily_manual_check_in))
                 }
             }
         }
     }
 }
-
-private fun formatSignedZeroHours(): String = String.format(Locale.GERMAN, "%+.2fh", 0.0)
 
 @Composable
 private fun StatusCard(
@@ -617,143 +500,6 @@ private fun WorkHoursCard(entry: WorkEntry, travelLegs: List<TravelLeg>) {
                     label = stringResource(R.string.history_stat_travel),
                     value = formatMinutes(travelMinutes)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatisticsDashboard(
-    weekStats: WeekStats?,
-    monthStats: MonthStats?,
-    monthMealAllowanceCents: Int?,
-    onOpenWeekView: () -> Unit
-) {
-    when {
-        weekStats != null -> {
-            StatisticsDashboardCard(
-                label = stringResource(R.string.today_stats_week),
-                totalPaidHours = weekStats.totalPaidHours,
-                targetHours = weekStats.targetHours,
-                workDaysCount = weekStats.workDaysCount,
-                progress = weekStats.progress,
-                isOverTarget = weekStats.isOverTarget,
-                isUnderTarget = weekStats.isUnderTarget,
-                mealAllowanceCents = monthMealAllowanceCents,
-                onOpenWeekView = onOpenWeekView
-            )
-        }
-        monthStats != null -> {
-            StatisticsDashboardCard(
-                label = stringResource(R.string.today_stats_month),
-                totalPaidHours = monthStats.totalPaidHours,
-                targetHours = monthStats.targetHours,
-                workDaysCount = monthStats.workDaysCount,
-                progress = monthStats.progress,
-                isOverTarget = monthStats.isOverTarget,
-                isUnderTarget = monthStats.isUnderTarget,
-                mealAllowanceCents = monthMealAllowanceCents,
-                onOpenWeekView = onOpenWeekView
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatisticsDashboardCard(
-    label: String,
-    totalPaidHours: Double,
-    targetHours: Double,
-    workDaysCount: Int,
-    progress: Float,
-    isOverTarget: Boolean,
-    isUnderTarget: Boolean,
-    mealAllowanceCents: Int? = null,
-    onOpenWeekView: () -> Unit
-) {
-    val status = when {
-        isOverTarget -> StatusType.SUCCESS
-        isUnderTarget -> StatusType.WARNING
-        else -> StatusType.INFO
-    }
-
-    MZCard(
-        modifier = Modifier.clickableWithAccessibility(
-            onClick = onOpenWeekView,
-            contentDescription = stringResource(R.string.cd_open_statistics)
-        )
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MZSectionHeader(
-                title = stringResource(R.string.today_stats_title),
-                action = {
-                    MZStatusBadge(
-                        text = label,
-                        type = status,
-                        showIcon = false
-                    )
-                }
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(
-                            R.string.today_stats_hours,
-                            totalPaidHours,
-                            targetHours
-                        ),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.today_stats_label_days, label, workDaysCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                MZStatusBadge(
-                    text = stringResource(
-                        R.string.today_stats_percent,
-                        (progress * 100).toInt()
-                    ),
-                    type = status
-                )
-            }
-
-            LinearProgressIndicator(
-                progress = progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp),
-                color = when (status) {
-                    StatusType.SUCCESS -> MaterialTheme.colorScheme.primary
-                    StatusType.WARNING -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.secondary
-                },
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-
-            if (mealAllowanceCents != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(R.string.meal_allowance_month_label),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = MealAllowanceCalculator.formatEuro(mealAllowanceCents),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }
