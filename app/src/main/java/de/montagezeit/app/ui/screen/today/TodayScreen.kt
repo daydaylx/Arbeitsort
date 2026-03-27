@@ -54,7 +54,7 @@ import java.util.Locale
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodayScreenV2(
+fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
     onOpenEditSheet: (LocalDate) -> Unit,
     onOpenWeekView: () -> Unit = {}
@@ -129,7 +129,7 @@ fun TodayScreenV2(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            StickyTodayActionBarV2(
+            StickyTodayActionBar(
                 entry = screenState.currentEntry,
                 isDailyCheckInLoading = screenState.isDailyCheckInLoading,
                 isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
@@ -163,7 +163,7 @@ fun TodayScreenV2(
                     }
 
                     else -> {
-                        TodayContentV2(
+                        TodayContent(
                             entry = screenState.currentEntry,
                             travelLegs = screenState.currentTravelLegs,
                             selectedDate = screenState.selectedDate,
@@ -240,7 +240,7 @@ private fun TodayDialogsHost(
     }
 
     if (dialogState.showDayLocationDialog) {
-        DayLocationDialogV2(
+        DayLocationDialog(
             input = dialogState.dayLocationInput,
             isLoading = dialogState.isUpdateDayLocationLoading,
             onInputChange = { viewModel.onDayLocationInputChanged(it) },
@@ -250,7 +250,7 @@ private fun TodayDialogsHost(
     }
 
     if (dialogState.showDailyCheckInDialog) {
-        DailyManualCheckInDialogV2(
+        DailyManualCheckInDialog(
             input = dialogState.dailyCheckInLocationInput,
             isLoading = dialogState.isDailyCheckInLoading,
             isArrivalDeparture = dialogState.dailyCheckInIsArrivalDeparture,
@@ -266,7 +266,7 @@ private fun TodayDialogsHost(
 }
 
 @Composable
-private fun StickyTodayActionBarV2(
+private fun StickyTodayActionBar(
     entry: WorkEntry?,
     isDailyCheckInLoading: Boolean,
     isConfirmOffdayLoading: Boolean,
@@ -323,7 +323,7 @@ private fun StickyTodayActionBarV2(
 }
 
 @Composable
-private fun TodayContentV2(
+private fun TodayContent(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
     selectedDate: LocalDate,
@@ -362,14 +362,14 @@ private fun TodayContentV2(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            StatusCardV2(
+            StatusCard(
                 entry = entry,
                 date = selectedDate,
                 onEditToday = onEditToday,
                 onEditDayLocation = onEditDayLocation
             )
 
-            OvertimeCardV2(
+            OvertimeCard(
                 isConfigured = isOvertimeConfigured,
                 yearDisplay = overtimeYearDisplay,
                 monthDisplay = overtimeMonthDisplay,
@@ -381,11 +381,11 @@ private fun TodayContentV2(
             )
 
             if (entry != null && (entry.dayType == DayType.WORK || travelLegs.isNotEmpty())) {
-                WorkHoursCardV2(entry = entry, travelLegs = travelLegs)
+                WorkHoursCard(entry = entry, travelLegs = travelLegs)
             }
 
             if (weekStats != null || monthStats != null) {
-                StatisticsDashboardV2(
+                StatisticsDashboard(
                     weekStats = weekStats,
                     monthStats = monthStats,
                     monthMealAllowanceCents = monthStats?.mealAllowanceTotalCents,
@@ -397,7 +397,7 @@ private fun TodayContentV2(
 }
 
 @Composable
-private fun OvertimeCardV2(
+private fun OvertimeCard(
     isConfigured: Boolean,
     yearDisplay: String,
     monthDisplay: String?,
@@ -464,7 +464,7 @@ private fun OvertimeCardV2(
 private fun formatSignedZeroHours(): String = String.format(Locale.GERMAN, "%+.2fh", 0.0)
 
 @Composable
-private fun StatusCardV2(
+private fun StatusCard(
     entry: WorkEntry?,
     date: LocalDate,
     onEditToday: () -> Unit,
@@ -589,7 +589,7 @@ private fun DayTypeRow(dayType: DayType) {
 }
 
 @Composable
-private fun WorkHoursCardV2(entry: WorkEntry, travelLegs: List<TravelLeg>) {
+private fun WorkHoursCard(entry: WorkEntry, travelLegs: List<TravelLeg>) {
     val (workMinutes, travelMinutes, totalMinutes) = remember(entry, travelLegs) {
         Triple(
             TimeCalculator.calculateWorkMinutes(entry),
@@ -623,7 +623,7 @@ private fun WorkHoursCardV2(entry: WorkEntry, travelLegs: List<TravelLeg>) {
 }
 
 @Composable
-private fun StatisticsDashboardV2(
+private fun StatisticsDashboard(
     weekStats: WeekStats?,
     monthStats: MonthStats?,
     monthMealAllowanceCents: Int?,
@@ -631,7 +631,7 @@ private fun StatisticsDashboardV2(
 ) {
     when {
         weekStats != null -> {
-            StatisticsDashboardCardV2(
+            StatisticsDashboardCard(
                 label = stringResource(R.string.today_stats_week),
                 totalPaidHours = weekStats.totalPaidHours,
                 targetHours = weekStats.targetHours,
@@ -644,7 +644,7 @@ private fun StatisticsDashboardV2(
             )
         }
         monthStats != null -> {
-            StatisticsDashboardCardV2(
+            StatisticsDashboardCard(
                 label = stringResource(R.string.today_stats_month),
                 totalPaidHours = monthStats.totalPaidHours,
                 targetHours = monthStats.targetHours,
@@ -660,7 +660,7 @@ private fun StatisticsDashboardV2(
 }
 
 @Composable
-private fun StatisticsDashboardCardV2(
+private fun StatisticsDashboardCard(
     label: String,
     totalPaidHours: Double,
     targetHours: Double,
@@ -761,7 +761,7 @@ private fun StatisticsDashboardCardV2(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun DailyManualCheckInDialogV2(
+private fun DailyManualCheckInDialog(
     input: String,
     isLoading: Boolean,
     isArrivalDeparture: Boolean,
@@ -857,7 +857,7 @@ private fun DailyManualCheckInDialogV2(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun DayLocationDialogV2(
+private fun DayLocationDialog(
     input: String,
     isLoading: Boolean,
     onInputChange: (String) -> Unit,

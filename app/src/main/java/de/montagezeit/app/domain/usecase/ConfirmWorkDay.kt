@@ -31,7 +31,6 @@ class ConfirmWorkDay(
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(date) { existingEntry ->
             val dayLocation = DayLocationResolver.resolve(existingEntry)
-            require(dayLocation.isNotBlank()) { "Arbeitsort fehlt für bestätigten Arbeitstag" }
             val updatedEntry = existingEntry?.let { entry ->
                 val keepExistingWorkSchedule =
                     entry.dayType == DayType.WORK &&

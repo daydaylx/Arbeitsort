@@ -210,6 +210,7 @@
     <string name="settings_error_no_entries_last_30_days">Keine Einträge für die letzten 30 Tage gefunden.</string>
     <string name="settings_error_no_entries_custom_range">Keine Einträge für den gewählten Zeitraum gefunden.</string>
     <string name="settings_error_pdf_export_failed">PDF-Export fehlgeschlagen</string>
+    <string name="settings_error_csv_export_failed">CSV-Export fehlgeschlagen</string>
     <string name="settings_error_export_failed">Export fehlgeschlagen</string>
     
     <!-- Status -->
@@ -258,6 +259,8 @@
     <string name="export_current_month">Dieser Monat</string>
     <string name="export_30_days">30 Tage</string>
     <string name="export_custom">Benutzerdef.</string>
+    <string name="export_format_pdf">PDF</string>
+    <string name="export_format_csv">CSV</string>
     <string name="exporting">Exportiere...</string>
     <string name="export_success_title">Export erfolgreich!</string>
     <string name="export_success_format">Format: %1$s</string>

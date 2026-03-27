@@ -83,9 +83,7 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 val settings = reminderSettingsManager.settings.first()
-                val targetMinutes =
-                    (settings.workEnd.toSecondOfDay() - settings.workStart.toSecondOfDay()) / 60 - settings.breakMinutes
-                val dailyTargetHours = maxOf(0, targetMinutes) / 60.0
+                val dailyTargetHours = settings.dailyTargetHours
 
                 val record = workEntryDao.getByDateWithTravel(date)
                 if (record != null) {
@@ -480,11 +478,11 @@ data class EditFormData(
         val explicitLegs = travelLegs.filterNot(EditTravelLegForm::isBlank)
         if (explicitLegs.isNotEmpty()) return explicitLegs
 
-        val legacyLeg = EditTravelLegForm(
+        val fallbackLeg = EditTravelLegForm(
             startTime = travelStartTime,
             arriveTime = travelArriveTime
         )
-        return if (legacyLeg.isBlank()) emptyList() else listOf(legacyLeg)
+        return if (fallbackLeg.isBlank()) emptyList() else listOf(fallbackLeg)
     }
 
     fun mealAllowancePreviewCents(): Int {

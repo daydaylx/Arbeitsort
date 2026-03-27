@@ -394,7 +394,6 @@ class TodayViewModelTest {
 
     @Test
     fun `week stats uses weekly target from settings`() {
-        val today = LocalDate.now()
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings(
@@ -431,7 +430,6 @@ class TodayViewModelTest {
 
     @Test
     fun `month stats uses monthly target from settings`() {
-        val today = LocalDate.now()
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings(
@@ -468,7 +466,6 @@ class TodayViewModelTest {
 
     @Test
     fun `overtime targets default to 8-40-160 when not configured`() {
-        val today = LocalDate.now()
         val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
         val settingsManager = mockk<ReminderSettingsManager>()
         val settings = ReminderSettings()  // No explicit target hours, should use defaults

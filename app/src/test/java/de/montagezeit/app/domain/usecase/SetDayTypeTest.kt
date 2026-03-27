@@ -34,7 +34,7 @@ class SetDayTypeTest {
     private fun mockReadModifyWrite(date: LocalDate, existingEntry: WorkEntry?) {
         coEvery { workEntryDao.readModifyWrite(date, any()) } coAnswers {
             val modify = secondArg<(WorkEntry?) -> WorkEntry>()
-            val result = modify(existingEntry)
+            modify(existingEntry)
             // The real readModifyWrite calls upsert internally, so we just verify the lambda output
         }
     }

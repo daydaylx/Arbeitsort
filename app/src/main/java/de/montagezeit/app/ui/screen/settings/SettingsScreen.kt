@@ -70,7 +70,7 @@ import kotlin.math.roundToInt
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreenV2(
+fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onOpenEditSheet: (LocalDate, () -> Unit) -> Unit
 ) {
@@ -131,7 +131,7 @@ fun SettingsScreenV2(
             contentPadding = paddingValues
         ) {
             if (settings != null) {
-                SettingsContentV2(
+                SettingsContent(
                     settings = settings!!,
                     uiState = uiState,
                     onUpdateMorningWindow = { startH, startM, endH, endM ->
@@ -154,8 +154,11 @@ fun SettingsScreenV2(
                     onAddHolidayDate = { viewModel.addHolidayDate(it) },
                     onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
                     onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
+                    onExportCsvCurrentMonth = { viewModel.exportCsvCurrentMonth() },
                     onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
+                    onExportCsvLast30Days = { viewModel.exportCsvLast30Days() },
                     onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
+                    onExportCsvCustomRange = { start, end -> viewModel.exportCsvCustomRange(start, end) },
                     onOpenExportPreview = { start, end ->
                         previewRange = start to end
                         showPreviewSheet = true
@@ -204,7 +207,7 @@ fun SettingsScreenV2(
 }
 
 @Composable
-fun SettingsContentV2(
+private fun SettingsContent(
     settings: de.montagezeit.app.data.preferences.ReminderSettings,
     uiState: SettingsUiState,
     onUpdateMorningWindow: (Int, Int, Int, Int) -> Unit,
@@ -223,8 +226,11 @@ fun SettingsContentV2(
     onAddHolidayDate: (LocalDate) -> Unit,
     onRemoveHolidayDate: (LocalDate) -> Unit,
     onExportPdfCurrentMonth: () -> Unit,
+    onExportCsvCurrentMonth: () -> Unit,
     onExportPdfLast30Days: () -> Unit,
+    onExportCsvLast30Days: () -> Unit,
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    onExportCsvCustomRange: (LocalDate, LocalDate) -> Unit,
     onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onUpdateDailyTargetHours: (Double) -> Unit,
@@ -283,7 +289,7 @@ fun SettingsContentV2(
         }
 
         // Setup Section
-        SetupSectionV2(
+        SetupSection(
             hasNotificationPermission = hasNotificationPermission,
             isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
             onRequestNotificationPermission = onRequestNotificationPermission,
@@ -293,7 +299,7 @@ fun SettingsContentV2(
         )
 
         // Work Times Section
-        WorkTimesSectionV2(
+        WorkTimesSection(
             workStart = settings.workStart,
             workEnd = settings.workEnd,
             breakMinutes = settings.breakMinutes,
@@ -305,7 +311,7 @@ fun SettingsContentV2(
         )
 
         // Overtime Targets Section
-        OvertimeTargetsSectionV2(
+        OvertimeTargetsSection(
             dailyTargetHours = settings.dailyTargetHours,
             weeklyTargetHours = settings.weeklyTargetHours,
             monthlyTargetHours = settings.monthlyTargetHours,
@@ -317,7 +323,7 @@ fun SettingsContentV2(
         )
 
         // Reminder Settings Section
-        ReminderSettingsSectionV2(
+        ReminderSettingsSection(
             morningReminderEnabled = settings.morningReminderEnabled,
             morningWindowStart = settings.morningWindowStart,
             morningWindowEnd = settings.morningWindowEnd,
@@ -342,7 +348,7 @@ fun SettingsContentV2(
         )
 
         // Non-working days section
-        NonWorkingDaysSectionV2(
+        NonWorkingDaysSection(
             autoOffWeekends = settings.autoOffWeekends,
             autoOffHolidays = settings.autoOffHolidays,
             holidayDates = settings.holidayDates,
@@ -355,11 +361,14 @@ fun SettingsContentV2(
         )
 
         // Export Section
-        ExportSectionV2(
+        ExportSection(
             uiState = uiState,
             onExportPdfCurrentMonth = onExportPdfCurrentMonth,
+            onExportCsvCurrentMonth = onExportCsvCurrentMonth,
             onExportPdfLast30Days = onExportPdfLast30Days,
+            onExportCsvLast30Days = onExportCsvLast30Days,
             onExportPdfCustomRange = onExportPdfCustomRange,
+            onExportCsvCustomRange = onExportCsvCustomRange,
             onOpenExportPreview = onOpenExportPreview,
             pdfEmployeeName = settings.pdfEmployeeName,
             pdfCompany = settings.pdfCompany,
@@ -376,7 +385,7 @@ fun SettingsContentV2(
 }
 
 @Composable
-fun SetupSectionV2(
+private fun SetupSection(
     hasNotificationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
     onRequestNotificationPermission: () -> Unit,
@@ -391,7 +400,7 @@ fun SetupSectionV2(
         status = if (allPermissionsGranted) StatusType.SUCCESS else StatusType.WARNING
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SetupRowV2(
+            SetupRow(
                 title = stringResource(R.string.settings_notifications),
                 status = if (hasNotificationPermission)
                     stringResource(R.string.status_active)
@@ -407,7 +416,7 @@ fun SetupSectionV2(
 
             Divider()
 
-            SetupRowV2(
+            SetupRow(
                 title = stringResource(R.string.settings_battery_optimization),
                 status = if (isIgnoringBatteryOptimizations)
                     stringResource(R.string.status_excluded)
@@ -432,7 +441,7 @@ fun SetupSectionV2(
 }
 
 @Composable
-fun SetupRowV2(
+private fun SetupRow(
     title: String,
     status: String,
     actionLabel: String,
@@ -550,7 +559,7 @@ private fun CollapsibleSettingsCard(
 }
 
 @Composable
-fun WorkTimesSectionV2(
+private fun WorkTimesSection(
     workStart: LocalTime,
     workEnd: LocalTime,
     breakMinutes: Int,
@@ -665,7 +674,7 @@ fun WorkTimesSectionV2(
 }
 
 @Composable
-fun ReminderSettingsSectionV2(
+private fun ReminderSettingsSection(
     morningReminderEnabled: Boolean,
     morningWindowStart: LocalTime,
     morningWindowEnd: LocalTime,
@@ -713,14 +722,14 @@ fun ReminderSettingsSectionV2(
         }
 
         // Morning Window
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.reminder_morning),
             checked = morningReminderEnabled,
             onCheckedChange = onUpdateMorningEnabled
         )
 
         AnimatedVisibility(visible = morningReminderEnabled) {
-            TimeRangePickerV2(
+            TimeRangePicker(
                 label = stringResource(R.string.label_time_range),
                 startTime = morningWindowStart,
                 endTime = morningWindowEnd,
@@ -734,14 +743,14 @@ fun ReminderSettingsSectionV2(
         Divider()
 
         // Evening Window
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.reminder_evening),
             checked = eveningReminderEnabled,
             onCheckedChange = onUpdateEveningEnabled
         )
 
         AnimatedVisibility(visible = eveningReminderEnabled) {
-            TimeRangePickerV2(
+            TimeRangePicker(
                 label = stringResource(R.string.label_time_range),
                 startTime = eveningWindowStart,
                 endTime = eveningWindowEnd,
@@ -755,12 +764,12 @@ fun ReminderSettingsSectionV2(
         Divider()
 
         // Fallback Reminder
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.reminder_fallback),
             checked = fallbackEnabled,
             onCheckedChange = onUpdateFallbackEnabled
         )
-        SettingsTimeButtonRowV2(
+        SettingsTimeButtonRow(
             label = stringResource(R.string.label_time),
             time = fallbackTime,
             enabled = fallbackEnabled,
@@ -771,13 +780,13 @@ fun ReminderSettingsSectionV2(
         Divider()
 
         // Daily Reminder
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.reminder_daily),
             supportingText = stringResource(R.string.reminder_daily_description),
             checked = dailyReminderEnabled,
             onCheckedChange = onUpdateDailyEnabled
         )
-        SettingsTimeButtonRowV2(
+        SettingsTimeButtonRow(
             label = stringResource(R.string.label_time),
             time = dailyReminderTime,
             enabled = dailyReminderEnabled,
@@ -810,7 +819,7 @@ fun ReminderSettingsSectionV2(
 }
 
 @Composable
-fun TimeRangePickerV2(
+private fun TimeRangePicker(
     label: String,
     startTime: LocalTime,
     endTime: LocalTime,
@@ -890,7 +899,7 @@ fun TimeRangePickerV2(
 }
 
 @Composable
-fun NonWorkingDaysSectionV2(
+private fun NonWorkingDaysSection(
     autoOffWeekends: Boolean,
     autoOffHolidays: Boolean,
     holidayDates: Set<LocalDate>,
@@ -931,7 +940,7 @@ fun NonWorkingDaysSectionV2(
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.label_auto_off_weekends),
             supportingText = stringResource(R.string.auto_off_weekends_description),
             checked = autoOffWeekends,
@@ -940,7 +949,7 @@ fun NonWorkingDaysSectionV2(
 
         Divider()
 
-        SettingsToggleRowV2(
+        SettingsToggleRow(
             title = stringResource(R.string.label_auto_off_holidays),
             supportingText = stringResource(R.string.auto_off_holidays_description),
             checked = autoOffHolidays,
@@ -1000,7 +1009,7 @@ fun NonWorkingDaysSectionV2(
 }
 
 @Composable
-fun HolidayRow(
+private fun HolidayRow(
     date: LocalDate,
     onRemove: () -> Unit
 ) {
@@ -1027,11 +1036,14 @@ fun HolidayRow(
 }
 
 @Composable
-fun ExportSectionV2(
+private fun ExportSection(
     uiState: SettingsUiState,
     onExportPdfCurrentMonth: () -> Unit,
+    onExportCsvCurrentMonth: () -> Unit,
     onExportPdfLast30Days: () -> Unit,
+    onExportCsvLast30Days: () -> Unit,
     onExportPdfCustomRange: (LocalDate, LocalDate) -> Unit,
+    onExportCsvCustomRange: (LocalDate, LocalDate) -> Unit,
     onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     pdfEmployeeName: String?,
     pdfCompany: String?,
@@ -1045,7 +1057,7 @@ fun ExportSectionV2(
     val context = LocalContext.current
 
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
-    var showPdfCustomRangeDialog by remember { mutableStateOf(false) }
+    var showExportRangeDialog by remember { mutableStateOf(false) }
 
     val employeeName = pdfEmployeeName.orEmpty()
     val company = pdfCompany.orEmpty()
@@ -1085,31 +1097,27 @@ fun ExportSectionV2(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                PrimaryActionButton(
-                    onClick = onExportPdfCurrentMonth,
-                    modifier = Modifier.weight(1f),
-                    enabled = employeeName.isNotBlank(),
-                    content = { Text(stringResource(R.string.export_current_month)) }
-                )
+            QuickExportRow(
+                label = stringResource(R.string.export_current_month),
+                enabled = employeeName.isNotBlank(),
+                onExportPdf = onExportPdfCurrentMonth,
+                onExportCsv = onExportCsvCurrentMonth
+            )
 
-                PrimaryActionButton(
-                    onClick = onExportPdfLast30Days,
-                    modifier = Modifier.weight(1f),
-                    enabled = employeeName.isNotBlank(),
-                    content = { Text(stringResource(R.string.export_30_days)) }
-                )
-            }
+            QuickExportRow(
+                label = stringResource(R.string.export_30_days),
+                enabled = employeeName.isNotBlank(),
+                onExportPdf = onExportPdfLast30Days,
+                onExportCsv = onExportCsvLast30Days
+            )
 
             SecondaryActionButton(
-                onClick = { showPdfCustomRangeDialog = true },
+                onClick = { showExportRangeDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = employeeName.isNotBlank(),
-                content = { Text(stringResource(R.string.export_custom)) }
-            )
+                enabled = employeeName.isNotBlank()
+            ) {
+                Text(stringResource(R.string.export_custom))
+            }
         }
 
         // Export Status
@@ -1127,14 +1135,7 @@ fun ExportSectionV2(
                         onResetState()
                     },
                     onShare = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "application/pdf"
-                            putExtra(Intent.EXTRA_STREAM, uiState.fileUri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_subject))
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent,
-                            context.getString(R.string.share_export)))
+                        shareExport(context, uiState.fileUri, uiState.format)
                         onResetState()
                     },
                     onDismiss = onResetState
@@ -1167,23 +1168,62 @@ fun ExportSectionV2(
         )
     }
 
-    if (showPdfCustomRangeDialog) {
-        PdfCustomRangeDialog(
-            onDateRangeSelected = { start, end ->
+    if (showExportRangeDialog) {
+        ExportRangeDialog(
+            onPdfRangeSelected = { start, end ->
                 onExportPdfCustomRange(start, end)
-                showPdfCustomRangeDialog = false
+                showExportRangeDialog = false
+            },
+            onCsvRangeSelected = { start, end ->
+                onExportCsvCustomRange(start, end)
+                showExportRangeDialog = false
             },
             onPreviewRangeSelected = { start, end ->
                 onOpenExportPreview(start, end)
-                showPdfCustomRangeDialog = false
+                showExportRangeDialog = false
             },
-            onDismiss = { showPdfCustomRangeDialog = false }
+            onDismiss = { showExportRangeDialog = false }
         )
     }
 }
 
 @Composable
-fun ExportSuccessCard(
+private fun QuickExportRow(
+    label: String,
+    enabled: Boolean,
+    onExportPdf: () -> Unit,
+    onExportCsv: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PrimaryActionButton(
+                onClick = onExportPdf,
+                modifier = Modifier.weight(1f),
+                enabled = enabled
+            ) {
+                Text(stringResource(R.string.export_format_pdf))
+            }
+            SecondaryActionButton(
+                onClick = onExportCsv,
+                modifier = Modifier.weight(1f),
+                enabled = enabled
+            ) {
+                Text(stringResource(R.string.export_format_csv))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportSuccessCard(
     format: ExportFormat,
     onCopy: () -> Unit,
     onShare: () -> Unit,
@@ -1193,8 +1233,14 @@ fun ExportSuccessCard(
         title = stringResource(R.string.export_success_title),
         status = StatusType.SUCCESS
     ) {
+        val formatLabel = stringResource(
+            when (format) {
+                ExportFormat.PDF -> R.string.export_format_pdf
+                ExportFormat.CSV -> R.string.export_format_csv
+            }
+        )
         Text(
-            text = stringResource(R.string.export_success_format, format.name),
+            text = stringResource(R.string.export_success_format, formatLabel),
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -1233,8 +1279,23 @@ private fun copyExportUriToClipboard(context: Context, fileUri: Uri) {
     ).show()
 }
 
+private fun shareExport(context: Context, fileUri: Uri, format: ExportFormat) {
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = when (format) {
+            ExportFormat.PDF -> "application/pdf"
+            ExportFormat.CSV -> "text/csv"
+        }
+        putExtra(Intent.EXTRA_STREAM, fileUri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.export_share_subject))
+    }
+    context.startActivity(
+        Intent.createChooser(shareIntent, context.getString(R.string.share_export))
+    )
+}
+
 @Composable
-fun SettingsToggleRowV2(
+private fun SettingsToggleRow(
     title: String,
     supportingText: String? = null,
     checked: Boolean,
@@ -1286,7 +1347,7 @@ fun SettingsToggleRowV2(
 }
 
 @Composable
-fun SettingsTimeButtonRowV2(
+private fun SettingsTimeButtonRow(
     label: String,
     time: LocalTime,
     enabled: Boolean,
@@ -1324,7 +1385,7 @@ fun SettingsTimeButtonRowV2(
 }
 
 @Composable
-fun OvertimeTargetsSectionV2(
+private fun OvertimeTargetsSection(
     dailyTargetHours: Double,
     weeklyTargetHours: Double,
     monthlyTargetHours: Double,
@@ -1511,14 +1572,6 @@ private fun openNotificationSettings(context: Context) {
         }
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    context.startActivity(intent)
-}
-
-private fun openAppSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-        data = Uri.parse("package:${context.packageName}")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
     context.startActivity(intent)
 }
 

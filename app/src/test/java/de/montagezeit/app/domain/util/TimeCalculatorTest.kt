@@ -161,8 +161,6 @@ class TimeCalculatorTest {
 
     @Test
     fun `calculate - INTERSITE Legs summieren korrekt`() {
-        val entry = WorkEntry(date = date, dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 0)
         val legs = listOf(
             TravelLeg(workEntryDate = date, sortOrder = 0,
                 category = TravelLegCategory.OUTBOUND,

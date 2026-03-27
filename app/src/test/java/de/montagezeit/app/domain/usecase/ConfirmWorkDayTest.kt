@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -29,7 +28,7 @@ class ConfirmWorkDayTest {
     )
 
     @Test
-    fun `invoke throws when no day location is available`() = runTest {
+    fun `invoke creates confirmed work day when no entry exists`() = runTest {
         val date = LocalDate.now()
         coEvery { workEntryDao.upsert(any()) } returns Unit
         stubReadModifyWrite(workEntryDao, existingEntry = null)
@@ -41,14 +40,18 @@ class ConfirmWorkDayTest {
             )
         )
 
-        try {
-            useCase(date, source = "TEST")
-            fail("Expected missing day location to fail")
-        } catch (expected: IllegalArgumentException) {
-            assertEquals("Arbeitsort fehlt für bestätigten Arbeitstag", expected.message)
-        }
+        val result = useCase(date, source = "TEST")
 
-        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+        assertEquals(DayType.WORK, result.dayType)
+        assertEquals(LocalTime.of(9, 0), result.workStart)
+        assertEquals(LocalTime.of(18, 0), result.workEnd)
+        assertEquals(45, result.breakMinutes)
+        assertEquals("", result.dayLocationLabel)
+        assertNotNull(result.morningCapturedAt)
+        assertEquals(true, result.confirmedWorkDay)
+        assertNotNull(result.confirmationAt)
+        assertEquals("TEST", result.confirmationSource)
+        coVerify(exactly = 1) { workEntryDao.upsert(result) }
     }
 
     @Test

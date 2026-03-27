@@ -13,7 +13,7 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 ## Projektstatus
 
 - Single-Module-Android-Projekt (`:app`)
-- App-Version: `1.0.2` (`versionCode 3`)
+- App-Version: `1.1.1` (`versionCode 5`)
 - Room-Datenbank: Schema `14`, Migrationen `1 -> 14`
 
 ## Tech Stack
@@ -65,6 +65,7 @@ Build-Umgebung:
 ### Export
 
 - PDF-Export mit Preview-Flow in den Settings
+- CSV-Export als sichtbarer Schnell-Export in den Settings
 - PDF-Stammdaten in den Settings:
   - Mitarbeitername
   - Firma
@@ -72,7 +73,10 @@ Build-Umgebung:
   - Personalnummer
 - CSV-Zellwerte werden mit Quoting fuer `;`, Anfuehrungszeichen und Zeilenumbrueche exportiert
 - Fuehrende Formel-Praefixe (`=`, `+`, `-`, `@`) werden fuer CSV zusaetzlich neutralisiert
-- Ein `CsvExporter` ist im Code vorhanden, ist aktuell aber nicht an den sichtbaren Settings-/Export-Flow angebunden
+- PDF und CSV teilen sich dieselben Export-Zeitraeume:
+  - aktueller Monat
+  - letzte 30 Tage
+  - benutzerdefinierter Zeitraum
 
 ## Aktuelles Verhalten von Today, DayType und Remindern
 

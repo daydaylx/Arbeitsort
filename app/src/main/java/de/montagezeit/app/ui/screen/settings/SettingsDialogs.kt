@@ -113,8 +113,9 @@ fun PdfSettingsDialog(
 }
 
 @Composable
-fun PdfCustomRangeDialog(
-    onDateRangeSelected: (LocalDate, LocalDate) -> Unit,
+fun ExportRangeDialog(
+    onPdfRangeSelected: (LocalDate, LocalDate) -> Unit,
+    onCsvRangeSelected: (LocalDate, LocalDate) -> Unit,
     onPreviewRangeSelected: (LocalDate, LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -168,11 +169,17 @@ fun PdfCustomRangeDialog(
                 ) {
                     Text(stringResource(R.string.action_preview))
                 }
-                Button(
-                    onClick = { onDateRangeSelected(startDate, endDate) },
+                OutlinedButton(
+                    onClick = { onCsvRangeSelected(startDate, endDate) },
                     enabled = !startDate.isAfter(endDate)
                 ) {
-                    Text(stringResource(R.string.action_export))
+                    Text(stringResource(R.string.export_format_csv))
+                }
+                Button(
+                    onClick = { onPdfRangeSelected(startDate, endDate) },
+                    enabled = !startDate.isAfter(endDate)
+                ) {
+                    Text(stringResource(R.string.export_format_pdf))
                 }
             }
         },
@@ -205,4 +212,3 @@ fun PdfCustomRangeDialog(
         )
     }
 }
-

@@ -6,6 +6,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
@@ -35,6 +36,7 @@ class SettingsViewModelTest {
     private val reminderSettingsManager = mockk<ReminderSettingsManager>(relaxed = true)
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val pdfExporter = mockk<PdfExporter>()
+    private val csvExporter = mockk<CsvExporter>()
     private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
     private val notificationManager = mockk<ReminderNotificationManager>(relaxed = true)
 
@@ -95,11 +97,50 @@ class SettingsViewModelTest {
         )
     }
 
+    @Test
+    fun `exportCsvCurrentMonth exposes csv success state`() = runTest {
+        val today = LocalDate.now()
+        val entries = listOf(WorkEntryWithTravelLegs(workEntry = WorkEntry(date = today), travelLegs = emptyList()))
+        val exportUri = mockk<android.net.Uri>()
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
+        every { csvExporter.exportToCsv(entries) } returns exportUri
+
+        val viewModel = createViewModel()
+        viewModel.exportCsvCurrentMonth()
+        advanceUntilIdle()
+
+        assertEquals(
+            SettingsUiState.ExportSuccess(
+                fileUri = exportUri,
+                format = ExportFormat.CSV
+            ),
+            viewModel.uiState.value
+        )
+    }
+
+    @Test
+    fun `exportCsvCurrentMonth maps exporter null to csv error`() = runTest {
+        val today = LocalDate.now()
+        val entries = listOf(WorkEntryWithTravelLegs(workEntry = WorkEntry(date = today), travelLegs = emptyList()))
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
+        every { csvExporter.exportToCsv(entries) } returns null
+
+        val viewModel = createViewModel()
+        viewModel.exportCsvCurrentMonth()
+        advanceUntilIdle()
+
+        assertEquals(
+            SettingsUiState.ExportError(UiText.StringResource(R.string.settings_error_csv_export_failed)),
+            viewModel.uiState.value
+        )
+    }
+
     private fun createViewModel(): SettingsViewModel {
         return SettingsViewModel(
             reminderSettingsManager = reminderSettingsManager,
             workEntryDao = workEntryDao,
             pdfExporter = pdfExporter,
+            csvExporter = csvExporter,
             reminderScheduler = reminderScheduler,
             notificationManager = notificationManager
         )
