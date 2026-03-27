@@ -1,1 +1,0 @@
-// Deprecated file. All components moved to de.montagezeit.app.ui.components

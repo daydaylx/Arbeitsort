@@ -1,1 +1,0 @@
-// Deprecated. Moved to de.montagezeit.app.ui.components.TimePickerDialog

@@ -79,7 +79,7 @@ Reboot-Resilienz:
 - Plant alle Reminder-Worker neu
 
 #### 7. Settings UI (`ui/screen/`)
-**ReminderSettingsScreen.kt** mit:
+**SettingsScreen.kt** (enthält die Sektion für Erinnerungen) mit:
 - Toggle für Morning/Evening/Fallback
 - Time Picker für Fenster-Start/Ende
 - Slider für Intervalle
