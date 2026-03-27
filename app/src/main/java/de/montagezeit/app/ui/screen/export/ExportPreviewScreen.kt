@@ -51,9 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.common.PrimaryActionButton
-import de.montagezeit.app.ui.common.SecondaryActionButton
-import de.montagezeit.app.ui.common.TertiaryActionButton
+import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import kotlin.math.roundToInt

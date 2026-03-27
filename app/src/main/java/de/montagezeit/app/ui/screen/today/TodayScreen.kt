@@ -39,9 +39,9 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
-import de.montagezeit.app.ui.common.PrimaryActionButton
-import de.montagezeit.app.ui.common.SecondaryActionButton
-import de.montagezeit.app.ui.common.TertiaryActionButton
+import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString

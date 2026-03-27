@@ -54,8 +54,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.common.PrimaryActionButton
-import de.montagezeit.app.ui.common.TertiaryActionButton
+
 
 /**
  * Accessibility-Konstanten für konsistente Touch-Targets
@@ -673,3 +672,183 @@ fun Modifier.clickableWithAccessibility(
     onClick = onClick,
     onClickLabel = contentDescription
 )
+escription: String
+): Modifier = this.clickable(
+    onClick = onClick,
+    onClickLabel = contentDescription
+)
+
+@Composable
+fun PrimaryActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
+    icon: ImageVector? = null,
+    contentDescription: String? = null,
+    minHeight: Dp = AccessibilityDefaults.PrimaryButtonHeight,
+    shape: androidx.compose.ui.graphics.Shape? = null,
+    colors: androidx.compose.material3.ButtonColors? = null,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics { this.contentDescription = contentDescription }
+    } else {
+        Modifier
+    }
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
+    )
+
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
+        enabled = enabled && !isLoading,
+        shape = resolvedShape,
+        colors = resolvedColors
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(18.dp)
+                    .padding(end = 8.dp),
+                strokeWidth = 2.dp,
+                color = androidx.compose.material3.LocalContentColor.current
+            )
+        } else {
+            icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+        content()
+    }
+}
+
+@Composable
+fun SecondaryActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
+    icon: ImageVector? = null,
+    contentDescription: String? = null,
+    minHeight: Dp = AccessibilityDefaults.SecondaryButtonHeight,
+    shape: androidx.compose.ui.graphics.Shape? = null,
+    colors: androidx.compose.material3.ButtonColors? = null,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics { this.contentDescription = contentDescription }
+    } else {
+        Modifier
+    }
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+        contentColor = MaterialTheme.colorScheme.onSurface
+    )
+
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
+        enabled = enabled && !isLoading,
+        shape = resolvedShape,
+        colors = resolvedColors
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(18.dp)
+                    .padding(end = 8.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+        content()
+    }
+}
+
+@Composable
+fun TertiaryActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
+    icon: ImageVector? = null,
+    contentDescription: String? = null,
+    minHeight: Dp = AccessibilityDefaults.TertiaryButtonHeight,
+    shape: androidx.compose.ui.graphics.Shape? = null,
+    colors: androidx.compose.material3.ButtonColors? = null,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+        Modifier.semantics { this.contentDescription = contentDescription }
+    } else {
+        Modifier
+    }
+    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.textButtonColors()
+
+    androidx.compose.material3.TextButton(
+        onClick = onClick,
+        modifier = semanticsModifier
+            .then(modifier)
+            .heightIn(min = minHeight),
+        enabled = enabled && !isLoading,
+        shape = resolvedShape,
+        colors = resolvedColors
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(18.dp)
+                    .padding(end = 8.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+        content()
+    }
+}
+
+@Composable
+fun DestructiveActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = AccessibilityDefaults.PrimaryButtonHeight),
+        enabled = enabled,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError
+        ),
+        content = content
+    )
+}
