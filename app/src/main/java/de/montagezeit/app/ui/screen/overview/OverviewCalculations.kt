@@ -61,7 +61,7 @@ internal fun buildOverviewMetrics(
 
     return OverviewMetrics(
         overtimeHours = overtime.totalOvertimeHours,
-        targetHours = targetHoursForPeriod(period, settings),
+        targetHours = overtime.totalTargetHours,
         actualHours = overtime.totalActualHours,
         travelHours = stats.totalTravelMinutes / 60.0,
         mealAllowanceCents = stats.mealAllowanceCents,

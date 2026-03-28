@@ -56,7 +56,7 @@ class AggregateWorkStats {
     private val classifier = ClassifyDay()
 
     operator fun invoke(entries: List<WorkEntryWithTravelLegs>): WorkStatsResult {
-        val confirmed = entries.filter { it.workEntry.confirmedWorkDay }
+        val confirmed = entries.filter { it.workEntry.confirmedWorkDay || it.orderedTravelLegs.isNotEmpty() }
         
         // Neue Klassifikation-basierte Zählung
         val classifiedDays = confirmed.map { entry ->

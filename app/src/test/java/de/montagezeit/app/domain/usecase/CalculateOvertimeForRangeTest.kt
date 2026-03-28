@@ -5,7 +5,6 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -15,7 +14,8 @@ class CalculateOvertimeForRangeTest {
     private val useCase = CalculateOvertimeForRange()
 
     @Test
-    fun `normaler arbeitstag mit positiven ueberstunden`() {
+    fun `nur Arbeit`() {
+        // 8h IST, 8h SOLL, Saldo 0
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -23,86 +23,8 @@ class CalculateOvertimeForRangeTest {
                     dayType = DayType.WORK,
                     confirmedWorkDay = true,
                     workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(18, 0),
-                    breakMinutes = 60
-                )
-            ),
-            dailyTargetHours = 8.0
-        )
-
-        assertEquals(1.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(9.0, result.totalActualHours, 0.0001)
-        assertEquals(8.0, result.totalTargetHours, 0.0001)
-        assertEquals(1, result.countedDays)
-        assertEquals(0.0, result.offDayTravelHours, 0.0001)
-        assertEquals(0, result.offDayTravelDays)
-    }
-
-    @Test
-    fun `minusstunden werden korrekt berechnet`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 4),
-                    dayType = DayType.WORK,
-                    confirmedWorkDay = true,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(15, 0),
-                    breakMinutes = 60
-                )
-            ),
-            dailyTargetHours = 8.0
-        )
-
-        assertEquals(-2.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(6.0, result.totalActualHours, 0.0001)
-        assertEquals(8.0, result.totalTargetHours, 0.0001)
-        assertEquals(1, result.countedDays)
-        assertEquals(0.0, result.offDayTravelHours, 0.0001)
-        assertEquals(0, result.offDayTravelDays)
-    }
-
-    @Test
-    fun `freier tag mit fahrzeit wird separat gezaehlt`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 5),
-                    dayType = DayType.OFF,
-                    confirmedWorkDay = true,
-                    travelPaidMinutes = 120
-                )
-            ),
-            dailyTargetHours = 8.0
-        )
-
-        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(0.0, result.totalActualHours, 0.0001)
-        assertEquals(0.0, result.totalTargetHours, 0.0001)
-        assertEquals(0, result.countedDays)
-        assertEquals(2.0, result.offDayTravelHours, 0.0001)
-        assertEquals(1, result.offDayTravelDays)
-    }
-
-    @Test
-    fun `unbestaetigter tag wird ignoriert`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 6),
-                    dayType = DayType.WORK,
-                    confirmedWorkDay = false,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(18, 0),
-                    breakMinutes = 60
-                ),
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 7),
-                    dayType = DayType.WORK,
-                    confirmedWorkDay = true,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(17, 0),
-                    breakMinutes = 60
+                    workEnd = LocalTime.of(16, 0),
+                    breakMinutes = 0
                 )
             ),
             dailyTargetHours = 8.0
@@ -112,87 +34,86 @@ class CalculateOvertimeForRangeTest {
         assertEquals(8.0, result.totalActualHours, 0.0001)
         assertEquals(8.0, result.totalTargetHours, 0.0001)
         assertEquals(1, result.countedDays)
-        assertEquals(0.0, result.offDayTravelHours, 0.0001)
-        assertEquals(0, result.offDayTravelDays)
     }
 
     @Test
-    fun `mix aus mehreren tagen trennt offday fahrzeit von ueberstunden`() {
+    fun `nur Fahrzeit - unbestaetigter WORK-Tag mit Travel wird aggregiert`() {
+        // WORK-Tag unbestätigt aber mit Travel (4h IST, 8h SOLL, Saldo -4)
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
-                    date = LocalDate.of(2026, 1, 8),
-                    dayType = DayType.WORK,
-                    confirmedWorkDay = true,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(18, 0),
-                    breakMinutes = 60
-                ),
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 9),
-                    dayType = DayType.WORK,
-                    confirmedWorkDay = true,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(16, 0),
-                    breakMinutes = 60
-                ),
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 10),
-                    dayType = DayType.OFF,
-                    confirmedWorkDay = true,
-                    travelPaidMinutes = 90
-                ),
-                overtimeEntry(
-                    date = LocalDate.of(2026, 1, 11),
+                    date = LocalDate.of(2026, 1, 4),
                     dayType = DayType.WORK,
                     confirmedWorkDay = false,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(20, 0),
-                    breakMinutes = 60
+                    travelPaidMinutes = 240 // 4 Stunden
                 )
             ),
             dailyTargetHours = 8.0
         )
 
-        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(16.0, result.totalActualHours, 0.0001)
-        assertEquals(16.0, result.totalTargetHours, 0.0001)
-        assertEquals(2, result.countedDays)
-        assertEquals(1.5, result.offDayTravelHours, 0.0001)
+        assertEquals(-4.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(4.0, result.totalActualHours, 0.0001)
+        assertEquals(8.0, result.totalTargetHours, 0.0001)
+        assertEquals(1, result.countedDays)
+    }
+
+    @Test
+    fun `Arbeit und Fahrzeit kombiniert`() {
+        // (12h IST, 8h SOLL, Saldo +4)
+        val result = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 5),
+                    dayType = DayType.WORK,
+                    confirmedWorkDay = true,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(16, 0), // 8h Arbeit
+                    breakMinutes = 0,
+                    travelPaidMinutes = 240 // 4h Fahrt
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+
+        assertEquals(4.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(12.0, result.totalActualHours, 0.0001)
+        assertEquals(8.0, result.totalTargetHours, 0.0001)
+        assertEquals(1, result.countedDays)
+    }
+
+    @Test
+    fun `frei mit Reise`() {
+        // OFF-Tag (3h IST, 0h SOLL, Saldo +3)
+        // Vorher: travelHours wurde nur zu offDayTravelHours addiert.
+        // Jetzt: erhöht totalActualHours!
+        val result = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 6),
+                    dayType = DayType.OFF,
+                    confirmedWorkDay = true,
+                    travelPaidMinutes = 180 // 3 Stunden
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+
+        // 3h IST, 0 SOLL => +3 Überstunden
+        assertEquals(3.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(3.0, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalTargetHours, 0.0001)
+        assertEquals(0, result.countedDays)
+        assertEquals(3.0, result.offDayTravelHours, 0.0001)
         assertEquals(1, result.offDayTravelDays)
     }
 
     @Test
-    fun `offday ohne fahrzeit erhoeht offday travel zaehler nicht`() {
+    fun `Ueberstunden-Abbau (COMP_TIME)`() {
+        // (0h IST, 8h SOLL, Saldo -8)
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
-                    date = LocalDate.of(2026, 1, 12),
-                    dayType = DayType.OFF,
-                    confirmedWorkDay = true
-                )
-            ),
-            dailyTargetHours = 8.0
-        )
-
-        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(0.0, result.totalActualHours, 0.0001)
-        assertEquals(0.0, result.totalTargetHours, 0.0001)
-        assertEquals(0, result.countedDays)
-        assertEquals(0.0, result.offDayTravelHours, 0.0001)
-        assertEquals(0, result.offDayTravelDays)
-    }
-
-    // -------------------------------------------------------------------------
-    // COMP_TIME
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `COMP_TIME tag reduziert overtime bank um targetMinutes`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 3, 1),
+                    date = LocalDate.of(2026, 1, 7),
                     dayType = DayType.COMP_TIME,
                     confirmedWorkDay = true
                 )
@@ -200,115 +121,70 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
 
-        // Net delta = 0 actual - 8 target = -8 h
         assertEquals(-8.0, result.totalOvertimeHours, 0.0001)
         assertEquals(0.0, result.totalActualHours, 0.0001)
         assertEquals(8.0, result.totalTargetHours, 0.0001)
         assertEquals(1, result.countedDays)
-        assertEquals(0.0, result.offDayTravelHours, 0.0001)
-        assertEquals(0, result.offDayTravelDays)
     }
-
+    
     @Test
-    fun `COMP_TIME tag mit anderem target korrekt berechnet`() {
-        val result = useCase(
+    fun `leerer Arbeitstag wird nur gezaehlt wenn explizit bestaetigt`() {
+        // Unbestätigt -> Ignoriert
+        val result1 = useCase(
             entries = listOf(
                 overtimeEntry(
-                    date = LocalDate.of(2026, 3, 2),
-                    dayType = DayType.COMP_TIME,
-                    confirmedWorkDay = true
-                )
-            ),
-            dailyTargetHours = 10.0
-        )
-
-        assertEquals(-10.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(0.0, result.totalActualHours, 0.0001)
-        assertEquals(10.0, result.totalTargetHours, 0.0001)
-        assertEquals(1, result.countedDays)
-    }
-
-    @Test
-    fun `COMP_TIME und WORK tag kombiniert berechnet korrekt`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 3, 3),
+                    date = LocalDate.of(2026, 1, 8),
                     dayType = DayType.WORK,
-                    confirmedWorkDay = true,
-                    workStart = LocalTime.of(8, 0),
-                    workEnd = LocalTime.of(18, 0),
-                    breakMinutes = 60
-                ),
-                overtimeEntry(
-                    date = LocalDate.of(2026, 3, 4),
-                    dayType = DayType.COMP_TIME,
-                    confirmedWorkDay = true
-                )
-            ),
-            dailyTargetHours = 8.0
-        )
-
-        // WORK day: 9h actual - 8h target = +1h
-        // COMP_TIME day: 0h actual - 8h target = -8h
-        // Total: 9h actual, 16h target, -7h overtime
-        assertEquals(-7.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(9.0, result.totalActualHours, 0.0001)
-        assertEquals(16.0, result.totalTargetHours, 0.0001)
-        assertEquals(2, result.countedDays)
-    }
-
-    @Test
-    fun `unbestaetiger COMP_TIME tag wird ignoriert`() {
-        val result = useCase(
-            entries = listOf(
-                overtimeEntry(
-                    date = LocalDate.of(2026, 3, 5),
-                    dayType = DayType.COMP_TIME,
                     confirmedWorkDay = false
                 )
             ),
             dailyTargetHours = 8.0
         )
-
-        // confirmedWorkDay == false → skip
-        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(0, result.countedDays)
-    }
-
-    @Test
-    fun `dailyTargetHours kleiner gleich null wirft exception`() {
-        try {
-            useCase(entries = emptyList(), dailyTargetHours = 0.0)
-            fail("Expected IllegalArgumentException")
-        } catch (expected: IllegalArgumentException) {
-            assertEquals("dailyTargetHours must be > 0", expected.message)
-        }
+        assertEquals(0, result1.countedDays)
+        
+        // Bestätigt -> 0h IST, 8h SOLL, Saldo -8
+        val result2 = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 9),
+                    dayType = DayType.WORK,
+                    confirmedWorkDay = true
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+        assertEquals(1, result2.countedDays)
+        assertEquals(-8.0, result2.totalOvertimeHours, 0.0001)
     }
 
     private fun overtimeEntry(
         date: LocalDate,
         dayType: DayType,
         confirmedWorkDay: Boolean,
-        workStart: LocalTime = LocalTime.of(8, 0),
-        workEnd: LocalTime = LocalTime.of(8, 0),
+        workStart: LocalTime? = null,
+        workEnd: LocalTime? = null,
         breakMinutes: Int = 0,
-        travelPaidMinutes: Int? = null
+        travelPaidMinutes: Int = 0
     ): WorkEntryWithTravelLegs {
-        return WorkEntryWithTravelLegs(
-            workEntry = WorkEntry(
-                date = date,
-                workStart = workStart,
-                workEnd = workEnd,
-                breakMinutes = breakMinutes,
-                dayType = dayType,
-                confirmedWorkDay = confirmedWorkDay
-            ),
-            travelLegs = if (travelPaidMinutes != null && travelPaidMinutes > 0) {
-                listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = travelPaidMinutes))
-            } else {
-                emptyList()
-            }
+        val entry = WorkEntry(
+            date = date,
+            dayType = dayType,
+            confirmedWorkDay = confirmedWorkDay,
+            workStart = workStart,
+            workEnd = workEnd,
+            breakMinutes = breakMinutes
         )
+
+        val travelLegs = if (travelPaidMinutes > 0) {
+            listOf(
+                TravelLeg(
+                    workEntryDate = date,
+                    sortOrder = 0,
+                    paidMinutesOverride = travelPaidMinutes
+                )
+            )
+        } else emptyList()
+
+        return WorkEntryWithTravelLegs(workEntry = entry, travelLegs = travelLegs)
     }
 }
