@@ -2,6 +2,7 @@ package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -138,5 +139,25 @@ object PdfUtilities {
 
     fun filterWorkDays(entries: Collection<WorkEntry>): List<WorkEntry> {
         return entries.filter { it.dayType == DayType.WORK }
+    }
+
+    /**
+     * Bestimmt den Reiseart-Schlüssel basierend auf den TravelLeg-Kategorien.
+     * Rückgabewerte: "ARRIVAL", "DEPARTURE", "ARRIVAL_DEPARTURE", "CONTINUATION", "TRAVEL", "NONE"
+     * Lokalisierung erfolgt im aufrufenden Code über String-Ressourcen.
+     */
+    fun determineTravelTypeKey(travelLegs: List<TravelLeg>): String {
+        if (travelLegs.isEmpty()) return "NONE"
+        val categories = travelLegs.map { it.category }.toSet()
+        val hasOutbound = TravelLegCategory.OUTBOUND in categories
+        val hasReturn = TravelLegCategory.RETURN in categories
+        val hasIntersite = TravelLegCategory.INTERSITE in categories
+        return when {
+            hasOutbound && hasReturn -> "ARRIVAL_DEPARTURE"
+            hasOutbound              -> "ARRIVAL"
+            hasReturn                -> "DEPARTURE"
+            hasIntersite             -> "CONTINUATION"
+            else                     -> "TRAVEL"
+        }
     }
 }
