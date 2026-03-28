@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -150,7 +152,9 @@ fun OverviewScreen(
                             metrics = metrics,
                             onPreviousRange = viewModel::goToPreviousRange,
                             onNextRange = viewModel::goToNextRange,
-                            onOpenPeriodPicker = { showPeriodPicker = true }
+                            onSelectPeriod = viewModel::selectPeriod,
+                            onOpenPeriodPicker = { showPeriodPicker = true },
+                            onActionNeededClick = onOpenHistory
                         )
                     }
                 }
@@ -176,7 +180,9 @@ private fun OverviewContent(
     metrics: OverviewMetrics,
     onPreviousRange: () -> Unit,
     onNextRange: () -> Unit,
-    onOpenPeriodPicker: () -> Unit
+    onSelectPeriod: (OverviewPeriod) -> Unit,
+    onOpenPeriodPicker: () -> Unit,
+    onActionNeededClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -193,15 +199,53 @@ private fun OverviewContent(
             onOpenPicker = onOpenPeriodPicker
         )
 
+        OverviewPeriodQuickSelector(
+            selectedPeriod = selectedPeriod,
+            onSelectPeriod = onSelectPeriod
+        )
+
         OverviewHeroSection(
             selectedDate = selectedDate,
             selectedPeriod = selectedPeriod,
             metrics = metrics
         )
 
-        OverviewKpiGrid(metrics = metrics)
+        OverviewKpiGrid(
+            metrics = metrics,
+            onActionNeededClick = onActionNeededClick
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun OverviewPeriodQuickSelector(
+    selectedPeriod: OverviewPeriod,
+    onSelectPeriod: (OverviewPeriod) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OverviewPeriod.values().forEach { period ->
+            FilterChip(
+                selected = selectedPeriod == period,
+                onClick = { onSelectPeriod(period) },
+                label = { 
+                    Text(
+                        text = stringResource(period.labelRes),
+                        style = MaterialTheme.typography.labelMedium
+                    ) 
+                },
+                modifier = Modifier.weight(1f),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
     }
 }
 
@@ -320,7 +364,10 @@ private fun OverviewHeroSection(
 }
 
 @Composable
-private fun OverviewKpiGrid(metrics: OverviewMetrics) {
+private fun OverviewKpiGrid(
+    metrics: OverviewMetrics,
+    onActionNeededClick: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -362,7 +409,8 @@ private fun OverviewKpiGrid(metrics: OverviewMetrics) {
                 } else {
                     stringResource(R.string.overview_kpi_none_unconfirmed)
                 },
-                tint = if (actionNeeded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                tint = if (actionNeeded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                onClick = onActionNeededClick
             )
         }
     }
@@ -374,9 +422,16 @@ private fun KpiGridItem(
     icon: ImageVector,
     label: String,
     value: String,
-    tint: Color
+    tint: Color,
+    onClick: (() -> Unit)? = null
 ) {
-    MZCard(modifier = modifier) {
+    MZCard(
+        modifier = if (onClick != null) {
+            modifier.clickable(onClick = onClick)
+        } else {
+            modifier
+        }
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(
                 imageVector = icon,
