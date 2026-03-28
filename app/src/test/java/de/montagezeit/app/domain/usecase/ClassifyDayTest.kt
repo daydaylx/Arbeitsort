@@ -99,25 +99,23 @@ class ClassifyDayTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `COMP_TIME ohne Reise ergibt FREI`() {
+    fun `COMP_TIME ohne Reise ergibt UEBERSTUNDEN_ABBAU`() {
         val result = classifier(
             dayType = DayType.COMP_TIME,
             workMinutes = 0,
             travelMinutes = 0
         )
-        assertEquals(DayClassification.FREI, result)
+        assertEquals(DayClassification.UEBERSTUNDEN_ABBAU, result)
     }
 
     @Test
-    fun `COMP_TIME mit Reise ergibt FREI`() {
-        // COMP_TIME mit Reise wird aktuell nicht unterstützt,
-        // daher immer FREI
+    fun `COMP_TIME mit Reise ergibt UEBERSTUNDEN_ABBAU`() {
         val result = classifier(
             dayType = DayType.COMP_TIME,
             workMinutes = 0,
             travelMinutes = 120
         )
-        assertEquals(DayClassification.FREI, result)
+        assertEquals(DayClassification.UEBERSTUNDEN_ABBAU, result)
     }
 
     // -------------------------------------------------------------------------

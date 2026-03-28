@@ -59,7 +59,15 @@ enum class DayClassification {
      * WARNUNG: Dies sollte in der Regel durch Validierung verhindert werden,
      * da es auf vergessene Zeiterfassung hindeuten könnte.
      */
-    ARBEITSTAG_LEER;
+    ARBEITSTAG_LEER,
+    
+    /**
+     * Tag zum Abbau von Überstunden (COMP_TIME).
+     * - Zählt als Arbeitstag (Sollstunden werden abgezogen)
+     * - Keine Ist-Stunden
+     * - Keine Verpflegungspauschale
+     */
+    UEBERSTUNDEN_ABBAU;
     
     /**
      * true, wenn dieser Tag als Arbeitstag gezählt wird (für Sollstunden-Berechnung).
@@ -93,5 +101,5 @@ enum class DayClassification {
      * true, wenn dieser Tag für Verpflegungspauschale berechtigt sein kann.
      */
     val isMealAllowanceEligible: Boolean
-        get() = this in listOf(ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE)
+        get() = this in listOf(FREI_MIT_REISE, ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE)
 }

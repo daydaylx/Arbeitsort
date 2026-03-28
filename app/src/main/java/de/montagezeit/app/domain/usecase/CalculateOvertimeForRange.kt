@@ -72,6 +72,9 @@ class CalculateOvertimeForRange {
                     }
                 }
                 DayClassification.FREI -> {
+                    // Keine Stunden, kein Ziel
+                }
+                DayClassification.UEBERSTUNDEN_ABBAU -> {
                     // Wenn es ein COMP_TIME (Überstundenabbau) Tag ist, reduzieren wir das Saldo
                     if (entry.workEntry.dayType == DayType.COMP_TIME && entry.workEntry.confirmedWorkDay) {
                         countedDays += 1

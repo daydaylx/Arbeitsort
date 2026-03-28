@@ -59,9 +59,8 @@ class ClassifyDay {
                 if (hasTravel) DayClassification.FREI_MIT_REISE else DayClassification.FREI
             }
             DayType.COMP_TIME -> {
-                // COMP_TIME ist immer FREI, auch mit Reisezeit
-                // (Reisezeit an COMP_TIME-Tagen wird aktuell nicht unterstützt)
-                DayClassification.FREI
+                // COMP_TIME ist ein expliziter Überstundenabbau-Tag
+                DayClassification.UEBERSTUNDEN_ABBAU
             }
             DayType.WORK -> {
                 when {

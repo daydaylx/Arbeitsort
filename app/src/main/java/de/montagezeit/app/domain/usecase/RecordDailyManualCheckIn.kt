@@ -58,6 +58,8 @@ class RecordDailyManualCheckIn(
                     confirmedWorkDay = true,
                     confirmationAt = now,
                     confirmationSource = CONFIRMATION_SOURCE_UI,
+                    morningCapturedAt = existingEntry.morningCapturedAt ?: now,
+                    eveningCapturedAt = existingEntry.eveningCapturedAt ?: now,
                     updatedAt = now
                 )
             } else {
@@ -74,7 +76,9 @@ class RecordDailyManualCheckIn(
                     mealAllowanceAmountCents = mealResult.amountCents,
                     confirmedWorkDay = true,
                     confirmationAt = now,
-                    confirmationSource = CONFIRMATION_SOURCE_UI
+                    confirmationSource = CONFIRMATION_SOURCE_UI,
+                    morningCapturedAt = now,
+                    eveningCapturedAt = now
                 )
             }
             result = updatedEntry
