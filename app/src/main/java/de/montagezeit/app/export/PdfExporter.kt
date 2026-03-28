@@ -14,8 +14,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.model.DayClassification
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.domain.usecase.classifyDay
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -60,20 +62,20 @@ class PdfExporter @Inject constructor(
         private const val TABLE_HEADER_HEIGHT = 30
         private const val ROW_HEIGHT = 25
         private const val SPACING = 10
-        private const val SUMMARY_HEIGHT = 120
+        private const val SUMMARY_HEIGHT = 75   // 3 Zeilen × 25 pt
         private const val SIGNATURE_HEIGHT = 80
-        
+
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
+        // 9 Spalten: 60+50+50+45+50+95+55+70+40 = 515
         private const val COL_DATE = 60
         private const val COL_START = 50
         private const val COL_END = 50
         private const val COL_BREAK = 45
         private const val COL_WORK_TIME = 50
-        private const val COL_TRAVEL_WINDOW = 70
-        private const val COL_TRAVEL_TIME = 55
-        private const val COL_TOTAL_TIME = 55
-        private const val COL_LOCATION = 50
-        private const val COL_MEAL_ALLOWANCE = 30
+        private const val COL_TRAVEL_ROUTE = 95   // war COL_TRAVEL_WINDOW=70; breiter für längere Routen
+        private const val COL_TRAVEL_TYPE = 55    // war COL_TRAVEL_TIME=55; jetzt Reiseart (Anreise/Abreise/…)
+        private const val COL_LOCATION = 70       // war 50; breiter durch Wegfall der Gesamt-Spalte
+        private const val COL_BREAKFAST = 40      // war COL_MEAL_ALLOWANCE=30; Frühstück ✓/–
     }
     
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
@@ -165,7 +167,10 @@ class PdfExporter @Inject constructor(
                 var canvas = currentPage.canvas
 
                 // Header zeichnen
-                var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate)
+                // Letzten erfassten Tag ermitteln – bei Teilmonat wird "Stand:" angezeigt
+                val lastEntryDate = entries.maxOfOrNull { it.workEntry.date }
+                val actualEndDate = if (lastEntryDate != null && lastEntryDate < endDate) lastEntryDate else null
+                var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate, actualEndDate)
 
                 // Tabellenkopf zeichnen
                 yPosition = drawTableHeader(canvas, yPosition)
@@ -225,7 +230,8 @@ class PdfExporter @Inject constructor(
         project: String?,
         personnelNumber: String?,
         startDate: java.time.LocalDate,
-        endDate: java.time.LocalDate
+        endDate: java.time.LocalDate,
+        actualEndDate: java.time.LocalDate? = null
     ): Float {
         var y = MARGIN.toFloat() + 20
         
@@ -278,8 +284,22 @@ class PdfExporter @Inject constructor(
             y,
             paintHeader
         )
-        y += SPACING
-        
+        y += 20
+
+        // Stand-Hinweis: nur wenn Daten nicht bis zum Ende des gewählten Zeitraums reichen
+        if (actualEndDate != null) {
+            canvas.drawText(
+                string(R.string.pdf_export_header_as_of,
+                    dateFormat.format(java.sql.Date.valueOf(actualEndDate.toString()))),
+                MARGIN.toFloat(),
+                y,
+                paintHeader
+            )
+            y += 20
+        }
+
+        y += SPACING - 10  // Abstand vor Trennlinie beibehalten
+
         // Trennlinie
         y += 10
         canvas.drawLine(MARGIN.toFloat(), y, (PAGE_WIDTH - MARGIN).toFloat(), y, paintLine)
@@ -305,36 +325,33 @@ class PdfExporter @Inject constructor(
         )
         paintTableHeader.color = Color.BLACK
         
-        // Spaltenüberschriften
+        // Spaltenüberschriften (9 Spalten)
         var xPos = MARGIN.toFloat() + 5
         canvas.drawText(string(R.string.pdf_export_column_date), xPos, yPos + 20, paintTableHeader)
         xPos += COL_DATE
-        
+
         canvas.drawText(string(R.string.pdf_export_column_start), xPos, yPos + 20, paintTableHeader)
         xPos += COL_START
-        
+
         canvas.drawText(string(R.string.pdf_export_column_end), xPos, yPos + 20, paintTableHeader)
         xPos += COL_END
-        
+
         canvas.drawText(string(R.string.pdf_export_column_break), xPos, yPos + 20, paintTableHeader)
         xPos += COL_BREAK
-        
+
         canvas.drawText(string(R.string.pdf_export_column_work), xPos, yPos + 20, paintTableHeader)
         xPos += COL_WORK_TIME
 
-        canvas.drawText(string(R.string.pdf_export_column_travel_window), xPos, yPos + 20, paintTableHeader)
-        xPos += COL_TRAVEL_WINDOW
+        canvas.drawText(string(R.string.pdf_export_column_travel_route), xPos, yPos + 20, paintTableHeader)
+        xPos += COL_TRAVEL_ROUTE
 
-        canvas.drawText(string(R.string.pdf_export_column_travel_time), xPos, yPos + 20, paintTableHeader)
-        xPos += COL_TRAVEL_TIME
-
-        canvas.drawText(string(R.string.pdf_export_column_total), xPos, yPos + 20, paintTableHeader)
-        xPos += COL_TOTAL_TIME
+        canvas.drawText(string(R.string.pdf_export_column_travel_type), xPos, yPos + 20, paintTableHeader)
+        xPos += COL_TRAVEL_TYPE
 
         canvas.drawText(string(R.string.pdf_export_column_location), xPos, yPos + 20, paintTableHeader)
         xPos += COL_LOCATION
 
-        canvas.drawText(string(R.string.pdf_export_column_meal_allowance), xPos, yPos + 20, paintTableHeader)
+        canvas.drawText(string(R.string.pdf_export_column_breakfast), xPos, yPos + 20, paintTableHeader)
 
         // Trennlinie unter Tabellenkopf
         yPos += TABLE_HEADER_HEIGHT
@@ -374,87 +391,92 @@ class PdfExporter @Inject constructor(
                 y = drawTableHeader(activeCanvas, y)
             }
             
-            // Tabellenzeile zeichnen
+            // Tabellenzeile zeichnen (9 Spalten)
             var xPos = MARGIN.toFloat() + 5
-            
+            val dash = string(R.string.pdf_export_placeholder_dash)
+
+            // Vorberechnungen
+            val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
+            val workHours = TimeCalculator.calculateWorkHours(entry)
+            val isWorkDay = entry.dayType == DayType.WORK
+
             // Datum
             activeCanvas.drawText(PdfUtilities.formatDate(entry.date), xPos, y + 15, paintTableText)
             xPos += COL_DATE
-            
-            // Start – nur für WORK-Tage fachlich relevant
-            val isWorkDay = entry.dayType == DayType.WORK
-            val dash = string(R.string.pdf_export_placeholder_dash)
+
+            // Start – Reisetage ohne Arbeitszeit klar als "Reisetag" kennzeichnen
             val startText = when (entry.dayType) {
-                DayType.WORK -> PdfUtilities.formatTime(entry.workStart).ifBlank { dash }
-                DayType.OFF -> string(R.string.day_type_off)
+                DayType.WORK -> when {
+                    entry.workStart != null -> PdfUtilities.formatTime(entry.workStart)
+                    travelMinutes > 0       -> string(R.string.pdf_export_row_label_travel_only)
+                    else                    -> dash
+                }
+                DayType.OFF       -> string(R.string.day_type_off)
                 DayType.COMP_TIME -> string(R.string.day_type_comp_time)
             }
-            activeCanvas.drawText(
-                startText,
-                xPos, y + 15, paintTableText
-            )
+            activeCanvas.drawText(startText, xPos, y + 15, paintTableText)
             xPos += COL_START
 
-            // Ende – nur für WORK-Tage
+            // Ende – nur für WORK-Tage mit erfasster Startzeit
             activeCanvas.drawText(
-                if (isWorkDay) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash,
+                if (isWorkDay && entry.workStart != null) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash,
                 xPos, y + 15, paintTableText
             )
             xPos += COL_END
 
-            // Pause – nur für WORK-Tage
+            // Pause – nur für WORK-Tage mit erfasster Startzeit
             activeCanvas.drawText(
-                if (isWorkDay) string(R.string.format_minutes, entry.breakMinutes) else dash,
+                if (isWorkDay && entry.workStart != null) string(R.string.format_minutes, entry.breakMinutes) else dash,
                 xPos, y + 15, paintTableText
             )
             xPos += COL_BREAK
-            
+
             // Arbeitszeit
-            val workHours = TimeCalculator.calculateWorkHours(entry)
-            val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
-            val travelHours = travelMinutes / 60.0
-            val totalHours = workHours + travelHours
-            val workText = string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours))
+            val workText = if (workHours > 0) {
+                string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours))
+            } else {
+                dash
+            }
             activeCanvas.drawText(workText, xPos, y + 15, paintTableText)
             xPos += COL_WORK_TIME
 
-            // Reise (von–bis)
-            val travelWindow = PdfUtilities.buildTravelRouteSummary(travelLegs)
-            val travelWindowText = if (travelWindow.isNotBlank()) {
-                if (travelWindow.length > 18) travelWindow.take(17) + string(R.string.common_ellipsis) else travelWindow
+            // Route (von–bis) – länger als bisher darstellbar (95 pt statt 70 pt)
+            val travelRoute = PdfUtilities.buildTravelRouteSummary(travelLegs)
+            val travelRouteText = if (travelRoute.isNotBlank()) {
+                if (travelRoute.length > 23) travelRoute.take(22) + string(R.string.common_ellipsis) else travelRoute
             } else {
-                string(R.string.pdf_export_placeholder_dash)
+                dash
             }
-            activeCanvas.drawText(travelWindowText, xPos, y + 15, paintTableText)
-            xPos += COL_TRAVEL_WINDOW
+            activeCanvas.drawText(travelRouteText, xPos, y + 15, paintTableText)
+            xPos += COL_TRAVEL_ROUTE
 
-            // Reisezeit
-            val travelTime = PdfUtilities.formatTravelTime(travelMinutes)
-            val travelTimeText = if (travelMinutes > 0) {
-                string(R.string.pdf_export_value_hours, travelTime)
-            } else {
-                string(R.string.pdf_export_placeholder_dash)
+            // Reiseart: Anreise / Abreise / An-/Abreise / Weiterreise / Reise / –
+            val travelTypeText = when (PdfUtilities.determineTravelTypeKey(travelLegs)) {
+                "ARRIVAL"           -> string(R.string.pdf_export_travel_type_arrival)
+                "DEPARTURE"         -> string(R.string.pdf_export_travel_type_departure)
+                "ARRIVAL_DEPARTURE" -> string(R.string.pdf_export_travel_type_arrival_departure)
+                "CONTINUATION"      -> string(R.string.pdf_export_travel_type_continuation)
+                "TRAVEL"            -> string(R.string.pdf_export_travel_type_travel)
+                else                -> dash
             }
-            activeCanvas.drawText(travelTimeText, xPos, y + 15, paintTableText)
-            xPos += COL_TRAVEL_TIME
+            activeCanvas.drawText(travelTypeText, xPos, y + 15, paintTableText)
+            xPos += COL_TRAVEL_TYPE
 
-            // Gesamtzeit
-            val totalText = string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(totalHours))
-            activeCanvas.drawText(totalText, xPos, y + 15, paintTableText)
-            xPos += COL_TOTAL_TIME
-
-            // Ort
+            // Ort – breiter als bisher (70 pt statt 50 pt)
             val location = PdfUtilities.getLocation(entry, travelLegs)
-            activeCanvas.drawText(if (location.length > 8) location.take(7) + string(R.string.common_ellipsis) else location, xPos, y + 15, paintTableText)
+            activeCanvas.drawText(
+                if (location.length > 11) location.take(10) + string(R.string.common_ellipsis) else location,
+                xPos, y + 15, paintTableText
+            )
             xPos += COL_LOCATION
 
-            // Verpflegungspauschale
-            val vpText = if (entry.mealAllowanceAmountCents > 0) {
-                MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
+            // Frühstück: ✓ wenn Frühstück erfasst und Verpflegungspauschale greift, sonst –
+            val breakfastText = if (entry.mealBreakfastIncluded && entry.mealAllowanceBaseCents > 0) {
+                string(R.string.pdf_export_breakfast_yes)
             } else {
-                string(R.string.pdf_export_placeholder_dash)
+                dash
             }
-            activeCanvas.drawText(if (vpText.length > 8) vpText.take(7) + string(R.string.common_ellipsis) else vpText, xPos, y + 15, paintTableText)
+            activeCanvas.drawText(breakfastText, xPos, y + 15, paintTableText)
 
             y += ROW_HEIGHT
         }
@@ -477,53 +499,40 @@ class PdfExporter @Inject constructor(
      */
     private fun drawSummary(canvas: Canvas, entries: List<WorkEntryWithTravelLegs>, y: Float): Float {
         var yPos = y + 20
-        
-        val workDays = PdfUtilities.filterWorkDays(entries).size
+
+        // Arbeitstage: ClassifyDay-basiert; ARBEITSTAG_LEER nur wenn explizit bestätigt
+        val workDays = entries.count { record ->
+            val classification = record.classifyDay()
+            when (classification) {
+                DayClassification.ARBEITSTAG_LEER -> record.workEntry.confirmedWorkDay
+                else -> classification.isCountedWorkDay
+            }
+        }
         val totalWorkHours = PdfUtilities.sumWorkHours(entries)
-        val totalTravelMinutes = PdfUtilities.sumTravelMinutes(entries)
-        val totalTravelHours = totalTravelMinutes / 60.0
-        val totalPaidHours = totalWorkHours + totalTravelHours
-        
-        canvas.drawText(string(R.string.pdf_export_summary_work_days, workDays), MARGIN.toFloat(), yPos, paintSummary)
+        val totalMealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
+
+        canvas.drawText(
+            string(R.string.pdf_export_summary_work_days, workDays),
+            MARGIN.toFloat(), yPos, paintSummary
+        )
         yPos += 25
-        
+
         canvas.drawText(
             string(R.string.pdf_export_summary_work_time, PdfUtilities.formatWorkHours(totalWorkHours)),
-            MARGIN.toFloat(),
-            yPos,
-            paintSummary
+            MARGIN.toFloat(), yPos, paintSummary
         )
         yPos += 25
 
-        canvas.drawText(
-            string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelHours)),
-            MARGIN.toFloat(),
-            yPos,
-            paintSummary
-        )
-        yPos += 25
-
-        canvas.drawText(
-            string(R.string.pdf_export_summary_total_paid_time, PdfUtilities.formatWorkHours(totalPaidHours)),
-            MARGIN.toFloat(),
-            yPos,
-            paintSummary
-        )
-        yPos += 25
-
-        val totalMealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
         canvas.drawText(
             string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),
-            MARGIN.toFloat(),
-            yPos,
-            paintSummary
+            MARGIN.toFloat(), yPos, paintSummary
         )
         yPos += 25
 
         // Trennlinie
         canvas.drawLine(MARGIN.toFloat(), yPos, (PAGE_WIDTH - MARGIN).toFloat(), yPos, paintLine)
         yPos += SPACING * 3
-        
+
         return yPos
     }
     
