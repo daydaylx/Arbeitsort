@@ -491,7 +491,7 @@ private fun WorkHoursCard(entry: WorkEntry, travelLegs: List<TravelLeg>) {
             )
 
             if (travelMinutes > 0 && workMinutes > 0) {
-                Divider()
+                HorizontalDivider()
                 MZKeyValueRow(
                     label = stringResource(R.string.history_stat_work),
                     value = formatMinutes(workMinutes)

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -130,7 +131,7 @@ fun EditEntrySheet(
                         onSwipeNext = { onNavigateDate(date.plusDays(1)) },
                         modifier = Modifier.padding(bottom = 6.dp)
                     )
-                    Divider()
+                    HorizontalDivider()
                 }
 
                 when (val state = uiState) {
@@ -428,7 +429,7 @@ fun DateNavigationRow(
     ) {
         IconButton(onClick = onPrevious) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.edit_cd_prev_day)
             )
         }
@@ -437,7 +438,7 @@ fun DateNavigationRow(
         }
         IconButton(onClick = onNext) {
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = stringResource(R.string.edit_cd_next_day)
             )
         }
@@ -476,7 +477,7 @@ private fun DateNavigationSwipeZone(
             },
         contentAlignment = Alignment.Center
     ) {
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.width(44.dp),
             thickness = 2.dp,
             color = MaterialTheme.colorScheme.outlineVariant
@@ -727,7 +728,7 @@ fun EditFormContent(
         }
 
         if (showSecondaryActions && showPrimarySaveButton) {
-            Divider()
+            HorizontalDivider()
         }
 
         if (showPrimarySaveButton) {

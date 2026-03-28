@@ -25,16 +25,6 @@ class ScreenStateEntryBindingTest {
             selectedDate = selectedDate,
             todayDate = selectedDate,
             weekDaysUi = emptyList(),
-            weekStats = null,
-            monthStats = null,
-            isOvertimeConfigured = true,
-            overtimeYearDisplay = "+0.00h",
-            overtimeMonthDisplay = "+0.00h",
-            overtimeYearActualDisplay = "0.00h",
-            overtimeYearTargetDisplay = "0.00h",
-            overtimeYearCountedDays = 0,
-            overtimeYearOffDayTravelDisplay = "0.00h",
-            overtimeYearOffDayTravelDays = 0,
             loadingActions = emptySet()
         )
 
@@ -53,16 +43,6 @@ class ScreenStateEntryBindingTest {
             selectedDate = selectedDate,
             todayDate = selectedDate,
             weekDaysUi = emptyList(),
-            weekStats = null,
-            monthStats = null,
-            isOvertimeConfigured = true,
-            overtimeYearDisplay = "+0.00h",
-            overtimeMonthDisplay = "+0.00h",
-            overtimeYearActualDisplay = "0.00h",
-            overtimeYearTargetDisplay = "0.00h",
-            overtimeYearCountedDays = 0,
-            overtimeYearOffDayTravelDisplay = "0.00h",
-            overtimeYearOffDayTravelDays = 0,
             loadingActions = emptySet()
         )
 

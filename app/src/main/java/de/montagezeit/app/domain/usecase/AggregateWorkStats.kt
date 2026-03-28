@@ -24,6 +24,7 @@ data class WorkStatsResult(
     val workDaysWithWork: Int,           // ARBEITSTAG_MIT_ARBEIT
     val workDaysTravelOnly: Int,         // ARBEITSTAG_NUR_REISE
     val workDaysEmpty: Int,              // ARBEITSTAG_LEER
+    val compTimeDays: Int,               // UEBERSTUNDEN_ABBAU
     val freeDaysWithTravel: Int,         // FREI_MIT_REISE
     val freeDaysWithoutTravel: Int       // FREI
 ) {
@@ -66,9 +67,9 @@ class AggregateWorkStats {
             )
         }
         
-        // Klassische Metriken
-        val workDays = confirmed.count { it.workEntry.dayType == DayType.WORK }
-        val offDays = confirmed.count { it.workEntry.dayType == DayType.OFF || it.workEntry.dayType == DayType.COMP_TIME }
+        // Klassische Metriken (synchronisiert mit Overtime-Logik)
+        val workDays = classifiedDays.count { it.classification.isCountedWorkDay }
+        val offDays = confirmed.size - workDays
         val totalWorkMinutes = confirmed.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
         val totalTravelMinutes = confirmed.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
         
@@ -81,6 +82,7 @@ class AggregateWorkStats {
         val workDaysWithWork = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT }
         val workDaysTravelOnly = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_NUR_REISE }
         val workDaysEmpty = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_LEER }
+        val compTimeDays = classifiedDays.count { it.classification == DayClassification.UEBERSTUNDEN_ABBAU }
         val freeDaysWithTravel = classifiedDays.count { it.classification == DayClassification.FREI_MIT_REISE }
         val freeDaysWithoutTravel = classifiedDays.count { it.classification == DayClassification.FREI }
         
@@ -94,6 +96,7 @@ class AggregateWorkStats {
             workDaysWithWork = workDaysWithWork,
             workDaysTravelOnly = workDaysTravelOnly,
             workDaysEmpty = workDaysEmpty,
+            compTimeDays = compTimeDays,
             freeDaysWithTravel = freeDaysWithTravel,
             freeDaysWithoutTravel = freeDaysWithoutTravel
         )

@@ -384,8 +384,13 @@ class PdfExporter @Inject constructor(
             // Start – nur für WORK-Tage fachlich relevant
             val isWorkDay = entry.dayType == DayType.WORK
             val dash = string(R.string.pdf_export_placeholder_dash)
+            val startText = when (entry.dayType) {
+                DayType.WORK -> PdfUtilities.formatTime(entry.workStart).ifBlank { dash }
+                DayType.OFF -> string(R.string.day_type_off)
+                DayType.COMP_TIME -> string(R.string.day_type_comp_time)
+            }
             activeCanvas.drawText(
-                if (isWorkDay) PdfUtilities.formatTime(entry.workStart).ifBlank { dash } else dash,
+                startText,
                 xPos, y + 15, paintTableText
             )
             xPos += COL_START

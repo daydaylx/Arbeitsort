@@ -73,7 +73,7 @@ enum class DayClassification {
      * true, wenn dieser Tag als Arbeitstag gezählt wird (für Sollstunden-Berechnung).
      */
     val isCountedWorkDay: Boolean
-        get() = this in listOf(ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE, ARBEITSTAG_LEER)
+        get() = this in listOf(ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE, ARBEITSTAG_LEER, UEBERSTUNDEN_ABBAU)
     
     /**
      * true, wenn dieser Tag Arbeitszeit enthält.

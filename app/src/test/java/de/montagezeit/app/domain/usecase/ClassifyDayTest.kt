@@ -159,12 +159,13 @@ class ClassifyDayTest {
     }
 
     @Test
-    fun `Verpflegungspauschale nur für Arbeitstage`() {
+    fun `Verpflegungspauschale fuer Arbeitstage und Reisetage`() {
         assert(DayClassification.ARBEITSTAG_MIT_ARBEIT.isMealAllowanceEligible)
         assert(DayClassification.ARBEITSTAG_NUR_REISE.isMealAllowanceEligible)
+        assert(DayClassification.FREI_MIT_REISE.isMealAllowanceEligible)
         assert(!DayClassification.ARBEITSTAG_LEER.isMealAllowanceEligible)
         assert(!DayClassification.FREI.isMealAllowanceEligible)
-        assert(!DayClassification.FREI_MIT_REISE.isMealAllowanceEligible)
+        assert(!DayClassification.UEBERSTUNDEN_ABBAU.isMealAllowanceEligible)
     }
 
     // -------------------------------------------------------------------------

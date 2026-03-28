@@ -22,7 +22,8 @@ data class OverviewMetrics(
     val travelHours: Double = 0.0,
     val mealAllowanceCents: Int = 0,
     val countedDays: Int = 0,
-    val unconfirmedDaysCount: Int = 0
+    val unconfirmedDaysCount: Int = 0,
+    val compTimeDays: Int = 0
 )
 
 data class OverviewScreenState(

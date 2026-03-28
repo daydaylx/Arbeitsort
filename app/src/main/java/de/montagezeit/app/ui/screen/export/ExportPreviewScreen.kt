@@ -26,7 +26,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -331,7 +331,7 @@ private fun TotalsCard(totals: ExportPreviewTotals) {
                     Text(totals.paidHours, fontWeight = FontWeight.Bold)
                 }
             }
-            Divider(modifier = Modifier.padding(top = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -390,7 +390,7 @@ private fun ExportPreviewRowCard(
                 Text(stringResource(R.string.export_preview_row_total, row.totalLabel))
             }
             if (footerLines.isNotEmpty()) {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 footerLines.forEach { line ->
                     Text(
                         text = line,

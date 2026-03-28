@@ -33,7 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -426,7 +426,7 @@ private fun SetupSection(
                 isOk = hasNotificationPermission
             )
 
-            Divider()
+            HorizontalDivider()
 
             SetupRow(
                 title = stringResource(R.string.settings_battery_optimization),
@@ -440,7 +440,7 @@ private fun SetupSection(
             )
 
             if (hasNotificationPermission) {
-                Divider()
+                HorizontalDivider()
 
                 SecondaryActionButton(
                     onClick = onSendTestReminder,
@@ -562,7 +562,7 @@ private fun CollapsibleSettingsCard(
 
             AnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Divider()
+                    HorizontalDivider()
                     content()
                 }
             }
@@ -730,7 +730,7 @@ private fun ReminderSettingsSection(
                 type = StatusType.ERROR,
                 modifier = Modifier.fillMaxWidth()
             )
-            Divider()
+            HorizontalDivider()
         }
 
         // Morning Window
@@ -752,7 +752,7 @@ private fun ReminderSettingsSection(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Evening Window
         SettingsToggleRow(
@@ -773,7 +773,7 @@ private fun ReminderSettingsSection(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         // Fallback Reminder
         SettingsToggleRow(
@@ -789,7 +789,7 @@ private fun ReminderSettingsSection(
             modifier = Modifier.padding(start = 12.dp)
         )
 
-        Divider()
+        HorizontalDivider()
 
         // Daily Reminder
         SettingsToggleRow(
@@ -959,7 +959,7 @@ private fun NonWorkingDaysSection(
             onCheckedChange = onUpdateAutoOffWeekends
         )
 
-        Divider()
+        HorizontalDivider()
 
         SettingsToggleRow(
             title = stringResource(R.string.label_auto_off_holidays),

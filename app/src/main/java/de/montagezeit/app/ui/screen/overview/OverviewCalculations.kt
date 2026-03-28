@@ -56,7 +56,9 @@ internal fun buildOverviewMetrics(
     val stats = AggregateWorkStats()(entries)
     val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours)
     val unconfirmedCount = entries.count { 
-        it.workEntry.dayType == DayType.WORK && !it.workEntry.confirmedWorkDay 
+        val entry = it.workEntry
+        val hasTravel = it.orderedTravelLegs.isNotEmpty()
+        !entry.confirmedWorkDay && (entry.dayType == DayType.WORK || hasTravel)
     }
 
     return OverviewMetrics(
@@ -66,6 +68,7 @@ internal fun buildOverviewMetrics(
         travelHours = stats.totalTravelMinutes / 60.0,
         mealAllowanceCents = stats.mealAllowanceCents,
         countedDays = overtime.countedDays,
-        unconfirmedDaysCount = unconfirmedCount
+        unconfirmedDaysCount = unconfirmedCount,
+        compTimeDays = stats.compTimeDays
     )
 }

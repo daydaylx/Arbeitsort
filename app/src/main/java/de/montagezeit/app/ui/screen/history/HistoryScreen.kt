@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -437,7 +438,7 @@ fun CalendarView(
         ) {
             IconButton(onClick = onPreviousMonth) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.history_cd_prev_month)
                 )
             }
@@ -447,7 +448,7 @@ fun CalendarView(
             )
             IconButton(onClick = onNextMonth) {
                 Icon(
-                    imageVector = Icons.Default.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = stringResource(R.string.history_cd_next_month)
                 )
             }
@@ -502,7 +503,7 @@ fun WeekCalendarView(
         ) {
             IconButton(onClick = onPreviousWeek) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.history_cd_prev_week)
                 )
             }
@@ -517,7 +518,7 @@ fun WeekCalendarView(
             )
             IconButton(onClick = onNextWeek) {
                 Icon(
-                    imageVector = Icons.Default.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = stringResource(R.string.history_cd_next_week)
                 )
             }
@@ -747,7 +748,7 @@ fun BatchEditDialog(
                     )
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
