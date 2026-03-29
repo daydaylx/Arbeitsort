@@ -80,38 +80,3 @@ fun WorkEntryWithTravelLegs.classifyDay(): DayClassification {
     return ClassifyDay()(this)
 }
 
-/**
- * Datenklasse für ein klassifiziertes Tagesergebnis.
- * Enthält alle relevanten Zeitwerte für Statistikberechnungen.
- */
-data class ClassifiedDay(
-    val date: java.time.LocalDate,
-    val classification: DayClassification,
-    val workMinutes: Int,
-    val travelMinutes: Int,
-    val paidMinutes: Int,
-    val mealAllowanceCents: Int,
-    val confirmed: Boolean
-) {
-    val workHours: Double get() = workMinutes / 60.0
-    val travelHours: Double get() = travelMinutes / 60.0
-    val paidHours: Double get() = paidMinutes / 60.0
-    
-    companion object {
-        fun from(entry: WorkEntryWithTravelLegs): ClassifiedDay {
-            val classifier = ClassifyDay()
-            val workMinutes = TimeCalculator.calculateWorkMinutes(entry.workEntry)
-            val travelMinutes = TimeCalculator.calculateTravelMinutes(entry.orderedTravelLegs)
-            
-            return ClassifiedDay(
-                date = entry.workEntry.date,
-                classification = classifier(entry),
-                workMinutes = workMinutes,
-                travelMinutes = travelMinutes,
-                paidMinutes = workMinutes + travelMinutes,
-                mealAllowanceCents = entry.workEntry.mealAllowanceAmountCents,
-                confirmed = entry.workEntry.confirmedWorkDay
-            )
-        }
-    }
-}

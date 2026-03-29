@@ -237,51 +237,6 @@ class ClassifyDayTest {
     }
 
     // -------------------------------------------------------------------------
-    // ClassifiedDay
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `ClassifiedDay from entry berechnet alle Werte korrekt`() {
-        val entry = createEntry(
-            date = LocalDate.of(2026, 3, 30),
-            dayType = DayType.WORK,
-            workStart = LocalTime.of(8, 0),
-            workEnd = LocalTime.of(17, 0),
-            breakMinutes = 60,
-            travelMinutes = 120,
-            mealAllowanceCents = 820,
-            confirmed = true
-        )
-
-        val classified = ClassifiedDay.from(entry)
-
-        assertEquals(LocalDate.of(2026, 3, 30), classified.date)
-        assertEquals(DayClassification.ARBEITSTAG_MIT_ARBEIT, classified.classification)
-        assertEquals(480, classified.workMinutes)
-        assertEquals(120, classified.travelMinutes)
-        assertEquals(600, classified.paidMinutes)
-        assertEquals(820, classified.mealAllowanceCents)
-        assert(classified.confirmed)
-    }
-
-    @Test
-    fun `ClassifiedDay Stundenberechnung korrekt`() {
-        val classified = ClassifiedDay(
-            date = LocalDate.of(2026, 3, 31),
-            classification = DayClassification.ARBEITSTAG_MIT_ARBEIT,
-            workMinutes = 480,
-            travelMinutes = 120,
-            paidMinutes = 600,
-            mealAllowanceCents = 0,
-            confirmed = true
-        )
-
-        assertEquals(8.0, classified.workHours, 0.001)
-        assertEquals(2.0, classified.travelHours, 0.001)
-        assertEquals(10.0, classified.paidHours, 0.001)
-    }
-
-    // -------------------------------------------------------------------------
     // Helper Functions
     // -------------------------------------------------------------------------
 
