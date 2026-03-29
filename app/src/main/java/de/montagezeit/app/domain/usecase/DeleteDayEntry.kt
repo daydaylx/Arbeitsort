@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
@@ -10,7 +10,7 @@ data class DeletedDaySnapshot(
     val travelLegs: List<TravelLeg>
 )
 
-class DeleteDayEntry(private val workEntryDao: WorkEntryDao) {
+class DeleteDayEntry(private val workEntryDao: WorkEntryRepository) {
     /**
      * Deletes the work entry for [date] from the database.
      * Returns the deleted snapshot so the caller can offer an undo action,

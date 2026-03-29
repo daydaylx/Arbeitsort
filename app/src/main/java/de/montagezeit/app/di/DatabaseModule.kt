@@ -9,6 +9,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.database.AppDatabase
+import de.montagezeit.app.data.repository.RoomWorkEntryRepository
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import javax.inject.Singleton
 
 @Module
@@ -30,5 +32,11 @@ object DatabaseModule {
     @Provides
     fun provideWorkEntryDao(database: AppDatabase): WorkEntryDao {
         return database.workEntryDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWorkEntryRepository(workEntryDao: WorkEntryDao): WorkEntryRepository {
+        return RoomWorkEntryRepository(workEntryDao)
     }
 }

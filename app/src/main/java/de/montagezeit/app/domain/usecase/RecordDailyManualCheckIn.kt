@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -19,7 +19,7 @@ data class DailyManualCheckInInput(
  * Speichert einen einmaligen manuellen Tages-Check-in inkl. Tagesabschluss.
  */
 class RecordDailyManualCheckIn(
-    private val workEntryDao: WorkEntryDao,
+    private val workEntryDao: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager
 ) {
 

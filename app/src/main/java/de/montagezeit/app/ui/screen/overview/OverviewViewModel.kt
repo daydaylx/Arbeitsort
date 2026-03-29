@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import java.time.LocalDate
@@ -35,7 +36,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class OverviewViewModel @Inject constructor(
-    private val workEntryDao: WorkEntryDao,
+    private val observeWorkEntryWithTravelByDate: ObserveWorkEntryWithTravelByDate,
+    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -88,7 +90,7 @@ class OverviewViewModel @Inject constructor(
 
     private val selectedEntrySnapshot: StateFlow<SelectedEntrySnapshot> = _selectedDate
         .flatMapLatest { date ->
-            workEntryDao.getByDateWithTravelFlow(date).map { entryWithTravel ->
+            observeWorkEntryWithTravelByDate(date).map { entryWithTravel ->
                 SelectedEntrySnapshot(
                     requestedDate = date,
                     entryWithTravel = entryWithTravel
@@ -247,7 +249,7 @@ class OverviewViewModel @Inject constructor(
                 val settings = reminderSettingsManager.settings.first()
                 val range = selectedPeriod.rangeFor(selectedDate)
                 val entries = withContext(Dispatchers.IO) {
-                    workEntryDao.getByDateRangeWithTravel(range.startDate, range.endDate)
+                    getWorkEntriesWithTravelByDateRange(range.startDate, range.endDate)
                 }
 
                 _metrics.value = buildOverviewMetrics(
