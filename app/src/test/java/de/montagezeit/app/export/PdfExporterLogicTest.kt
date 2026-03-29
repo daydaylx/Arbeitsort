@@ -199,47 +199,49 @@ class PdfExporterLogicTest {
     }
 
     // -------------------------------------------------------------------------
-    // Texttrunkierung: Location (8 Zeichen) und Routen-Summary (18 Zeichen)
+    // Texttrunkierung: Location (10 Zeichen) und Routen-Summary (22 Zeichen)
+    // PdfExporter.drawTable: location.length > 11 → take(10)+"…"
+    //                        route.length   > 23 → take(22)+"…"
     // -------------------------------------------------------------------------
 
     @Test
-    fun `getLocation – mehr als 8 Zeichen take8 liefert Prefix`() {
+    fun `getLocation – mehr als 11 Zeichen take10 liefert Prefix`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 1, 15),
             dayType = DayType.WORK,
             dayLocationLabel = "LangerOrtslabel"
         )
         val location = PdfUtilities.getLocation(entry)
-        // PdfExporter.drawTable ruft location.take(8) auf
-        assertEquals("LangerOr", location.take(8))
+        // PdfExporter.drawTable: length > 11 → take(10) + "…"
+        assertEquals("LangerOrts", location.take(10))
     }
 
     @Test
-    fun `getLocation – genau 8 Zeichen bleibt unveraendert`() {
+    fun `getLocation – genau 11 Zeichen bleibt unveraendert`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 1, 15),
             dayType = DayType.WORK,
-            dayLocationLabel = "Ort12345"
+            dayLocationLabel = "Ort12345678"
         )
         val location = PdfUtilities.getLocation(entry)
-        assertEquals("Ort12345", location.take(8))
+        assertEquals("Ort12345678", location.take(11))
     }
 
     @Test
-    fun `buildTravelRouteSummary – take(18) trunkiert lange Route`() {
+    fun `buildTravelRouteSummary – take(22) trunkiert lange Route`() {
         val leg = TravelLeg(
             workEntryDate = LocalDate.of(2026, 1, 15),
             sortOrder = 0,
             startLabel = "StadtA",
-            endLabel = "StadtBLangerName"
+            endLabel = "StadtBLangerNameXXXXX"
         )
         val summary = PdfUtilities.buildTravelRouteSummary(listOf(leg))
-        // PdfExporter.drawTable ruft summary.take(18) auf
-        assertEquals("StadtA→StadtBLange", summary.take(18))
+        // PdfExporter.drawTable: length > 23 → take(22) + "…"
+        assertEquals("StadtA→StadtBLangerNam", summary.take(22))
     }
 
     @Test
-    fun `buildTravelRouteSummary – kurze Route bleibt durch take(18) unveraendert`() {
+    fun `buildTravelRouteSummary – kurze Route bleibt durch take(22) unveraendert`() {
         val leg = TravelLeg(
             workEntryDate = LocalDate.of(2026, 1, 15),
             sortOrder = 0,
@@ -247,7 +249,63 @@ class PdfExporterLogicTest {
             endLabel = "B"
         )
         val summary = PdfUtilities.buildTravelRouteSummary(listOf(leg))
-        assertEquals(summary, summary.take(18))
+        assertEquals(summary, summary.take(22))
+    }
+
+    // -------------------------------------------------------------------------
+    // determineTravelTypeKey
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `determineTravelTypeKey – leere Liste ergibt NONE`() {
+        assertEquals("NONE", PdfUtilities.determineTravelTypeKey(emptyList()))
+    }
+
+    @Test
+    fun `determineTravelTypeKey – nur OUTBOUND ergibt ARRIVAL`() {
+        val legs = listOf(
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 0,
+                category = TravelLegCategory.OUTBOUND)
+        )
+        assertEquals("ARRIVAL", PdfUtilities.determineTravelTypeKey(legs))
+    }
+
+    @Test
+    fun `determineTravelTypeKey – nur RETURN ergibt DEPARTURE`() {
+        val legs = listOf(
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 0,
+                category = TravelLegCategory.RETURN)
+        )
+        assertEquals("DEPARTURE", PdfUtilities.determineTravelTypeKey(legs))
+    }
+
+    @Test
+    fun `determineTravelTypeKey – OUTBOUND und RETURN ergibt ARRIVAL_DEPARTURE`() {
+        val legs = listOf(
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 0,
+                category = TravelLegCategory.OUTBOUND),
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 1,
+                category = TravelLegCategory.RETURN)
+        )
+        assertEquals("ARRIVAL_DEPARTURE", PdfUtilities.determineTravelTypeKey(legs))
+    }
+
+    @Test
+    fun `determineTravelTypeKey – nur INTERSITE ergibt CONTINUATION`() {
+        val legs = listOf(
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 0,
+                category = TravelLegCategory.INTERSITE)
+        )
+        assertEquals("CONTINUATION", PdfUtilities.determineTravelTypeKey(legs))
+    }
+
+    @Test
+    fun `determineTravelTypeKey – nur OTHER ergibt TRAVEL`() {
+        val legs = listOf(
+            TravelLeg(workEntryDate = LocalDate.of(2026, 1, 15), sortOrder = 0,
+                category = TravelLegCategory.OTHER)
+        )
+        assertEquals("TRAVEL", PdfUtilities.determineTravelTypeKey(legs))
     }
 
     // -------------------------------------------------------------------------

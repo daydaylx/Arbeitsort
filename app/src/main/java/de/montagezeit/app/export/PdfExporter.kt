@@ -63,7 +63,7 @@ class PdfExporter @Inject constructor(
         private const val ROW_HEIGHT = 25
         private const val SPACING = 10
         private const val SUMMARY_HEIGHT = 75   // 3 Zeilen × 25 pt
-        private const val SIGNATURE_HEIGHT = 80
+        private const val SIGNATURE_HEIGHT = 120  // je Block: Label(15) + Linie(20) + Ort/Datum(25) + Abstand(20)
 
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
         // 9 Spalten: 60+50+50+45+50+95+55+70+40 = 515
@@ -100,6 +100,12 @@ class PdfExporter @Inject constructor(
         textSize = 10f
         isAntiAlias = true
         isFakeBoldText = true
+    }
+
+    // Dedizierter Paint für den Tabellenkopf-Hintergrund – vermeidet Mutation von paintTableHeader
+    private val paintTableHeaderBackground = Paint().apply {
+        color = Color.parseColor("#E0E0E0")
+        style = Paint.Style.FILL
     }
     
     private val paintTableText = Paint().apply {
@@ -198,6 +204,8 @@ class PdfExporter @Inject constructor(
                 // Unterschriften zeichnen
                 drawSignatures(canvas, yPosition)
 
+                // Seitennummer auf der letzten Seite
+                drawFooter(canvas, tableResult.pageNumber)
                 pdfDocument.finishPage(currentPage)
 
                 // PDF schreiben
@@ -314,16 +322,14 @@ class PdfExporter @Inject constructor(
     private fun drawTableHeader(canvas: Canvas, y: Float): Float {
         var yPos = y
         
-        // Hintergrund für Tabellenkopf
-        paintTableHeader.color = Color.parseColor("#E0E0E0")
+        // Hintergrund für Tabellenkopf (dedizierter Paint, kein Mutation-Risiko)
         canvas.drawRect(
             MARGIN.toFloat(),
             yPos,
             (PAGE_WIDTH - MARGIN).toFloat(),
             yPos + TABLE_HEADER_HEIGHT,
-            paintTableHeader
+            paintTableHeaderBackground
         )
-        paintTableHeader.color = Color.BLACK
         
         // Spaltenüberschriften (9 Spalten)
         var xPos = MARGIN.toFloat() + 5
@@ -362,6 +368,19 @@ class PdfExporter @Inject constructor(
     }
     
     /**
+     * Zeichnet die Seitennummer am unteren rechten Rand ("Seite X")
+     */
+    private fun drawFooter(canvas: Canvas, pageNum: Int) {
+        val text = string(R.string.pdf_export_footer_page, pageNum)
+        canvas.drawText(
+            text,
+            (PAGE_WIDTH - MARGIN).toFloat(),
+            (PAGE_HEIGHT - 15).toFloat(),
+            paintTableText
+        )
+    }
+
+    /**
      * Zeichnet die Tabelle mit allen Einträgen (Multi-Pag)
      */
     private fun drawTable(
@@ -381,6 +400,7 @@ class PdfExporter @Inject constructor(
             val travelLegs = record.orderedTravelLegs
             // Prüfen, ob eine neue Seite benötigt wird
             if (y + ROW_HEIGHT > PAGE_HEIGHT - MARGIN) {
+                drawFooter(activeCanvas, pageNum)
                 pdfDocument.finishPage(activePage)
                 pageNum++
                 activePage = pdfDocument.startPage(
@@ -545,25 +565,17 @@ class PdfExporter @Inject constructor(
         // Mitarbeiter-Unterschrift
         canvas.drawText(string(R.string.pdf_export_signature_employee), MARGIN.toFloat(), yPos, paintSignature)
         yPos += 15
-        canvas.drawLine(
-            MARGIN.toFloat(),
-            yPos,
-            (MARGIN + 200).toFloat(),
-            yPos,
-            paintLine
-        )
+        canvas.drawLine(MARGIN.toFloat(), yPos, (MARGIN + 200).toFloat(), yPos, paintLine)
         yPos += 20
-        
+        canvas.drawText(string(R.string.pdf_export_signature_date_location), MARGIN.toFloat(), yPos, paintSignature)
+        yPos += 30
+
         // Vorgesetzter-Unterschrift
         canvas.drawText(string(R.string.pdf_export_signature_supervisor), MARGIN.toFloat(), yPos, paintSignature)
         yPos += 15
-        canvas.drawLine(
-            MARGIN.toFloat(),
-            yPos,
-            (MARGIN + 200).toFloat(),
-            yPos,
-            paintLine
-        )
+        canvas.drawLine(MARGIN.toFloat(), yPos, (MARGIN + 200).toFloat(), yPos, paintLine)
+        yPos += 20
+        canvas.drawText(string(R.string.pdf_export_signature_date_location), MARGIN.toFloat(), yPos, paintSignature)
         
         return yPos
     }

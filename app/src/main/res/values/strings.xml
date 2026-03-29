@@ -332,6 +332,8 @@
     <string name="pdf_export_summary_meal_allowance">Gesamt Verpflegungspauschale: %1$s</string>
     <string name="pdf_export_signature_employee">Mitarbeiter</string>
     <string name="pdf_export_signature_supervisor">Vorgesetzter</string>
+    <string name="pdf_export_footer_page">Seite %1$d</string>
+    <string name="pdf_export_signature_date_location">Ort, Datum: _______________________</string>
     <string name="warning_name_missing">Name fehlt! Bitte zuerst in den Settings eingeben.</string>
     <string name="cd_pdf_settings">PDF Einstellungen</string>
     <string name="pdf_settings_title">PDF Einstellungen</string>
