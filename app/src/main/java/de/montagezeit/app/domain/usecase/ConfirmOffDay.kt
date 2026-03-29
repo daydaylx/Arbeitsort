@@ -19,7 +19,6 @@ class ConfirmOffDay(
     
     companion object {
         private const val CONFIRMATION_SOURCE_NOTIFICATION = "NOTIFICATION"
-        private const val CONFIRMATION_SOURCE_UI = "UI"
     }
     
     /**

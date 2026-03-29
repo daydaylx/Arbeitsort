@@ -17,8 +17,7 @@ object Formatters {
     // Formatter-Instanzen (Thread-safe, wiederverwendbar)
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN)
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
-    private val dateFormatterShort = DateTimeFormatter.ofPattern("dd.MM.", Locale.GERMAN)
-    private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
+private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
 
     /**
      * Formatiert LocalTime zu "HH:mm" (z.B. "08:30").
@@ -38,16 +37,6 @@ object Formatters {
      */
     fun formatDate(date: LocalDate?): String {
         return date?.format(dateFormatter) ?: "--"
-    }
-
-    /**
-     * Formatiert LocalDate zu "dd.MM." (z.B. "28.01.").
-     *
-     * @param date Datum oder null
-     * @return Formatierter String oder "--" wenn null
-     */
-    fun formatDateShort(date: LocalDate?): String {
-        return date?.format(dateFormatterShort) ?: "--"
     }
 
     /**
@@ -77,30 +66,6 @@ object Formatters {
             hours > 0 && minutes > 0 -> "${hours}h ${minutes}min"
             hours > 0 -> "${hours}h"
             minutes > 0 -> "${minutes}min"
-            else -> "0min"
-        }
-    }
-
-    /**
-     * Formatiert Minuten zu "Xh Ymin" oder "X,Y Std." abhängig vom Kontext.
-     *
-     * @param minutes Gesamtminuten
-     * @param asDecimalHours true für "2,5 Std.", false für "2h 30min"
-     * @return Formatierter String
-     */
-    fun formatMinutes(minutes: Int, asDecimalHours: Boolean = false): String {
-        if (asDecimalHours) {
-            val hours = minutes / 60.0
-            return "%.1f Std.".format(Locale.GERMAN, hours)
-        }
-
-        val hours = minutes / 60
-        val remainingMinutes = minutes % 60
-
-        return when {
-            hours > 0 && remainingMinutes > 0 -> "${hours}h ${remainingMinutes}min"
-            hours > 0 -> "${hours}h"
-            remainingMinutes > 0 -> "${remainingMinutes}min"
             else -> "0min"
         }
     }

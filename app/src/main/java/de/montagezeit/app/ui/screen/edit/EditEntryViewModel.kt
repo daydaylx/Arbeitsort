@@ -513,7 +513,7 @@ data class EditFormData(
             }
 
             if (hasWorkTimes) {
-                val workTimeValid = workEnd > workStart
+                val workTimeValid = workEnd != workStart
                 if (!workTimeValid) {
                     errors += ValidationError.WorkEndBeforeStart
                 }
@@ -521,7 +521,17 @@ data class EditFormData(
                     errors += ValidationError.NegativeBreakMinutes
                 }
                 if (workTimeValid) {
-                    val totalWorkMinutes = (workEnd.toSecondOfDay() - workStart.toSecondOfDay()) / 60
+                    // Nachtschicht-Unterstützung: wenn Ende < Start, über Mitternacht
+                    val startSec = workStart.toSecondOfDay()
+                    val endSec = workEnd.toSecondOfDay()
+                    val totalWorkMinutes = if (endSec < startSec) {
+                        (24 * 3600 - startSec + endSec) / 60
+                    } else {
+                        (endSec - startSec) / 60
+                    }
+                    if (totalWorkMinutes > 18 * 60) {
+                        errors += ValidationError.WorkEndBeforeStart
+                    }
                     if (breakMinutes > totalWorkMinutes) {
                         errors += ValidationError.BreakLongerThanWorkTime
                     }

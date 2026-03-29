@@ -32,26 +32,27 @@ internal object CheckInEntryBuilder {
         if (existingEntry != null && existingEntry.dayType != DayType.WORK) {
             throw IllegalStateException("Check-in nicht erlaubt für dayType=${existingEntry.dayType}")
         }
-        val normalizedEntry = existingEntry
-        val dayLocation = DayLocationResolver.resolve(normalizedEntry)
+        val dayLocation = DayLocationResolver.resolve(existingEntry)
 
         return if (snapshot == Snapshot.MORNING) {
-            normalizedEntry?.copy(
+            existingEntry?.copy(
                 morningCapturedAt = now,
                 dayLocationLabel = dayLocation,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
+                now = now,
                 morningCapturedAt = now,
                 dayLocationLabel = dayLocation
             )
         } else {
-            normalizedEntry?.copy(
+            existingEntry?.copy(
                 eveningCapturedAt = now,
                 dayLocationLabel = dayLocation,
                 updatedAt = now
             ) ?: createDefaultEntry(
                 date = date,
+                now = now,
                 eveningCapturedAt = now,
                 dayLocationLabel = dayLocation
             )
@@ -60,11 +61,11 @@ internal object CheckInEntryBuilder {
 
     private fun createDefaultEntry(
         date: LocalDate,
+        now: Long,
         morningCapturedAt: Long? = null,
         eveningCapturedAt: Long? = null,
         dayLocationLabel: String = ""
     ): WorkEntry {
-        val now = System.currentTimeMillis()
         return WorkEntry(
             date = date,
             dayType = DayType.WORK,

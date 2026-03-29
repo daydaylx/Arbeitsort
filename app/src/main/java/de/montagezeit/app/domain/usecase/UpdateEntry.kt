@@ -62,14 +62,23 @@ class UpdateEntry(
         if (entry.dayType == DayType.WORK && hasWorkBlock) {
             val workStart = requireNotNull(entry.workStart)
             val workEnd = requireNotNull(entry.workEnd)
-            if (workEnd <= workStart) {
-                throw IllegalArgumentException("workEnd ($workEnd) muss nach workStart ($workStart) liegen")
+            if (workEnd == workStart) {
+                throw IllegalArgumentException("workEnd ($workEnd) muss sich von workStart ($workStart) unterscheiden")
             }
             if (entry.breakMinutes < 0) {
                 throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht negativ sein")
             }
-            val workDurationMinutes = (workEnd.hour * 60 + workEnd.minute) -
-                (workStart.hour * 60 + workStart.minute)
+            // Nachtschicht-Unterstützung: wenn Ende < Start, über Mitternacht gerechnet
+            val startMinutes = workStart.hour * 60 + workStart.minute
+            val endMinutes = workEnd.hour * 60 + workEnd.minute
+            val workDurationMinutes = if (endMinutes < startMinutes) {
+                (24 * 60 - startMinutes) + endMinutes
+            } else {
+                endMinutes - startMinutes
+            }
+            if (workDurationMinutes > 18 * 60) {
+                throw IllegalArgumentException("Arbeitszeit ($workDurationMinutes min) darf nicht mehr als 18 Stunden betragen")
+            }
             if (entry.breakMinutes > workDurationMinutes) {
                 throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")
             }

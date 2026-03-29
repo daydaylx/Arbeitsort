@@ -46,7 +46,8 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `validate should return WorkEndBeforeStart when workEnd is before workStart`() {
+    fun `validate should accept night shift where workEnd is before workStart`() {
+        // 17:00 bis 08:00 = 15h Nachtschicht, unter 18h Limit -> valide
         val formData = validFormData(
             workStart = LocalTime.of(17, 0),
             workEnd = LocalTime.of(8, 0),
@@ -55,8 +56,21 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertEquals(1, errors.size)
-        assertTrue(errors[0] is ValidationError.WorkEndBeforeStart)
+        assertTrue(errors.none { it is ValidationError.WorkEndBeforeStart })
+    }
+
+    @Test
+    fun `validate should reject shift exceeding 18 hours`() {
+        // 06:00 bis 01:00 = 19h -> ueber 18h Limit -> invalide
+        val formData = validFormData(
+            workStart = LocalTime.of(6, 0),
+            workEnd = LocalTime.of(1, 0),
+            breakMinutes = 0
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.any { it is ValidationError.WorkEndBeforeStart })
     }
 
     @Test
@@ -401,8 +415,8 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `WORK-Tag mit workEnd vor workStart bleibt invalide`() {
-        // Sicherstellen: Bestehende WORK-Validierung ist unberührt
+    fun `WORK-Tag mit Nachtschicht ist valide`() {
+        // 17:00 bis 08:00 = 15h Nachtschicht -> valide
         val formData = validFormData(
             dayType = DayType.WORK,
             workStart = LocalTime.of(17, 0),
@@ -412,9 +426,8 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue("WORK-Tag mit umgekehrten Zeiten muss WorkEndBeforeStart-Fehler erzeugen",
-            errors.any { it is ValidationError.WorkEndBeforeStart })
-        assertFalse(formData.isValid())
+        assertTrue("WORK-Tag mit Nachtschicht darf keinen WorkEndBeforeStart-Fehler erzeugen",
+            errors.none { it is ValidationError.WorkEndBeforeStart })
     }
 
     private fun validFormData(

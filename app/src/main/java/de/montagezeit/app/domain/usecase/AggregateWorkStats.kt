@@ -43,13 +43,6 @@ data class WorkStatsResult(
      */
     val averageWorkHoursPerWorkDayWithWork: Double
         get() = if (workDaysWithWork > 0) totalWorkMinutes / 60.0 / workDaysWithWork else 0.0
-    
-    /**
-     * Reisezeit auf freien Tagen in Minuten.
-     * Wird separat ausgewiesen, da nicht in die Überstundenberechnung einbezogen.
-     */
-    val offDayTravelMinutes: Int
-        get() = totalTravelMinutes - (totalPaidMinutes - totalWorkMinutes)
 }
 
 class AggregateWorkStats {
