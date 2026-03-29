@@ -17,7 +17,7 @@ object Formatters {
     // Formatter-Instanzen (Thread-safe, wiederverwendbar)
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN)
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
-private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
+    private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMAN)
 
     /**
      * Formatiert LocalTime zu "HH:mm" (z.B. "08:30").
@@ -78,5 +78,20 @@ private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy
      */
     fun formatHours(hours: Double): String {
         return "%.1f Std.".format(Locale.GERMAN, hours)
+    }
+
+
+    /**
+     * Formatiert Stunden als Vorzeichenwert (z.B. "+1,25h" oder "-0,75h").
+     */
+    fun formatSignedHours(hours: Double): String {
+        return String.format(Locale.GERMAN, "%+.2fh", hours)
+    }
+
+    /**
+     * Formatiert Stunden als neutralen Stundenwert (z.B. "8,00h").
+     */
+    fun formatRawHours(hours: Double): String {
+        return String.format(Locale.GERMAN, "%.2fh", hours)
     }
 }
