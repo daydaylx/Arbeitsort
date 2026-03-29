@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
@@ -14,6 +13,10 @@ import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.DeleteWorkEntryByDate
+import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
+import de.montagezeit.app.domain.usecase.GetWorkEntryWithTravelByDate
+import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.util.UiText
@@ -35,7 +38,10 @@ import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class EditEntryViewModel @Inject constructor(
-    private val workEntryDao: WorkEntryDao,
+    private val getWorkEntryByDate: GetWorkEntryByDate,
+    private val getWorkEntryWithTravelByDate: GetWorkEntryWithTravelByDate,
+    private val deleteWorkEntryByDate: DeleteWorkEntryByDate,
+    private val replaceWorkEntryWithTravelLegs: ReplaceWorkEntryWithTravelLegs,
     private val reminderSettingsManager: ReminderSettingsManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -63,7 +69,7 @@ class EditEntryViewModel @Inject constructor(
     fun setFormData(data: EditFormData) {
         _screenState.update { it.copy(formData = data) }
         viewModelScope.launch {
-            val entry = workEntryDao.getByDate(currentDate)
+            val entry = getWorkEntryByDate(currentDate)
             _screenState.update { state ->
                 state.copy(
                     uiState = if (entry == null) {
@@ -85,7 +91,7 @@ class EditEntryViewModel @Inject constructor(
                 val settings = reminderSettingsManager.settings.first()
                 val dailyTargetHours = settings.dailyTargetHours
 
-                val record = workEntryDao.getByDateWithTravel(date)
+                val record = getWorkEntryWithTravelByDate(date)
                 if (record != null) {
                     val formData = EditFormData.fromEntry(
                         entry = record.workEntry,
@@ -236,7 +242,7 @@ class EditEntryViewModel @Inject constructor(
         if (_screenState.value.isSaving) { onResult(false); return }
         viewModelScope.launch(Dispatchers.IO) {
             val previousDate = currentDate.minusDays(1)
-            val record = workEntryDao.getByDateWithTravel(previousDate)
+            val record = getWorkEntryWithTravelByDate(previousDate)
             withContext(Dispatchers.Main) {
                 if (record != null) {
                     val copied = EditFormData.fromEntry(
@@ -258,14 +264,14 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 _screenState.update { it.copy(isSaving = true) }
-                val existingEntry = workEntryDao.getByDate(currentDate)
+                val existingEntry = getWorkEntryByDate(currentDate)
                 if (existingEntry == null) {
                     _screenState.update { it.copy(isSaving = false, uiState = EditUiState.NewEntry(currentDate)) }
                     onResult(false)
                     return@launch
                 }
 
-                workEntryDao.deleteByDate(currentDate)
+                deleteWorkEntryByDate(currentDate)
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
                 onResult(true)
             } catch (e: Exception) {
@@ -363,7 +369,7 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 _screenState.update { it.copy(isSaving = true) }
-                workEntryDao.replaceEntryWithTravelLegs(entryToSave, legsToSave)
+                replaceWorkEntryWithTravelLegs(entryToSave, legsToSave)
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved, originalFormData = data) }
             } catch (e: Exception) {
                 _screenState.update {

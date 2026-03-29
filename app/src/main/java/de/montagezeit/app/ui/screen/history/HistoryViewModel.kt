@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -13,6 +12,10 @@ import de.montagezeit.app.data.local.entity.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
+import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
+import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
+import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.domain.usecase.UpsertWorkEntries
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import android.util.Log
 import androidx.compose.runtime.Stable
@@ -41,7 +44,10 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val workEntryDao: WorkEntryDao,
+    private val observeWorkEntriesWithTravelByDateRange: ObserveWorkEntriesWithTravelByDateRange,
+    private val getWorkEntriesByDateRange: GetWorkEntriesByDateRange,
+    private val upsertWorkEntries: UpsertWorkEntries,
+    private val deleteTravelLegsForDate: DeleteTravelLegsForDate,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
 
@@ -56,7 +62,7 @@ class HistoryViewModel @Inject constructor(
         .flatMapLatest {
             val endDate = LocalDate.now()
             val startDate = endDate.minusDays(365)
-            workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
+            observeWorkEntriesWithTravelByDateRange(startDate, endDate)
                 .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
                     val groupedWeeks = groupByWeek(entries)
                     val groupedMonths = groupByMonth(entries)
@@ -96,7 +102,7 @@ class HistoryViewModel @Inject constructor(
             _batchEditState.value = BatchEditState.InProgress
             try {
                 val settings = reminderSettingsManager.settings.first()
-                val existingEntries = workEntryDao.getByDateRange(request.startDate, request.endDate)
+                val existingEntries = getWorkEntriesByDateRange(request.startDate, request.endDate)
                 val entriesByDate = existingEntries.associateBy { it.date }
                 val dates = buildDateRange(request.startDate, request.endDate)
                 val now = System.currentTimeMillis()
@@ -138,10 +144,10 @@ class HistoryViewModel @Inject constructor(
                     }
                 }
                 if (entriesToUpsert.isNotEmpty()) {
-                    workEntryDao.upsertAll(entriesToUpsert)
+                    upsertWorkEntries(entriesToUpsert)
                     if (request.dayType == DayType.COMP_TIME || request.dayType == DayType.OFF) {
                         for (entry in entriesToUpsert) {
-                            workEntryDao.deleteTravelLegsByDate(entry.date)
+                            deleteTravelLegsForDate(entry.date)
                         }
                     }
                 } else {

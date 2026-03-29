@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -11,7 +11,7 @@ import java.time.LocalDate
  * Setzt den Tagesort manuell für einen Tag.
  */
 class SetDayLocation(
-    private val workEntryDao: WorkEntryDao,
+    private val workEntryDao: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager
 ) {
     suspend operator fun invoke(date: LocalDate, label: String): WorkEntry {

@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
@@ -8,7 +8,7 @@ import java.time.LocalDate
  * UseCase für den Abend-Check-in (ohne GPS-Erfassung)
  */
 class RecordEveningCheckIn(
-    private val workEntryDao: WorkEntryDao
+    private val workEntryDao: WorkEntryRepository
 ) {
 
     suspend operator fun invoke(date: LocalDate): WorkEntry {

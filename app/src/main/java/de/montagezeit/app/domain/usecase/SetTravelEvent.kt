@@ -1,6 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
@@ -13,7 +13,7 @@ import java.time.LocalDate
  * Ermöglicht das Erfassen von Anreise- und Abreise-Informationen
  */
 class SetTravelEvent(
-    private val workEntryDao: WorkEntryDao
+    private val workEntryDao: WorkEntryRepository
 ) {
     
     /**

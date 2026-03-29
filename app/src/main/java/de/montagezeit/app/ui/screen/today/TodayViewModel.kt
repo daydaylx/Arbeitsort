@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
@@ -13,6 +12,11 @@ import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
+import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
+import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
+import de.montagezeit.app.domain.usecase.ObserveWorkEntryByDate
+import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
+import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
@@ -76,7 +80,11 @@ enum class TodayAction {
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class TodayViewModel @Inject constructor(
-    private val workEntryDao: WorkEntryDao,
+    private val observeWorkEntryByDate: ObserveWorkEntryByDate,
+    private val observeWorkEntryWithTravelByDate: ObserveWorkEntryWithTravelByDate,
+    private val getWorkEntryByDate: GetWorkEntryByDate,
+    private val getWorkEntriesByDateRange: GetWorkEntriesByDateRange,
+    private val replaceWorkEntryWithTravelLegs: ReplaceWorkEntryWithTravelLegs,
     private val recordDailyManualCheckIn: RecordDailyManualCheckIn,
     private val resolveDayLocationPrefill: ResolveDayLocationPrefill,
     private val confirmOffDay: ConfirmOffDay,
@@ -102,7 +110,7 @@ class TodayViewModel @Inject constructor(
 
     /** Always tracks today's entry reactively (for the action bar). */
     val todayEntry: StateFlow<WorkEntry?> = _todayDate
-        .flatMapLatest { date -> workEntryDao.getByDateFlow(date) }
+        .flatMapLatest { date -> observeWorkEntryByDate(date) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -111,7 +119,7 @@ class TodayViewModel @Inject constructor(
 
     /** Tracks the selected date's entry reactively. */
     val selectedEntry: StateFlow<WorkEntry?> = _selectedDate
-        .flatMapLatest { date -> workEntryDao.getByDateFlow(date) }
+        .flatMapLatest { date -> observeWorkEntryByDate(date) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -120,7 +128,7 @@ class TodayViewModel @Inject constructor(
 
     /** Tracks the selected date's entry with travel legs reactively. */
     val selectedEntryWithTravel: StateFlow<WorkEntryWithTravelLegs?> = _selectedDate
-        .flatMapLatest { date -> workEntryDao.getByDateWithTravelFlow(date) }
+        .flatMapLatest { date -> observeWorkEntryWithTravelByDate(date) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -266,7 +274,7 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = TodayUiState.Loading
             try {
-                val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(_selectedDate.value) }
+                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(_selectedDate.value) }
                 _uiState.value = TodayUiState.Success(entry)
             } catch (e: Exception) {
                 _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
@@ -318,7 +326,7 @@ class TodayViewModel @Inject constructor(
                 de.montagezeit.app.domain.util.WeekCalculator.weekStart(selected)
             )
             val entries = withContext(Dispatchers.IO) {
-                workEntryDao.getByDateRange(weekDates.first(), weekDates.last())
+                getWorkEntriesByDateRange(weekDates.first(), weekDates.last())
             }
             _weekDaysUi.value = buildWeekDayUi(
                 selectedDate = selected,
@@ -349,7 +357,7 @@ class TodayViewModel @Inject constructor(
             // Still need to restore the UI state from the flow
             selectDateJob?.cancel()
             selectDateJob = viewModelScope.launch {
-                val entry = selectedEntry.value ?: withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                val entry = selectedEntry.value ?: withContext(Dispatchers.IO) { getWorkEntryByDate(date) }
                 _uiState.value = TodayUiState.Success(entry)
             }
             return
@@ -362,7 +370,7 @@ class TodayViewModel @Inject constructor(
         selectDateJob?.cancel()
         selectDateJob = viewModelScope.launch {
             try {
-                val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(date) }
                 _uiState.value = TodayUiState.Success(entry)
             } catch (e: CancellationException) {
                 throw e
@@ -377,7 +385,7 @@ class TodayViewModel @Inject constructor(
         _dailyCheckInDate.value = _selectedDate.value
         viewModelScope.launch {
             try {
-                val existingEntry = currentSelectedEntryOrNull() ?: workEntryDao.getByDate(_selectedDate.value)
+                val existingEntry = currentSelectedEntryOrNull() ?: getWorkEntryByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dailyCheckInLocationInput.value = prefill
                 _dailyCheckInIsArrivalDeparture.value = existingEntry?.mealIsArrivalDeparture ?: false
@@ -408,7 +416,7 @@ class TodayViewModel @Inject constructor(
     fun openDayLocationDialog() {
         viewModelScope.launch {
             try {
-                val existingEntry = currentSelectedEntryOrNull() ?: workEntryDao.getByDate(_selectedDate.value)
+                val existingEntry = currentSelectedEntryOrNull() ?: getWorkEntryByDate(_selectedDate.value)
                 val prefill = resolveDayLocationPrefill(existingEntry)
                 _dayLocationInput.value = prefill
                 _showDayLocationDialog.value = true
@@ -464,7 +472,7 @@ class TodayViewModel @Inject constructor(
         _uiState.value = TodayUiState.Loading
         selectDateJob = viewModelScope.launch {
             try {
-                val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(_selectedDate.value) }
+                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(_selectedDate.value) }
                 _uiState.value = TodayUiState.Success(entry)
             } catch (e: CancellationException) {
                 throw e
@@ -551,7 +559,7 @@ class TodayViewModel @Inject constructor(
         _deletedEntryForUndo.value = null
         viewModelScope.launch {
             try {
-                workEntryDao.replaceEntryWithTravelLegs(snapshot.entry, snapshot.travelLegs)
+                replaceWorkEntryWithTravelLegs(snapshot.entry, snapshot.travelLegs)
                 _uiState.value = TodayUiState.Success(snapshot.entry)
                 selectDate(snapshot.entry.date)
             } catch (e: Exception) {

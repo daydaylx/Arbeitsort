@@ -6,9 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
@@ -26,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val workEntryDao: WorkEntryDao,
+    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
     private val pdfExporter: PdfExporter,
     private val csvExporter: CsvExporter,
     private val reminderScheduler: ReminderScheduler,
@@ -256,7 +256,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 val employeeName = settings.pdfEmployeeName
-                val entries = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
+                val entries = getWorkEntriesWithTravelByDateRange(startDate, endDate)
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
                         UiText.StringResource(emptyRangeRes)
