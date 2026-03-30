@@ -699,10 +699,10 @@ internal fun OvertimeTargetsSection(
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
-        val expectedWeekly = dailyTargetHours * 5
-        val expectedMonthly = dailyTargetHours * 20
-        val isInconsistent = (weeklyTargetHours - expectedWeekly).absoluteValue > 1.0 ||
-                            (monthlyTargetHours - expectedMonthly).absoluteValue > 5.0
+        val expectedWeekly = dailyTargetHours * WORKDAYS_PER_WEEK
+        val expectedMonthly = dailyTargetHours * APPROX_WORKDAYS_PER_MONTH
+        val isInconsistent = (weeklyTargetHours - expectedWeekly).absoluteValue > WEEKLY_TOLERANCE_HOURS ||
+                            (monthlyTargetHours - expectedMonthly).absoluteValue > MONTHLY_TOLERANCE_HOURS
 
         if (isInconsistent) {
             Card(
