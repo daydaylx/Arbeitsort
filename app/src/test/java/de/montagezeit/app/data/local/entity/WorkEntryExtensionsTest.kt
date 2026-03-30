@@ -1,5 +1,10 @@
 package de.montagezeit.app.data.local.entity
 
+import de.montagezeit.app.domain.util.confirmationStateForDayType
+import de.montagezeit.app.domain.util.createConfirmedOffDayEntry
+import de.montagezeit.app.domain.util.transitionToDayType
+import de.montagezeit.app.domain.util.withConfirmedOffDay
+import de.montagezeit.app.domain.util.withMealAllowanceCleared
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

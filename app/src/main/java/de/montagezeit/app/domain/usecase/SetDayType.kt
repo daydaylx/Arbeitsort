@@ -3,7 +3,7 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.local.entity.transitionToDayType
+import de.montagezeit.app.domain.util.transitionToDayType
 import java.time.LocalDate
 
 /**
