@@ -68,8 +68,7 @@ class UpdateEntry(
             if (entry.breakMinutes < 0) {
                 throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht negativ sein")
             }
-            val workDurationMinutes = (workEnd.hour * 60 + workEnd.minute) -
-                (workStart.hour * 60 + workStart.minute)
+            val workDurationMinutes = (workEnd.toSecondOfDay() - workStart.toSecondOfDay()) / 60
             if (entry.breakMinutes > workDurationMinutes) {
                 throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")
             }

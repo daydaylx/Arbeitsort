@@ -138,12 +138,12 @@ class HistoryViewModel @Inject constructor(
                     }
                 }
                 if (entriesToUpsert.isNotEmpty()) {
-                    workEntryDao.upsertAll(entriesToUpsert)
-                    if (request.dayType == DayType.COMP_TIME || request.dayType == DayType.OFF) {
-                        for (entry in entriesToUpsert) {
-                            workEntryDao.deleteTravelLegsByDate(entry.date)
-                        }
+                    val travelDatesToClean = if (request.dayType == DayType.COMP_TIME || request.dayType == DayType.OFF) {
+                        entriesToUpsert.map { it.date }
+                    } else {
+                        emptyList()
                     }
+                    workEntryDao.upsertAllAndDeleteTravelLegs(entriesToUpsert, travelDatesToClean)
                 } else {
                     _batchEditState.value = BatchEditState.Failure(
                         UiText.StringResource(R.string.history_batch_no_changes)

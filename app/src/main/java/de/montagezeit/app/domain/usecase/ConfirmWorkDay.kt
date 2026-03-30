@@ -61,6 +61,6 @@ class ConfirmWorkDay(
             result = updatedEntry
             updatedEntry
         }
-        return result!!
+        return requireNotNull(result) { "readModifyWrite must return an entry for date $date" }
     }
 }

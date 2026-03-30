@@ -334,35 +334,28 @@ class TodayViewModel @Inject constructor(
     fun selectDate(date: LocalDate) {
         val wasAlreadySelected = _selectedDate.value == date
         val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
+
+        // Cancel any in-flight load BEFORE mutating state to avoid races
+        selectDateJob?.cancel()
+
+        // Batch all synchronous state updates together
         _selectedDate.value = date
-
-        // B08: Set Loading immediately to avoid stale UI
         _uiState.value = TodayUiState.Loading
-
-        // Update week overview highlights immediately
         _weekDaysUi.update { days ->
             days.map { it.copy(isSelected = it.date == date) }
         }
 
-        // Skip reloading if already selected (optimization)
-        if (wasAlreadySelected) {
-            // Still need to restore the UI state from the flow
-            selectDateJob?.cancel()
-            selectDateJob = viewModelScope.launch {
-                val entry = selectedEntry.value ?: withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
-                _uiState.value = TodayUiState.Success(entry)
-            }
-            return
-        }
-
-        if (!isDateInCurrentWeek) {
+        if (!wasAlreadySelected && !isDateInCurrentWeek) {
             loadWeekOverview()
         }
 
-        selectDateJob?.cancel()
         selectDateJob = viewModelScope.launch {
             try {
-                val entry = withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                val entry = if (wasAlreadySelected) {
+                    selectedEntry.value ?: withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                } else {
+                    withContext(Dispatchers.IO) { workEntryDao.getByDate(date) }
+                }
                 _uiState.value = TodayUiState.Success(entry)
             } catch (e: CancellationException) {
                 throw e

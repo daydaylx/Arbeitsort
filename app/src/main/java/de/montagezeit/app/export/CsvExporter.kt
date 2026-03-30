@@ -45,6 +45,10 @@ class CsvExporter @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+    private companion object {
+        const val MIN_DISK_SPACE_BYTES = 1024L * 1024L // 1 MB
+    }
+
     /**
      * Exportiert Einträge als CSV-Datei.
      *
@@ -86,7 +90,7 @@ class CsvExporter @Inject constructor(
             } else {
                 cacheDir.usableSpace
             }
-            if (availableBytes < 1024 * 1024) {
+            if (availableBytes < MIN_DISK_SPACE_BYTES) {
                 android.util.Log.e("CsvExporter", "Insufficient disk space: $availableBytes bytes")
                 return null
             }
