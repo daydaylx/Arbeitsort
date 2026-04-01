@@ -2,8 +2,8 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.data.local.entity.createConfirmedOffDayEntry
-import de.montagezeit.app.data.local.entity.withConfirmedOffDay
+import de.montagezeit.app.domain.util.createConfirmedOffDayEntry
+import de.montagezeit.app.domain.util.withConfirmedOffDay
 import java.time.LocalDate
 
 /**

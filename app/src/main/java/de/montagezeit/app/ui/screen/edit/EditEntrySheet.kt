@@ -54,10 +54,7 @@ fun EditEntrySheet(
         skipPartiallyExpanded = true
     )
     val context = LocalContext.current
-    var showCopyDatePicker by remember { mutableStateOf(false) }
-    var showNavigateDatePicker by remember { mutableStateOf(false) }
-    var showDeleteDayConfirmDialog by remember { mutableStateOf(false) }
-    var showDiscardChangesDialog by remember { mutableStateOf(false) }
+    var activeDialog by remember { mutableStateOf<EditSheetDialog>(EditSheetDialog.None) }
     val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     LaunchedEffect(date) {
@@ -80,14 +77,14 @@ fun EditEntrySheet(
     val isDirty = screenState.isDirty
     val handleDismiss: () -> Unit = {
         if (isDirty && !isSaving) {
-            showDiscardChangesDialog = true
+            activeDialog = EditSheetDialog.DiscardChanges
         } else {
             onDismiss()
         }
     }
 
     BackHandler(enabled = isDirty && !isSaving) {
-        showDiscardChangesDialog = true
+        activeDialog = EditSheetDialog.DiscardChanges
     }
 
     ModalBottomSheet(
@@ -123,7 +120,7 @@ fun EditEntrySheet(
                         onPrevious = { onNavigateDate(date.minusDays(1)) },
                         onNext = { onNavigateDate(date.plusDays(1)) },
                         onToday = { onNavigateDate(LocalDate.now()) },
-                        onPickDate = { showNavigateDatePicker = true }
+                        onPickDate = { activeDialog = EditSheetDialog.NavigateDatePicker }
                     )
                     DateNavigationSwipeZone(
                         swipeThresholdPx = swipeThresholdPx,
@@ -276,7 +273,7 @@ fun EditEntrySheet(
                             onMealBreakfastIncludedChange = { viewModel.updateMealBreakfastIncluded(it) },
                             onNoteChange = { viewModel.updateNote(it) },
                             onSave = { viewModel.save() },
-                            onDeleteDay = { showDeleteDayConfirmDialog = true },
+                            onDeleteDay = { activeDialog = EditSheetDialog.DeleteDayConfirm },
                             onCopyPrevious = {
                                 viewModel.copyFromPreviousDay { success ->
                                     if (!success) {
@@ -291,7 +288,7 @@ fun EditEntrySheet(
                             onApplyDefaultTimes = { viewModel.applyDefaultWorkTimes() },
                             isSaving = isSaving,
                             onCopy = if (onCopyToNewDate != null) {
-                                { showCopyDatePicker = true }
+                                { activeDialog = EditSheetDialog.CopyDatePicker }
                             } else null,
                             showPrimarySaveButton = false
                         )
@@ -358,12 +355,12 @@ fun EditEntrySheet(
             }
         }
 
-        if (showDeleteDayConfirmDialog) {
+        if (activeDialog is EditSheetDialog.DeleteDayConfirm) {
             DeleteDayConfirmDialog(
                 isLoading = isSaving,
-                onDismiss = { showDeleteDayConfirmDialog = false },
+                onDismiss = { activeDialog = EditSheetDialog.None },
                 onConfirm = {
-                    showDeleteDayConfirmDialog = false
+                    activeDialog = EditSheetDialog.None
                     viewModel.deleteCurrentEntry { deleted ->
                         if (deleted) {
                             android.widget.Toast.makeText(
@@ -377,39 +374,39 @@ fun EditEntrySheet(
             )
         }
 
-        if (showDiscardChangesDialog) {
+        if (activeDialog is EditSheetDialog.DiscardChanges) {
             DiscardChangesDialog(
                 onDiscard = {
-                    showDiscardChangesDialog = false
+                    activeDialog = EditSheetDialog.None
                     onDismiss()
                 },
-                onKeepEditing = { showDiscardChangesDialog = false }
+                onKeepEditing = { activeDialog = EditSheetDialog.None }
             )
         }
     }
     
     // Copy Date Picker Dialog
-    if (showCopyDatePicker && onCopyToNewDate != null) {
+    if (activeDialog is EditSheetDialog.CopyDatePicker && onCopyToNewDate != null) {
         DatePickerDialog(
             initialDate = date,
             onDateSelected = { newDate ->
                 val copiedData = viewModel.copyEntryData()
                 onCopyToNewDate(newDate, copiedData)
-                showCopyDatePicker = false
+                activeDialog = EditSheetDialog.None
                 onDismiss() // Schließe aktuelles Sheet
             },
-            onDismiss = { showCopyDatePicker = false }
+            onDismiss = { activeDialog = EditSheetDialog.None }
         )
     }
 
-    if (showNavigateDatePicker && onNavigateDate != null) {
+    if (activeDialog is EditSheetDialog.NavigateDatePicker && onNavigateDate != null) {
         DatePickerDialog(
             initialDate = date,
             onDateSelected = { newDate ->
                 onNavigateDate(newDate)
-                showNavigateDatePicker = false
+                activeDialog = EditSheetDialog.None
             },
-            onDismiss = { showNavigateDatePicker = false }
+            onDismiss = { activeDialog = EditSheetDialog.None }
         )
     }
 }
@@ -1424,3 +1421,11 @@ private fun formatShortDate(date: java.time.LocalDate): String {
 }
 
 private val editShortDateFormatter = DateTimeFormatter.ofPattern("E, dd.MM.", Locale.GERMAN)
+
+private sealed interface EditSheetDialog {
+    data object None : EditSheetDialog
+    data object CopyDatePicker : EditSheetDialog
+    data object NavigateDatePicker : EditSheetDialog
+    data object DeleteDayConfirm : EditSheetDialog
+    data object DiscardChanges : EditSheetDialog
+}

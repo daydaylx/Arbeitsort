@@ -14,6 +14,9 @@ import java.util.Locale
  */
 object Formatters {
 
+    private const val PLACEHOLDER_TIME = "--:--"
+    private const val PLACEHOLDER_TEXT = "--"
+
     // Formatter-Instanzen (Thread-safe, wiederverwendbar)
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN)
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
@@ -26,7 +29,7 @@ private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy
      * @return Formatierter String oder "--:--" wenn null
      */
     fun formatTime(time: LocalTime?): String {
-        return time?.format(timeFormatter) ?: "--:--"
+        return time?.format(timeFormatter) ?: PLACEHOLDER_TIME
     }
 
     /**
@@ -36,7 +39,7 @@ private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy
      * @return Formatierter String oder "-- " wenn null
      */
     fun formatDate(date: LocalDate?): String {
-        return date?.format(dateFormatter) ?: "--"
+        return date?.format(dateFormatter) ?: PLACEHOLDER_TEXT
     }
 
     /**
@@ -46,7 +49,7 @@ private val dateFormatterLong = DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy
      * @return Formatierter String oder "--" wenn null
      */
     fun formatDateLong(date: LocalDate?): String {
-        return date?.format(dateFormatterLong) ?: "--"
+        return date?.format(dateFormatterLong) ?: PLACEHOLDER_TEXT
     }
 
     /**

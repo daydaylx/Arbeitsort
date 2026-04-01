@@ -1,5 +1,7 @@
-package de.montagezeit.app.data.local.entity
+package de.montagezeit.app.domain.util
 
+import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
 data class DayTypeConfirmationState(

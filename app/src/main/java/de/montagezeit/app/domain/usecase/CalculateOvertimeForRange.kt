@@ -16,6 +16,8 @@ data class OvertimeResult(
 
 class CalculateOvertimeForRange {
 
+    private val classifyDay = ClassifyDay()
+
     operator fun invoke(entries: List<WorkEntryWithTravelLegs>, dailyTargetHours: Double): OvertimeResult {
         require(dailyTargetHours > 0) { "dailyTargetHours must be > 0" }
 
@@ -35,8 +37,6 @@ class CalculateOvertimeForRange {
         var countedDays = 0
         var offDayTravelHours = 0.0
         var offDayTravelDays = 0
-        
-        val classifyDay = ClassifyDay()
 
         entries.forEach { entry ->
             // Tage berücksichtigen, wenn sie entweder bestätigt sind oder Reisezeit enthalten

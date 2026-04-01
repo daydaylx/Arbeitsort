@@ -342,12 +342,13 @@ class TodayViewModel @Inject constructor(
     fun selectDate(date: LocalDate) {
         val wasAlreadySelected = _selectedDate.value == date
         val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
+
+        // Cancel any in-flight load BEFORE mutating state to avoid races
+        selectDateJob?.cancel()
+
+        // Batch all synchronous state updates together
         _selectedDate.value = date
-
-        // B08: Set Loading immediately to avoid stale UI
         _uiState.value = TodayUiState.Loading
-
-        // Update week overview highlights immediately
         _weekDaysUi.update { days ->
             days.map { it.copy(isSelected = it.date == date) }
         }
@@ -367,7 +368,6 @@ class TodayViewModel @Inject constructor(
             loadWeekOverview()
         }
 
-        selectDateJob?.cancel()
         selectDateJob = viewModelScope.launch {
             try {
                 val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(date) }

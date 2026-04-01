@@ -101,6 +101,17 @@ abstract class WorkEntryDao {
     }
 
     @Transaction
+    open suspend fun upsertAllAndDeleteTravelLegs(
+        entries: List<WorkEntry>,
+        travelLegDatesToDelete: List<LocalDate>
+    ) {
+        upsertAll(entries)
+        for (date in travelLegDatesToDelete) {
+            deleteTravelLegsByDate(date)
+        }
+    }
+
+    @Transaction
     open suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>) {
         upsert(entry)
         deleteTravelLegsByDate(entry.date)
