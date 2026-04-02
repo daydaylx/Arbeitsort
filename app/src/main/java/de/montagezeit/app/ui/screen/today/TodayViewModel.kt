@@ -116,6 +116,9 @@ class TodayViewModel @Inject constructor(
     val deletedEntryForUndo = actionsHandler.deletedEntryForUndo
 
     private var selectDateJob: Job? = null
+    private var weekOverviewJob: Job? = null
+    private var entryLoadRequestId = 0L
+    private var weekOverviewRequestId = 0L
 
     private data class ScreenCorePart(
         val uiState: TodayUiState,
@@ -199,22 +202,14 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun loadTodayEntry() {
-        viewModelScope.launch {
-            _uiState.value = TodayUiState.Loading
-            try {
-                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(selectedDate.value) }
-                _uiState.value = TodayUiState.Success(entry)
-            } catch (e: Exception) {
-                _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
-            }
-        }
+        loadEntryForDate(selectedDate.value, preferCachedSelection = true)
     }
 
     private fun observeTodayDate() {
         viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
                 if (dateCoordinator.syncWithSystemDate()) {
-                    loadWeekOverviewInternal()
+                    requestWeekOverviewRefresh(selectedDate.value)
                 }
                 delay(dateCoordinator.millisUntilNextDay())
             }
@@ -228,31 +223,46 @@ class TodayViewModel @Inject constructor(
             }
                 .debounce(ENTRY_UPDATE_DEBOUNCE_MS)
                 .distinctUntilChanged()
-                .collectLatest {
-                    loadWeekOverviewInternal()
+                .collectLatest { refreshKey ->
+                    requestWeekOverviewRefresh(refreshKey.selectedDate)
                 }
         }
     }
 
     private fun loadWeekOverview() {
-        viewModelScope.launch { loadWeekOverviewInternal() }
+        requestWeekOverviewRefresh(selectedDate.value)
     }
 
-    private suspend fun loadWeekOverviewInternal() {
+    private fun requestWeekOverviewRefresh(selectedDateSnapshot: LocalDate) {
+        weekOverviewJob?.cancel()
+        val requestId = ++weekOverviewRequestId
+        weekOverviewJob = viewModelScope.launch {
+            loadWeekOverviewInternal(
+                selectedDateSnapshot = selectedDateSnapshot,
+                requestId = requestId
+            )
+        }
+    }
+
+    private suspend fun loadWeekOverviewInternal(
+        selectedDateSnapshot: LocalDate,
+        requestId: Long
+    ) {
         try {
-            val selected = selectedDate.value
-            val today = todayDate.value
             val weekDates = de.montagezeit.app.domain.util.WeekCalculator.weekDays(
-                de.montagezeit.app.domain.util.WeekCalculator.weekStart(selected)
+                de.montagezeit.app.domain.util.WeekCalculator.weekStart(selectedDateSnapshot)
             )
             val entries = withContext(Dispatchers.IO) {
                 getWorkEntriesByDateRange(weekDates.first(), weekDates.last())
             }
+            if (!isLatestWeekOverviewRequest(selectedDateSnapshot, requestId)) return
             _weekDaysUi.value = weekOverviewUseCase(
-                selectedDate = selected,
-                todayDate = today,
+                selectedDate = selectedDateSnapshot,
+                todayDate = todayDate.value,
                 entries = entries
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.w("TodayViewModel", "loadWeekOverview failed: ${e.message}")
         }
@@ -262,38 +272,15 @@ class TodayViewModel @Inject constructor(
         val wasAlreadySelected = selectedDate.value == date
         val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
 
-        // Cancel any in-flight load BEFORE mutating state to avoid races
-        selectDateJob?.cancel()
-
-        // Batch all synchronous state updates together
         dateCoordinator.selectDate(date)
         _uiState.value = TodayUiState.Loading
         _weekDaysUi.update { days -> days.map { it.copy(isSelected = it.date == date) } }
-
-
-        if (wasAlreadySelected) {
-            selectDateJob?.cancel()
-            selectDateJob = viewModelScope.launch {
-                val entry = selectedEntry.value ?: withContext(Dispatchers.IO) { getWorkEntryByDate(date) }
-                _uiState.value = TodayUiState.Success(entry)
-            }
-            return
-        }
 
         if (!isDateInCurrentWeek) {
             loadWeekOverview()
         }
 
-        selectDateJob = viewModelScope.launch {
-            try {
-                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(date) }
-                _uiState.value = TodayUiState.Success(entry)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
-            }
-        }
+        loadEntryForDate(date, preferCachedSelection = wasAlreadySelected)
     }
 
     fun openDailyCheckInDialog() {
@@ -357,16 +344,34 @@ class TodayViewModel @Inject constructor(
     fun onResetError() = loadSelectedDateEntry()
 
     private fun loadSelectedDateEntry() {
+        loadEntryForDate(selectedDate.value, preferCachedSelection = true)
+    }
+
+    private fun loadEntryForDate(
+        targetDate: LocalDate,
+        preferCachedSelection: Boolean
+    ) {
         selectDateJob?.cancel()
+        val requestId = ++entryLoadRequestId
+        val cachedEntry = if (preferCachedSelection) {
+            selectedEntry.value?.takeIf { it.date == targetDate }
+        } else {
+            null
+        }
+
         _uiState.value = TodayUiState.Loading
         selectDateJob = viewModelScope.launch {
             try {
-                val entry = withContext(Dispatchers.IO) { getWorkEntryByDate(selectedDate.value) }
-                _uiState.value = TodayUiState.Success(entry)
+                val entry = cachedEntry ?: withContext(Dispatchers.IO) { getWorkEntryByDate(targetDate) }
+                if (isLatestEntryLoad(targetDate, requestId)) {
+                    _uiState.value = TodayUiState.Success(entry)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
+                if (isLatestEntryLoad(targetDate, requestId)) {
+                    _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
+                }
             }
         }
     }
@@ -423,6 +428,14 @@ class TodayViewModel @Inject constructor(
 
     private fun currentSelectedEntryOrNull(): WorkEntry? =
         selectedEntry.value?.takeIf { it.date == selectedDate.value }
+
+    private fun isLatestEntryLoad(targetDate: LocalDate, requestId: Long): Boolean {
+        return requestId == entryLoadRequestId && selectedDate.value == targetDate
+    }
+
+    private fun isLatestWeekOverviewRequest(selectedDateSnapshot: LocalDate, requestId: Long): Boolean {
+        return requestId == weekOverviewRequestId && selectedDate.value == selectedDateSnapshot
+    }
 
     private companion object {
         private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L

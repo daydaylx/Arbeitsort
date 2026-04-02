@@ -1,35 +1,35 @@
 package de.montagezeit.app.ui.screen.today
 
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
-import de.montagezeit.app.data.preferences.ReminderSettings
-import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.util.WeekCalculator
-import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
+import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
+import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
+import de.montagezeit.app.domain.usecase.ObserveWorkEntryByDate
+import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
+import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
-import de.montagezeit.app.domain.usecase.SetDayLocation
-import de.montagezeit.app.domain.util.NonWorkingDayChecker
+import de.montagezeit.app.domain.util.WeekCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -37,9 +37,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModelTest {
@@ -63,38 +63,28 @@ class TodayViewModelTest {
 
     @Test
     fun `ensureTodayEntryThen opens callback without creating entry when missing`() {
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
-
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         val latch = CountDownLatch(1)
 
         viewModel.ensureTodayEntryThen { latch.countDown() }
 
         assertTrue(latch.await(2, TimeUnit.SECONDS))
-        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+        coVerify(exactly = 0) { repository.upsert(any()) }
     }
 
     @Test
     fun `ensureTodayEntryThen does not touch dao when entry exists`() {
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
-
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         val latch = CountDownLatch(1)
 
         viewModel.ensureTodayEntryThen { latch.countDown() }
 
         assertTrue(latch.await(2, TimeUnit.SECONDS))
-        coVerify(exactly = 0) { workEntryDao.upsert(any()) }
+        coVerify(exactly = 0) { repository.upsert(any()) }
     }
 
     @Test
@@ -105,17 +95,12 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "Baustelle Heute"
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns existing
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(any()) } returns null
-        every { settingsManager.settings } returns flowOf(settings)
+        coEvery { repository.getByDate(any()) } returns existing
+        coEvery { repository.getLatestDayLocationLabelByDayType(any()) } returns null
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             viewModel.showDailyCheckInDialog.collect { shown ->
@@ -129,7 +114,7 @@ class TodayViewModelTest {
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
         assertEquals("Baustelle Heute", viewModel.dailyCheckInLocationInput.value)
-        coVerify(exactly = 0) { workEntryDao.getLatestDayLocationLabelByDayType(any()) }
+        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
 
@@ -141,17 +126,12 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = ""
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns existing
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
-        every { settingsManager.settings } returns flowOf(settings)
+        coEvery { repository.getByDate(any()) } returns existing
+        coEvery { repository.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             viewModel.showDailyCheckInDialog.collect { shown ->
@@ -165,7 +145,7 @@ class TodayViewModelTest {
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
         assertEquals("Letzte Baustelle", viewModel.dailyCheckInLocationInput.value)
-        coVerify(exactly = 1) { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) }
+        coVerify(exactly = 1) { repository.getLatestDayLocationLabelByDayType(DayType.WORK) }
         collectJob.cancel()
     }
 
@@ -177,17 +157,12 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = ""
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
-        val settings = ReminderSettings()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns existing
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
-        every { settingsManager.settings } returns flowOf(settings)
+        coEvery { repository.getByDate(any()) } returns existing
+        coEvery { repository.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             viewModel.showDailyCheckInDialog.collect { shown ->
@@ -212,22 +187,16 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "Wieder geladen"
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
         var calls = 0
 
-        coEvery { workEntryDao.getByDate(any()) } answers {
+        coEvery { repository.getByDate(any()) } answers {
             calls += 1
             if (calls == 1) throw IllegalStateException("boom")
             recoveredEntry
         }
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        every { workEntryDao.getByDateWithTravelFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
         waitUntil { viewModel.uiState.value is TodayUiState.Error }
 
@@ -245,19 +214,14 @@ class TodayViewModelTest {
             dayType = DayType.WORK,
             dayLocationLabel = "Gespeichert"
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
         val recordDailyManualCheckIn = mockk<RecordDailyManualCheckIn>()
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns null
         coEvery { recordDailyManualCheckIn(any()) } returns savedEntry
 
         val viewModel = createViewModel(
-            workEntryDao = workEntryDao,
-            settingsManager = settingsManager,
+            repository = repository,
             recordDailyManualCheckIn = recordDailyManualCheckIn
         )
 
@@ -283,19 +247,14 @@ class TodayViewModelTest {
     @Test
     fun `submitDailyManualCheckIn surfaces security errors as snackbar without location flow`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
         val recordDailyManualCheckIn = mockk<RecordDailyManualCheckIn>()
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns null
         coEvery { recordDailyManualCheckIn(any()) } throws SecurityException("Location permission missing")
 
         val viewModel = createViewModel(
-            workEntryDao = workEntryDao,
-            settingsManager = settingsManager,
+            repository = repository,
             recordDailyManualCheckIn = recordDailyManualCheckIn
         )
         val snackbarLatch = CountDownLatch(1)
@@ -319,19 +278,11 @@ class TodayViewModelTest {
     @Test
     fun `selectDate updates selectedDate even when same date is selected`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns null
 
-        val viewModel = createViewModel(
-            workEntryDao,
-            settingsManager,
-            entriesWithTravel = emptyList()
-        )
+        val viewModel = createViewModel(repository)
         val successLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             var loadingSeen = false
@@ -368,53 +319,70 @@ class TodayViewModelTest {
     fun `selectDate switches between different dates correctly`() {
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val todayEntry = WorkEntry(date = today, dayType = DayType.WORK, dayLocationLabel = "Heute")
+        val yesterdayEntry = WorkEntry(date = yesterday, dayType = DayType.WORK, dayLocationLabel = "Gestern")
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(today) } returns todayEntry
+        coEvery { repository.getByDate(yesterday) } returns yesterdayEntry
 
-        val viewModel = createViewModel(
-            workEntryDao,
-            settingsManager,
-            entriesWithTravel = emptyList()
-        )
+        val viewModel = createViewModel(repository)
 
-        // Initially today
         assertEquals(today, viewModel.selectedDate.value)
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(todayEntry) }
 
-        // Switch to yesterday
         viewModel.selectDate(yesterday)
         assertEquals(yesterday, viewModel.selectedDate.value)
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(yesterdayEntry) }
 
-        // Switch back to today
         viewModel.selectDate(today)
         assertEquals(today, viewModel.selectedDate.value)
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(todayEntry) }
+    }
 
-        // Verify DB was queried for both dates
-        coVerify(atLeast = 1) { workEntryDao.getByDate(today) }
-        coVerify(atLeast = 1) { workEntryDao.getByDate(yesterday) }
+    @Test
+    fun `stale initial load does not overwrite a newer selected date`() {
+        val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
+        val todayEntry = WorkEntry(date = today, dayType = DayType.WORK, dayLocationLabel = "Heute")
+        val yesterdayEntry = WorkEntry(date = yesterday, dayType = DayType.WORK, dayLocationLabel = "Gestern")
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
+        val initialLoadStarted = CountDownLatch(1)
+        val releaseInitialLoad = CountDownLatch(1)
+        val todayCalls = AtomicInteger(0)
+
+        coEvery { repository.getByDate(today) } coAnswers {
+            if (todayCalls.incrementAndGet() == 1) {
+                initialLoadStarted.countDown()
+                assertTrue(releaseInitialLoad.await(2, TimeUnit.SECONDS))
+            }
+            todayEntry
+        }
+        coEvery { repository.getByDate(yesterday) } returns yesterdayEntry
+
+        val viewModel = createViewModel(repository)
+
+        assertTrue(initialLoadStarted.await(2, TimeUnit.SECONDS))
+
+        viewModel.selectDate(yesterday)
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(yesterdayEntry) }
+
+        releaseInitialLoad.countDown()
+        Thread.sleep(200)
+
+        assertEquals(yesterday, viewModel.selectedDate.value)
+        assertEquals(TodayUiState.Success(yesterdayEntry), viewModel.uiState.value)
     }
 
     @Test
     fun `selectDate rebuilds week overview from selected date`() {
         val today = LocalDate.now()
         val otherWeekDate = today.plusWeeks(1)
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns null
 
-        val viewModel = createViewModel(
-            workEntryDao,
-            settingsManager,
-            entriesWithTravel = emptyList()
-        )
+        val viewModel = createViewModel(repository)
         val weekLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
             viewModel.weekDaysUi.collect { days ->
@@ -442,16 +410,11 @@ class TodayViewModelTest {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
         val existingSnapshot = DeletedDaySnapshot(existingEntry, emptyList())
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDateWithTravel(today) } returns record(existingEntry)
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.deleteByDate(today) } returns Unit
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDateWithTravel(today) } returns record(existingEntry)
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
         val deletedLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
@@ -466,7 +429,7 @@ class TodayViewModelTest {
         assertEquals(existingSnapshot, viewModel.deletedEntryForUndo.value)
         assertTrue(viewModel.uiState.value is TodayUiState.Success)
         assertEquals(null, (viewModel.uiState.value as TodayUiState.Success).entry)
-        coVerify(exactly = 1) { workEntryDao.deleteByDate(today) }
+        coVerify(exactly = 1) { repository.deleteByDate(today) }
         collectJob.cancel()
     }
 
@@ -482,18 +445,12 @@ class TodayViewModelTest {
                 endLabel = "B"
             )
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDateWithTravel(today) } returns record(existingEntry, travelLegs)
-        coEvery { workEntryDao.getByDate(today) } returns existingEntry
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.deleteByDate(today) } returns Unit
-        coEvery { workEntryDao.replaceEntryWithTravelLegs(existingEntry, travelLegs) } returns Unit
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDateWithTravel(today) } returns record(existingEntry, travelLegs)
+        coEvery { repository.getByDate(today) } returns existingEntry
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
         // Delete
         val deletedLatch = CountDownLatch(1)
@@ -507,7 +464,7 @@ class TodayViewModelTest {
         viewModel.undoDeleteDay()
 
         assertEquals(null, viewModel.deletedEntryForUndo.value)
-        coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(existingEntry, travelLegs) }
+        coVerify(exactly = 1) { repository.replaceEntryWithTravelLegs(existingEntry, travelLegs) }
         assertTrue(viewModel.uiState.value is TodayUiState.Success)
         assertEquals(existingEntry, (viewModel.uiState.value as TodayUiState.Success).entry)
         collectJob.cancel()
@@ -516,57 +473,49 @@ class TodayViewModelTest {
     @Test
     fun `confirmDeleteDay does nothing when no entry exists`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDateWithTravel(today) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDateWithTravel(today) } returns null
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
         viewModel.confirmDeleteDay()
 
         // Short wait for coroutine to complete
         Thread.sleep(200)
         assertEquals(null, viewModel.deletedEntryForUndo.value)
-        coVerify(exactly = 0) { workEntryDao.deleteByDate(any()) }
+        coVerify(exactly = 0) { repository.deleteByDate(any()) }
     }
 
     @Test
-    fun `swipe navigation selectDate with plusDays and minusDays updates selectedDate and queries DB`() {
+    fun `swipe navigation selectDate with plusDays and minusDays keeps final selection and queries final date`() {
         val today = LocalDate.now()
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val plusOneEntry = WorkEntry(date = today.plusDays(1), dayType = DayType.WORK, dayLocationLabel = "+1")
+        val plusTwoEntry = WorkEntry(date = today.plusDays(2), dayType = DayType.WORK, dayLocationLabel = "+2")
+        val yesterdayEntry = WorkEntry(date = today.minusDays(1), dayType = DayType.WORK, dayLocationLabel = "-1")
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(today) } returns WorkEntry(date = today, dayType = DayType.WORK, dayLocationLabel = "Heute")
+        coEvery { repository.getByDate(today.plusDays(1)) } returns plusOneEntry
+        coEvery { repository.getByDate(today.plusDays(2)) } returns plusTwoEntry
+        coEvery { repository.getByDate(today.minusDays(1)) } returns yesterdayEntry
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
-        // Simulate swipe left (next day)
         viewModel.selectDate(today.plusDays(1))
         assertEquals(today.plusDays(1), viewModel.selectedDate.value)
 
-        // Simulate swipe left again
         viewModel.selectDate(today.plusDays(2))
         assertEquals(today.plusDays(2), viewModel.selectedDate.value)
 
-        // Simulate swipe right (previous day, back to +1)
         viewModel.selectDate(today.plusDays(1))
         assertEquals(today.plusDays(1), viewModel.selectedDate.value)
 
-        // Swipe right past today into past
         viewModel.selectDate(today)
         viewModel.selectDate(today.minusDays(1))
         assertEquals(today.minusDays(1), viewModel.selectedDate.value)
 
-        // Verify DB was queried for each navigated date
-        coVerify { workEntryDao.getByDate(today.plusDays(1)) }
-        coVerify { workEntryDao.getByDate(today.plusDays(2)) }
-        coVerify { workEntryDao.getByDate(today.minusDays(1)) }
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(yesterdayEntry) }
+        coVerify(timeout = 2_000) { repository.getByDate(today.minusDays(1)) }
     }
 
     @Test
@@ -581,15 +530,11 @@ class TodayViewModelTest {
             mealAllowanceBaseCents = 1400,
             mealAllowanceAmountCents = 820
         )
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns existing
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns existing
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
         viewModel.openDailyCheckInDialog()
 
@@ -600,16 +545,12 @@ class TodayViewModelTest {
 
     @Test
     fun `openDailyCheckInDialog defaults meal flags to false when no entry exists`() = runTest {
-        val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-        val settingsManager = mockk<ReminderSettingsManager>()
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { workEntryDao.getByDate(any()) } returns null
-        every { workEntryDao.getByDateFlow(any()) } returns flowOf(null)
-        coEvery { workEntryDao.getByDateRange(any(), any()) } returns emptyList()
-        coEvery { workEntryDao.getLatestDayLocationLabelByDayType(any()) } returns null
-        every { settingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { repository.getByDate(any()) } returns null
+        coEvery { repository.getLatestDayLocationLabelByDayType(any()) } returns null
 
-        val viewModel = createViewModel(workEntryDao, settingsManager)
+        val viewModel = createViewModel(repository)
 
         viewModel.openDailyCheckInDialog()
 
@@ -619,24 +560,30 @@ class TodayViewModelTest {
     }
 
     private fun createViewModel(
-        workEntryDao: WorkEntryDao,
-        settingsManager: ReminderSettingsManager,
-        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
-        resolveDayLocationPrefill: ResolveDayLocationPrefill = ResolveDayLocationPrefill(workEntryDao),
-        entriesWithTravel: List<WorkEntryWithTravelLegs> = emptyList(),
-        deleteDayEntry: DeleteDayEntry = DeleteDayEntry(workEntryDao)
+        repository: WorkEntryRepository = mockk(relaxed = true),
+        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true)
     ): TodayViewModel {
-        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entriesWithTravel
-        every { workEntryDao.getByDateWithTravelFlow(any()) } returns flowOf(null)
-        return TodayViewModel(
-            workEntryDao = workEntryDao,
+        every { repository.getByDateFlow(any()) } returns flowOf(null)
+        every { repository.getByDateWithTravelFlow(any()) } returns flowOf(null)
+        coEvery { repository.getByDateRange(any(), any()) } returns emptyList()
+
+        val actionsHandler = TodayActionsHandler(
             recordDailyManualCheckIn = recordDailyManualCheckIn,
-            resolveDayLocationPrefill = resolveDayLocationPrefill,
-            confirmOffDay = mockk<ConfirmOffDay>(relaxed = true),
-            setDayLocation = mockk<SetDayLocation>(relaxed = true),
-            reminderSettingsManager = settingsManager,
-            deleteDayEntry = deleteDayEntry,
-            nonWorkingDayChecker = mockk<NonWorkingDayChecker>(relaxed = true)
+            confirmOffDay = mockk(relaxed = true),
+            setDayLocation = mockk(relaxed = true),
+            deleteDayEntry = DeleteDayEntry(repository),
+            replaceWorkEntryWithTravelLegs = ReplaceWorkEntryWithTravelLegs(repository)
+        )
+        return TodayViewModel(
+            observeWorkEntryByDate = ObserveWorkEntryByDate(repository),
+            observeWorkEntryWithTravelByDate = ObserveWorkEntryWithTravelByDate(repository),
+            getWorkEntryByDate = GetWorkEntryByDate(repository),
+            getWorkEntriesByDateRange = GetWorkEntriesByDateRange(repository),
+            resolveDayLocationPrefill = ResolveDayLocationPrefill(repository),
+            dateCoordinator = TodayDateCoordinator(),
+            weekOverviewUseCase = TodayWeekOverviewUseCase(),
+            dialogsStateHolder = TodayDialogsStateHolder(),
+            actionsHandler = actionsHandler
         ).also {
             createdViewModels.add(it)
             it.viewModelScope.launch { it.screenState.collect {} }

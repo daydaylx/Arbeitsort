@@ -211,7 +211,7 @@ class PdfExporter @Inject constructor(
                 // PDF schreiben
                 writePdfFile(pdfDocument, startDate, endDate)
             } finally {
-                pdfDocument.close()
+                closePdfDocumentQuietly(pdfDocument)
             }
         } catch (e: IOException) {
             Log.e("PdfExporter", "PDF export IO error: ${e.javaClass.simpleName}", e)
@@ -624,6 +624,16 @@ class PdfExporter @Inject constructor(
             file
         )
         return PdfExportResult.Success(fileUri)
+    }
+
+    private fun closePdfDocumentQuietly(pdfDocument: PdfDocument) {
+        try {
+            pdfDocument.close()
+        } catch (e: IllegalStateException) {
+            if (e.message?.contains("closed", ignoreCase = true) != true) {
+                throw e
+            }
+        }
     }
     
     /**
