@@ -29,6 +29,11 @@ import java.time.LocalTime
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
+private const val WORKDAYS_PER_WEEK = 5.0
+private const val APPROX_WORKDAYS_PER_MONTH = 20.0
+private const val WEEKLY_TOLERANCE_HOURS = 0.1
+private const val MONTHLY_TOLERANCE_HOURS = 0.1
+
 @Composable
 internal fun WorkTimesSection(
     workStart: LocalTime,
