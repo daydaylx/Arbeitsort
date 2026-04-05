@@ -147,16 +147,17 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `COMP_TIME Tag zaehlt in offDays und keine Arbeitsminuten`() {
+    fun `COMP_TIME Tag zaehlt separat und keine Arbeitsminuten`() {
         val result = useCase(
             listOf(
                 entry(LocalDate.of(2026, 1, 7), DayType.COMP_TIME,
                     workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60)
             )
         )
-        assertEquals(0, result.workDays)
-        assertEquals(1, result.offDays)
+        assertEquals(1, result.workDays)
+        assertEquals(0, result.offDays)
         assertEquals(0, result.totalWorkMinutes)
+        assertEquals(1, result.compTimeDays)
     }
 
     @Test
@@ -379,5 +380,57 @@ class AggregateWorkStatsTest {
         )
         // (480 + 420) / 60 / 2 = 15 hours / 2 = 7.5
         assertEquals(7.5, result.averageWorkHoursPerWorkDayWithWork, 0.001)
+    }
+
+    @Test
+    fun `averageWorkHoursPerDay exkludiert COMP_TIME-Tage aus dem Nenner`() {
+        // 5 Arbeitstage à 480 min + 2 COMP_TIME-Tage → Durchschnitt muss 8h bleiben
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 4, 7), DayType.WORK,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60),
+                entry(LocalDate.of(2026, 4, 8), DayType.WORK,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60),
+                entry(LocalDate.of(2026, 4, 9), DayType.WORK,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60),
+                entry(LocalDate.of(2026, 4, 10), DayType.WORK,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60),
+                entry(LocalDate.of(2026, 4, 11), DayType.WORK,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60),
+                entry(LocalDate.of(2026, 4, 14), DayType.COMP_TIME,
+                    workStart = null, workEnd = null, breakMinutes = 0),
+                entry(LocalDate.of(2026, 4, 15), DayType.COMP_TIME,
+                    workStart = null, workEnd = null, breakMinutes = 0)
+            )
+        )
+        assertEquals(7, result.workDays)
+        assertEquals(2, result.compTimeDays)
+        // 5 * 480 min / 60.0 / 5 effektive Tage = 8,0h (nicht 5*480/60/7 = 5,71h)
+        assertEquals(8.0, result.averageWorkHoursPerDay, 0.001)
+    }
+
+    @Test
+    fun `averageWorkHoursPerDay ist 0 wenn nur COMP_TIME-Tage vorhanden`() {
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 4, 14), DayType.COMP_TIME,
+                    workStart = null, workEnd = null, breakMinutes = 0)
+            )
+        )
+        assertEquals(0.0, result.averageWorkHoursPerDay, 0.001)
+    }
+
+    @Test
+    fun `isMealAllowanceEligible ist false fuer FREI_MIT_REISE`() {
+        // OFF-Tag mit Reise soll keine Verpflegungspauschale in die Summe einbringen
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 4, 18), DayType.OFF,
+                    workStart = null, workEnd = null, breakMinutes = 0,
+                    travelMinutes = 120, mealAllowanceCents = 1400)
+            )
+        )
+        // FREI_MIT_REISE ist nicht eligible → mealAllowanceCents muss 0 sein
+        assertEquals(0, result.mealAllowanceCents)
     }
 }

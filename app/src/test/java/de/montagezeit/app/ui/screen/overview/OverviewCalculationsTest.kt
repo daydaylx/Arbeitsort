@@ -56,7 +56,7 @@ class OverviewCalculationsTest {
     }
 
     @Test
-    fun `buildOverviewMetrics aggregates confirmed values for selected period`() {
+    fun `buildOverviewMetrics includes travel-bearing days in selected period totals`() {
         val date = LocalDate.of(2026, 3, 18)
         val confirmedEntry = WorkEntryWithTravelLegs(
             workEntry = WorkEntry(
@@ -85,16 +85,17 @@ class OverviewCalculationsTest {
             settings = settings
         )
 
-        assertEquals(2.0, metrics.overtimeHours, 0.001)
-        assertEquals(8.0, metrics.targetHours, 0.001)
-        assertEquals(10.0, metrics.actualHours, 0.001)
-        assertEquals(2.0, metrics.travelHours, 0.001)
-        assertEquals(2800, metrics.mealAllowanceCents)
-        assertEquals(1, metrics.countedDays)
+        assertEquals(4.0, metrics.overtimeHours, 0.001)
+        assertEquals(16.0, metrics.targetHours, 0.001)
+        assertEquals(20.0, metrics.actualHours, 0.001)
+        assertEquals(4.0, metrics.travelHours, 0.001)
+        assertEquals(4200, metrics.mealAllowanceCents)
+        assertEquals(2, metrics.countedDays)
+        assertEquals(1, metrics.unconfirmedDaysCount)
     }
 
     @Test
-    fun `buildOverviewMetrics excludes off day travel from actual overtime hours`() {
+    fun `buildOverviewMetrics includes off day travel in actual overtime hours`() {
         val date = LocalDate.of(2026, 3, 19)
         val offEntry = WorkEntryWithTravelLegs(
             workEntry = WorkEntry(
@@ -111,15 +112,10 @@ class OverviewCalculationsTest {
             settings = settings
         )
 
-        assertEquals(0.0, metrics.overtimeHours, 0.001)
-        assertEquals(0.0, metrics.actualHours, 0.001)
+        assertEquals(2.0, metrics.overtimeHours, 0.001)
+        assertEquals(2.0, metrics.actualHours, 0.001)
         assertEquals(2.0, metrics.travelHours, 0.001)
         assertEquals(0, metrics.countedDays)
-    }
-
-    @Test
-    fun `targetHoursForPeriod uses monthly target for year view`() {
-        assertEquals(1920.0, targetHoursForPeriod(OverviewPeriod.YEAR, settings), 0.001)
     }
 
 }

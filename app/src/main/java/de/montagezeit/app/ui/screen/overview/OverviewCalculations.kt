@@ -38,16 +38,6 @@ internal fun OverviewPeriod.shiftReferenceDate(referenceDate: LocalDate, step: L
         OverviewPeriod.YEAR -> referenceDate.plusYears(step)
     }
 
-internal fun targetHoursForPeriod(
-    period: OverviewPeriod,
-    settings: ReminderSettings
-): Double = when (period) {
-    OverviewPeriod.DAY -> settings.dailyTargetHours
-    OverviewPeriod.WEEK -> settings.weeklyTargetHours
-    OverviewPeriod.MONTH -> settings.monthlyTargetHours
-    OverviewPeriod.YEAR -> settings.monthlyTargetHours * 12
-}
-
 internal fun buildOverviewMetrics(
     period: OverviewPeriod,
     entries: List<WorkEntryWithTravelLegs>,

@@ -125,7 +125,7 @@ private fun WeekDayChip(
         if (day.workHours != null) {
             val h = day.workHours.toInt()
             val m = ((day.workHours - h) * 60).toInt()
-            val hoursText = if (m == 0) "${h}h" else "${h}h${m}"
+            val hoursText = if (m == 0) "${h}h" else "${h}h${m}min"
             Text(
                 text = hoursText,
                 fontSize = 9.sp,

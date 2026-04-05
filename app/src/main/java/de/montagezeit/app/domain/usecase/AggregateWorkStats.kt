@@ -29,13 +29,19 @@ data class WorkStatsResult(
     val freeDaysWithoutTravel: Int       // FREI
 ) {
     val averageWorkHoursPerDay: Double
-        get() = if (workDays > 0) totalWorkMinutes / 60.0 / workDays else 0.0
-    
+        get() {
+            val effectiveDays = workDays - compTimeDays
+            return if (effectiveDays > 0) totalWorkMinutes / 60.0 / effectiveDays else 0.0
+        }
+
     /**
      * Durchschnittliche bezahlte Stunden pro Arbeitstag (inkl. Reisezeit).
      */
     val averagePaidHoursPerWorkDay: Double
-        get() = if (workDays > 0) totalPaidMinutes / 60.0 / workDays else 0.0
+        get() {
+            val effectiveDays = workDays - compTimeDays
+            return if (effectiveDays > 0) totalPaidMinutes / 60.0 / effectiveDays else 0.0
+        }
     
     /**
      * Durchschnittliche Arbeitsstunden pro Arbeitstag mit Arbeit.

@@ -24,7 +24,7 @@ enum class DayClassification {
      * - Kein gezählter Arbeitstag
      * - Reisezeit wird separat als "Fahrstunden an freien Tagen" ausgewiesen
      * - Keine Sollstunden
-     * - Verpflegungspauschale möglich (fachlich zu klären)
+     * - Keine Verpflegungspauschale (MealAllowanceCalculator gibt für DayType.OFF immer 0 zurück)
      */
     FREI_MIT_REISE,
     
@@ -111,7 +111,7 @@ enum class DayClassification {
      */
     val isMealAllowanceEligible: Boolean
         get() = when (this) {
-            FREI_MIT_REISE, ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE -> true
-            FREI, ARBEITSTAG_LEER, UEBERSTUNDEN_ABBAU -> false
+            ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE -> true
+            FREI_MIT_REISE, FREI, ARBEITSTAG_LEER, UEBERSTUNDEN_ABBAU -> false
         }
 }
