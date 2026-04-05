@@ -107,15 +107,12 @@ private val DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
 
 fun LocalTime.toPrefString(): String = this.format(TIME_FORMATTER)
 
-fun String?.toLocalTime(): LocalTime {
-    return if (this.isNullOrBlank()) {
-        LocalTime.MIDNIGHT
-    } else {
-        try {
-            LocalTime.parse(this, TIME_FORMATTER)
-        } catch (e: Exception) {
-            LocalTime.MIDNIGHT
-        }
+fun String?.toLocalTime(): LocalTime? {
+    if (this.isNullOrBlank()) return null
+    return try {
+        LocalTime.parse(this, TIME_FORMATTER)
+    } catch (e: Exception) {
+        null
     }
 }
 

@@ -92,7 +92,7 @@ class ReminderScheduler @Inject constructor(
             flexTimeInterval = WINDOW_FLEX_MINUTES,
             flexTimeIntervalUnit = TimeUnit.MINUTES
         )
-            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
             .setConstraints(constraints)
             .addTag("morning_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.MORNING.name))
@@ -139,7 +139,7 @@ class ReminderScheduler @Inject constructor(
             flexTimeInterval = WINDOW_FLEX_MINUTES,
             flexTimeIntervalUnit = TimeUnit.MINUTES
         )
-            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
             .setConstraints(constraints)
             .addTag("evening_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.EVENING.name))
@@ -179,7 +179,7 @@ class ReminderScheduler @Inject constructor(
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
             repeatInterval = 1, TimeUnit.DAYS
         )
-            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
             .setConstraints(constraints)
             .addTag("fallback_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.FALLBACK.name))
@@ -218,7 +218,7 @@ class ReminderScheduler @Inject constructor(
         val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
             repeatInterval = 1, TimeUnit.DAYS
         )
-            .setInitialDelay(initialDelay.toMinutes(), TimeUnit.MINUTES)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
             .setConstraints(constraints)
             .addTag("daily_reminder")
             .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.DAILY.name))

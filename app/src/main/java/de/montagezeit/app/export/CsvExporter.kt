@@ -118,6 +118,7 @@ class CsvExporter @Inject constructor(
                     val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
                     val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, travelLegs)
                     val travelRouteSummary = buildTravelRouteSummary(travelLegs)
+                    val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
 
                     val dayTypeLabel = when (entry.dayType) {
                         DayType.COMP_TIME -> "Ü-Abbau"
@@ -150,15 +151,15 @@ class CsvExporter @Inject constructor(
                         append(";")
                         append(paidTotalMinutes)
                         append(";")
-                        append(if (entry.mealIsArrivalDeparture) 1 else 0)
+                        append(if (mealSnapshot.isArrivalDeparture) 1 else 0)
                         append(";")
-                        append(if (entry.mealBreakfastIncluded) 1 else 0)
+                        append(if (mealSnapshot.breakfastIncluded) 1 else 0)
                         append(";")
-                        append(entry.mealAllowanceBaseCents)
+                        append(mealSnapshot.baseCents)
                         append(";")
-                        append(entry.mealAllowanceAmountCents)
+                        append(mealSnapshot.amountCents)
                         append(";")
-                        append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
+                        append(MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents))
                         append(";")
                         append(CsvCellEncoder.encode(entry.note ?: ""))
                         append("\n")

@@ -381,7 +381,9 @@ class EditEntryViewModel @Inject constructor(
         val mealAllowance = resolveMealAllowanceForSave(
             dayType = data.dayType,
             isArrivalDeparture = data.mealIsArrivalDeparture,
-            breakfastIncluded = data.mealBreakfastIncluded
+            breakfastIncluded = data.mealBreakfastIncluded,
+            workMinutes = data.calculateEffectiveWorkMinutes(),
+            travelMinutes = data.calculateEffectiveTravelMinutes()
         )
         return PendingSave(
             entry = buildEntryToSave(currentState, data, now, mealAllowance),
@@ -560,8 +562,41 @@ data class EditFormData(
         return resolveMealAllowanceForSave(
             dayType = dayType,
             isArrivalDeparture = mealIsArrivalDeparture,
-            breakfastIncluded = mealBreakfastIncluded
+            breakfastIncluded = mealBreakfastIncluded,
+            workMinutes = calculateEffectiveWorkMinutes(),
+            travelMinutes = calculateEffectiveTravelMinutes()
         ).amountCents
+    }
+
+    fun calculateEffectiveWorkMinutes(): Int {
+        if (dayType != DayType.WORK || !hasWorkTimes) return 0
+
+        val startMinutes = workStart.hour * 60 + workStart.minute
+        val endMinutes = workEnd.hour * 60 + workEnd.minute
+        val rawMinutes = if (endMinutes < startMinutes) {
+            (24 * 60 - startMinutes) + endMinutes
+        } else {
+            endMinutes - startMinutes
+        }
+        return (rawMinutes - breakMinutes).coerceAtLeast(0)
+    }
+
+    fun calculateEffectiveTravelMinutes(): Int {
+        return normalizedTravelLegs().sumOf { leg ->
+            when {
+                leg.paidMinutesOverride != null -> leg.paidMinutesOverride
+                leg.startTime != null && leg.arriveTime != null -> {
+                    val startMinutes = requireNotNull(leg.startTime).hour * 60 + requireNotNull(leg.startTime).minute
+                    val arriveMinutes = requireNotNull(leg.arriveTime).hour * 60 + requireNotNull(leg.arriveTime).minute
+                    if (arriveMinutes < startMinutes) {
+                        (24 * 60 - startMinutes) + arriveMinutes
+                    } else {
+                        arriveMinutes - startMinutes
+                    }
+                }
+                else -> 0
+            }
+        }
     }
 
     fun validate(): List<ValidationError> {
@@ -709,27 +744,22 @@ data class ResolvedMealAllowanceForSave(
 fun resolveMealAllowanceForSave(
     dayType: DayType,
     isArrivalDeparture: Boolean,
-    breakfastIncluded: Boolean
+    breakfastIncluded: Boolean,
+    workMinutes: Int = 0,
+    travelMinutes: Int = 0
 ): ResolvedMealAllowanceForSave {
-    if (dayType != DayType.WORK) {
-        return ResolvedMealAllowanceForSave(
-            isArrivalDeparture = false,
-            breakfastIncluded = false,
-            baseCents = 0,
-            amountCents = 0
-        )
-    }
-
-    val result = MealAllowanceCalculator.calculate(
+    val snapshot = MealAllowanceCalculator.resolveForActivity(
         dayType = dayType,
         isArrivalDeparture = isArrivalDeparture,
-        breakfastIncluded = breakfastIncluded
+        breakfastIncluded = breakfastIncluded,
+        workMinutes = workMinutes,
+        travelMinutes = travelMinutes
     )
     return ResolvedMealAllowanceForSave(
-        isArrivalDeparture = isArrivalDeparture,
-        breakfastIncluded = breakfastIncluded,
-        baseCents = result.baseCents,
-        amountCents = result.amountCents
+        isArrivalDeparture = snapshot.isArrivalDeparture,
+        breakfastIncluded = snapshot.breakfastIncluded,
+        baseCents = snapshot.baseCents,
+        amountCents = snapshot.amountCents
     )
 }
 

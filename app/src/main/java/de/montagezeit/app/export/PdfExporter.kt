@@ -14,11 +14,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
-import de.montagezeit.app.domain.model.DayClassification
+import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
-import de.montagezeit.app.domain.usecase.classifyDay
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -496,7 +495,8 @@ class PdfExporter @Inject constructor(
             xPos += COL_LOCATION
 
             // Frühstück: ✓ wenn Frühstück erfasst und Verpflegungspauschale greift, sonst –
-            val breakfastText = if (entry.mealBreakfastIncluded && entry.mealAllowanceBaseCents > 0) {
+            val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
+            val breakfastText = if (mealSnapshot.breakfastIncluded && mealSnapshot.baseCents > 0) {
                 string(R.string.pdf_export_breakfast_yes)
             } else {
                 dash
@@ -524,21 +524,13 @@ class PdfExporter @Inject constructor(
      */
     private fun drawSummary(canvas: Canvas, entries: List<WorkEntryWithTravelLegs>, y: Float): Float {
         var yPos = y + 20
-
-        // Arbeitstage: ClassifyDay-basiert; ARBEITSTAG_LEER nur wenn explizit bestätigt
-        val workDays = entries.count { record ->
-            val classification = record.classifyDay()
-            when (classification) {
-                DayClassification.ARBEITSTAG_LEER -> record.workEntry.confirmedWorkDay
-                else -> classification.isCountedWorkDay
-            }
-        }
-        val totalWorkHours = PdfUtilities.sumWorkHours(entries)
-        val totalTravelMinutes = PdfUtilities.sumTravelMinutes(entries)
-        val totalMealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
+        val stats = AggregateWorkStats()(entries)
+        val totalWorkHours = stats.totalWorkMinutes / 60.0
+        val totalTravelMinutes = stats.totalTravelMinutes
+        val totalMealAllowanceCents = stats.mealAllowanceCents
 
         canvas.drawText(
-            string(R.string.pdf_export_summary_work_days, workDays),
+            string(R.string.pdf_export_summary_work_days, stats.workDays),
             MARGIN.toFloat(), yPos, paintSummary
         )
         yPos += 25

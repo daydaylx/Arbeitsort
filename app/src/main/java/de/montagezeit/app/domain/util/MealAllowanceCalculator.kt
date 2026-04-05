@@ -1,6 +1,7 @@
 package de.montagezeit.app.domain.util
 
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 
 /**
  * Berechnet die Verpflegungspauschale nach fachlichen Regeln.
@@ -20,6 +21,20 @@ object MealAllowanceCalculator {
     const val BREAKFAST_DEDUCTION_CENTS = 580
 
     data class Result(val baseCents: Int, val amountCents: Int)
+    data class Snapshot(
+        val isArrivalDeparture: Boolean,
+        val breakfastIncluded: Boolean,
+        val baseCents: Int,
+        val amountCents: Int
+    )
+
+    fun isEligible(
+        dayType: DayType,
+        workMinutes: Int,
+        travelMinutes: Int
+    ): Boolean {
+        return dayType == DayType.WORK && (workMinutes > 0 || travelMinutes > 0)
+    }
 
     fun calculate(
         dayType: DayType,
@@ -31,6 +46,56 @@ object MealAllowanceCalculator {
         val deduction = if (breakfastIncluded) BREAKFAST_DEDUCTION_CENTS else 0
         val amount = maxOf(0, base - deduction)
         return Result(baseCents = base, amountCents = amount)
+    }
+
+    fun resolveForActivity(
+        dayType: DayType,
+        isArrivalDeparture: Boolean,
+        breakfastIncluded: Boolean,
+        workMinutes: Int,
+        travelMinutes: Int
+    ): Snapshot {
+        if (!isEligible(dayType = dayType, workMinutes = workMinutes, travelMinutes = travelMinutes)) {
+            return Snapshot(
+                isArrivalDeparture = false,
+                breakfastIncluded = false,
+                baseCents = 0,
+                amountCents = 0
+            )
+        }
+
+        val result = calculate(
+            dayType = dayType,
+            isArrivalDeparture = isArrivalDeparture,
+            breakfastIncluded = breakfastIncluded
+        )
+        return Snapshot(
+            isArrivalDeparture = isArrivalDeparture,
+            breakfastIncluded = breakfastIncluded,
+            baseCents = result.baseCents,
+            amountCents = result.amountCents
+        )
+    }
+
+    fun resolveEffectiveStoredSnapshot(record: WorkEntryWithTravelLegs): Snapshot {
+        val workMinutes = TimeCalculator.calculateWorkMinutes(record.workEntry)
+        val travelMinutes = TimeCalculator.calculateTravelMinutes(record.orderedTravelLegs)
+        if (!isEligible(record.workEntry.dayType, workMinutes, travelMinutes)) {
+            return Snapshot(
+                isArrivalDeparture = false,
+                breakfastIncluded = false,
+                baseCents = 0,
+                amountCents = 0
+            )
+        }
+
+        val entry = record.workEntry
+        return Snapshot(
+            isArrivalDeparture = entry.mealIsArrivalDeparture,
+            breakfastIncluded = entry.mealBreakfastIncluded,
+            baseCents = entry.mealAllowanceBaseCents,
+            amountCents = entry.mealAllowanceAmountCents
+        )
     }
 
     fun formatEuro(cents: Int): String {

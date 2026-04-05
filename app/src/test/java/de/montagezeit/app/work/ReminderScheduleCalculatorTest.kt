@@ -44,4 +44,25 @@ class ReminderScheduleCalculatorTest {
 
         assertEquals(24L * 60L, delay.toMinutes())
     }
+
+    @Test
+    fun `delay to window start preserves sub minute remainder`() {
+        val delay = ReminderScheduleCalculator.delayToWindowStart(
+            now = LocalTime.of(5, 59, 30),
+            windowStart = LocalTime.of(6, 0),
+            windowEnd = LocalTime.of(13, 0)
+        )
+
+        assertEquals(30_000L, delay.toMillis())
+    }
+
+    @Test
+    fun `delay to time preserves sub minute remainder`() {
+        val delay = ReminderScheduleCalculator.delayToTime(
+            now = LocalTime.of(22, 29, 45),
+            target = LocalTime.of(22, 30)
+        )
+
+        assertEquals(15_000L, delay.toMillis())
+    }
 }

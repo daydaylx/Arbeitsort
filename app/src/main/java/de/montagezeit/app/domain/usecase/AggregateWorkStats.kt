@@ -3,6 +3,7 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.model.DayClassification
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 
 /**
@@ -12,8 +13,9 @@ import de.montagezeit.app.domain.util.TimeCalculator
  * die neue differenzierte Tageszählung basierend auf DayClassification.
  */
 data class WorkStatsResult(
-    // Klassische Metriken (für Backwards Compatibility)
+    // Sichtbare Metriken für UI/Export
     val workDays: Int,
+    val targetCountedDays: Int,
     val offDays: Int,
     val totalWorkMinutes: Int,
     val totalTravelMinutes: Int,
@@ -29,19 +31,13 @@ data class WorkStatsResult(
     val freeDaysWithoutTravel: Int       // FREI
 ) {
     val averageWorkHoursPerDay: Double
-        get() {
-            val effectiveDays = workDays - compTimeDays
-            return if (effectiveDays > 0) totalWorkMinutes / 60.0 / effectiveDays else 0.0
-        }
+        get() = if (workDays > 0) totalWorkMinutes / 60.0 / workDays else 0.0
 
     /**
      * Durchschnittliche bezahlte Stunden pro Arbeitstag (inkl. Reisezeit).
      */
     val averagePaidHoursPerWorkDay: Double
-        get() {
-            val effectiveDays = workDays - compTimeDays
-            return if (effectiveDays > 0) totalPaidMinutes / 60.0 / effectiveDays else 0.0
-        }
+        get() = if (workDays > 0) totalPaidMinutes / 60.0 / workDays else 0.0
     
     /**
      * Durchschnittliche Arbeitsstunden pro Arbeitstag mit Arbeit.
@@ -66,16 +62,19 @@ class AggregateWorkStats {
             )
         }
         
-        // Klassische Metriken (synchronisiert mit Overtime-Logik)
-        val workDays = classifiedDays.count { it.classification.isCountedWorkDay }
-        val offDays = eligibleEntries.size - workDays
+        // Sichtbare Arbeitstage ohne UEBERSTUNDEN_ABBAU; Soll-/Overtime-Zähler separat
+        val visibleWorkDays = classifiedDays.count {
+            it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT ||
+                it.classification == DayClassification.ARBEITSTAG_NUR_REISE ||
+                it.classification == DayClassification.ARBEITSTAG_LEER
+        }
+        val targetCountedDays = classifiedDays.count { it.classification.isCountedWorkDay }
+        val offDays = eligibleEntries.size - visibleWorkDays
         val totalWorkMinutes = eligibleEntries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
         val totalTravelMinutes = eligibleEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
-        
-        // Verpflegungspauschale: Nur für ARBEITSTAG_MIT_ARBEIT und ARBEITSTAG_NUR_REISE
+
         val mealAllowanceCents = classifiedDays
-            .filter { it.classification.isMealAllowanceEligible }
-            .sumOf { it.entry.workEntry.mealAllowanceAmountCents }
+            .sumOf { MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it.entry).amountCents }
         
         // Neue differenzierte Metriken
         val workDaysWithWork = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT }
@@ -86,7 +85,8 @@ class AggregateWorkStats {
         val freeDaysWithoutTravel = classifiedDays.count { it.classification == DayClassification.FREI }
         
         return WorkStatsResult(
-            workDays = workDays,
+            workDays = visibleWorkDays,
+            targetCountedDays = targetCountedDays,
             offDays = offDays,
             totalWorkMinutes = totalWorkMinutes,
             totalTravelMinutes = totalTravelMinutes,

@@ -42,6 +42,7 @@ class AggregateWorkStatsTest {
     fun `leere Liste ergibt Nullwerte`() {
         val result = useCase(emptyList())
         assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
         assertEquals(0, result.offDays)
         assertEquals(0, result.totalWorkMinutes)
         assertEquals(0, result.totalTravelMinutes)
@@ -64,6 +65,7 @@ class AggregateWorkStatsTest {
             )
         )
         assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
         assertEquals(0, result.totalWorkMinutes)
     }
 
@@ -85,6 +87,7 @@ class AggregateWorkStatsTest {
         )
 
         assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
         assertEquals(0, result.totalTravelMinutes)
         assertEquals(0, result.totalPaidMinutes)
         assertEquals(0, result.mealAllowanceCents)
@@ -100,6 +103,7 @@ class AggregateWorkStatsTest {
             )
         )
         assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
         assertEquals(480, result.totalWorkMinutes)
         assertEquals(0, result.offDays)
     }
@@ -113,6 +117,7 @@ class AggregateWorkStatsTest {
             )
         )
         assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
         assertEquals(1, result.offDays)
         assertEquals(0, result.totalWorkMinutes)
     }
@@ -177,8 +182,9 @@ class AggregateWorkStatsTest {
                     workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0), breakMinutes = 60)
             )
         )
-        assertEquals(1, result.workDays)
-        assertEquals(0, result.offDays)
+        assertEquals(0, result.workDays)
+        assertEquals(1, result.targetCountedDays)
+        assertEquals(1, result.offDays)
         assertEquals(0, result.totalWorkMinutes)
         assertEquals(1, result.compTimeDays)
     }
@@ -207,6 +213,7 @@ class AggregateWorkStatsTest {
             )
         )
         assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
         assertEquals(1, result.offDays)
         assertEquals(480, result.totalWorkMinutes)
         assertEquals(120, result.totalTravelMinutes)
@@ -261,6 +268,7 @@ class AggregateWorkStatsTest {
         assertEquals(0, result.workDaysEmpty)
         // Sollte immer noch als workDay zählen
         assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
         // Verpflegungspauschale ist erlaubt
         assertEquals(820, result.mealAllowanceCents)
         // Reisezeit wird berücksichtigt
@@ -283,6 +291,7 @@ class AggregateWorkStatsTest {
         assertEquals(1, result.workDaysEmpty)
         // Sollte als workDay zählen
         assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
         // Keine Verpflegungspauschale bei leerem Tag
         assertEquals(0, result.mealAllowanceCents)
     }
@@ -357,6 +366,7 @@ class AggregateWorkStatsTest {
         
         // Klassische Metriken
         assertEquals(4, result.workDays) // 2 + 1 + 1
+        assertEquals(4, result.targetCountedDays)
         assertEquals(2, result.offDays)  // 1 + 1
         
         // Zeitwerte
@@ -426,7 +436,8 @@ class AggregateWorkStatsTest {
                     workStart = null, workEnd = null, breakMinutes = 0)
             )
         )
-        assertEquals(7, result.workDays)
+        assertEquals(5, result.workDays)
+        assertEquals(7, result.targetCountedDays)
         assertEquals(2, result.compTimeDays)
         // 5 * 480 min / 60.0 / 5 effektive Tage = 8,0h (nicht 5*480/60/7 = 5,71h)
         assertEquals(8.0, result.averageWorkHoursPerDay, 0.001)
@@ -441,6 +452,25 @@ class AggregateWorkStatsTest {
             )
         )
         assertEquals(0.0, result.averageWorkHoursPerDay, 0.001)
+    }
+
+    @Test
+    fun `zero net work day does not contribute stored meal allowance`() {
+        val result = useCase(
+            listOf(
+                entry(
+                    LocalDate.of(2026, 4, 19),
+                    DayType.WORK,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(8, 30),
+                    breakMinutes = 30,
+                    mealAllowanceCents = 1400
+                )
+            )
+        )
+
+        assertEquals(1, result.workDays)
+        assertEquals(0, result.mealAllowanceCents)
     }
 
     @Test

@@ -12,6 +12,7 @@ import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
+import de.montagezeit.app.domain.util.hasPositiveNetWorkDuration
 import de.montagezeit.app.domain.util.isValidWorkTimeRange
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
@@ -102,9 +103,16 @@ class SettingsViewModel @Inject constructor(
 
     fun updateBreakMinutes(minutes: Int) {
         viewModelScope.launch {
-            reminderSettingsManager.updateSettings(
-                breakMinutes = minutes.coerceIn(0, 180)
-            )
+            val settings = reminderSettingsManager.settings.first()
+            val normalizedBreakMinutes = minutes.coerceIn(0, 180)
+            if (!hasPositiveNetWorkDuration(settings.workStart, settings.workEnd, normalizedBreakMinutes)) {
+                _uiState.value = SettingsUiState.ReminderError(
+                    UiText.StringResource(R.string.error_break_must_be_shorter_than_shift)
+                )
+                return@launch
+            }
+            reminderSettingsManager.updateSettings(breakMinutes = normalizedBreakMinutes)
+            _uiState.value = SettingsUiState.Initial
         }
     }
 
@@ -380,8 +388,11 @@ class SettingsViewModel @Inject constructor(
      */
     fun updateWeeklyTargetHours(hours: Double) {
         viewModelScope.launch {
+            val normalizedDaily = ((hours / 5.0) * 2).roundToInt() / 2.0
             reminderSettingsManager.updateSettings(
-                weeklyTargetHours = hours.coerceIn(1.0, 168.0)
+                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
+                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
+                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
             )
         }
     }
@@ -391,16 +402,26 @@ class SettingsViewModel @Inject constructor(
      */
     fun updateMonthlyTargetHours(hours: Double) {
         viewModelScope.launch {
+            val normalizedDaily = ((hours / 20.0) * 2).roundToInt() / 2.0
             reminderSettingsManager.updateSettings(
-                monthlyTargetHours = hours.coerceIn(1.0, 744.0)
+                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
+                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
+                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
             )
         }
     }
 
     private suspend fun updateWorkSchedule(workStart: LocalTime, workEnd: LocalTime) {
+        val settings = reminderSettingsManager.settings.first()
         if (!isValidWorkTimeRange(workStart, workEnd)) {
             _uiState.value = SettingsUiState.ReminderError(
                 UiText.StringResource(R.string.error_time_range_invalid)
+            )
+            return
+        }
+        if (!hasPositiveNetWorkDuration(workStart, workEnd, settings.breakMinutes)) {
+            _uiState.value = SettingsUiState.ReminderError(
+                UiText.StringResource(R.string.error_break_must_be_shorter_than_shift)
             )
             return
         }

@@ -86,6 +86,9 @@ class WindowCheckWorker @AssistedInject constructor(
                     if (!settings.dailyReminderEnabled) {
                         return Result.success()
                     }
+                    if (!ReminderWindowEvaluator.isAfterDailyReminderTime(currentTime, settings)) {
+                        return Result.success()
+                    }
                     checkAndShowDailyReminder(today, settings)
                     // Daily ist periodic, kein self-reschedule
                 }

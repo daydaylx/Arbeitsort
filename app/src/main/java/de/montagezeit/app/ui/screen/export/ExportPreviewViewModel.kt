@@ -60,7 +60,9 @@ internal fun calculatePreviewSummary(entries: List<WorkEntryWithTravelLegs>): Pr
     val workMinutes = eligibleEntries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
     val travelMinutes = eligibleEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
     val paidMinutes = eligibleEntries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
-    val mealAllowanceCents = eligibleEntries.sumOf { it.workEntry.mealAllowanceAmountCents }
+    val mealAllowanceCents = eligibleEntries.sumOf {
+        MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it).amountCents
+    }
     return PreviewSummary(
         workMinutes = workMinutes,
         travelMinutes = travelMinutes,
@@ -85,9 +87,10 @@ internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPrevi
     val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
     val travelMinutes = TimeCalculator.calculateTravelMinutes(record.orderedTravelLegs)
     val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, record.orderedTravelLegs)
+    val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
     val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK && entry.workStart != null && entry.workEnd != null
-    val mealLabel = if (entry.mealAllowanceAmountCents > 0) {
-        MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents)
+    val mealLabel = if (mealSnapshot.amountCents > 0) {
+        MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents)
     } else {
         null
     }

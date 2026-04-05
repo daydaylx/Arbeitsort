@@ -23,6 +23,10 @@ object ReminderWindowEvaluator {
         return !currentTime.isBefore(settings.fallbackTime)
     }
 
+    fun isAfterDailyReminderTime(currentTime: LocalTime, settings: ReminderSettings): Boolean {
+        return !currentTime.isBefore(settings.dailyReminderTime)
+    }
+
     /**
      * Prüft ob ein Tag ein Nicht-Arbeitstag ist
      *

@@ -64,12 +64,18 @@ class ExportPreviewViewModelTest {
                     record(WorkEntry(
                         date = LocalDate.of(2026, 1, 10),
                         dayType = DayType.WORK,
+                        workStart = LocalTime.of(8, 0),
+                        workEnd = LocalTime.of(17, 0),
+                        breakMinutes = 60,
                         mealAllowanceAmountCents = 820,
                         confirmedWorkDay = true
                     )),
                     record(WorkEntry(
                         date = LocalDate.of(2026, 1, 11),
                         dayType = DayType.WORK,
+                        workStart = LocalTime.of(8, 0),
+                        workEnd = LocalTime.of(17, 0),
+                        breakMinutes = 60,
                         mealAllowanceAmountCents = 2220,
                         confirmedWorkDay = true
                     ))
@@ -122,6 +128,9 @@ class ExportPreviewViewModelTest {
         val entryWithMeal = WorkEntry(
             date = LocalDate.of(2026, 1, 10),
             dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
             mealAllowanceAmountCents = 820
         )
         val entryWithoutMeal = WorkEntry(
@@ -132,6 +141,20 @@ class ExportPreviewViewModelTest {
 
         assertEquals("8,20 €", buildExportPreviewRow(record(entryWithMeal)).mealAllowanceLabel)
         assertNull(buildExportPreviewRow(record(entryWithoutMeal)).mealAllowanceLabel)
+    }
+
+    @Test
+    fun `buildExportPreviewRow hides stored meal allowance when work day has zero activity`() {
+        val zeroNetEntry = WorkEntry(
+            date = LocalDate.of(2026, 1, 13),
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(8, 30),
+            breakMinutes = 30,
+            mealAllowanceAmountCents = 1400
+        )
+
+        assertNull(buildExportPreviewRow(record(zeroNetEntry)).mealAllowanceLabel)
     }
 
     @Test

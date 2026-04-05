@@ -15,7 +15,9 @@ class EditMealAllowanceLogicTest {
         val result = resolveMealAllowanceForSave(
             dayType = DayType.WORK,
             isArrivalDeparture = true,
-            breakfastIncluded = true
+            breakfastIncluded = true,
+            workMinutes = 480,
+            travelMinutes = 0
         )
 
         assertTrue(result.isArrivalDeparture)
@@ -39,10 +41,29 @@ class EditMealAllowanceLogicTest {
     }
 
     @Test
+    fun `resolveMealAllowanceForSave clears meal data for work day without activity`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.WORK,
+            isArrivalDeparture = true,
+            breakfastIncluded = true,
+            workMinutes = 0,
+            travelMinutes = 0
+        )
+
+        assertFalse(result.isArrivalDeparture)
+        assertFalse(result.breakfastIncluded)
+        assertEquals(0, result.baseCents)
+        assertEquals(0, result.amountCents)
+    }
+
+    @Test
     fun `fromEntry keeps meal allowance flags in edit form`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 3, 12),
             dayType = DayType.WORK,
+            workStart = java.time.LocalTime.of(8, 0),
+            workEnd = java.time.LocalTime.of(17, 0),
+            breakMinutes = 60,
             mealIsArrivalDeparture = true,
             mealBreakfastIncluded = true,
             mealAllowanceBaseCents = 1400,

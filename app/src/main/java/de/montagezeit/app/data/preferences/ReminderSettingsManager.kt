@@ -31,9 +31,9 @@ class ReminderSettingsManager @Inject constructor(
      * Flow für Reminder-Settings
      */
     val settings: Flow<ReminderSettings> = dataStore.data.map { preferences ->
-        val rawWorkStart = preferences[ReminderSettingsKeys.WORK_START]?.toLocalTime()
+        val rawWorkStart = preferences[ReminderSettingsKeys.WORK_START].toLocalTime()
             ?: AppDefaults.WORK_START
-        val rawWorkEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime()
+        val rawWorkEnd = preferences[ReminderSettingsKeys.WORK_END].toLocalTime()
             ?: AppDefaults.WORK_END
         val rawBreakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: AppDefaults.BREAK_MINUTES
         val workDefaults = resolveWorkScheduleDefaults(
@@ -41,6 +41,10 @@ class ReminderSettingsManager @Inject constructor(
             workEnd = rawWorkEnd,
             breakMinutes = rawBreakMinutes
         )
+        val normalizedDailyTargetHours = preferences[ReminderSettingsKeys.DAILY_TARGET_HOURS]
+            ?.toDoubleOrNull()
+            ?.coerceIn(0.5, 24.0)
+            ?: 8.0
 
         ReminderSettings(
             // Arbeitszeit Defaults
@@ -50,28 +54,28 @@ class ReminderSettingsManager @Inject constructor(
 
             // Morning Window
             morningReminderEnabled = preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] ?: true,
-            morningWindowStart = preferences[ReminderSettingsKeys.MORNING_WINDOW_START]?.toLocalTime()
+            morningWindowStart = preferences[ReminderSettingsKeys.MORNING_WINDOW_START].toLocalTime()
                 ?: LocalTime.of(6, 0),
-            morningWindowEnd = preferences[ReminderSettingsKeys.MORNING_WINDOW_END]?.toLocalTime()
+            morningWindowEnd = preferences[ReminderSettingsKeys.MORNING_WINDOW_END].toLocalTime()
                 ?: LocalTime.of(13, 0),
             morningCheckIntervalMinutes = preferences[ReminderSettingsKeys.MORNING_CHECK_INTERVAL] ?: 120,
 
             // Evening Window
             eveningReminderEnabled = preferences[ReminderSettingsKeys.EVENING_REMINDER_ENABLED] ?: true,
-            eveningWindowStart = preferences[ReminderSettingsKeys.EVENING_WINDOW_START]?.toLocalTime()
+            eveningWindowStart = preferences[ReminderSettingsKeys.EVENING_WINDOW_START].toLocalTime()
                 ?: LocalTime.of(16, 0),
-            eveningWindowEnd = preferences[ReminderSettingsKeys.EVENING_WINDOW_END]?.toLocalTime()
+            eveningWindowEnd = preferences[ReminderSettingsKeys.EVENING_WINDOW_END].toLocalTime()
                 ?: LocalTime.of(22, 30),
             eveningCheckIntervalMinutes = preferences[ReminderSettingsKeys.EVENING_CHECK_INTERVAL] ?: 180,
 
             // Fallback
             fallbackEnabled = preferences[ReminderSettingsKeys.FALLBACK_ENABLED] ?: true,
-            fallbackTime = preferences[ReminderSettingsKeys.FALLBACK_TIME]?.toLocalTime()
+            fallbackTime = preferences[ReminderSettingsKeys.FALLBACK_TIME].toLocalTime()
                 ?: LocalTime.of(22, 30),
 
             // Tägliche Erinnerung
             dailyReminderEnabled = preferences[ReminderSettingsKeys.DAILY_REMINDER_ENABLED] ?: true,
-            dailyReminderTime = preferences[ReminderSettingsKeys.DAILY_REMINDER_TIME]?.toLocalTime()
+            dailyReminderTime = preferences[ReminderSettingsKeys.DAILY_REMINDER_TIME].toLocalTime()
                 ?: LocalTime.of(18, 0),
 
             // Arbeitsfreie Tage
@@ -86,9 +90,9 @@ class ReminderSettingsManager @Inject constructor(
             pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER],
 
             // Überstunden-Ziele
-            dailyTargetHours = preferences[ReminderSettingsKeys.DAILY_TARGET_HOURS]?.toDoubleOrNull() ?: 8.0,
-            weeklyTargetHours = preferences[ReminderSettingsKeys.WEEKLY_TARGET_HOURS]?.toDoubleOrNull() ?: 40.0,
-            monthlyTargetHours = preferences[ReminderSettingsKeys.MONTHLY_TARGET_HOURS]?.toDoubleOrNull() ?: 160.0
+            dailyTargetHours = normalizedDailyTargetHours,
+            weeklyTargetHours = normalizedDailyTargetHours * 5.0,
+            monthlyTargetHours = normalizedDailyTargetHours * 20.0
         )
     }
 

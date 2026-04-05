@@ -8,7 +8,6 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
-import de.montagezeit.app.domain.util.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
@@ -16,7 +15,7 @@ import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
 import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
 import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.UpsertWorkEntries
-import de.montagezeit.app.domain.usecase.WorkEntryFactory
+import de.montagezeit.app.domain.util.transitionToDayType
 import android.util.Log
 import androidx.compose.runtime.Stable
 import de.montagezeit.app.ui.util.UiText
@@ -35,7 +34,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle
@@ -118,13 +116,8 @@ class HistoryViewModel @Inject constructor(
 
                 val entriesToUpsert = mutableListOf<WorkEntry>()
                 for (date in dates) {
-                    val existing = entriesByDate[date]
-                    val baseEntry = existing ?: WorkEntryFactory.createDefaultEntry(
-                        date = date,
-                        settings = settings,
-                        dayType = WorkEntryFactory.resolveAutoDayType(date, settings),
-                        now = now
-                    )
+                    val existing = entriesByDate[date] ?: continue
+                    val baseEntry = existing
 
                     var updated = baseEntry
                     if (request.dayType != null) {
@@ -147,7 +140,7 @@ class HistoryViewModel @Inject constructor(
                         updated = updated.copy(note = request.note?.takeIf { it.isNotBlank() })
                     }
 
-                    if (updated != baseEntry || existing == null) {
+                    if (updated != baseEntry) {
                         updated = updated.copy(updatedAt = now)
                         entriesToUpsert.add(updated)
                     }
@@ -230,7 +223,7 @@ class HistoryViewModel @Inject constructor(
         val stats = aggregateWorkStats(entries)
         return HistoryGroupStats(
             workDaysCount = stats.workDays,
-            offDaysCount = stats.offDays,
+            offDaysCount = stats.freeDaysWithTravel + stats.freeDaysWithoutTravel + stats.compTimeDays,
             totalHours = stats.totalWorkMinutes / 60.0,
             totalPaidHours = stats.totalPaidMinutes / 60.0,
             averageHoursPerDay = stats.averageWorkHoursPerDay,

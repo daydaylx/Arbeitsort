@@ -131,6 +131,21 @@ class WorkEntryFactoryTest {
 
         assertEquals(AppDefaults.WORK_START, entry.workStart)
         assertEquals(AppDefaults.WORK_END, entry.workEnd)
-        assertEquals(45, entry.breakMinutes)
+        assertEquals(AppDefaults.BREAK_MINUTES, entry.breakMinutes)
+    }
+
+    @Test
+    fun `createDefaultEntry falls back to app defaults when break removes all work time`() {
+        val invalidSettings = defaultSettings.copy(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(8, 30),
+            breakMinutes = 30
+        )
+
+        val entry = WorkEntryFactory.createDefaultEntry(LocalDate.of(2024, 6, 3), invalidSettings)
+
+        assertEquals(AppDefaults.WORK_START, entry.workStart)
+        assertEquals(AppDefaults.WORK_END, entry.workEnd)
+        assertEquals(AppDefaults.BREAK_MINUTES, entry.breakMinutes)
     }
 }

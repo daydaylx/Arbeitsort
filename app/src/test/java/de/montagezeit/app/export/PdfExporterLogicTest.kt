@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -93,24 +94,21 @@ class PdfExporterLogicTest {
     }
 
     // -------------------------------------------------------------------------
-    // Meal allowance – kommt aus pre-stored mealAllowanceAmountCents
+    // Meal allowance – gespeicherte Werte zählen nur mit fachlicher Aktivität
     // -------------------------------------------------------------------------
 
     @Test
-    fun `meal allowance im Summary kommt aus gespeichertem Betrag, nicht neu berechnet`() {
-        val storedCents = 1200
-        val entry = workRecord(mealAllowanceCents = storedCents)
-
-        // Direkt aus dem Entity-Feld, keine Neuberechnung
-        assertEquals(storedCents, entry.workEntry.mealAllowanceAmountCents)
-
-        // sumOf über mehrere Einträge spiegelt pre-stored Werte
-        val entries = listOf(
-            workRecord(LocalDate.of(2026, 1, 15), mealAllowanceCents = 820),
-            workRecord(LocalDate.of(2026, 1, 16), mealAllowanceCents = 2220)
+    fun `meal allowance effective snapshot ignores stored amount without activity`() {
+        val ineligible = workRecord(
+            mealAllowanceCents = 1200,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(8, 30),
+            breakMinutes = 30
         )
-        val total = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
-        assertEquals(3040, total)
+        val eligible = workRecord(mealAllowanceCents = 820)
+
+        assertEquals(0, MealAllowanceCalculator.resolveEffectiveStoredSnapshot(ineligible).amountCents)
+        assertEquals(820, MealAllowanceCalculator.resolveEffectiveStoredSnapshot(eligible).amountCents)
     }
 
     // -------------------------------------------------------------------------

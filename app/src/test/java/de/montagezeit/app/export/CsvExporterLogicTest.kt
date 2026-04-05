@@ -21,6 +21,9 @@ class CsvExporterLogicTest {
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     private fun buildCsvLine(entry: WorkEntry): String {
+        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(
+            WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
+        )
         val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
         val travelMinutes = TimeCalculator.calculateTravelMinutes(emptyList())
         val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
@@ -54,15 +57,15 @@ class CsvExporterLogicTest {
             append(";")
             append(paidTotalMinutes)
             append(";")
-            append(if (entry.mealIsArrivalDeparture) 1 else 0)
+            append(if (mealSnapshot.isArrivalDeparture) 1 else 0)
             append(";")
-            append(if (entry.mealBreakfastIncluded) 1 else 0)
+            append(if (mealSnapshot.breakfastIncluded) 1 else 0)
             append(";")
-            append(entry.mealAllowanceBaseCents)
+            append(mealSnapshot.baseCents)
             append(";")
-            append(entry.mealAllowanceAmountCents)
+            append(mealSnapshot.amountCents)
             append(";")
-            append(MealAllowanceCalculator.formatEuro(entry.mealAllowanceAmountCents))
+            append(MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents))
             append(";")
             append(CsvCellEncoder.encode(entry.note ?: ""))
             append("\n")
@@ -170,6 +173,30 @@ class CsvExporterLogicTest {
         assertEquals("1400", cols[14])
         assertEquals("820", cols[15])
         assertEquals("8,20 €", cols[16])
+    }
+
+    @Test
+    fun `ineligible stored meal allowance is exported as zero values`() {
+        val entryWithZeroActivity = WorkEntry(
+            date = LocalDate.of(2024, 6, 10),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Dresden",
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(8, 30),
+            breakMinutes = 30,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+
+        val cols = buildCsvLine(entryWithZeroActivity).trimEnd('\n').split(";")
+
+        assertEquals("0", cols[12])
+        assertEquals("0", cols[13])
+        assertEquals("0", cols[14])
+        assertEquals("0", cols[15])
+        assertEquals("0,00 €", cols[16])
     }
 
     @Test

@@ -210,6 +210,32 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `applyBatchEdit does not create entries for missing dates`() = runTest {
+        val start = LocalDate.of(2026, 3, 12)
+        val end = LocalDate.of(2026, 3, 14)
+        coEvery { workEntryDao.getByDateRange(start, end) } returns emptyList()
+
+        val viewModel = createViewModel()
+        viewModel.applyBatchEdit(
+            BatchEditRequest(
+                startDate = start,
+                endDate = end,
+                dayType = null,
+                applyDefaultTimes = false,
+                note = "Nur bestehende Einträge",
+                applyNote = true
+            )
+        )
+        waitUntil { viewModel.batchEditState.value is BatchEditState.Failure }
+
+        assertEquals(
+            BatchEditState.Failure(UiText.StringResource(R.string.history_batch_no_changes)),
+            viewModel.batchEditState.value
+        )
+        coVerify(exactly = 0) { workEntryDao.upsertAll(any()) }
+    }
+
+    @Test
     fun `uiState observes exactly the last 365 days inclusive`() = runTest {
         val endDate = LocalDate.now()
         val startDate = endDate.minusDays(364)

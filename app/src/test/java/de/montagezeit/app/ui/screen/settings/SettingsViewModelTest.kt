@@ -118,6 +118,27 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `updateBreakMinutes rejects break that removes all net work time`() = runTest {
+        every { reminderSettingsManager.settings } returns flowOf(
+            ReminderSettings(
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(8, 30),
+                breakMinutes = 15
+            )
+        )
+        val viewModel = createViewModel()
+
+        viewModel.updateBreakMinutes(30)
+        advanceUntilIdle()
+
+        assertEquals(
+            SettingsUiState.ReminderError(UiText.StringResource(R.string.error_break_must_be_shorter_than_shift)),
+            viewModel.uiState.value
+        )
+        coVerify(exactly = 0) { reminderSettingsManager.updateSettings(breakMinutes = any()) }
+    }
+
+    @Test
     fun `exportPdfCurrentMonth maps storage failures to detailed error`() = runTest {
         val today = LocalDate.now()
         val entries = listOf(WorkEntryWithTravelLegs(workEntry = WorkEntry(date = today), travelLegs = emptyList()))
