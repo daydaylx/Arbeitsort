@@ -3,6 +3,7 @@ package de.montagezeit.app.data.local.entity
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
@@ -55,6 +56,6 @@ data class WorkEntryWithTravelLegs(
     )
     val travelLegs: List<TravelLeg>
 ) {
-    val orderedTravelLegs: List<TravelLeg>
-        get() = travelLegs.sortedBy { it.sortOrder }
+    @Ignore
+    val orderedTravelLegs: List<TravelLeg> = travelLegs.sortedBy { it.sortOrder }
 }

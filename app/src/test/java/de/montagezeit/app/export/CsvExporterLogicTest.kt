@@ -2,6 +2,7 @@ package de.montagezeit.app.export
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.assertEquals
@@ -211,5 +212,27 @@ class CsvExporterLogicTest {
         val unconfirmedLine = buildCsvLine(entry().copy(confirmedWorkDay = false))
         val unconfirmedCols = unconfirmedLine.trimEnd('\n').split(";")
         assertEquals("0", unconfirmedCols[2])
+    }
+
+    @Test
+    fun `filterCsvExportEntries keeps only confirmed entries`() {
+        val entries = listOf(
+            WorkEntryWithTravelLegs(
+                workEntry = entry().copy(confirmedWorkDay = true),
+                travelLegs = emptyList()
+            ),
+            WorkEntryWithTravelLegs(
+                workEntry = entry(location = "Leipzig").copy(
+                    date = LocalDate.of(2024, 6, 11),
+                    confirmedWorkDay = false
+                ),
+                travelLegs = emptyList()
+            )
+        )
+
+        val filtered = filterCsvExportEntries(entries)
+
+        assertEquals(1, filtered.size)
+        assertEquals(LocalDate.of(2024, 6, 10), filtered.single().workEntry.date)
     }
 }

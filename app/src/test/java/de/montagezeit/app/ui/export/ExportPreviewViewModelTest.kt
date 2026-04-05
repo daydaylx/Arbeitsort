@@ -64,18 +64,57 @@ class ExportPreviewViewModelTest {
                     record(WorkEntry(
                         date = LocalDate.of(2026, 1, 10),
                         dayType = DayType.WORK,
-                        mealAllowanceAmountCents = 820
+                        mealAllowanceAmountCents = 820,
+                        confirmedWorkDay = true
                     )),
                     record(WorkEntry(
                         date = LocalDate.of(2026, 1, 11),
                         dayType = DayType.WORK,
-                        mealAllowanceAmountCents = 2220
+                        mealAllowanceAmountCents = 2220,
+                        confirmedWorkDay = true
                     ))
                 )
             )
         )
 
         assertEquals("30,40 €", totals.mealAllowanceTotal)
+    }
+
+    @Test
+    fun `calculatePreviewSummary ignores unconfirmed entries`() {
+        val entries = listOf(
+            record(
+                WorkEntry(
+                    date = LocalDate.of(2026, 1, 10),
+                    dayType = DayType.WORK,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(18, 0),
+                    breakMinutes = 60,
+                    mealAllowanceAmountCents = 820,
+                    confirmedWorkDay = true
+                ),
+                travelMinutes = 60
+            ),
+            record(
+                WorkEntry(
+                    date = LocalDate.of(2026, 1, 11),
+                    dayType = DayType.WORK,
+                    workStart = LocalTime.of(7, 30),
+                    workEnd = LocalTime.of(16, 0),
+                    breakMinutes = 30,
+                    mealAllowanceAmountCents = 2220,
+                    confirmedWorkDay = false
+                ),
+                travelMinutes = 30
+            )
+        )
+
+        val summary = calculatePreviewSummary(entries)
+
+        assertEquals(540, summary.workMinutes)
+        assertEquals(60, summary.travelMinutes)
+        assertEquals(600, summary.paidMinutes)
+        assertEquals(820, summary.mealAllowanceCents)
     }
 
     @Test

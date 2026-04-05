@@ -10,6 +10,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.export.PdfExporter
@@ -55,10 +56,11 @@ data class PreviewSummary(
 }
 
 internal fun calculatePreviewSummary(entries: List<WorkEntryWithTravelLegs>): PreviewSummary {
-    val workMinutes = entries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
-    val travelMinutes = entries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
-    val paidMinutes = entries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
-    val mealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
+    val eligibleEntries = entries.filter(::isStatisticsEligible)
+    val workMinutes = eligibleEntries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
+    val travelMinutes = eligibleEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
+    val paidMinutes = eligibleEntries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
+    val mealAllowanceCents = eligibleEntries.sumOf { it.workEntry.mealAllowanceAmountCents }
     return PreviewSummary(
         workMinutes = workMinutes,
         travelMinutes = travelMinutes,
@@ -165,6 +167,7 @@ class ExportPreviewViewModel @Inject constructor(
 
     private var currentRange: DateRange? = null
     private var lastPreviewState: PreviewState? = null
+    private var cachedPreviewEntries: CachedPreviewEntries? = null
 
     fun loadRange(startDate: LocalDate, endDate: LocalDate) {
         currentRange = DateRange(startDate, endDate)
@@ -184,6 +187,7 @@ class ExportPreviewViewModel @Inject constructor(
             return
         }
         val header = buildHeader(range)
+        cachedPreviewEntries = null
         updateState(
             PreviewState.Empty(
                 header = header,
@@ -192,24 +196,10 @@ class ExportPreviewViewModel @Inject constructor(
         )
         viewModelScope.launch {
             try {
-                val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
-                if (entries.isEmpty()) {
-                    updateState(
-                        PreviewState.Empty(
-                            header = header,
-                            message = UiText.StringResource(R.string.export_preview_empty_range)
-                        )
-                    )
-                } else {
-                    updateState(
-                        PreviewState.List(
-                            header = header,
-                            totals = buildTotals(entries),
-                            rows = entries.map { buildRow(it) }
-                        )
-                    )
-                }
+                val entries = loadEntries(range)
+                updateState(buildPreviewState(header, entries))
             } catch (e: Exception) {
+                cachedPreviewEntries = null
                 updateState(
                     PreviewState.Error(
                         message = toUiText(e.message, R.string.export_preview_error_export_failed),
@@ -245,7 +235,7 @@ class ExportPreviewViewModel @Inject constructor(
             }
             updateState(PreviewState.CreatingPdf)
             try {
-                val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
+                val entries = getEntriesForPdf(range)
                 if (entries.isEmpty()) {
                     updateState(
                         PreviewState.Error(
@@ -332,6 +322,38 @@ class ExportPreviewViewModel @Inject constructor(
         return "${PdfUtilities.formatDate(range.start)} – ${PdfUtilities.formatDate(range.end)}"
     }
 
+    private suspend fun loadEntries(range: DateRange): List<WorkEntryWithTravelLegs> {
+        val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
+            .filter(::isStatisticsEligible)
+        cachedPreviewEntries = CachedPreviewEntries(range = range, entries = entries)
+        return entries
+    }
+
+    private suspend fun getEntriesForPdf(range: DateRange): List<WorkEntryWithTravelLegs> {
+        return cachedPreviewEntries
+            ?.takeIf { it.range == range }
+            ?.entries
+            ?: loadEntries(range)
+    }
+
+    private fun buildPreviewState(
+        header: String,
+        entries: List<WorkEntryWithTravelLegs>
+    ): PreviewState {
+        return if (entries.isEmpty()) {
+            PreviewState.Empty(
+                header = header,
+                message = UiText.StringResource(R.string.export_preview_empty_range)
+            )
+        } else {
+            PreviewState.List(
+                header = header,
+                totals = buildTotals(entries),
+                rows = entries.map(::buildRow)
+            )
+        }
+    }
+
     private fun buildTotals(entries: List<WorkEntryWithTravelLegs>): ExportPreviewTotals {
         val summary = calculatePreviewSummary(entries)
         return buildExportPreviewTotals(summary)
@@ -342,6 +364,11 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     private data class DateRange(val start: LocalDate, val end: LocalDate)
+
+    private data class CachedPreviewEntries(
+        val range: DateRange,
+        val entries: List<WorkEntryWithTravelLegs>
+    )
 }
 
 private fun toUiText(message: String?, fallbackRes: Int): UiText {

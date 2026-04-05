@@ -26,7 +26,7 @@ class UpdateEntryTest {
     @Before
     fun setup() {
         workEntryDao = mockk(relaxed = true)
-        updateEntry = UpdateEntry(workEntryDao)
+        updateEntry = UpdateEntry(testRepository(workEntryDao))
     }
 
     @After

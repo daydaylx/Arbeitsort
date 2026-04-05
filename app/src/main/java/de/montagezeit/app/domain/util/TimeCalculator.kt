@@ -7,6 +7,8 @@ import java.util.Locale
 
 object TimeCalculator {
 
+    private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000L
+
     /**
      * Berechnet die Netto-Arbeitszeit in Minuten.
      * (Ende - Start - Pause).
@@ -80,7 +82,8 @@ object TimeCalculator {
         val arrive = leg.arriveAt
         if (start != null && arrive != null) {
             val diffMs = arrive - start
-            return if (diffMs < 0) 0 else (diffMs / 60_000L).toInt()
+            val normalizedDiffMs = if (diffMs < 0) diffMs + MILLIS_PER_DAY else diffMs
+            return if (normalizedDiffMs < 0) 0 else (normalizedDiffMs / 60_000L).toInt()
         }
         return leg.paidMinutesOverride?.coerceAtLeast(0) ?: 0
     }

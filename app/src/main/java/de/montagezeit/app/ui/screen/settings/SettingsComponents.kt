@@ -5,6 +5,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,13 +14,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
@@ -384,6 +388,27 @@ internal fun NumericInputRow(
 ) {
     var textValue by remember(value) { mutableStateOf(value.toString()) }
     var isError by remember { mutableStateOf(false) }
+    var hadFocus by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    fun parseDraftValue(): Double? {
+        return textValue
+            .replace(',', '.')
+            .toDoubleOrNull()
+            ?.takeIf { it in minValue..maxValue }
+    }
+
+    fun commitDraft() {
+        val parsedValue = parseDraftValue()
+        if (parsedValue != null) {
+            isError = false
+            if (parsedValue != value) {
+                onValueChange(parsedValue)
+            }
+        } else {
+            isError = textValue.isNotBlank()
+        }
+    }
 
     Column {
         Text(
@@ -400,21 +425,29 @@ internal fun NumericInputRow(
                 value = textValue,
                 onValueChange = { newValue ->
                     textValue = newValue
-                    newValue.replace(',', '.').toDoubleOrNull()?.let { num ->
-                        if (num in minValue..maxValue) {
-                            isError = false
-                            onValueChange(num)
-                        } else {
-                            isError = true
-                        }
-                    } ?: run {
-                        isError = newValue.isNotBlank()
-                    }
+                    isError = newValue.isNotBlank() && parseDraftValue() == null
                 },
                 isError = isError,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        commitDraft()
+                        keyboardController?.hide()
+                    }
+                ),
                 singleLine = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { focusState ->
+                        val lostFocus = hadFocus && !focusState.isFocused
+                        hadFocus = focusState.isFocused
+                        if (lostFocus) {
+                            commitDraft()
+                        }
+                    }
             )
 
             Text(

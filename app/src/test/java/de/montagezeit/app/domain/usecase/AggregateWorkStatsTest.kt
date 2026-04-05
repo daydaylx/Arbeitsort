@@ -68,6 +68,29 @@ class AggregateWorkStatsTest {
     }
 
     @Test
+    fun `unbestaetigte Reisetage werden ebenfalls ignoriert`() {
+        val result = useCase(
+            listOf(
+                entry(
+                    LocalDate.of(2026, 1, 6),
+                    DayType.WORK,
+                    confirmed = false,
+                    workStart = null,
+                    workEnd = null,
+                    breakMinutes = 0,
+                    travelMinutes = 120,
+                    mealAllowanceCents = 820
+                )
+            )
+        )
+
+        assertEquals(0, result.workDays)
+        assertEquals(0, result.totalTravelMinutes)
+        assertEquals(0, result.totalPaidMinutes)
+        assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
     fun `WORK Tag zaehlt workDays und Arbeitsminuten`() {
         // 08:00–17:00 – 60 min Pause = 480 min
         val result = useCase(

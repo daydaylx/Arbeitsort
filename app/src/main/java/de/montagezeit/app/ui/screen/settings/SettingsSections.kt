@@ -31,8 +31,6 @@ import kotlin.math.roundToInt
 
 private const val WORKDAYS_PER_WEEK = 5.0
 private const val APPROX_WORKDAYS_PER_MONTH = 20.0
-private const val WEEKLY_TOLERANCE_HOURS = 0.1
-private const val MONTHLY_TOLERANCE_HOURS = 0.1
 
 @Composable
 internal fun WorkTimesSection(
@@ -685,57 +683,24 @@ private fun shareExport(context: Context, fileUri: Uri, format: ExportFormat) {
 @Composable
 internal fun OvertimeTargetsSection(
     dailyTargetHours: Double,
-    weeklyTargetHours: Double,
-    monthlyTargetHours: Double,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onUpdateDailyTarget: (Double) -> Unit,
-    onUpdateWeeklyTarget: (Double) -> Unit,
-    onUpdateMonthlyTarget: (Double) -> Unit
+    onUpdateDailyTarget: (Double) -> Unit
 ) {
+    val derivedWeeklyHours = dailyTargetHours * WORKDAYS_PER_WEEK
+    val derivedMonthlyHours = dailyTargetHours * APPROX_WORKDAYS_PER_MONTH
+
     CollapsibleSettingsCard(
         title = stringResource(R.string.settings_overtime_targets),
         summary = stringResource(
             R.string.settings_overtime_targets_summary,
             dailyTargetHours,
-            weeklyTargetHours,
-            monthlyTargetHours
+            derivedWeeklyHours,
+            derivedMonthlyHours
         ),
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
-        val expectedWeekly = dailyTargetHours * WORKDAYS_PER_WEEK
-        val expectedMonthly = dailyTargetHours * APPROX_WORKDAYS_PER_MONTH
-        val isInconsistent = (weeklyTargetHours - expectedWeekly).absoluteValue > WEEKLY_TOLERANCE_HOURS ||
-                            (monthlyTargetHours - expectedMonthly).absoluteValue > MONTHLY_TOLERANCE_HOURS
-
-        if (isInconsistent) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    Text(
-                        text = stringResource(R.string.overtime_targets_inconsistent_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-            }
-        }
-
         Text(
             text = stringResource(R.string.overtime_targets_description),
             style = MaterialTheme.typography.bodyMedium,
@@ -753,24 +718,16 @@ internal fun OvertimeTargetsSection(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        NumericInputRow(
+        MZKeyValueRow(
             label = stringResource(R.string.label_weekly_target),
-            value = weeklyTargetHours,
-            unit = "Std.",
-            onValueChange = onUpdateWeeklyTarget,
-            minValue = 1.0,
-            maxValue = 168.0
+            value = Formatters.formatHours(derivedWeeklyHours)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        NumericInputRow(
+        MZKeyValueRow(
             label = stringResource(R.string.label_monthly_target),
-            value = monthlyTargetHours,
-            unit = "Std.",
-            onValueChange = onUpdateMonthlyTarget,
-            minValue = 1.0,
-            maxValue = 744.0
+            value = Formatters.formatHours(derivedMonthlyHours)
         )
     }
 }

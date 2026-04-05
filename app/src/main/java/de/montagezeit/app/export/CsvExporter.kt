@@ -8,6 +8,7 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.export.PdfUtilities.buildTravelRouteSummary
@@ -38,6 +39,9 @@ internal object CsvCellEncoder {
     }
 }
 
+internal fun filterCsvExportEntries(entries: List<WorkEntryWithTravelLegs>): List<WorkEntryWithTravelLegs> =
+    entries.filter(::isStatisticsEligible)
+
 @Singleton
 class CsvExporter @Inject constructor(
     @ApplicationContext private val context: Context
@@ -56,8 +60,10 @@ class CsvExporter @Inject constructor(
      * @return Uri zur CSV-Datei bei Erfolg, null bei Fehler
      */
     fun exportToCsv(entries: List<WorkEntryWithTravelLegs>): Uri? {
+        val eligibleEntries = filterCsvExportEntries(entries)
+
         // Validate input
-        if (entries.isEmpty()) {
+        if (eligibleEntries.isEmpty()) {
             android.util.Log.w("CsvExporter", "No entries to export")
             return null
         }
@@ -105,7 +111,7 @@ class CsvExporter @Inject constructor(
                 val header = "date;dayType;confirmedWorkDay;dayLocation;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;travelLegCount;travelRouteSummary;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"
                 it.write(header.toByteArray(Charsets.UTF_8))
 
-                entries.forEach { record ->
+                eligibleEntries.forEach { record ->
                     val entry = record.workEntry
                     val travelLegs = record.orderedTravelLegs
                     val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
@@ -161,7 +167,10 @@ class CsvExporter @Inject constructor(
                 }
             }
 
-            android.util.Log.i("CsvExporter", "Successfully exported ${entries.size} entries to $filename")
+            android.util.Log.i(
+                "CsvExporter",
+                "Successfully exported ${eligibleEntries.size} entries to $filename"
+            )
 
             FileProvider.getUriForFile(
                 context,

@@ -76,18 +76,18 @@ class TimeCalculatorTest {
     }
 
     @Test
-    fun `calculate - End before Start`() {
+    fun `calculate - End before Start uses overnight shift calculation`() {
         val entry = WorkEntry(
             date = date,
             dayType = DayType.WORK,
             workStart = LocalTime.of(18, 0),
-            workEnd = LocalTime.of(8, 0), // Negative duration -> 0
+            workEnd = LocalTime.of(8, 0),
             breakMinutes = 0
         )
         val legs = listOf(travelLeg(60))
 
-        assertEquals(0, TimeCalculator.calculateWorkMinutes(entry))
-        assertEquals(60, TimeCalculator.calculatePaidTotalMinutes(entry, legs))
+        assertEquals(840, TimeCalculator.calculateWorkMinutes(entry))
+        assertEquals(900, TimeCalculator.calculatePaidTotalMinutes(entry, legs))
     }
 
     @Test
@@ -162,17 +162,17 @@ class TimeCalculatorTest {
     }
 
     @Test
-    fun `calculate - Travel from invalid negative timestamp diff returns 0`() {
+    fun `calculate - Travel from same day overnight timestamp diff uses overnight calculation`() {
         val legs = listOf(
             travelLegWithTimestamps(
                 startDate = date,
-                start = LocalTime.of(10, 0),
+                start = LocalTime.of(23, 0),
                 arriveDate = date,
-                arrive = LocalTime.of(9, 0)
+                arrive = LocalTime.of(1, 0)
             )
         )
 
-        assertEquals(0, TimeCalculator.calculateTravelMinutes(legs))
+        assertEquals(120, TimeCalculator.calculateTravelMinutes(legs))
     }
 
     @Test

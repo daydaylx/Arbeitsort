@@ -162,7 +162,7 @@ class WindowCheckWorkerDecisionTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `OFF-Tag ohne Bestaetigung - keine Check-In-Reminder, aber Daily aktiv`() {
+    fun `OFF-Tag ohne Bestaetigung - keine Check-In-Reminder und Daily inaktiv`() {
         val entry = workEntry(
             dayType = DayType.OFF,
             morningCapturedAt = null,
@@ -174,8 +174,7 @@ class WindowCheckWorkerDecisionTest {
         assertFalse(WindowCheckWorker.shouldShowMorningReminder(entry))
         assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
         assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
-        // Daily: confirmedWorkDay != true → Daily Reminder würde anklopfen
-        assertTrue(WindowCheckWorker.shouldShowDailyReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
     }
 
     @Test

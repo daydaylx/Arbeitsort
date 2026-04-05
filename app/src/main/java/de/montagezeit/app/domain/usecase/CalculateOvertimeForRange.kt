@@ -39,10 +39,7 @@ class CalculateOvertimeForRange {
         var offDayTravelDays = 0
 
         entries.forEach { entry ->
-            // Tage berücksichtigen, wenn sie entweder bestätigt sind oder Reisezeit enthalten
-            // (Damit werden reine Reisetage nicht mehr stillschweigend ignoriert)
-            val isConfirmedOrHasTravel = entry.workEntry.confirmedWorkDay || entry.orderedTravelLegs.isNotEmpty()
-            if (!isConfirmedOrHasTravel) {
+            if (!isStatisticsEligible(entry)) {
                 return@forEach
             }
             

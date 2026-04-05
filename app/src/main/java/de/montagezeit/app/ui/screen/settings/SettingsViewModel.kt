@@ -9,8 +9,10 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
+import de.montagezeit.app.domain.util.isValidWorkTimeRange
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.work.ReminderScheduler
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @HiltViewModel
@@ -85,13 +88,15 @@ class SettingsViewModel @Inject constructor(
 
     fun updateWorkStart(time: LocalTime) {
         viewModelScope.launch {
-            reminderSettingsManager.updateSettings(workStart = time)
+            val settings = reminderSettingsManager.settings.first()
+            updateWorkSchedule(workStart = time, workEnd = settings.workEnd)
         }
     }
 
     fun updateWorkEnd(time: LocalTime) {
         viewModelScope.launch {
-            reminderSettingsManager.updateSettings(workEnd = time)
+            val settings = reminderSettingsManager.settings.first()
+            updateWorkSchedule(workStart = settings.workStart, workEnd = time)
         }
     }
 
@@ -249,13 +254,12 @@ class SettingsViewModel @Inject constructor(
 
             try {
                 val settings = reminderSettingsManager.settings.first()
-                if (settings.pdfEmployeeName.isNullOrBlank()) {
+                if (format == ExportFormat.PDF && settings.pdfEmployeeName.isNullOrBlank()) {
                     _uiState.value = SettingsUiState.ExportError(
                         UiText.StringResource(R.string.settings_error_name_missing)
                     )
                     return@launch
                 }
-                val employeeName = settings.pdfEmployeeName
                 val entries = getWorkEntriesWithTravelByDateRange(startDate, endDate)
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
@@ -267,14 +271,22 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = when (format) {
                     ExportFormat.PDF -> exportPdf(
                         entries = entries,
-                        employeeName = employeeName,
+                        employeeName = settings.pdfEmployeeName.orEmpty(),
                         company = settings.pdfCompany,
                         project = settings.pdfProject,
                         personnelNumber = settings.pdfPersonnelNumber,
                         startDate = startDate,
                         endDate = endDate
                     )
-                    ExportFormat.CSV -> exportCsv(entries)
+                    ExportFormat.CSV -> {
+                        if (entries.none(::isStatisticsEligible)) {
+                            SettingsUiState.ExportError(
+                                UiText.StringResource(emptyRangeRes)
+                            )
+                        } else {
+                            exportCsv(entries)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = buildExportError(
@@ -354,8 +366,11 @@ class SettingsViewModel @Inject constructor(
      */
     fun updateDailyTargetHours(hours: Double) {
         viewModelScope.launch {
+            val normalizedDaily = (hours * 2).roundToInt() / 2.0
             reminderSettingsManager.updateSettings(
-                dailyTargetHours = hours.coerceIn(0.5, 24.0)
+                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
+                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
+                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
             )
         }
     }
@@ -380,6 +395,20 @@ class SettingsViewModel @Inject constructor(
                 monthlyTargetHours = hours.coerceIn(1.0, 744.0)
             )
         }
+    }
+
+    private suspend fun updateWorkSchedule(workStart: LocalTime, workEnd: LocalTime) {
+        if (!isValidWorkTimeRange(workStart, workEnd)) {
+            _uiState.value = SettingsUiState.ReminderError(
+                UiText.StringResource(R.string.error_time_range_invalid)
+            )
+            return
+        }
+        reminderSettingsManager.updateSettings(
+            workStart = workStart,
+            workEnd = workEnd
+        )
+        _uiState.value = SettingsUiState.Initial
     }
 
     private fun isValidWindow(start: LocalTime, end: LocalTime): Boolean = end.isAfter(start)

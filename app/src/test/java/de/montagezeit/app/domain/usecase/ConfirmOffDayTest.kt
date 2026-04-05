@@ -28,7 +28,7 @@ class ConfirmOffDayTest {
     private val testScheduler = TestCoroutineScheduler()
     private val mainDispatcher = UnconfinedTestDispatcher(testScheduler)
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-    private val useCase = ConfirmOffDay(workEntryDao)
+    private val useCase = ConfirmOffDay(testRepository(workEntryDao))
 
     @Before
     fun setup() {

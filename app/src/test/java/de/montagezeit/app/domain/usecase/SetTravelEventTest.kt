@@ -22,7 +22,7 @@ class SetTravelEventTest {
     @Before
     fun setup() {
         workEntryDao = mockk(relaxed = true)
-        setTravelEvent = SetTravelEvent(workEntryDao)
+        setTravelEvent = SetTravelEvent(testRepository(workEntryDao))
     }
 
     @After

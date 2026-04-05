@@ -2,6 +2,7 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.domain.util.AppDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -117,5 +118,19 @@ class WorkEntryFactoryTest {
         val entry = WorkEntryFactory.createDefaultEntry(date, defaultSettings, now = fixedNow)
         assertEquals(fixedNow, entry.createdAt)
         assertEquals(fixedNow, entry.updatedAt)
+    }
+
+    @Test
+    fun `createDefaultEntry falls back to app defaults for invalid work time settings`() {
+        val invalidSettings = defaultSettings.copy(
+            workStart = LocalTime.of(18, 0),
+            workEnd = LocalTime.of(17, 0)
+        )
+
+        val entry = WorkEntryFactory.createDefaultEntry(LocalDate.of(2024, 6, 3), invalidSettings)
+
+        assertEquals(AppDefaults.WORK_START, entry.workStart)
+        assertEquals(AppDefaults.WORK_END, entry.workEnd)
+        assertEquals(45, entry.breakMinutes)
     }
 }

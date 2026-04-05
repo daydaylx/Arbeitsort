@@ -17,7 +17,7 @@ import java.time.LocalDate
 class RecordEveningCheckInTest {
 
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-    private val useCase = RecordEveningCheckIn(workEntryDao)
+    private val useCase = RecordEveningCheckIn(testRepository(workEntryDao))
 
     @Test
     fun `invoke creates new WORK entry with evening timestamp`() = runTest {

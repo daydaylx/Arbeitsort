@@ -7,6 +7,11 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
+import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
+import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.domain.usecase.UpsertWorkEntries
+import de.montagezeit.app.domain.usecase.testRepository
 import de.montagezeit.app.ui.util.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -14,9 +19,11 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -52,7 +59,7 @@ class HistoryViewModelTest {
 
     @Test
     fun `applyBatchEdit rejects invalid range before DAO work`() = runTest {
-        val viewModel = HistoryViewModel(workEntryDao, reminderSettingsManager)
+        val viewModel = createViewModel()
         val request = BatchEditRequest(
             startDate = LocalDate.of(2026, 3, 15),
             endDate = LocalDate.of(2026, 3, 14),
@@ -73,7 +80,7 @@ class HistoryViewModelTest {
 
     @Test
     fun `applyBatchEdit rejects no-op request before DAO work`() = runTest {
-        val viewModel = HistoryViewModel(workEntryDao, reminderSettingsManager)
+        val viewModel = createViewModel()
         val today = LocalDate.of(2026, 3, 15)
 
         viewModel.applyBatchEdit(
@@ -105,7 +112,7 @@ class HistoryViewModelTest {
         )
         coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
 
-        val viewModel = HistoryViewModel(workEntryDao, reminderSettingsManager)
+        val viewModel = createViewModel()
         viewModel.applyBatchEdit(
             BatchEditRequest(
                 startDate = date,
@@ -146,7 +153,7 @@ class HistoryViewModelTest {
             Unit
         }
 
-        val viewModel = HistoryViewModel(workEntryDao, reminderSettingsManager)
+        val viewModel = createViewModel()
         viewModel.applyBatchEdit(
             BatchEditRequest(
                 startDate = date,
@@ -169,6 +176,7 @@ class HistoryViewModelTest {
         assertEquals(0, saved.mealAllowanceBaseCents)
         assertEquals(0, saved.mealAllowanceAmountCents)
         coVerify(atLeast = 1) { workEntryDao.upsertAll(any()) }
+        coVerify(exactly = 0) { workEntryDao.deleteTravelLegsByDate(any()) }
     }
 
     @Test
@@ -181,7 +189,7 @@ class HistoryViewModelTest {
         )
         coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
 
-        val viewModel = HistoryViewModel(workEntryDao, reminderSettingsManager)
+        val viewModel = createViewModel()
         viewModel.applyBatchEdit(
             BatchEditRequest(
                 startDate = date,
@@ -201,11 +209,38 @@ class HistoryViewModelTest {
         coVerify(exactly = 0) { workEntryDao.upsertAll(any()) }
     }
 
+    @Test
+    fun `uiState observes exactly the last 365 days inclusive`() = runTest {
+        val endDate = LocalDate.now()
+        val startDate = endDate.minusDays(364)
+        every { workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate) } returns flowOf(emptyList())
+
+        val viewModel = createViewModel()
+        val collectJob = backgroundScope.launch { viewModel.uiState.collect { } }
+        advanceUntilIdle()
+
+        io.mockk.verify(exactly = 1) {
+            workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
+        }
+        collectJob.cancel()
+    }
+
     private fun waitUntil(timeoutMs: Long = 2_000L, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (!condition() && System.currentTimeMillis() < deadline) {
             Thread.sleep(25)
         }
         assertTrue(condition())
+    }
+
+    private fun createViewModel(): HistoryViewModel {
+        val repository = testRepository(workEntryDao)
+        return HistoryViewModel(
+            observeWorkEntriesWithTravelByDateRange = ObserveWorkEntriesWithTravelByDateRange(repository),
+            getWorkEntriesByDateRange = GetWorkEntriesByDateRange(repository),
+            upsertWorkEntries = UpsertWorkEntries(repository),
+            deleteTravelLegsForDate = DeleteTravelLegsForDate(repository),
+            reminderSettingsManager = reminderSettingsManager
+        )
     }
 }

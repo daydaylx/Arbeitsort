@@ -37,8 +37,7 @@ class CalculateOvertimeForRangeTest {
     }
 
     @Test
-    fun `nur Fahrzeit - unbestaetigter WORK-Tag mit Travel wird aggregiert`() {
-        // WORK-Tag unbestätigt aber mit Travel (4h IST, 8h SOLL, Saldo -4)
+    fun `nur Fahrzeit - unbestaetigter WORK-Tag mit Travel wird ignoriert`() {
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -51,10 +50,10 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
 
-        assertEquals(-4.0, result.totalOvertimeHours, 0.0001)
-        assertEquals(4.0, result.totalActualHours, 0.0001)
-        assertEquals(8.0, result.totalTargetHours, 0.0001)
-        assertEquals(1, result.countedDays)
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(0.0, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalTargetHours, 0.0001)
+        assertEquals(0, result.countedDays)
     }
 
     @Test

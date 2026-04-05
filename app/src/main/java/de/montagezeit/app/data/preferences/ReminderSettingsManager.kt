@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.domain.util.AppDefaults
+import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -30,13 +31,22 @@ class ReminderSettingsManager @Inject constructor(
      * Flow für Reminder-Settings
      */
     val settings: Flow<ReminderSettings> = dataStore.data.map { preferences ->
+        val rawWorkStart = preferences[ReminderSettingsKeys.WORK_START]?.toLocalTime()
+            ?: AppDefaults.WORK_START
+        val rawWorkEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime()
+            ?: AppDefaults.WORK_END
+        val rawBreakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: AppDefaults.BREAK_MINUTES
+        val workDefaults = resolveWorkScheduleDefaults(
+            workStart = rawWorkStart,
+            workEnd = rawWorkEnd,
+            breakMinutes = rawBreakMinutes
+        )
+
         ReminderSettings(
             // Arbeitszeit Defaults
-            workStart = preferences[ReminderSettingsKeys.WORK_START]?.toLocalTime()
-                ?: AppDefaults.WORK_START,
-            workEnd = preferences[ReminderSettingsKeys.WORK_END]?.toLocalTime()
-                ?: AppDefaults.WORK_END,
-            breakMinutes = preferences[ReminderSettingsKeys.BREAK_MINUTES] ?: AppDefaults.BREAK_MINUTES,
+            workStart = workDefaults.workStart,
+            workEnd = workDefaults.workEnd,
+            breakMinutes = workDefaults.breakMinutes,
 
             // Morning Window
             morningReminderEnabled = preferences[ReminderSettingsKeys.MORNING_REMINDER_ENABLED] ?: true,

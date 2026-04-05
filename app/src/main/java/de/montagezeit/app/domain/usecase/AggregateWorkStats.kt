@@ -56,10 +56,10 @@ class AggregateWorkStats {
     private val classifier = ClassifyDay()
 
     operator fun invoke(entries: List<WorkEntryWithTravelLegs>): WorkStatsResult {
-        val confirmed = entries.filter { it.workEntry.confirmedWorkDay || it.orderedTravelLegs.isNotEmpty() }
+        val eligibleEntries = entries.filter(::isStatisticsEligible)
         
         // Neue Klassifikation-basierte Zählung
-        val classifiedDays = confirmed.map { entry ->
+        val classifiedDays = eligibleEntries.map { entry ->
             ClassifiedDayWithEntry(
                 classification = classifier(entry),
                 entry = entry
@@ -68,9 +68,9 @@ class AggregateWorkStats {
         
         // Klassische Metriken (synchronisiert mit Overtime-Logik)
         val workDays = classifiedDays.count { it.classification.isCountedWorkDay }
-        val offDays = confirmed.size - workDays
-        val totalWorkMinutes = confirmed.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
-        val totalTravelMinutes = confirmed.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
+        val offDays = eligibleEntries.size - workDays
+        val totalWorkMinutes = eligibleEntries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
+        val totalTravelMinutes = eligibleEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
         
         // Verpflegungspauschale: Nur für ARBEITSTAG_MIT_ARBEIT und ARBEITSTAG_NUR_REISE
         val mealAllowanceCents = classifiedDays

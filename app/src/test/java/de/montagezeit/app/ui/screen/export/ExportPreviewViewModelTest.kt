@@ -72,7 +72,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `refresh transitions to List state when entries exist`() = runTest {
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK)
+        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
         coEvery { workEntryDao.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
@@ -86,6 +86,23 @@ class ExportPreviewViewModelTest {
     @Test
     fun `refresh transitions to Empty state when no entries exist`() = runTest {
         coEvery { workEntryDao.getByDateRangeWithTravel(startDate, endDate) } returns emptyList()
+
+        viewModel.loadRange(startDate, endDate)
+
+        assertTrue("Expected Empty state but got: ${viewModel.uiState.value}",
+            viewModel.uiState.value is PreviewState.Empty)
+    }
+
+    @Test
+    fun `refresh transitions to Empty state when only unconfirmed entries exist`() = runTest {
+        val entry = WorkEntry(
+            date = startDate,
+            dayType = DayType.WORK,
+            confirmedWorkDay = false
+        )
+        coEvery { workEntryDao.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
+            WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
+        )
 
         viewModel.loadRange(startDate, endDate)
 
@@ -124,7 +141,7 @@ class ExportPreviewViewModelTest {
         val settings = ReminderSettings(pdfEmployeeName = "Max Mustermann")
         every { reminderSettingsManager.settings } returns flowOf(settings)
         val vm = ExportPreviewViewModel(workEntryDao, reminderSettingsManager, pdfExporter)
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK)
+        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
         coEvery { workEntryDao.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
@@ -147,12 +164,13 @@ class ExportPreviewViewModelTest {
 
         assertTrue("Expected PdfReady state but got: ${vm.uiState.value}",
             vm.uiState.value is PreviewState.PdfReady)
+        coVerify(exactly = 1) { workEntryDao.getByDateRangeWithTravel(startDate, endDate) }
         vm.viewModelScope.cancel()
     }
 
     @Test
     fun `returnToPreview restores cached List state without re-querying DAO`() = runTest {
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK)
+        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
         coEvery { workEntryDao.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )

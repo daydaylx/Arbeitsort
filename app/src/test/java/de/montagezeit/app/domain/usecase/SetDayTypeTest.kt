@@ -19,7 +19,7 @@ class SetDayTypeTest {
     @Before
     fun setup() {
         workEntryDao = mockk()
-        setDayType = SetDayType(workEntryDao)
+        setDayType = SetDayType(testRepository(workEntryDao))
     }
 
     @After

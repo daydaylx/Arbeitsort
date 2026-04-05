@@ -23,7 +23,7 @@ class ConfirmWorkDayTest {
     private val reminderSettingsManager = mockk<ReminderSettingsManager>()
 
     private val useCase = ConfirmWorkDay(
-        workEntryDao = workEntryDao,
+        workEntryDao = testRepository(workEntryDao),
         reminderSettingsManager = reminderSettingsManager
     )
 
@@ -193,5 +193,32 @@ class ConfirmWorkDayTest {
         assertEquals(LocalTime.of(14, 0), result.workEnd)
         assertEquals(30, result.breakMinutes)
         assertEquals(true, result.confirmedWorkDay)
+    }
+
+    @Test
+    fun `explizite null pause bleibt bei bestaetigung erhalten`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Baustelle",
+            workStart = LocalTime.of(6, 0),
+            workEnd = LocalTime.of(14, 0),
+            breakMinutes = 0,
+            confirmedWorkDay = false
+        )
+        coEvery { workEntryDao.upsert(any()) } returns Unit
+        stubReadModifyWrite(workEntryDao, existing)
+        every { reminderSettingsManager.settings } returns flowOf(
+            ReminderSettings(
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60
+            )
+        )
+
+        val result = useCase(date, source = "NOTIFICATION")
+
+        assertEquals(0, result.breakMinutes)
     }
 }

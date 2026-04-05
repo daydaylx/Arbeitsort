@@ -329,6 +329,8 @@
     <string name="pdf_export_header_as_of">Stand: %1$s</string>
     <string name="pdf_export_summary_work_days">Arbeitstage: %1$d</string>
     <string name="pdf_export_summary_work_time">Summe Arbeitszeit: %1$s h</string>
+    <string name="pdf_export_summary_travel_time">Summe Reisezeit: %1$s h</string>
+    <string name="pdf_export_summary_paid_time">Gesamt bezahlt: %1$s h</string>
     <string name="pdf_export_summary_meal_allowance">Gesamt Verpflegungspauschale: %1$s</string>
     <string name="pdf_export_signature_employee">Mitarbeiter</string>
     <string name="pdf_export_signature_supervisor">Vorgesetzter</string>
@@ -500,6 +502,7 @@
     <string name="edit_placeholder_note">Zusätzliche Informationen…</string>
     <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
     <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
+    <string name="edit_validation_work_day_too_long">Arbeitszeit überschreitet 18 Stunden</string>
     <string name="edit_validation_negative_break">Pause kann nicht negativ sein</string>
     <string name="edit_validation_break_longer_than_work">Pause kann nicht länger als die Arbeitszeit sein</string>
     <string name="edit_validation_travel_arrive_before_start">Ankunftszeit muss nach Abfahrtszeit liegen</string>
@@ -526,8 +529,7 @@
     <!-- Overtime Target Settings -->
     <string name="settings_overtime_targets">Überstunden-Ziele</string>
     <string name="settings_overtime_targets_summary">Tag: %1$.1f Std. · Woche: %2$.1f Std. · Monat: %3$.1f Std.</string>
-    <string name="overtime_targets_description">Diese Werte werden für die Berechnung von Überstunden verwendet.</string>
-    <string name="overtime_targets_inconsistent_hint">Hinweis: Die Werte passen nicht zusammen. Standard wäre z.B. 8h/Tag × 5 Tage = 40h/Woche.</string>
+    <string name="overtime_targets_description">Das Tagesziel wird direkt für die Überstundenberechnung verwendet. Woche und Monat werden daraus zur Orientierung abgeleitet.</string>
     <string name="label_daily_target">Soll-Stunden pro Tag</string>
     <string name="label_weekly_target">Soll-Stunden pro Woche</string>
     <string name="label_monthly_target">Soll-Stunden pro Monat</string>

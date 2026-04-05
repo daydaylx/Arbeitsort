@@ -23,11 +23,13 @@ import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -61,19 +63,13 @@ class HistoryViewModel @Inject constructor(
     val uiState: StateFlow<HistoryUiState> = _refreshTrigger
         .flatMapLatest {
             val endDate = LocalDate.now()
-            val startDate = endDate.minusDays(365)
+            val startDate = endDate.minusDays(364)
             observeWorkEntriesWithTravelByDateRange(startDate, endDate)
+                .distinctUntilChanged()
                 .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
-                    val groupedWeeks = groupByWeek(entries)
-                    val groupedMonths = groupByMonth(entries)
-                    val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
-                    val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
-                    HistoryUiState.Success(
-                        weeks = groupedWeeks,
-                        months = groupedMonths,
-                        entriesByDate = entriesByDate,
-                        travelLegsByDate = travelLegsByDate
-                    )
+                    withContext(Dispatchers.Default) {
+                        buildSuccessState(entries)
+                    }
                 }
                 .catch { e ->
                     emit(HistoryUiState.Error(message = e.toUiText(R.string.history_error_unknown)))
@@ -88,6 +84,19 @@ class HistoryViewModel @Inject constructor(
     /** Retriggers the DB-Observer flow. Call on error to retry loading. */
     fun loadHistory() {
         _refreshTrigger.value++
+    }
+
+    private fun buildSuccessState(entries: List<WorkEntryWithTravelLegs>): HistoryUiState.Success {
+        val groupedWeeks = groupByWeek(entries)
+        val groupedMonths = groupByMonth(entries)
+        val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
+        val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
+        return HistoryUiState.Success(
+            weeks = groupedWeeks,
+            months = groupedMonths,
+            entriesByDate = entriesByDate,
+            travelLegsByDate = travelLegsByDate
+        )
     }
     
     fun applyBatchEdit(request: BatchEditRequest) {
@@ -145,11 +154,6 @@ class HistoryViewModel @Inject constructor(
                 }
                 if (entriesToUpsert.isNotEmpty()) {
                     upsertWorkEntries(entriesToUpsert)
-                    if (request.dayType == DayType.COMP_TIME || request.dayType == DayType.OFF) {
-                        for (entry in entriesToUpsert) {
-                            deleteTravelLegsForDate(entry.date)
-                        }
-                    }
                 } else {
                     _batchEditState.value = BatchEditState.Failure(
                         UiText.StringResource(R.string.history_batch_no_changes)

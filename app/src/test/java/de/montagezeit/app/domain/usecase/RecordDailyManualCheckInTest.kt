@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
@@ -43,7 +44,7 @@ class RecordDailyManualCheckInTest {
         )
 
         useCase = RecordDailyManualCheckIn(
-            workEntryDao = workEntryDao,
+            workEntryDao = testRepository(workEntryDao),
             reminderSettingsManager = reminderSettingsManager
         )
     }
@@ -61,7 +62,7 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke confirms work day without synthesizing snapshots`() = runTest {
+    fun `invoke confirms work day and synthesizes snapshots`() = runTest {
         val date = LocalDate.now()
         mockReadModifyWrite(date, null)
 
@@ -69,8 +70,8 @@ class RecordDailyManualCheckInTest {
 
         assertEquals(DayType.WORK, result.dayType)
         assertEquals("Baustelle XY", result.dayLocationLabel)
-        assertNull(result.morningCapturedAt)
-        assertNull(result.eveningCapturedAt)
+        assertNotNull(result.morningCapturedAt)
+        assertNotNull(result.eveningCapturedAt)
         assertEquals(true, result.confirmedWorkDay)
         assertFalse(result.confirmationAt == null)
         assertEquals("UI", result.confirmationSource)
@@ -113,7 +114,7 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
-    fun `invoke does not create snapshots on existing entry without captures`() = runTest {
+    fun `invoke creates snapshots on existing entry without captures`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
@@ -124,8 +125,8 @@ class RecordDailyManualCheckInTest {
 
         val result = useCase(DailyManualCheckInInput(date, "Neuer Ort"))
 
-        assertNull(result.morningCapturedAt)
-        assertNull(result.eveningCapturedAt)
+        assertNotNull(result.morningCapturedAt)
+        assertNotNull(result.eveningCapturedAt)
         assertEquals("Neuer Ort", result.dayLocationLabel)
         assertEquals(true, result.confirmedWorkDay)
     }
@@ -253,5 +254,30 @@ class RecordDailyManualCheckInTest {
         assertEquals(LocalTime.of(14, 45), result.workEnd)
         assertEquals(30, result.breakMinutes)
         assertEquals("Neu", result.dayLocationLabel)
+    }
+
+    @Test
+    fun `invoke preserves explicit zero break on existing work schedule`() = runTest {
+        val date = LocalDate.now()
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Alt",
+            workStart = LocalTime.of(6, 15),
+            workEnd = LocalTime.of(14, 45),
+            breakMinutes = 0
+        )
+        mockReadModifyWrite(date, existing)
+
+        val result = useCase(
+            DailyManualCheckInInput(
+                date = date,
+                dayLocationLabel = "Neu",
+                isArrivalDeparture = false,
+                breakfastIncluded = false
+            )
+        )
+
+        assertEquals(0, result.breakMinutes)
     }
 }

@@ -4,6 +4,7 @@ import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
@@ -24,19 +25,21 @@ class ConfirmWorkDay(
         source: String = CONFIRMATION_SOURCE_NOTIFICATION
     ): WorkEntry {
         val settings = reminderSettingsManager.settings.first()
-        val workStart = settings.workStart
-        val workEnd = settings.workEnd
-        val breakMinutes = settings.breakMinutes
+        val defaults = resolveWorkScheduleDefaults(settings)
+        val workStart = defaults.workStart
+        val workEnd = defaults.workEnd
+        val breakMinutes = defaults.breakMinutes
         val now = System.currentTimeMillis()
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(date) { existingEntry ->
             val dayLocation = DayLocationResolver.resolve(existingEntry)
             val updatedEntry = existingEntry?.let { entry ->
+                val hasExistingWorkSchedule = entry.workStart != null && entry.workEnd != null
                 entry.copy(
                     dayType = DayType.WORK,
                     workStart = entry.workStart ?: workStart,
                     workEnd = entry.workEnd ?: workEnd,
-                    breakMinutes = if (entry.breakMinutes > 0) entry.breakMinutes else breakMinutes,
+                    breakMinutes = if (hasExistingWorkSchedule) entry.breakMinutes else breakMinutes,
                     morningCapturedAt = entry.morningCapturedAt ?: now,
                     dayLocationLabel = dayLocation,
                     confirmedWorkDay = true,

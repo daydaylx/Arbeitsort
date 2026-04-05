@@ -1071,6 +1071,14 @@ fun HistoryEntryItem(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        if (!entry.confirmedWorkDay) {
+                            Text(
+                                text = stringResource(R.string.today_unconfirmed),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
                     }
                 }
             }

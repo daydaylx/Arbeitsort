@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
+import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
@@ -35,6 +36,7 @@ class RecordDailyManualCheckIn(
 
         val now = System.currentTimeMillis()
         val settings = reminderSettingsManager.settings.first()
+        val defaults = resolveWorkScheduleDefaults(settings)
 
         val mealResult = MealAllowanceCalculator.calculate(
             dayType = DayType.WORK,
@@ -45,11 +47,12 @@ class RecordDailyManualCheckIn(
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(input.date) { existingEntry ->
             val updatedEntry = if (existingEntry != null) {
+                val hasExistingWorkSchedule = existingEntry.workStart != null && existingEntry.workEnd != null
                 existingEntry.copy(
                     dayType = DayType.WORK,
-                    workStart = existingEntry.workStart ?: settings.workStart,
-                    workEnd = existingEntry.workEnd ?: settings.workEnd,
-                    breakMinutes = existingEntry.breakMinutes.takeIf { it > 0 } ?: settings.breakMinutes,
+                    workStart = existingEntry.workStart ?: defaults.workStart,
+                    workEnd = existingEntry.workEnd ?: defaults.workEnd,
+                    breakMinutes = if (hasExistingWorkSchedule) existingEntry.breakMinutes else defaults.breakMinutes,
                     dayLocationLabel = resolvedLabel,
                     mealIsArrivalDeparture = input.isArrivalDeparture,
                     mealBreakfastIncluded = input.breakfastIncluded,

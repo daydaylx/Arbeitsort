@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
+import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import java.time.LocalDate
 import java.time.temporal.WeekFields
 
@@ -48,7 +49,7 @@ internal fun buildOverviewMetrics(
     val unconfirmedCount = entries.count { 
         val entry = it.workEntry
         val hasTravel = it.orderedTravelLegs.isNotEmpty()
-        !entry.confirmedWorkDay && (entry.dayType == DayType.WORK || hasTravel)
+        !isStatisticsEligible(it) && (entry.dayType == DayType.WORK || hasTravel)
     }
 
     return OverviewMetrics(

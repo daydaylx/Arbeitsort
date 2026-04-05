@@ -27,7 +27,7 @@ class SetDayLocationTest {
         workEntryDao = mockk(relaxed = true)
         reminderSettingsManager = mockk()
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
-        useCase = SetDayLocation(workEntryDao, reminderSettingsManager)
+        useCase = SetDayLocation(testRepository(workEntryDao), reminderSettingsManager)
     }
 
     @Test

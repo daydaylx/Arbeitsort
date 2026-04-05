@@ -19,7 +19,7 @@ import java.time.LocalDate
 class DeleteDayEntryTest {
 
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
-    private val useCase = DeleteDayEntry(workEntryDao)
+    private val useCase = DeleteDayEntry(testRepository(workEntryDao))
 
     private val date = LocalDate.of(2024, 7, 15)
 

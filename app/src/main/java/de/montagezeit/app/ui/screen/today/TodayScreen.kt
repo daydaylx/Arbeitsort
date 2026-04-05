@@ -281,6 +281,7 @@ private fun TodayContent(
         ) {
             StatusCard(
                 entry = entry,
+                travelLegs = travelLegs,
                 date = selectedDate,
                 onEditToday = onEditToday,
                 onEditDayLocation = onEditDayLocation
@@ -349,6 +350,7 @@ private fun TodayActionsCard(
 @Composable
 private fun StatusCard(
     entry: WorkEntry?,
+    travelLegs: List<TravelLeg>,
     date: LocalDate,
     onEditToday: () -> Unit,
     onEditDayLocation: () -> Unit
@@ -410,7 +412,7 @@ private fun StatusCard(
             if (it.dayType == DayType.WORK) {
                 MZKeyValueRow(
                     label = stringResource(R.string.total_paid_hours),
-                    value = formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it)),
+                    value = formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it, travelLegs)),
                     emphasize = true
                 )
             }

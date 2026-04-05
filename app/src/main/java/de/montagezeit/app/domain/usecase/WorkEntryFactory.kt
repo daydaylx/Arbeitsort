@@ -3,6 +3,7 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -25,12 +26,13 @@ object WorkEntryFactory {
         dayLocationLabel: String = "",
         now: Long = System.currentTimeMillis()
     ): WorkEntry {
+        val defaults = resolveWorkScheduleDefaults(settings)
         return WorkEntry(
             date = date,
             dayType = dayType,
-            workStart = settings.workStart,
-            workEnd = settings.workEnd,
-            breakMinutes = settings.breakMinutes,
+            workStart = defaults.workStart,
+            workEnd = defaults.workEnd,
+            breakMinutes = defaults.breakMinutes,
             dayLocationLabel = dayLocationLabel,
             createdAt = now,
             updatedAt = now

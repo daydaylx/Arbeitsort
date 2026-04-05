@@ -19,6 +19,7 @@ import de.montagezeit.app.domain.usecase.GetWorkEntryWithTravelByDate
 import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
+import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import de.montagezeit.app.ui.util.UiText
 import java.time.Instant
 import java.time.LocalDate
@@ -93,53 +94,14 @@ class EditEntryViewModel @Inject constructor(
 
                 val record = getWorkEntryWithTravelByDate(date)
                 if (record != null) {
-                    val formData = EditFormData.fromEntry(
-                        entry = record.workEntry,
-                        travelLegs = record.orderedTravelLegs,
-                        zoneId = editTimeZone
-                    )
-                    _screenState.update {
-                        it.copy(
-                            formData = formData,
-                            originalFormData = formData,
-                            uiState = EditUiState.Success(record.workEntry),
-                            isSaving = false,
-                            dailyTargetHours = dailyTargetHours
-                        )
-                    }
+                    showExistingEntry(record, dailyTargetHours)
                 } else {
-                    val defaultDayType = WorkEntryFactory.resolveAutoDayType(date, settings)
-                    val defaultEntry = WorkEntryFactory.createDefaultEntry(
-                        date = date,
-                        settings = settings,
-                        dayType = defaultDayType
-                    )
-                    val formData = EditFormData.defaultFor(
-                        dayType = defaultDayType,
-                        workStart = settings.workStart,
-                        workEnd = settings.workEnd,
-                        breakMinutes = settings.breakMinutes
-                    )
-                    val finalFormData = formData.copy(dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null })
-                    _screenState.update {
-                        it.copy(
-                            formData = finalFormData,
-                            originalFormData = finalFormData,
-                            uiState = EditUiState.NewEntry(date),
-                            isSaving = false,
-                            dailyTargetHours = dailyTargetHours
-                        )
-                    }
+                    showNewEntry(date, settings, dailyTargetHours)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _screenState.update {
-                    it.copy(
-                        uiState = EditUiState.Error(toUiText(e.message, R.string.edit_error_unknown)),
-                        isSaving = false
-                    )
-                }
+                showErrorState(e, R.string.edit_error_unknown)
             }
         }
     }
@@ -227,12 +189,13 @@ class EditEntryViewModel @Inject constructor(
     fun applyDefaultWorkTimes() {
         viewModelScope.launch {
             val settings = reminderSettingsManager.settings.first()
+            val workDefaults = resolveWorkScheduleDefaults(settings)
             updateFormData {
                 it.copy(
                     hasWorkTimes = true,
-                    workStart = settings.workStart,
-                    workEnd = settings.workEnd,
-                    breakMinutes = settings.breakMinutes
+                    workStart = workDefaults.workStart,
+                    workEnd = workDefaults.workEnd,
+                    breakMinutes = workDefaults.breakMinutes
                 )
             }
         }
@@ -297,89 +260,17 @@ class EditEntryViewModel @Inject constructor(
             val validationErrors = data.validate()
             val currentState = stateSnapshot.uiState
             if (validationErrors.isNotEmpty()) {
-                when (currentState) {
-                    is EditUiState.Success -> {
-                        _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
-                    }
-                    is EditUiState.NewEntry -> {
-                        _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
-                    }
-                    else -> {
-                        _screenState.update {
-                            it.copy(uiState = EditUiState.Error(UiText.StringResource(R.string.error_validation_failed)))
-                        }
-                    }
-                }
+                showValidationErrors(currentState, validationErrors)
                 return@launch
             }
 
-            val mealAllowance = resolveMealAllowanceForSave(
-                dayType = data.dayType,
-                isArrivalDeparture = data.mealIsArrivalDeparture,
-                breakfastIncluded = data.mealBreakfastIncluded
-            )
-            val now = System.currentTimeMillis()
-            val date = when (currentState) {
-                is EditUiState.Success -> currentState.entry.date
-                is EditUiState.NewEntry -> currentState.date
-                else -> return@launch
-            }
-            val originalEntry = (currentState as? EditUiState.Success)?.entry
-            val baseEntry = originalEntry?.transitionToDayType(dayType = data.dayType, now = now)
-                ?: WorkEntry(
-                    date = date,
-                    createdAt = now,
-                    updatedAt = now
-                ).transitionToDayType(dayType = data.dayType, now = now)
-
-            val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
-            val entryToSave = baseEntry.copy(
-                dayType = data.dayType,
-                workStart = if (persistWorkBlock) data.workStart else null,
-                workEnd = if (persistWorkBlock) data.workEnd else null,
-                breakMinutes = if (persistWorkBlock) data.breakMinutes else 0,
-                dayLocationLabel = data.dayLocationLabel.orEmpty(),
-                note = data.note,
-                mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
-                mealBreakfastIncluded = mealAllowance.breakfastIncluded,
-                mealAllowanceBaseCents = mealAllowance.baseCents,
-                mealAllowanceAmountCents = mealAllowance.amountCents,
-                updatedAt = now
-            )
-
-            val legsToSave = if (data.dayType == DayType.COMP_TIME) {
-                emptyList()
-            } else {
-                data.normalizedTravelLegs().mapIndexed { index, leg ->
-                    TravelLeg(
-                        workEntryDate = date,
-                        sortOrder = index,
-                        category = inferCategory(index, data.normalizedTravelLegs().size),
-                        startAt = leg.startTime?.let { toEpochMillis(date, it) },
-                        arriveAt = leg.arriveTime?.let { toEpochMillis(date, it) },
-                        startLabel = leg.startLabel,
-                        endLabel = leg.endLabel,
-                        paidMinutesOverride = leg.paidMinutesOverride?.takeIf { leg.startTime == null && leg.arriveTime == null },
-                        source = TravelSource.MANUAL,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                }
-            }
-
             try {
+                val pendingSave = buildPendingSave(currentState, data) ?: return@launch
                 _screenState.update { it.copy(isSaving = true) }
-                replaceWorkEntryWithTravelLegs(entryToSave, legsToSave)
+                replaceWorkEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved, originalFormData = data) }
             } catch (e: Exception) {
-                _screenState.update {
-                    it.copy(
-                        isSaving = false,
-                        uiState = EditUiState.Error(
-                            toUiText(e.message, R.string.edit_error_save_failed)
-                        )
-                    )
-                }
+                showErrorState(e, R.string.edit_error_save_failed)
             }
         }
     }
@@ -405,6 +296,175 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun copyEntryData(): EditFormData = _screenState.value.formData.copy()
+
+    private fun showExistingEntry(
+        record: de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs,
+        dailyTargetHours: Double
+    ) {
+        val formData = EditFormData.fromEntry(
+            entry = record.workEntry,
+            travelLegs = record.orderedTravelLegs,
+            zoneId = editTimeZone
+        )
+        _screenState.update {
+            it.copy(
+                formData = formData,
+                originalFormData = formData,
+                uiState = EditUiState.Success(record.workEntry),
+                isSaving = false,
+                dailyTargetHours = dailyTargetHours
+            )
+        }
+    }
+
+    private fun showNewEntry(
+        date: LocalDate,
+        settings: de.montagezeit.app.data.preferences.ReminderSettings,
+        dailyTargetHours: Double
+    ) {
+        val workDefaults = resolveWorkScheduleDefaults(settings)
+        val defaultDayType = WorkEntryFactory.resolveAutoDayType(date, settings)
+        val defaultEntry = WorkEntryFactory.createDefaultEntry(
+            date = date,
+            settings = settings,
+            dayType = defaultDayType
+        )
+        val formData = EditFormData.defaultFor(
+            dayType = defaultDayType,
+            workStart = workDefaults.workStart,
+            workEnd = workDefaults.workEnd,
+            breakMinutes = workDefaults.breakMinutes
+        )
+        val finalFormData = formData.copy(
+            dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null }
+        )
+        _screenState.update {
+            it.copy(
+                formData = finalFormData,
+                originalFormData = finalFormData,
+                uiState = EditUiState.NewEntry(date),
+                isSaving = false,
+                dailyTargetHours = dailyTargetHours
+            )
+        }
+    }
+
+    private fun showValidationErrors(
+        currentState: EditUiState,
+        validationErrors: List<ValidationError>
+    ) {
+        when (currentState) {
+            is EditUiState.Success -> {
+                _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
+            }
+            is EditUiState.NewEntry -> {
+                _screenState.update { it.copy(uiState = currentState.copy(validationErrors = validationErrors)) }
+            }
+            else -> {
+                _screenState.update {
+                    it.copy(uiState = EditUiState.Error(UiText.StringResource(R.string.error_validation_failed)))
+                }
+            }
+        }
+    }
+
+    private fun buildPendingSave(
+        currentState: EditUiState,
+        data: EditFormData
+    ): PendingSave? {
+        val date = when (currentState) {
+            is EditUiState.Success -> currentState.entry.date
+            is EditUiState.NewEntry -> currentState.date
+            else -> return null
+        }
+        val now = System.currentTimeMillis()
+        val mealAllowance = resolveMealAllowanceForSave(
+            dayType = data.dayType,
+            isArrivalDeparture = data.mealIsArrivalDeparture,
+            breakfastIncluded = data.mealBreakfastIncluded
+        )
+        return PendingSave(
+            entry = buildEntryToSave(currentState, data, now, mealAllowance),
+            legs = buildTravelLegsToSave(data, date, now)
+        )
+    }
+
+    private fun buildEntryToSave(
+        currentState: EditUiState,
+        data: EditFormData,
+        now: Long,
+        mealAllowance: ResolvedMealAllowanceForSave
+    ): WorkEntry {
+        val date = when (currentState) {
+            is EditUiState.Success -> currentState.entry.date
+            is EditUiState.NewEntry -> currentState.date
+            else -> error("Unsupported save state: $currentState")
+        }
+        val originalEntry = (currentState as? EditUiState.Success)?.entry
+        val baseEntry = originalEntry?.transitionToDayType(dayType = data.dayType, now = now)
+            ?: WorkEntry(
+                date = date,
+                createdAt = now,
+                updatedAt = now
+            ).transitionToDayType(dayType = data.dayType, now = now)
+
+        val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
+        return baseEntry.copy(
+            dayType = data.dayType,
+            workStart = if (persistWorkBlock) data.workStart else null,
+            workEnd = if (persistWorkBlock) data.workEnd else null,
+            breakMinutes = if (persistWorkBlock) data.breakMinutes else 0,
+            dayLocationLabel = data.dayLocationLabel.orEmpty(),
+            note = data.note,
+            mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
+            mealBreakfastIncluded = mealAllowance.breakfastIncluded,
+            mealAllowanceBaseCents = mealAllowance.baseCents,
+            mealAllowanceAmountCents = mealAllowance.amountCents,
+            updatedAt = now
+        )
+    }
+
+    private fun buildTravelLegsToSave(
+        data: EditFormData,
+        date: LocalDate,
+        now: Long
+    ): List<TravelLeg> {
+        if (data.dayType == DayType.COMP_TIME) return emptyList()
+
+        val normalizedTravelLegs = data.normalizedTravelLegs()
+        return normalizedTravelLegs.mapIndexed { index, leg ->
+            val isOvernightLeg = leg.startTime != null &&
+                leg.arriveTime != null &&
+                requireNotNull(leg.arriveTime).isBefore(requireNotNull(leg.startTime))
+            TravelLeg(
+                workEntryDate = date,
+                sortOrder = index,
+                category = inferCategory(index, normalizedTravelLegs.size),
+                startAt = leg.startTime?.let { toEpochMillis(date, it) },
+                arriveAt = leg.arriveTime?.let {
+                    val arriveDate = if (isOvernightLeg) date.plusDays(1) else date
+                    toEpochMillis(arriveDate, it)
+                },
+                startLabel = leg.startLabel,
+                endLabel = leg.endLabel,
+                paidMinutesOverride = leg.paidMinutesOverride?.takeIf {
+                    leg.startTime == null && leg.arriveTime == null
+                },
+                source = TravelSource.MANUAL,
+                createdAt = now,
+                updatedAt = now
+            )
+        }
+    }
+
+    private fun showErrorState(error: Throwable, @StringRes fallbackRes: Int) {
+        _screenState.update {
+            it.copy(
+                isSaving = false,
+                uiState = EditUiState.Error(toUiText(error.message, fallbackRes))
+            )
+        }
+    }
 
     private fun updateTravelLeg(index: Int, update: (EditTravelLegForm) -> EditTravelLegForm) {
         updateFormData { state ->
@@ -437,6 +497,11 @@ class EditEntryViewModel @Inject constructor(
             else -> TravelLegCategory.INTERSITE
         }
     }
+
+    private data class PendingSave(
+        val entry: WorkEntry,
+        val legs: List<TravelLeg>
+    )
 }
 
 data class EditScreenState(
@@ -536,7 +601,7 @@ data class EditFormData(
                         (endSec - startSec) / 60
                     }
                     if (totalWorkMinutes > 18 * 60) {
-                        errors += ValidationError.WorkEndBeforeStart
+                        errors += ValidationError.WorkDayTooLong
                     }
                     if (breakMinutes > totalWorkMinutes) {
                         errors += ValidationError.BreakLongerThanWorkTime
@@ -674,6 +739,7 @@ sealed class ValidationError(@StringRes val messageRes: Int) {
     object WorkEndBeforeStart : ValidationError(R.string.edit_validation_work_end_before_start)
     object NegativeBreakMinutes : ValidationError(R.string.edit_validation_negative_break)
     object BreakLongerThanWorkTime : ValidationError(R.string.edit_validation_break_longer_than_work)
+    object WorkDayTooLong : ValidationError(R.string.edit_validation_work_day_too_long)
     data class TravelArriveBeforeStart(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_arrive_before_start)
     data class TravelTooLong(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_too_long)
     data class TravelLegIncomplete(val legIndex: Int) : ValidationError(R.string.edit_validation_travel_incomplete)

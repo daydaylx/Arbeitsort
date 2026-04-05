@@ -15,6 +15,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.model.DayClassification
+import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.domain.usecase.classifyDay
@@ -62,7 +63,7 @@ class PdfExporter @Inject constructor(
         private const val TABLE_HEADER_HEIGHT = 30
         private const val ROW_HEIGHT = 25
         private const val SPACING = 10
-        private const val SUMMARY_HEIGHT = 75   // 3 Zeilen × 25 pt
+        private const val SUMMARY_HEIGHT = 125  // bis zu 5 Zeilen × 25 pt
         private const val SIGNATURE_HEIGHT = 120  // je Block: Label(15) + Linie(20) + Ort/Datum(25) + Abstand(20)
 
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
@@ -159,11 +160,15 @@ class PdfExporter @Inject constructor(
         endDate: java.time.LocalDate
     ): PdfExportResult {
         return try {
+            val eligibleEntries = entries.filter(::isStatisticsEligible)
             // Pflichtfeld-Validierung
             if (employeeName.isBlank()) {
                 throw IllegalArgumentException(string(R.string.pdf_export_error_name_missing))
             }
-            if (entries.size > MAX_ENTRIES_PER_PDF) {
+            if (eligibleEntries.isEmpty()) {
+                return PdfExportResult.ValidationError(string(R.string.export_preview_empty_range))
+            }
+            if (eligibleEntries.size > MAX_ENTRIES_PER_PDF) {
                 return PdfExportResult.ValidationError(string(R.string.pdf_export_error_too_many_entries))
             }
 
@@ -174,7 +179,7 @@ class PdfExporter @Inject constructor(
 
                 // Header zeichnen
                 // Letzten erfassten Tag ermitteln – bei Teilmonat wird "Stand:" angezeigt
-                val lastEntryDate = entries.maxOfOrNull { it.workEntry.date }
+                val lastEntryDate = eligibleEntries.maxOfOrNull { it.workEntry.date }
                 val actualEndDate = if (lastEntryDate != null && lastEntryDate < endDate) lastEntryDate else null
                 var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate, actualEndDate)
 
@@ -182,7 +187,7 @@ class PdfExporter @Inject constructor(
                 yPosition = drawTableHeader(canvas, yPosition)
 
                 // Tabelle zeichnen (Multi-Pag)
-                val tableResult = drawTable(canvas, pdfDocument, currentPage, entries, yPosition)
+                val tableResult = drawTable(canvas, pdfDocument, currentPage, eligibleEntries, yPosition)
                 currentPage = tableResult.page
                 canvas = currentPage.canvas
                 yPosition = tableResult.yPosition
@@ -199,7 +204,7 @@ class PdfExporter @Inject constructor(
                 }
 
                 // Summenblock zeichnen
-                yPosition = drawSummary(canvas, entries, yPosition)
+                yPosition = drawSummary(canvas, eligibleEntries, yPosition)
 
                 // Unterschriften zeichnen
                 drawSignatures(canvas, yPosition)
@@ -529,6 +534,7 @@ class PdfExporter @Inject constructor(
             }
         }
         val totalWorkHours = PdfUtilities.sumWorkHours(entries)
+        val totalTravelMinutes = PdfUtilities.sumTravelMinutes(entries)
         val totalMealAllowanceCents = entries.sumOf { it.workEntry.mealAllowanceAmountCents }
 
         canvas.drawText(
@@ -542,6 +548,21 @@ class PdfExporter @Inject constructor(
             MARGIN.toFloat(), yPos, paintSummary
         )
         yPos += 25
+
+        if (totalTravelMinutes > 0) {
+            canvas.drawText(
+                string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelMinutes / 60.0)),
+                MARGIN.toFloat(), yPos, paintSummary
+            )
+            yPos += 25
+
+            val totalPaidHours = totalWorkHours + totalTravelMinutes / 60.0
+            canvas.drawText(
+                string(R.string.pdf_export_summary_paid_time, PdfUtilities.formatWorkHours(totalPaidHours)),
+                MARGIN.toFloat(), yPos, paintSummary
+            )
+            yPos += 25
+        }
 
         canvas.drawText(
             string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),

@@ -298,13 +298,9 @@ private fun SettingsContent(
 
         OvertimeTargetsSection(
             dailyTargetHours = settings.dailyTargetHours,
-            weeklyTargetHours = settings.weeklyTargetHours,
-            monthlyTargetHours = settings.monthlyTargetHours,
             expanded = overtimeExpanded,
             onExpandedChange = { overtimeExpanded = it },
-            onUpdateDailyTarget = onUpdateDailyTargetHours,
-            onUpdateWeeklyTarget = onUpdateWeeklyTargetHours,
-            onUpdateMonthlyTarget = onUpdateMonthlyTargetHours
+            onUpdateDailyTarget = onUpdateDailyTargetHours
         )
 
         ReminderSettingsSection(

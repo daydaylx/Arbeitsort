@@ -70,7 +70,8 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.WorkEndBeforeStart })
+        assertTrue(errors.any { it is ValidationError.WorkDayTooLong })
+        assertFalse(errors.any { it is ValidationError.WorkEndBeforeStart })
     }
 
     @Test
@@ -306,7 +307,7 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `validate should handle midnight crossing correctly for work time`() {
+    fun `validate should allow midnight crossing for work time`() {
         val formData = validFormData(
             workStart = LocalTime.of(22, 0),
             workEnd = LocalTime.of(2, 0),
@@ -315,7 +316,8 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertTrue(errors.any { it is ValidationError.WorkEndBeforeStart })
+        assertTrue(errors.isEmpty())
+        assertTrue(formData.isValid())
     }
 
     @Test
