@@ -48,7 +48,7 @@ Build-Umgebung:
 
 - Verlauf für die letzten 365 Tage
 - Wochen-, Monats- und Kalenderansichten
-- Batch-Edit für Datumsbereiche
+- Batch-Edit für Datumsbereiche auf bestehenden Einträgen
 - Edit-Sheet für DayType, Zeiten, Travel-Daten, Tagesort und Notiz
 
 ### Reminder
@@ -91,7 +91,7 @@ Build-Umgebung:
   - `dayType = WORK`
   - `confirmedWorkDay = true`
   - Bestehende Arbeitszeiten bleiben erhalten; sonst werden Settings-Defaults gesetzt
-  - Verpflegungspauschale wird aus den Dialogoptionen berechnet
+  - Verpflegungspauschale wird aus den Dialogoptionen berechnet, aber nur für Tage mit Arbeit oder Reise geführt
 
 ### DayType
 
