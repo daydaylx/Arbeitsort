@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -56,40 +57,101 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.theme.Blue30
+import de.montagezeit.app.ui.theme.PetrolGlow
+import de.montagezeit.app.ui.theme.TealDeep
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Design Tokens
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Zentrale Design-Token für das Premium Dark Control Dashboard.
+ */
+object MZTokens {
+    // Radius
+    val RadiusCard   = 28.dp
+    val RadiusHero   = 32.dp
+    val RadiusButton = 50.dp   // Pill
+    val RadiusBadge  = 50.dp   // Pill
+    val RadiusChip   = 20.dp
+    val RadiusModal  = 32.dp
+
+    // Glass
+    val GlassAlpha       = 0.07f   // Card-Hintergrund-Alpha
+    val GlassBorderAlpha = 0.18f   // Standard Leucht-Kontur
+    val GlowBorderAlpha  = 0.45f   // Hero / aktive Leucht-Kontur
+
+    // Background Orbs
+    val OrbAlphaPrimary   = 0.14f
+    val OrbAlphaSecondary = 0.07f
+
+    // Spacing
+    val ScreenPadding = 20.dp
+    val CardSpacing   = 14.dp
+    val InnerPadding  = 20.dp
+
+    // Elevation
+    val CardElevation = 0.dp
+    val HeroElevation = 2.dp
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Accessibility Defaults
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Accessibility-Konstanten für konsistente Touch-Targets
  */
 object AccessibilityDefaults {
-    const val MinTouchTargetSize = 48
-    val MinTouchTargetSpacing = 8.dp
-    val CardPadding = 22.dp
-    val CardCornerRadius = 24.dp
-    val ButtonCornerRadius = 18.dp
-    val ButtonHeight = 54.dp
-    val PrimaryButtonHeight = 54.dp
-    val SecondaryButtonHeight = 54.dp
-    val TertiaryButtonHeight = 48.dp
-    val IconButtonSize = 48.dp
+    const val MinTouchTargetSize    = 48
+    val MinTouchTargetSpacing       = 8.dp
+    val CardPadding                 = 20.dp
+    val CardCornerRadius            = 28.dp
+    val ButtonCornerRadius          = 50.dp  // Pill
+    val ButtonHeight                = 54.dp
+    val PrimaryButtonHeight         = 54.dp
+    val SecondaryButtonHeight       = 54.dp
+    val TertiaryButtonHeight        = 48.dp
+    val IconButtonSize              = 48.dp
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Background
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Seiten-Hintergrund mit tiefdunklem Navy-Gradient und zwei Hintergrund-Orbs
+ * (oben-links: Petrol; unten-rechts: Blau) für die Dashboard-Tiefenwirkung.
+ */
 @Composable
 fun MZPageBackground(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val base = MaterialTheme.colorScheme.background
-    val topGlow = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-    val bottomGlow = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+    val bg         = MaterialTheme.colorScheme.background
+    val orbPrimary = MaterialTheme.colorScheme.primary
+    val orbBlue    = MaterialTheme.colorScheme.tertiary
 
     Box(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                colors = listOf(topGlow, base, bottomGlow)
-            )
-        )
+        modifier = modifier
+            .background(bg)
+            .drawBehind {
+                drawOrb(
+                    color  = orbPrimary,
+                    alpha  = MZTokens.OrbAlphaPrimary,
+                    center = Offset(size.width * 0.15f, size.height * 0.12f),
+                    radius = 320.dp.toPx()
+                )
+                drawOrb(
+                    color  = orbBlue,
+                    alpha  = MZTokens.OrbAlphaSecondary,
+                    center = Offset(size.width * 0.88f, size.height * 0.82f),
+                    radius = 220.dp.toPx()
+                )
+            }
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
@@ -99,26 +161,46 @@ fun MZPageBackground(
     }
 }
 
+private fun DrawScope.drawOrb(color: Color, alpha: Float, center: Offset, radius: Float) {
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                color.copy(alpha = alpha),
+                color.copy(alpha = 0f)
+            ),
+            center = center,
+            radius = radius
+        ),
+        radius = radius,
+        center = center
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Cards
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Vereinheitlichte Card-Komponente mit besserem Schatten und Padding
+ * Glass-Karte — transparenter Hintergrund mit leuchtender Petrol-Kontur.
  */
 @Composable
 fun MZCard(
     modifier: Modifier = Modifier,
-    elevation: Dp = 2.dp,
+    elevation: Dp = MZTokens.CardElevation,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val primary = MaterialTheme.colorScheme.primary
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = primary.copy(alpha = MZTokens.GlassAlpha)
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            color = primary.copy(alpha = MZTokens.GlassBorderAlpha)
         ),
-        shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
+        shape = RoundedCornerShape(MZTokens.RadiusCard)
     ) {
         Column(
             modifier = Modifier.padding(AccessibilityDefaults.CardPadding),
@@ -128,7 +210,7 @@ fun MZCard(
 }
 
 /**
- * Vereinheitlichte Card-Komponente mit klickbarem Verhalten und korrekten Ripple-Effekten
+ * Klickbare Glass-Karte.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,22 +218,23 @@ fun MZCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    elevation: Dp = 2.dp,
+    elevation: Dp = MZTokens.CardElevation,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val primary = MaterialTheme.colorScheme.primary
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = primary.copy(alpha = MZTokens.GlassAlpha)
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            color = primary.copy(alpha = MZTokens.GlassBorderAlpha)
         ),
-        shape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
+        shape = RoundedCornerShape(MZTokens.RadiusCard)
     ) {
         Column(
             modifier = Modifier.padding(AccessibilityDefaults.CardPadding),
@@ -161,7 +244,7 @@ fun MZCard(
 }
 
 /**
- * Card mit farbigem Header für Status-Anzeigen
+ * Status-Karte mit alpha-basierter Statusfarbe und leuchtender Kontur.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,26 +255,20 @@ fun MZStatusCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val (containerColor, contentColor) = when (status) {
-        StatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to
-                              MaterialTheme.colorScheme.onPrimaryContainer
-        StatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to
-                              MaterialTheme.colorScheme.onTertiaryContainer
-        StatusType.ERROR -> MaterialTheme.colorScheme.errorContainer to
-                            MaterialTheme.colorScheme.onErrorContainer
-        StatusType.INFO -> MaterialTheme.colorScheme.secondaryContainer to
-                           MaterialTheme.colorScheme.onSecondaryContainer
-        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to
-                              MaterialTheme.colorScheme.onSurfaceVariant
+    val (baseColor, contentColor) = when (status) {
+        StatusType.SUCCESS -> MaterialTheme.colorScheme.primary         to MaterialTheme.colorScheme.onPrimaryContainer
+        StatusType.WARNING -> MaterialTheme.colorScheme.tertiary        to MaterialTheme.colorScheme.onTertiaryContainer
+        StatusType.ERROR   -> MaterialTheme.colorScheme.error           to MaterialTheme.colorScheme.onErrorContainer
+        StatusType.INFO    -> MaterialTheme.colorScheme.secondary       to MaterialTheme.colorScheme.onSecondaryContainer
+        StatusType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    val cardShape = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
-    val cardColors = CardDefaults.cardColors(containerColor = containerColor)
+    val cardShape  = RoundedCornerShape(MZTokens.RadiusCard)
+    val cardColors = CardDefaults.cardColors(containerColor = baseColor.copy(alpha = 0.12f))
+    val cardBorder = BorderStroke(1.dp, baseColor.copy(alpha = 0.35f))
 
     val cardContent: @Composable ColumnScope.() -> Unit = {
-        Column(
-            modifier = Modifier.padding(AccessibilityDefaults.CardPadding)
-        ) {
+        Column(modifier = Modifier.padding(AccessibilityDefaults.CardPadding)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -200,7 +277,7 @@ fun MZStatusCard(
                     imageVector = when (status) {
                         StatusType.SUCCESS -> Icons.Default.CheckCircle
                         StatusType.WARNING -> Icons.Default.Warning
-                        StatusType.ERROR -> Icons.Default.Error
+                        StatusType.ERROR   -> Icons.Default.Error
                         StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
                     },
                     contentDescription = null,
@@ -209,33 +286,23 @@ fun MZStatusCard(
                 )
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                     color = contentColor
                 )
             }
-
-            androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(vertical = 10.dp))
-
-            Column {
-                content()
-            }
+            Spacer(modifier = Modifier.padding(vertical = 10.dp))
+            Column { content() }
         }
     }
 
-    // Use different Card overloads based on onClick
     if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = modifier.fillMaxWidth(),
             enabled = true,
             colors = cardColors,
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(
-                width = 1.dp,
-                color = contentColor.copy(alpha = 0.15f)
-            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = cardBorder,
             shape = cardShape,
             content = cardContent
         )
@@ -243,17 +310,17 @@ fun MZStatusCard(
         Card(
             modifier = modifier.fillMaxWidth(),
             colors = cardColors,
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(
-                width = 1.dp,
-                color = contentColor.copy(alpha = 0.15f)
-            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = cardBorder,
             shape = cardShape,
             content = cardContent
         )
     }
 }
 
+/**
+ * Hero-Karte mit diagonalem Teal→Blue-Gradient und leuchtender Glow-Kontur.
+ */
 @Composable
 fun MZHeroCard(
     title: String,
@@ -263,29 +330,24 @@ fun MZHeroCard(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
-    val backgroundBrush = Brush.linearGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.tertiaryContainer
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+    val heroBrush = Brush.linearGradient(
+        colors = listOf(TealDeep, Blue30),
+        start  = Offset(0f, 0f),
+        end    = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
     )
+    val primary = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-        ),
+        shape = RoundedCornerShape(MZTokens.RadiusHero),
+        elevation = CardDefaults.cardElevation(defaultElevation = MZTokens.HeroElevation),
+        border = BorderStroke(1.5.dp, primary.copy(alpha = MZTokens.GlowBorderAlpha)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(28.dp))
-                .background(backgroundBrush)
+                .clip(RoundedCornerShape(MZTokens.RadiusHero))
+                .background(heroBrush)
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -308,19 +370,20 @@ fun MZHeroCard(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
                     )
                 }
-
                 badge?.invoke()
             }
-
             content()
-
             action?.invoke()
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Badge
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Status-Badge für visuelle Status-Anzeige
+ * Pillenförmiges Status-Badge.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -330,44 +393,40 @@ fun MZStatusBadge(
     modifier: Modifier = Modifier,
     showIcon: Boolean = true
 ) {
-    val (backgroundColor, contentColor) = when (type) {
-        StatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to 
-                              MaterialTheme.colorScheme.onPrimaryContainer
-        StatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to 
-                              MaterialTheme.colorScheme.onTertiaryContainer
-        StatusType.ERROR -> MaterialTheme.colorScheme.errorContainer to 
-                            MaterialTheme.colorScheme.onErrorContainer
-        StatusType.INFO -> MaterialTheme.colorScheme.secondaryContainer to 
-                           MaterialTheme.colorScheme.onSecondaryContainer
-        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to 
-                              MaterialTheme.colorScheme.onSurfaceVariant
+    val (bgColor, contentColor) = when (type) {
+        StatusType.SUCCESS -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)   to MaterialTheme.colorScheme.primary
+        StatusType.WARNING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)  to MaterialTheme.colorScheme.tertiary
+        StatusType.ERROR   -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)     to MaterialTheme.colorScheme.error
+        StatusType.INFO    -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f) to MaterialTheme.colorScheme.secondary
+        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant                to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Surface(
-        color = backgroundColor,
+        color = bgColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(MZTokens.RadiusBadge),
+        border = BorderStroke(1.dp, contentColor.copy(alpha = 0.30f)),
         modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
             if (showIcon) {
                 Icon(
                     imageVector = when (type) {
                         StatusType.SUCCESS -> Icons.Default.CheckCircle
                         StatusType.WARNING -> Icons.Default.Warning
-                        StatusType.ERROR -> Icons.Default.Error
+                        StatusType.ERROR   -> Icons.Default.Error
                         StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
                     },
                     contentDescription = null,
                     modifier = Modifier
-                        .size(16.dp)
-                        .padding(end = 6.dp)
+                        .size(14.dp)
                         .semantics { invisibleToUser() },
                     tint = contentColor
                 )
+                Spacer(modifier = Modifier.size(6.dp))
             }
             Text(
                 text = text,
@@ -378,8 +437,12 @@ fun MZStatusBadge(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  State Screens
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Loading-State mit verbessertem Design
+ * Loading-State
  */
 @Composable
 fun MZLoadingState(
@@ -409,15 +472,11 @@ fun MZLoadingState(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
             color = MaterialTheme.colorScheme.onSurface
         )
-
         onCancel?.let {
             TertiaryActionButton(onClick = it) {
                 Text(stringResource(R.string.action_cancel))
@@ -427,7 +486,7 @@ fun MZLoadingState(
 }
 
 /**
- * Error-State mit verbessertem Design
+ * Error-State
  */
 @Composable
 fun MZErrorState(
@@ -448,15 +507,11 @@ fun MZErrorState(
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.error
         )
-
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
             color = MaterialTheme.colorScheme.error
         )
-
         PrimaryActionButton(
             onClick = onRetry,
             content = { Text(stringResource(R.string.action_retry)) }
@@ -465,7 +520,7 @@ fun MZErrorState(
 }
 
 /**
- * Empty-State für Listen
+ * Empty-State
  */
 @Composable
 fun MZEmptyState(
@@ -485,20 +540,20 @@ fun MZEmptyState(
         icon?.let {
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
                 modifier = Modifier.size(80.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = it,
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier = Modifier.size(38.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         }
-
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall.copy(
@@ -507,24 +562,24 @@ fun MZEmptyState(
             ),
             color = MaterialTheme.colorScheme.onSurface
         )
-
         Text(
             text = subtitle,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
         action?.let {
-            androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.padding(vertical = 8.dp))
             it()
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Layout Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Section-Header für gruppierte Inhalte
+ * Abschnittstitel mit optionalem Aktions-Link.
  */
 @Composable
 fun MZSectionHeader(
@@ -539,15 +594,16 @@ fun MZSectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface
         )
         action?.invoke()
     }
 }
 
+/**
+ * Label–Wert-Zeile mit gepunkteter Trennlinie (Petrol-getönt).
+ */
 @Composable
 fun MZKeyValueRow(
     label: String,
@@ -565,7 +621,7 @@ fun MZKeyValueRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        val dotColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        val dotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
         Spacer(
             modifier = Modifier
                 .weight(1f)
@@ -575,17 +631,16 @@ fun MZKeyValueRow(
                         color = dotColor,
                         start = Offset(0f, 0f),
                         end = Offset(size.width, 0f),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()), 0f)
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(4.dp.toPx(), 4.dp.toPx()), 0f
+                        )
                     )
                 }
         )
         Text(
             text = value,
-            style = if (emphasize) {
-                MaterialTheme.typography.titleSmall
-            } else {
-                MaterialTheme.typography.bodyMedium
-            },
+            style = if (emphasize) MaterialTheme.typography.titleSmall
+                    else            MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -595,7 +650,7 @@ fun MZKeyValueRow(
 }
 
 /**
- * Info-Row mit Icon und Text
+ * Icon + Text-Zeile.
  */
 @Composable
 fun MZInfoRow(
@@ -625,7 +680,7 @@ fun MZInfoRow(
 }
 
 /**
- * Divider mit Label
+ * Trennlinie mit zentriertem Label (Teal-Tönung).
  */
 @Composable
 fun MZDividerWithLabel(
@@ -639,7 +694,7 @@ fun MZDividerWithLabel(
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
         Text(
             text = label,
@@ -648,25 +703,30 @@ fun MZDividerWithLabel(
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
     }
 }
 
-/**
- * Status-Typen für konsistente Farbgebung
- */
-enum class StatusType {
-    SUCCESS,    // Grün - Erfolg, abgeschlossen
-    WARNING,    // Orange - Warnung, Aufmerksamkeit erforderlich
-    ERROR,      // Rot - Fehler, Problem
-    INFO,       // Blau - Information
-    NEUTRAL     // Grau - Neutral, inaktiv
-}
+// ─────────────────────────────────────────────────────────────────────────────
+//  Status Type
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Extension für klickbare Elemente mit Accessibility
+ * Status-Typen für konsistente Farbgebung.
  */
+enum class StatusType {
+    SUCCESS,    // Grün/Teal — Erfolg
+    WARNING,    // Orange — Achtung
+    ERROR,      // Rot — Fehler
+    INFO,       // Blau — Information
+    NEUTRAL     // Grau — Inaktiv
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Modifier Extension
+// ─────────────────────────────────────────────────────────────────────────────
+
 fun Modifier.clickableWithAccessibility(
     onClick: () -> Unit,
     contentDescription: String
@@ -675,6 +735,13 @@ fun Modifier.clickableWithAccessibility(
     onClickLabel = contentDescription
 )
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Buttons
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Primärer Pill-Button (solid Teal).
+ */
 @Composable
 fun PrimaryActionButton(
     onClick: () -> Unit,
@@ -686,35 +753,28 @@ fun PrimaryActionButton(
     minHeight: Dp = AccessibilityDefaults.PrimaryButtonHeight,
     shape: androidx.compose.ui.graphics.Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+    val semanticsMod = if (!contentDescription.isNullOrBlank()) {
         Modifier.semantics { this.contentDescription = contentDescription }
-    } else {
-        Modifier
-    }
-    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    } else Modifier
+    val resolvedShape  = shape  ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
     val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.buttonColors(
         containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary
+        contentColor   = MaterialTheme.colorScheme.onPrimary
     )
-
     androidx.compose.material3.Button(
-        onClick = onClick,
-        modifier = semanticsModifier
-            .then(modifier)
-            .heightIn(min = minHeight),
-        enabled = enabled && !isLoading,
-        shape = resolvedShape,
-        colors = resolvedColors
+        onClick  = onClick,
+        modifier = semanticsMod.then(modifier).heightIn(min = minHeight),
+        enabled  = enabled && !isLoading,
+        shape    = resolvedShape,
+        colors   = resolvedColors
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp),
+                modifier   = Modifier.size(18.dp).padding(end = 8.dp),
                 strokeWidth = 2.dp,
-                color = androidx.compose.material3.LocalContentColor.current
+                color       = androidx.compose.material3.LocalContentColor.current
             )
         } else {
             icon?.let {
@@ -729,6 +789,9 @@ fun PrimaryActionButton(
     }
 }
 
+/**
+ * Sekundärer Pill-Button (Outlined, Teal-Kontur).
+ */
 @Composable
 fun SecondaryActionButton(
     onClick: () -> Unit,
@@ -740,32 +803,26 @@ fun SecondaryActionButton(
     minHeight: Dp = AccessibilityDefaults.SecondaryButtonHeight,
     shape: androidx.compose.ui.graphics.Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+    val semanticsMod = if (!contentDescription.isNullOrBlank()) {
         Modifier.semantics { this.contentDescription = contentDescription }
-    } else {
-        Modifier
-    }
-    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    } else Modifier
+    val resolvedShape  = shape  ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
     val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-        contentColor = MaterialTheme.colorScheme.onSurface
+        contentColor = MaterialTheme.colorScheme.primary
     )
-
     androidx.compose.material3.OutlinedButton(
-        onClick = onClick,
-        modifier = semanticsModifier
-            .then(modifier)
-            .heightIn(min = minHeight),
-        enabled = enabled && !isLoading,
-        shape = resolvedShape,
-        colors = resolvedColors
+        onClick      = onClick,
+        modifier     = semanticsMod.then(modifier).heightIn(min = minHeight),
+        enabled      = enabled && !isLoading,
+        shape        = resolvedShape,
+        colors       = resolvedColors,
+        border       = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.50f))
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp),
+                modifier    = Modifier.size(18.dp).padding(end = 8.dp),
                 strokeWidth = 2.dp
             )
         } else {
@@ -781,6 +838,9 @@ fun SecondaryActionButton(
     }
 }
 
+/**
+ * Tertiärer Pill-Button (Text).
+ */
 @Composable
 fun TertiaryActionButton(
     onClick: () -> Unit,
@@ -792,30 +852,23 @@ fun TertiaryActionButton(
     minHeight: Dp = AccessibilityDefaults.TertiaryButtonHeight,
     shape: androidx.compose.ui.graphics.Shape? = null,
     colors: androidx.compose.material3.ButtonColors? = null,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit
 ) {
-    val semanticsModifier = if (!contentDescription.isNullOrBlank()) {
+    val semanticsMod = if (!contentDescription.isNullOrBlank()) {
         Modifier.semantics { this.contentDescription = contentDescription }
-    } else {
-        Modifier
-    }
-    val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
+    } else Modifier
+    val resolvedShape  = shape  ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
     val resolvedColors = colors ?: androidx.compose.material3.ButtonDefaults.textButtonColors()
-
     androidx.compose.material3.TextButton(
-        onClick = onClick,
-        modifier = semanticsModifier
-            .then(modifier)
-            .heightIn(min = minHeight),
-        enabled = enabled && !isLoading,
-        shape = resolvedShape,
-        colors = resolvedColors
+        onClick  = onClick,
+        modifier = semanticsMod.then(modifier).heightIn(min = minHeight),
+        enabled  = enabled && !isLoading,
+        shape    = resolvedShape,
+        colors   = resolvedColors
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp),
+                modifier    = Modifier.size(18.dp).padding(end = 8.dp),
                 strokeWidth = 2.dp
             )
         } else {
@@ -831,20 +884,24 @@ fun TertiaryActionButton(
     }
 }
 
+/**
+ * Destruktiver Pill-Button (Error-Rot).
+ */
 @Composable
 fun DestructiveActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit
 ) {
     androidx.compose.material3.Button(
-        onClick = onClick,
+        onClick  = onClick,
         modifier = modifier.heightIn(min = AccessibilityDefaults.PrimaryButtonHeight),
-        enabled = enabled,
-        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+        enabled  = enabled,
+        shape    = RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius),
+        colors   = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error,
-            contentColor = MaterialTheme.colorScheme.onError
+            contentColor   = MaterialTheme.colorScheme.onError
         ),
         content = content
     )

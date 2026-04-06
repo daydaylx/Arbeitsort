@@ -16,9 +16,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Teal80,
+    primary = Teal80,                                    // #4FD8EB — Teal-Leuchtakzent
     onPrimary = Teal20,
-    primaryContainer = Teal30,
+    primaryContainer = TealDeep,                         // #003645 — dunkler Teal-Container
     onPrimaryContainer = Teal90,
     secondary = Amber80,
     onSecondary = Amber20,
@@ -32,18 +32,18 @@ private val DarkColorScheme = darkColorScheme(
     onError = Error10,
     errorContainer = Error40,
     onErrorContainer = Error90,
-    background = Neutral6,
+    background = DeepNavy,                               // #04080F — tiefstes Dunkelblau
     onBackground = Neutral90,
-    surface = Neutral6,
+    surface = Navy,                                      // #070D1A — Surface-Navy
     onSurface = Neutral90,
-    surfaceVariant = NeutralVariant30,
-    onSurfaceVariant = NeutralVariant90,
-    outline = NeutralVariant60,
-    outlineVariant = NeutralVariant40,
+    surfaceVariant = NavyCard,                           // #0B1525 — Card-Basis
+    onSurfaceVariant = NeutralVariant80,                 // hell genug auf dunklem Grund
+    outline = PetrolGlow,                                // #00B4CC — leuchtende Petrol-Kontur
+    outlineVariant = Teal80,                             // #4FD8EB — sanftere Variante
     inverseSurface = Neutral90,
     inverseOnSurface = Neutral20,
     inversePrimary = Teal40,
-    scrim = Neutral6
+    scrim = DeepNavy
 )
 
 private val LightColorScheme = lightColorScheme(
