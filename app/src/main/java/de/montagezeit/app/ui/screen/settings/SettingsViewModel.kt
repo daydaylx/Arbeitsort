@@ -376,37 +376,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val normalizedDaily = (hours * 2).roundToInt() / 2.0
             reminderSettingsManager.updateSettings(
-                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
-                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
-                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
-            )
-        }
-    }
-
-    /**
-     * Aktualisiert das wöchentliche Überstunden-Ziel
-     */
-    fun updateWeeklyTargetHours(hours: Double) {
-        viewModelScope.launch {
-            val normalizedDaily = ((hours / 5.0) * 2).roundToInt() / 2.0
-            reminderSettingsManager.updateSettings(
-                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
-                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
-                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
-            )
-        }
-    }
-
-    /**
-     * Aktualisiert das monatliche Überstunden-Ziel
-     */
-    fun updateMonthlyTargetHours(hours: Double) {
-        viewModelScope.launch {
-            val normalizedDaily = ((hours / 20.0) * 2).roundToInt() / 2.0
-            reminderSettingsManager.updateSettings(
-                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0),
-                weeklyTargetHours = (normalizedDaily * 5.0).coerceIn(1.0, 168.0),
-                monthlyTargetHours = (normalizedDaily * 20.0).coerceIn(1.0, 744.0)
+                dailyTargetHours = normalizedDaily.coerceIn(0.5, 24.0)
             )
         }
     }

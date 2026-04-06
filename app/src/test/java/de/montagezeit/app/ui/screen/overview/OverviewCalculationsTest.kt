@@ -13,9 +13,7 @@ import java.time.LocalTime
 class OverviewCalculationsTest {
 
     private val settings = ReminderSettings(
-        dailyTargetHours = 8.0,
-        weeklyTargetHours = 40.0,
-        monthlyTargetHours = 160.0
+        dailyTargetHours = 8.0
     )
 
     @Test

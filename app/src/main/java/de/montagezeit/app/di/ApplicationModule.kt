@@ -9,7 +9,6 @@ import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
-import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
 import de.montagezeit.app.domain.usecase.DeleteWorkEntryByDate
 import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
 import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
@@ -24,9 +23,7 @@ import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
 import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.usecase.SetDayLocation
-import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.SetTravelEvent
-import de.montagezeit.app.domain.usecase.UpdateEntry
 import de.montagezeit.app.domain.usecase.UpsertWorkEntries
 import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import de.montagezeit.app.work.DefaultNonWorkingDayChecker
@@ -43,16 +40,6 @@ object ApplicationModule {
     @Provides
     fun provideRecordEveningCheckIn(repository: WorkEntryRepository): RecordEveningCheckIn {
         return RecordEveningCheckIn(repository)
-    }
-
-    @Provides
-    fun provideSetDayType(repository: WorkEntryRepository): SetDayType {
-        return SetDayType(repository)
-    }
-
-    @Provides
-    fun provideUpdateEntry(repository: WorkEntryRepository): UpdateEntry {
-        return UpdateEntry(repository)
     }
 
     @Provides
@@ -135,10 +122,6 @@ object ApplicationModule {
     @Provides
     fun provideUpsertWorkEntries(repository: WorkEntryRepository): UpsertWorkEntries =
         UpsertWorkEntries(repository)
-
-    @Provides
-    fun provideDeleteTravelLegsForDate(repository: WorkEntryRepository): DeleteTravelLegsForDate =
-        DeleteTravelLegsForDate(repository)
 
     @Provides
     fun provideDeleteWorkEntryByDate(repository: WorkEntryRepository): DeleteWorkEntryByDate =

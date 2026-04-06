@@ -36,12 +36,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -265,7 +267,11 @@ private fun PdfReadyContent(
 
         else -> {
             Text(
-                text = stringResource(R.string.export_preview_pdf_view_title, rendererState.renderer.pageCount),
+                text = pluralStringResource(
+                    R.plurals.export_preview_pdf_view_title,
+                    rendererState.renderer.pageCount,
+                    rendererState.renderer.pageCount
+                ),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -437,18 +443,19 @@ private fun PdfPageCard(
     renderer: PdfRenderer,
     pageIndex: Int
 ) {
-    val bitmapState by produceState<PdfPageRenderState>(
-        initialValue = PdfPageRenderState.Loading,
-        renderer,
-        pageIndex
-    ) {
-        value = try {
+    var bitmapState by remember(renderer, pageIndex) {
+        mutableStateOf<PdfPageRenderState>(PdfPageRenderState.Loading)
+    }
+
+    LaunchedEffect(renderer, pageIndex) {
+        bitmapState = PdfPageRenderState.Loading
+        try {
             val bitmap = withContext(Dispatchers.IO) {
                 renderPdfPage(renderer, pageIndex)
             }
-            PdfPageRenderState.Success(bitmap)
+            bitmapState = PdfPageRenderState.Success(bitmap)
         } catch (_: Exception) {
-            PdfPageRenderState.Error
+            bitmapState = PdfPageRenderState.Error
         }
     }
 

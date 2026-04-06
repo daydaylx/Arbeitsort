@@ -1,82 +1,54 @@
 # Dokumentation – MontageZeit
 
-Diese Datei bietet eine Übersicht über alle Dokumente im Projekt.
+Diese Datei ordnet die Projekt-Dokumentation nach Verbindlichkeit und Zweck ein.
 
-## Source of Truth (Verbindlich)
+## Source of Truth (verbindlich)
 
-Diese Dokumente sind die maßgeblichen Referenzen für Architektur und Produkt:
-
-| Dokument | Beschreibung |
-|----------|--------------|
-| [`README.md`](../README.md) | Hauptdokumentation – Build, Features, Tech-Stack, Berechtigungen |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Verbindliche Architektur-Referenz (Layer, Datenmodell, Reminder-Logik) |
-
-Nur diese beiden Dokumente sind verbindlich. Wenn ergänzende Dokumente abweichen, gelten `README.md` und Code.
-
-## Aktive Referenzdokumente
-
-Diese Dateien sind Arbeits- oder Hintergrundmaterial, aber keine Source of Truth:
+Diese Dokumente sind die maßgeblichen Referenzen fuer Produktverhalten und Architektur:
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [`CONCEPT.md`](CONCEPT.md) | Produkt-Konzept / MVP-Tech-Spec |
-| [`REMINDERS.md`](REMINDERS.md) | Reminder-System Dokumentation |
-| [`UI_IMPLEMENTATION_SUMMARY.md`](UI_IMPLEMENTATION_SUMMARY.md) | UI-Implementierungs-Zusammenfassung |
-| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Lokaler Setup-, Hook- und Contributing-Workflow |
-| [`../README_ANDROID_DEV.md`](../README_ANDROID_DEV.md) | Android-Geraete-Workflow, `adb`-Nutzung und VS-Code-Tasks |
+| [`README.md`](../README.md) | Hauptdokumentation fuer Features, Build, Berechtigungen und aktuelles App-Verhalten |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Verbindliche Architektur-Referenz fuer Layer, Persistenz, Reminder und Datenmodell |
 
----
+Wenn sich ergänzende Dokumente und Code widersprechen, gilt zuerst der Code. Fuer Doku-Entscheidungen gelten `README.md` und `docs/ARCHITECTURE.md`.
 
-## Dokumentenkategorien
+## Aktive Ergänzungsdokumente
 
-### 📊 Audits & Reports (Referenz)
+Diese Dateien sind keine eigene Source of Truth, beschreiben aber den aktuellen Stand ergänzend:
 
-Dokumente aus Code-Audits und Qualitätsprüfungen. Sie sind hilfreich fuer Kontext und Nachverfolgung, aber nicht verbindlich:
+| Dokument | Status | Beschreibung |
+|----------|--------|--------------|
+| [`DAY_CLASSIFICATION.md`](DAY_CLASSIFICATION.md) | aktiv | Fachreferenz fuer sichtbare Arbeitstage, Solltage, Overtime-Zaehltage und Verpflegungspauschalen |
+| [`REMINDERS.md`](REMINDERS.md) | aktiv | Technische Ergänzungsdoku zum Reminder-System, Notification-Aktionen und Scheduling |
+| [`CONCEPT.md`](CONCEPT.md) | aktiv | Produktkonzept und Leitbild auf Basis des aktuellen Offline-/Reminder-/History-Produkts |
+| [`UI_IMPLEMENTATION_SUMMARY.md`](UI_IMPLEMENTATION_SUMMARY.md) | aktiv | Kurzuebersicht ueber den aktuell implementierten UI-Umfang |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | aktiv | Lokaler Setup-, Hook- und Contributing-Workflow |
+| [`../README_ANDROID_DEV.md`](../README_ANDROID_DEV.md) | aktiv | Android-Geraete-Workflow, `adb`-Nutzung und VS-Code-Tasks |
 
-| Dokument | Datum | Beschreibung |
-|----------|-------|--------------|
-| [`AUDITS/AUDIT_REPORT_2026-03-14.md`](AUDITS/AUDIT_REPORT_2026-03-14.md) | 2026-03-14 | Haupt-Audit (A01–A20, B01–B25) mit Funden zu Race Conditions, Data-Flow, Performance |
+## Historische oder referenzielle Dokumente
 
-### 🧭 Richtlinien & Guides
+Diese Dateien behalten Kontext, sind aber nicht fuer den aktuellen Produktstand maßgeblich:
 
-| Dokument | Beschreibung |
-|----------|--------------|
-| [`AGENTS.md`](../AGENTS.md) | Repository Guidelines (Coding Style, Testing, Commit-Konventionen) |
-| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Entwickler-Workflow und lokale Qualitaetschecks |
-
-### 📦 Archiv (Historisch)
-
-Veraltete oder nicht mehr aktive Dokumente:
+### Audits & Reviews
 
 | Dokument | Beschreibung |
 |----------|--------------|
-| [`ARCHIVE/ASSUMPTIONS.md`](ARCHIVE/ASSUMPTIONS.md) | Annahmen (veraltet) |
-| [`ARCHIVE/AUDIT_PLAN.md`](ARCHIVE/AUDIT_PLAN.md) | Audit-Planung |
-| [`ARCHIVE/NEXT_TASKS.md`](ARCHIVE/NEXT_TASKS.md) | Historische Aufgabenliste |
-| [`ARCHIVE/QA_CHECKLIST.md`](ARCHIVE/QA_CHECKLIST.md) | QA-Checkliste |
-| [`ARCHIVE/UI_PERFORMANCE_BASELINE.md`](ARCHIVE/UI_PERFORMANCE_BASELINE.md) | UI-Performance-Baseline |
-| [`ARCHIVE/UI_QA_CHECKLIST.md`](ARCHIVE/UI_QA_CHECKLIST.md) | UI-QA-Checkliste |
-| [`ARCHIVE/REPORT_CODE_COMPARISON.md`](ARCHIVE/REPORT_CODE_COMPARISON.md) | Code-Vergleichs-Report |
-| [`ARCHIVE/REPORT.md`](ARCHIVE/REPORT.md) | Zusätzlicher Audit-/Report-Bestand |
-| [`ARCHIVE/NEXTSTEPS.md`](ARCHIVE/NEXTSTEPS.md) | Historische Nächste-Schritte-Notizen |
-| [`ARCHIVE/UI_AUDIT_REPORT_2026-01-31.md`](ARCHIVE/UI_AUDIT_REPORT_2026-01-31.md) | Älteres UI-Audit |
-| [`ARCHIVE/UI_TARGET_ALIGNMENT_PLAN.md`](ARCHIVE/UI_TARGET_ALIGNMENT_PLAN.md) | UI Target Alignment Plan |
-| [`ARCHIVE/CLAUDE.md`](ARCHIVE/CLAUDE.md) | Claude-spezifische Notizen |
+| [`AUDITS/AUDIT_REPORT_2026-03-14.md`](AUDITS/AUDIT_REPORT_2026-03-14.md) | Groesseres Code-Audit mit technischen Funden zum damaligen Stand |
+| [`AUDITS/AUDIT_REPORT_2026-03-29.md`](AUDITS/AUDIT_REPORT_2026-03-29.md) | Spaeteres Audit mit weiteren Architektur-, Reminder- und Wartungsfunden |
+| [`weekly-review/2026-03-30.md`](weekly-review/2026-03-30.md) | Punktuelle Wochen-Review zum damaligen Stand |
 
----
+### Planung / Archiv
 
-## Dokumenten-Pflege
+| Dokument | Beschreibung |
+|----------|--------------|
+| [`ARCHIVE/`](ARCHIVE/) | Historische Plaene, Checklisten und aeltere Berichte |
+| [`jira/ui_modernization_backlog.csv`](jira/ui_modernization_backlog.csv) | Backlog-Export, kein verbindlicher Produktstand |
 
-### Wann verschieben?
-- **Audit-Ergebnisse** → `AUDITS/` mit Datumsstempel im Namen
-- **Veraltete Pläne/Checklisten** → `ARCHIVE/`
-- **Aktive Guidelines** → `GUIDES/` (neu erstellen)
+## Pflege-Regeln
 
-### Namenskonventionen
-- Audit-Reports: `AUDIT_REPORT_YYYY-MM-DD.md`
-- Guides: `GUIDE_<THEMA>.md`
-- Architektur: `ARCHITECTURE.md` (bleibt im Root von `docs/`)
+- Aendere `README.md` und `docs/ARCHITECTURE.md` immer dann mit, wenn sich reales Verhalten, Datenmodell oder Entwickler-Workflow aendern.
+- Aendere aktive Ergänzungsdoku nur dann, wenn sie den aktuellen Stand hilfreicher erklaert als README/Architektur, aber vermeide eigene konkurrierende Wahrheiten.
+- Audit-, Weekly-Review- und Archivdokumente werden nicht rueckwirkend "korrigiert"; sie dokumentieren historische Befunde.
 
----
-
-**Letzte Aktualisierung:** 2026-03-27
+**Letzte Aktualisierung:** 2026-04-05

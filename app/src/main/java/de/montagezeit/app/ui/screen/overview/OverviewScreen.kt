@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -405,7 +406,11 @@ private fun OverviewKpiGrid(
                 icon = if (actionNeeded) Icons.Default.ErrorOutline else Icons.Default.CalendarMonth,
                 label = stringResource(R.string.overview_kpi_action_needed),
                 value = if (actionNeeded) {
-                    stringResource(R.string.overview_kpi_unconfirmed_count, metrics.unconfirmedDaysCount)
+                    pluralStringResource(
+                        R.plurals.overview_kpi_unconfirmed_count,
+                        metrics.unconfirmedDaysCount,
+                        metrics.unconfirmedDaysCount
+                    )
                 } else {
                     stringResource(R.string.overview_kpi_none_unconfirmed)
                 },

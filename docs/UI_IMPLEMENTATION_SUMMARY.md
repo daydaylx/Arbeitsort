@@ -1,196 +1,104 @@
-# UI-Implementierung - Zusammenfassung
+# UI-Implementierung – Zusammenfassung
 
-## ✅ Vollständig implementierte Features
+## Status
 
-### 1. Dependency Injection (Hilt)
-- **DatabaseModule**: Bietet AppDatabase und WorkEntryDao
-- **ApplicationModule**: Bietet alle UseCases, LocationProvider, ReminderSettingsManager
-- **MontageZeitApp**: Mit @HiltAndroidApp annotiert
-- **MainActivity**: Mit @AndroidEntryPoint annotiert
+Diese Datei ist eine kompakte Uebersicht ueber den aktuell implementierten UI-Umfang. Verbindlich bleiben `README.md` und `docs/ARCHITECTURE.md`.
 
-### 2. Heute-Screen (Today)
-**TodayViewModel:**
-- StateFlow für UI-State (Loading, LoadingLocation, Success, Error, LocationError)
-- Morning/Evening Check-In Aktionen
-- Standort-Skip-Funktionalität
-- Fehler-Reset
+## Aktuell sichtbare Hauptbereiche
 
-**TodayScreen:**
-- Statuskarte mit Datum, Tagtyp, Standort-Status
-- Große Check-In Buttons (64dp Höhe)
-- Loading-Screen mit "Standort wird ermittelt..."
-- Error-Handling mit Retry/Skip-Option
-- "Manuell bearbeiten" Button
-- needsReview-Warnung (rot)
+### 1. Today
 
-### 3. Verlauf-Screen (History)
-**HistoryViewModel:**
-- Lädt Einträge der letzten 30 Tage
-- Gruppiert nach Kalenderwochen (KW)
-- Sortiert absteigend (neueste zuerst)
+Der Today-Screen bildet den Hauptpfad fuer den aktuellen Tag:
 
-**HistoryScreen:**
-- LazyColumn mit Week-Gruppierung
-- KW-Header mit Jahresanzeige
-- Entry-Cards mit:
-  - Datum (deutsches Format)
-  - Tagtyp-Icon
-  - Standort-Status-Icons
-  - needsReview-Warnung
-  - Tap öffnet Edit-Sheet
-- Empty-State mit Icon und Text
+- Tageskarte fuer den gewaehlten Tag
+- Wochenleiste mit Tagesstatus
+- manueller Daily-Check-in mit Tagesort
+- optionale Angaben fuer Verpflegungspauschale im Daily-Dialog
+- Aktion `Heute frei`
+- Bearbeiten des aktuell gewaehlten Tags
+- Loeschen des Tags mit Undo
+- Anzeige von Wochen-/Monatswerten und relevanten Tagesdetails
 
-### 4. Einstellungen-Screen (Settings)
-**SettingsViewModel:**
-- DataStore-Integration für persistente Einstellungen
-- Export zu CSV (letztes Jahr)
-- Update-Funktionen für alle Einstellungen
+Today arbeitet mit manuellem Tagesort und nicht mit aktiver Standortlogik.
 
-**SettingsScreen:**
-- Arbeitszeiten (lesbar, nicht bearbeitbar)
-- Erinnerungs-Fenster (Morning/Evening mit TimePicker)
-- Standort-Einstellungen:
-  - Radius-Slider (1-50 km)
-  - Standortmodus (Radio-Buttons)
-- Export-Sektion mit Loading/Success/Error States
+### 2. History
 
-### 5. Edit Entry Sheet
-**EditEntryViewModel:**
-- Lädt Eintrag per SavedStateHandle
-- Formular-Data-Management
-- Borderzone-Confirm-Logik
-- Speichern mit Validierung
+Der History-Bereich dient zum Nachtragen, Kontrollieren und Korrigieren:
 
-**EditEntrySheet:**
-- ModalBottomSheet mit Scroll
-- Tagtyp-Auswahl (FilterChips)
-- Arbeitszeiten mit TimePicker und Slider
-- Standort-Labels (optional)
-- Notiz (optional, mehrzeilig)
-- needsReview-Reset-Button
-- Speichern-Button
-- Borderzone-Confirm-Dialog
+- Verlauf fuer die letzten 365 Tage
+- Wochen- und Monatsgruppen
+- Kalender- und Wochenansicht
+- Edit-Zugriff auf einzelne Tage
+- Batch-Edit fuer Datumsbereiche mit vorhandenen Eintraegen
 
-### 6. Navigation
-**MontageZeitNavGraph:**
-- Bottom Navigation mit 3 Tabs
-- Screen-Definitionen (Today, History, Settings)
-- ModalBottomSheet-Integration
-- State-Management für Sheet-Öffnen
+Batch-Edit aendert nur bestehende Eintraege. Leere Tage werden dabei nicht implizit angelegt.
 
-## 🎨 Design & UX
+### 3. Settings
 
-### Material3 Design
-- Konsistentes Theme mit primary/secondary/error Farben
-- Card-basiertes Layout
-- FilterChips, Radio-Buttons, Sliders
+Der Settings-Screen deckt den operativen App-Betrieb ab:
 
-### Accessibility
-- **Touch-Targets**: Mindestens 48dp
-- **Check-In Buttons**: 64dp Höhe (große Touch-Fläche)
-- **Navigation**: Bottom Bar für 1-Hand Bedienung
-- **Feedback**: Loading-Indikatoren, Erfolg/Fehler-Meldungen
+- Arbeitszeit-Defaults
+- Reminder-Konfiguration fuer Morning, Evening, Fallback und Daily
+- Einstellungen fuer automatische Wochenend-/Feiertagsbehandlung
+- Tagesziel-, Wochenziel- und Monatszielwerte
+- Test-Reminder
+- PDF-Stammdaten
+- CSV- und PDF-Export inklusive Preview fuer benutzerdefinierte Zeitraeume
+- Hinweise und Shortcuts fuer Notification- und Batterie-Einstellungen
 
-### State-Handling
-- **Loading**: CircularProgressIndicator
-- **Success**: Daten-Anzeige
-- **Error**: Fehlermeldung mit Retry-Option
-- **Empty**: Platzhalter mit Icon und Text
-- **LoadingLocation**: Spezieller State mit Skip-Option
+### 4. Edit-/Export-Nebenpfade
 
-### 1-Hand Bedienung
-- Wichtige Aktionen unten positioniert
-- Bottom Navigation leicht erreichbar
-- ModalBottomSheet für Kontext-gebundene Aktionen
+- Edit-Sheet fuer DayType, Zeiten, Tagesort, Travel-Daten und Notiz
+- Export-Preview als Bottom Sheet mit Drilldown auf einzelne Tage
 
-## 📁 Dateistruktur
+## Implementierungsbild
 
-```
-app/src/main/java/de/montagezeit/app/
-├── di/
-│   ├── ApplicationModule.kt
-│   └── DatabaseModule.kt
-├── ui/
-│   ├── screen/
-│   │   ├── today/
-│   │   │   ├── TodayViewModel.kt
-│   │   │   └── TodayScreen.kt
-│   │   ├── history/
-│   │   │   ├── HistoryViewModel.kt
-│   │   │   └── HistoryScreen.kt
-│   │   ├── settings/
-│   │   │   ├── SettingsViewModel.kt
-│   │   │   └── SettingsScreen.kt
-│   │   └── edit/
-│   │       ├── EditEntryViewModel.kt
-│   │       └── EditEntrySheet.kt
-│   └── navigation/
-│       └── MontageZeitNavGraph.kt
-├── MainActivity.kt (@AndroidEntryPoint)
-└── MontageZeitApp.kt (@HiltAndroidApp)
-```
+### ViewModels
 
-## 🔧 Build
+Aktive UI-Haupt-ViewModels:
 
-### Status
-- Gradle Wrapper ist vorhanden und der Debug-Build läuft über `./gradlew assembleDebug`.
-- Die zuletzt offenen Audit-Follow-ups zu Travel-Priorität, Reminder-Terminalzuständen und
-  COMP_TIME-/Edit-Transitions sind im Code umgesetzt und testseitig abgesichert.
+- `TodayViewModel`
+- `HistoryViewModel`
+- `SettingsViewModel`
+- `EditEntryViewModel`
+- `ExportPreviewViewModel`
 
-### Build-Befehl
-```bash
-./gradlew assembleDebug
-```
+### Navigation
 
-### Ausgabe
-APK wird generiert unter:
-```
-app/build/outputs/apk/debug/app-debug.apk
-```
+- Bottom-Navigation fuer Today, History und Settings
+- Sheet- und Dialog-Pfade fuer Bearbeitung, Check-in und Export-Preview
+- Reminder koennen ueber Notification-Aktionen in App- oder Bearbeitungspfade fuehren
 
-## ✅ QA-Checklist
+### UI-Grundmuster
 
-Detaillierte Smoke-Tests sind dokumentiert in:
-- `docs/UI_QA_CHECKLIST.md`
+- Compose + Material3
+- Hero-/Card-basierte Seitenstruktur
+- Dialoge und Bottom Sheets fuer kontextgebundene Aktionen
+- Snackbar-Feedback fuer kurzlebige Rueckmeldungen
 
-Enthält Checks für:
-- Build & Installation
-- Alle Screens und Features
-- Navigation
-- Accessibility & Usability
-- Performance & Stability
-- Edge Cases
+## Wichtige fachliche UI-Entscheidungen
 
-## 🎯 MVP-Ziele erreicht
+- Der primäre Today-Pfad ist der manuelle Daily-Check-in mit Pflichtfeld fuer den Tagesort.
+- `Heute frei` bestaetigt direkt einen freien Tag.
+- `COMP_TIME` ist ein eigener fachlicher Zustand und nicht einfach ein normaler Arbeitstag.
+- Verpflegungspauschalen werden in der UI nur als fachliche Ableitung eines `WORK`-Tags mit Aktivitaet behandelt.
+- History-, Statistik- und Exportanzeigen sollen dieselbe Fachlogik fuer Arbeitstage und Pauschalen verwenden.
 
-- [x] 3 Tabs Bottom Navigation (Heute, Verlauf, Einstellungen)
-- [x] Heute: Statuskarte + große Buttons
-- [x] Verlauf: Wochen-Gruppierung + Warnsymbole + Tap → Edit
-- [x] Einstellungen: Defaults + Reminderfenster + Radius + Standortmodus + Export
-- [x] Edit Modal: Labels, DayType, Zeiten, Notiz, needsReview Reset
-- [x] Grenzzone Confirm-Required
-- [x] Große Touch-Targets (Accessibility)
-- [x] 1-Hand Bedienung (wichtige Buttons unten)
-- [x] Sauberes State-Handling (Loading, Error, Success, Empty)
-- [x] Material3 Design
-- [x] Hilt DI Integration
-- [x] StateFlow in ViewModels
-- [x] QA-Checklist dokumentiert
+## Nicht mehr aktueller Umfang
 
-## 📝 Known Issues
+Nicht Teil des aktuellen UI-Produkts sind:
 
-1. **Manuelle Geräte-QA offen**: Die dokumentierten Smoke-Tests sind noch nicht als durchgeführt protokolliert.
+- GPS-gestuetzte Standortaufnahme als Hauptpfad
+- Radius-Slider oder Standortmodus als aktive Settings-Funktion
+- Loading- oder Error-Flows fuer laufende Standortermittlung als heutiger Normalfall
 
-## 🚀 Nächste Schritte
+## Offene Dokumentationsgrenze
 
-1. App auf Gerät testen und QA-Checklist abarbeiten
-2. Optional: erweitertes Travel-Modell / UI nur falls mehr als ein Fahrtfenster pro Tag benötigt wird
-3. Optional: Dark Theme Unterstützung
+Diese Datei ist eine Uebersicht, keine vollstaendige Screen-Spezifikation. Wenn Details zu Reminder, Statistik oder DayType-Auswertung relevant sind, sind diese Dokumente maßgeblicher:
 
-## 📊 Code-Metriken
+- `README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DAY_CLASSIFICATION.md`
+- `docs/REMINDERS.md`
 
-- **Zeilen Code**: ~2.500 (UI-only)
-- **Komponenten**: 3 Screens + 1 Edit Sheet
-- **ViewModels**: 4 (Today, History, Settings, EditEntry)
-- **State-Classes**: 4 (TodayUiState, HistoryUiState, SettingsUiState, EditUiState)
-- **Dependencies**: Hilt, Material3, Navigation, Lifecycle
+**Letzte Aktualisierung:** 2026-04-05

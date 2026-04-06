@@ -11,12 +11,9 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
-import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
 import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
-import de.montagezeit.app.domain.usecase.SetDayType
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
@@ -57,9 +54,6 @@ class CheckInActionService : Service() {
 
     @Inject
     lateinit var recordEveningCheckIn: RecordEveningCheckIn
-
-    @Inject
-    lateinit var setDayType: SetDayType
 
     @Inject
     lateinit var notificationManager: ReminderNotificationManager
@@ -152,23 +146,6 @@ class CheckInActionService : Service() {
                         }
                     }
                 }
-            }
-
-            ReminderActions.ACTION_EDIT_ENTRY -> {
-                val date = parseActionDate(intent) ?: return START_NOT_STICKY
-                val editIntent = Intent(this, MainActivity::class.java).apply {
-                    action = ReminderActions.ACTION_EDIT_ENTRY
-                    putExtra(ReminderActions.EXTRA_DATE, date.toString())
-                    putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_EDIT_ENTRY)
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    )
-                }
-                startActivity(editIntent)
-                notificationManager.cancelFallbackReminder()
-                stopSelf()
             }
 
             ReminderActions.ACTION_REMIND_LATER -> {

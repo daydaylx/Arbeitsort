@@ -219,4 +219,4 @@ Zusätzlich relevant:
 
 - Reminder sind WorkManager-basiert und damit bewusst fensterbasiert, nicht exakt alarmgenau.
 - Hersteller-Energiesparmechanismen und Doze können die tatsächliche Ausführung verzögern.
-- Die ergänzende Doku unter `docs/` enthält stellenweise ältere Aussagen zu Reminder-Aktionen, GPS-Logik und UI-Umfang; für den Ist-Zustand sind README und Code maßgeblich.
+- Historische Doku unter `docs/AUDITS/` und `docs/ARCHIVE/` kann bewusst ältere Aussagen enthalten; für den Ist-Zustand sind README, `docs/ARCHITECTURE.md` und der Code maßgeblich.

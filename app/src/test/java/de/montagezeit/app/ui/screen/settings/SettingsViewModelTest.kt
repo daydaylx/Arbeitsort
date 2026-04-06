@@ -102,7 +102,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateDailyTargetHours also syncs derived weekly and monthly targets`() = runTest {
+    fun `updateDailyTargetHours persists normalized daily target only`() = runTest {
         val viewModel = createViewModel()
 
         viewModel.updateDailyTargetHours(7.5)
@@ -110,9 +110,7 @@ class SettingsViewModelTest {
 
         coVerify(exactly = 1) {
             reminderSettingsManager.updateSettings(
-                dailyTargetHours = 7.5,
-                weeklyTargetHours = 37.5,
-                monthlyTargetHours = 150.0
+                dailyTargetHours = 7.5
             )
         }
     }

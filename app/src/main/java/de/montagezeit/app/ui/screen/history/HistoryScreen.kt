@@ -937,7 +937,13 @@ fun WeekGroupHeader(
     val summaryText = buildString {
         append(stringResource(R.string.history_hours_decimal, week.totalHours))
         append(" · ")
-        append(stringResource(R.string.history_summary_workdays, week.workDaysCount))
+        append(
+            pluralStringResource(
+                R.plurals.history_summary_workdays,
+                week.workDaysCount,
+                week.workDaysCount
+            )
+        )
     }
 
     Surface(
@@ -982,7 +988,13 @@ fun MonthGroupHeader(
     val summaryText = buildString {
         append(stringResource(R.string.history_hours_decimal, month.totalHours))
         append(" · ")
-        append(stringResource(R.string.history_summary_workdays, month.workDaysCount))
+        append(
+            pluralStringResource(
+                R.plurals.history_summary_workdays,
+                month.workDaysCount,
+                month.workDaysCount
+            )
+        )
     }
 
     Surface(

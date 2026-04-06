@@ -89,10 +89,8 @@ class ReminderSettingsManager @Inject constructor(
             pdfProject = preferences[ReminderSettingsKeys.PDF_PROJECT],
             pdfPersonnelNumber = preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER],
 
-            // Überstunden-Ziele
-            dailyTargetHours = normalizedDailyTargetHours,
-            weeklyTargetHours = normalizedDailyTargetHours * 5.0,
-            monthlyTargetHours = normalizedDailyTargetHours * 20.0
+            // Überstunden-Ziel
+            dailyTargetHours = normalizedDailyTargetHours
         )
     }
 
@@ -122,9 +120,7 @@ class ReminderSettingsManager @Inject constructor(
         pdfCompany: String? = null,
         pdfProject: String? = null,
         pdfPersonnelNumber: String? = null,
-        dailyTargetHours: Double? = null,
-        weeklyTargetHours: Double? = null,
-        monthlyTargetHours: Double? = null
+        dailyTargetHours: Double? = null
     ) {
         dataStore.edit { preferences ->
             workStart?.let { preferences[ReminderSettingsKeys.WORK_START] = it.toPrefString() }
@@ -157,8 +153,6 @@ class ReminderSettingsManager @Inject constructor(
             pdfPersonnelNumber?.let { preferences[ReminderSettingsKeys.PDF_PERSONNEL_NUMBER] = it }
 
             dailyTargetHours?.let { preferences[ReminderSettingsKeys.DAILY_TARGET_HOURS] = it.toString() }
-            weeklyTargetHours?.let { preferences[ReminderSettingsKeys.WEEKLY_TARGET_HOURS] = it.toString() }
-            monthlyTargetHours?.let { preferences[ReminderSettingsKeys.MONTHLY_TARGET_HOURS] = it.toString() }
         }
     }
 

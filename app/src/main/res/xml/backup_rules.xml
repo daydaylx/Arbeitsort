@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Vor Android 12 greifen full-backup-Regeln statt dataExtractionRules.
+    MontageZeit bleibt auch dort explizit von Backups ausgeschlossen.
+-->
+<full-backup-content>
+    <exclude domain="root" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="file" />
+    <exclude domain="external" />
+</full-backup-content>

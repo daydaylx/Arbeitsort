@@ -59,8 +59,9 @@ internal fun WorkTimesSection(
 
     CollapsibleSettingsCard(
         title = stringResource(R.string.settings_work_times),
-        summary = stringResource(
-            R.string.settings_work_times_summary,
+        summary = pluralStringResource(
+            R.plurals.settings_work_times_summary,
+            breakMinutes,
             Formatters.formatTime(workStart),
             Formatters.formatTime(workEnd),
             breakMinutes
@@ -101,8 +102,9 @@ internal fun WorkTimesSection(
         }
 
         Text(
-            text = stringResource(
-                R.string.settings_break_minutes_value,
+            text = pluralStringResource(
+                R.plurals.settings_break_minutes_value,
+                breakMinutesDraft.roundToInt(),
                 stringResource(R.string.label_break),
                 breakMinutesDraft.roundToInt()
             ),

@@ -42,10 +42,6 @@ class UpsertWorkEntries(private val repository: WorkEntryRepository) {
     suspend operator fun invoke(entries: List<WorkEntry>) = repository.upsertAll(entries)
 }
 
-class DeleteTravelLegsForDate(private val repository: WorkEntryRepository) {
-    suspend operator fun invoke(date: LocalDate) = repository.deleteTravelLegsByDate(date)
-}
-
 class DeleteWorkEntryByDate(private val repository: WorkEntryRepository) {
     suspend operator fun invoke(date: LocalDate) = repository.deleteByDate(date)
 }

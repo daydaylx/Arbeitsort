@@ -152,8 +152,6 @@ fun SettingsScreen(
                         viewModel.updatePdfSettings(name, company, project, personnel)
                     },
                     onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
-                    onUpdateWeeklyTargetHours = { viewModel.updateWeeklyTargetHours(it) },
-                    onUpdateMonthlyTargetHours = { viewModel.updateMonthlyTargetHours(it) },
                     onResetExportState = { viewModel.resetExportState() },
                     hasNotificationPermission = hasNotificationPermission,
                     isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
@@ -219,8 +217,6 @@ private fun SettingsContent(
     onOpenExportPreview: (LocalDate, LocalDate) -> Unit,
     onUpdatePdfSettings: (String?, String?, String?, String?) -> Unit,
     onUpdateDailyTargetHours: (Double) -> Unit,
-    onUpdateWeeklyTargetHours: (Double) -> Unit,
-    onUpdateMonthlyTargetHours: (Double) -> Unit,
     onResetExportState: () -> Unit,
     hasNotificationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,

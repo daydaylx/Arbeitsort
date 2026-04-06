@@ -7,7 +7,6 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
 import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
 import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.UpsertWorkEntries
@@ -265,7 +264,6 @@ class HistoryViewModelTest {
             observeWorkEntriesWithTravelByDateRange = ObserveWorkEntriesWithTravelByDateRange(repository),
             getWorkEntriesByDateRange = GetWorkEntriesByDateRange(repository),
             upsertWorkEntries = UpsertWorkEntries(repository),
-            deleteTravelLegsForDate = DeleteTravelLegsForDate(repository),
             reminderSettingsManager = reminderSettingsManager
         )
     }

@@ -1,293 +1,189 @@
 # Reminder & Notification System
 
-## Übersicht
+## Status
 
-Das Reminder & Notification System implementiert fensterbasierte Erinnerungen mit Notification Actions. Das System nutzt WorkManager für zuverlässiges, deferrable Scheduling und ist reboot-resilient.
+Diese Datei ist eine technische Ergänzungsdoku. Verbindlich bleiben `README.md` und `docs/ARCHITECTURE.md`.
 
-Wichtig: Der primäre Tagesablauf in der UI ist ein manueller Daily-Check-in (`Einchecken (Arbeit)` mit Orts-Textfeld), ohne GPS-Pflicht.
+MontageZeit nutzt ein WorkManager-basiertes Reminder-System fuer manuelle Tageserfassung. Es gibt keine GPS- oder Standortpflicht. Reminder fuehren entweder in Notification-Aktionen oder in die Bearbeitung des Tages.
 
-## Architektur
+## Überblick
 
-### Komponenten
+Aktive Reminder-Typen:
 
-#### 1. DataStore Settings (`data/preferences/`)
-- **ReminderSettings.kt**: Data class mit allen Konfigurationen
-- **ReminderSettingsManager.kt**: DataStore Wrapper für Persistenz
+- `MORNING`: erinnert an den Morgen-Check-in
+- `EVENING`: erinnert an den Abend-Check-in
+- `FALLBACK`: erinnert spaet am Tag an unvollstaendige Tage
+- `DAILY`: fragt, ob der Tag als Arbeitstag oder freier Tag bestaetigt werden soll
 
-**Konfigurationen:**
-- Arbeitszeit Defaults (workStart, workEnd, breakMinutes, radius)
-- Morning Window (06:00-13:00, Intervall 120min)
-- Evening Window (16:00-22:30, Intervall 180min)
-- Fallback (22:30, einmal täglich)
+Ziel des Systems:
 
-#### 2. WindowCheckWorker (`work/`)
-Prüft regelmäßig ob Reminder notwendig sind:
-- Läuft mehrfach im Fenster (deferrable scheduling)
-- Prüft WorkEntry DB ob Snapshot fehlt
-- Prüft ob dayType == WORK
-- Vermeidet mehrfache Erinnerungen pro Tag (SharedPreferences Flag)
-- **Wichtig**: Pro Worker-Typ nur im eigenen Fenster aktiv, sonst sofort `Result.success()`
-- **Daily Reminder**: `checkAndShowDailyReminder()` prüft ebenfalls auf Nicht-Werktage
-  (`isNonWorkingDay`), analog zu Morning/Evening/Fallback. An Nicht-Werktagen wird das Flag
-  gesetzt und kein Daily-Reminder angezeigt.
+- unbestaetigte oder unvollstaendige Tage rechtzeitig sichtbar machen
+- automatische Nicht-Arbeitstage respektieren
+- Doppel-Notifications pro Tag und Reminder-Typ vermeiden
+- trotz Doze/OEM-Verzoegerungen robust bleiben
 
-**Logik:**
-```kotlin
-if (inMorningWindow && !alreadyReminded && (entry == null || entry.dayType == WORK && entry.morningCapturedAt == null)) {
-    showMorningReminder()
-    setReminderFlag()
-}
-```
+## Komponenten
 
-#### 3. ReminderScheduler (`work/`)
-Plant WindowCheckWorker mit UniqueWork:
-- **Morning Worker**: Startet 06:00 (oder sofort im Fenster), wiederholt alle 2 Stunden
-- **Evening Worker**: Startet 16:00 (oder sofort im Fenster), wiederholt alle 3 Stunden
-- **Fallback Worker**: Startet 22:30, wiederholt täglich
+### Settings und Scheduler
 
-**Constraints:**
-- NetworkType.NOT_REQUIRED (Offline OK)
-- RequiresBatteryNotLow = false
+- `ReminderSettingsManager` liest und schreibt Reminder-, Feiertags- und Arbeitszeit-Defaults.
+- `ReminderScheduler` plant vier dedizierte Unique-Works fuer `MORNING`, `EVENING`, `FALLBACK` und `DAILY`.
+- Morning und Evening laufen periodisch innerhalb konfigurierbarer Zeitfenster.
+- Fallback und Daily laufen jeweils einmal pro Tag zur konfigurierten Uhrzeit.
+- Initial Delays werden millisekundengenau gesetzt, damit Sub-Minuten-Grenzen nicht versehentlich zu `0` abrunden.
 
-#### 4. ReminderNotificationManager (`notification/`)
-Erstellt Notifications mit Actions:
-- **Morning Actions**: "Mit Standort check-in", "Ohne Standort speichern"
-- **Evening Actions**: Analog
-- **Fallback Actions**: "Später", "Heute frei"
-- **Daily Confirmation Actions**: "Arbeit", "Frei", "Später"
+### Worker
 
-**Notification Channel:**
-- ID: `reminder_notifications`
-- Importance: HIGH (Sound + Vibration)
+- `WindowCheckWorker` ist der zentrale Entscheidungs-Worker fuer die regulaeren Reminder.
+- `ReminderLaterWorker` zeigt gesnoozte Reminder spaeter erneut an.
+- Beide Worker pruefen vor der Anzeige erneut, ob der Reminder fachlich noch sinnvoll ist.
 
-#### 5. CheckInActionService (`handler/`)
-ForegroundService für Check-In Actions:
-- Verwendet ForegroundService statt BroadcastReceiver (Location-Timeout 15s+)
-- Ruft RecordMorningCheckIn/RecordEveningCheckIn UseCases auf
-- Zeigt Toast bei Erfolg/Fehler
-- Cancelt Reminder-Notification nach Check-in
-- **`ACTION_REMIND_LATER`**: Cancelt nur den spezifischen Reminder-Typ (MORNING/EVENING/FALLBACK/DAILY),
-  der gesnoozed wird. Nur bei fehlendem Typ (`null`-Fallback) werden alle Reminder gecancelt.
+### Notification- und Action-Schicht
 
-**Warum ForegroundService?**
-- Location-Requests mit Timeout können länger dauern als BroadcastReceiver lebt
-- ForegroundService hat höhere Priorität und wird vom System nicht abgebrochen
+- `ReminderNotificationManager` baut die vier Notification-Typen und ihre Actions.
+- `CheckInActionService` verarbeitet Notification-Aktionen fuer Check-in, `Heute frei`, `Später`, Daily-Confirmation und Edit-Pfade.
+- `BootReceiver` und `TimeChangeReceiver` planen alle Reminder nach Reboot, App-Update, Zeit- oder Zeitzonenwechsel neu.
 
-#### 6. BootReceiver (`receiver/`)
-Reboot-Resilienz:
-- Empfängt BOOT_COMPLETED, QUICKBOOT_POWERON, MY_PACKAGE_REPLACED
-- Plant alle Reminder-Worker neu
+## Fachlogik pro Reminder-Typ
 
-#### 7. Settings UI (`ui/screen/`)
-**SettingsScreen.kt** (enthält die Sektion für Erinnerungen) mit:
-- Toggle für Morning/Evening/Fallback
-- Time Picker für Fenster-Start/Ende
-- Slider für Intervalle
-- Samsung Hardening Info-Karte
-- Buttons zu Battery Optimization / App Details
+### MORNING
 
-## Funktionsweise
+Ein Morning-Reminder darf nur erscheinen, wenn:
 
-### Today Daily Flow (UI)
+- Morning-Reminder aktiviert ist
+- aktuelle Uhrzeit im Morning-Window liegt
+- der Tag nicht bereits als abgeschlossen bestaetigt wurde
+- der Tag kein automatischer Nicht-Arbeitstag ohne manuellen Override ist
+- entweder noch kein Eintrag existiert oder ein `WORK`-Eintrag ohne `morningCapturedAt` vorliegt
 
-1. User öffnet den Heute-Screen und tippt `Einchecken (Arbeit)`.
-2. Der Ortswert wird vorbefüllt (heute -> letzter WORK-Ort -> letzter Ort -> Settings-Default).
-3. Speichern via `RecordDailyManualCheckIn`:
-   - `dayType = WORK`
-   - `confirmedWorkDay = true`
-   - Morning/Evening-Snapshots werden gesetzt
-4. Ergebnis: Tag gilt als abgeschlossen; Worker/Reminder behandeln den Tag als erledigt.
+Notification-Aktionen:
 
-### Morning Reminder Flow
+- `Arbeit` / Morgen-Check-in
+- `Heute frei`
+- `10 Min`
+- `+1 h`
+- `+2 h`
 
-1. **06:00**: WindowCheckWorker startet
-2. **Prüfung**:
-   - Ist 06:00-13:00? Ja
-   - Morning-Captured-At == null? Ja
-   - dayType == WORK? Ja
-   - Schon erinnert? Nein
-3. **Action**: Zeige Notification mit Actions
-4. **User Klick**: Startet CheckInActionService
-5. **Service**:
-   - Location-Request mit 15s Timeout
-   - Ruft RecordMorningCheckIn auf
-   - Speichert in DB
-   - Zeigt Toast
-   - Cancelt Notification
+### EVENING
 
-### Evening Reminder Flow
+Ein Evening-Reminder darf nur erscheinen, wenn:
 
-Analog zu Morning, aber:
-- Fenster: 16:00-22:30
-- Ruft RecordEveningCheckIn auf
+- Evening-Reminder aktiviert ist
+- aktuelle Uhrzeit im Evening-Window liegt
+- der Tag nicht bereits bestaetigt wurde
+- der Tag kein automatischer Nicht-Arbeitstag ohne manuellen Override ist
+- entweder noch kein Eintrag existiert oder ein `WORK`-Eintrag ohne `eveningCapturedAt` vorliegt
 
-### Fallback Reminder Flow
+Notification-Aktionen:
 
-1. **22:30**: Fallback Worker startet
-2. **Prüfung**:
-   - Ist nach 22:30? Ja
-   - Tag unvollständig? Ja
-   - Schon erinnert? Nein
-3. **Action**: Zeige Fallback-Notification
-4. **User Klick**: Öffnet Bearbeitungsansicht oder markiert den Tag als frei
+- Abend-Check-in
+- `10 Min`
+- `+1 h`
+- `+2 h`
+- `Heute frei`
 
-## Bekannte Limits & Edge Cases
+### FALLBACK
 
-### OS-Restrictions
+Ein Fallback-Reminder darf nur erscheinen, wenn:
 
-**Samsung One UI:**
-- Killt Hintergrund-Prozesse aggressiv
-- **Lösung**: Hardening Screen mit Battery Optimization / App Details Buttons
-- User muss "Unrestricted" setzen
+- Fallback aktiviert ist
+- aktuelle Uhrzeit die Fallback-Zeit erreicht oder ueberschritten hat
+- der Tag nicht bereits bestaetigt wurde
+- der Tag kein automatischer Nicht-Arbeitstag ohne manuellen Override ist
+- der Tag leer ist oder bei `WORK` noch Morning- oder Evening-Erfassung fehlt
 
-**Battery Optimization:**
-- Android 6.0+ kann WorkManager blockieren
-- **Lösung**: User wird aufgefordert, App zu whitelisten
+Notification-Aktionen:
 
-**Doze Mode:**
-- Verzögert WorkManager Ausführung
-- **Lösung**: WorkManager ist resilient, führt Worker später aus
+- `Bearbeiten`
+- `10 Min`
+- `+1 h`
+- `+2 h`
+- `Heute frei`
 
-### Location Issues
+### DAILY
 
-**GPS indoors:**
-- GPS kann indoors nicht verfügbar sein
-- **Lösung**: "Ohne Standort speichern" Action → needsReview=true (betrifft Notification-Actions)
+Der Daily-Reminder ist die taegliche Bestaetigungslogik fuer noch nicht abgeschlossene Tage. Er darf nur erscheinen, wenn:
 
-**Low Accuracy:**
-- Accuracy zu niedrig (< 50m)
-- **Lösung**: LocationStatus.LOW_ACCURACY → needsReview=true (betrifft Notification-Actions)
+- Daily-Reminder aktiviert ist
+- aktuelle Uhrzeit die konfigurierte Daily-Zeit erreicht oder ueberschritten hat
+- der Tag kein automatischer Nicht-Arbeitstag ohne manuellen Override ist
+- kein terminaler Zustand vorliegt
 
-**Timeout:**
-- Location-Request timeout nach 15s
-- **Lösung**: LocationStatus.UNAVAILABLE → needsReview=true (betrifft Notification-Actions)
+Als terminal gelten:
 
-### User Experience
+- `confirmedWorkDay = true`
+- `OFF`
+- `COMP_TIME`
 
-**Mehrfache Erinnerungen:**
-- Können nerven wenn User schon gecheck-in hat
-- **Lösung**: SharedPreferences Flag "remindedToday" (pro Tag und Typ)
+Notification-Aktionen:
 
-**DayType=OFF:**
-- Sollte keine Reminder auslösen
-- **Lösung**: Worker prüft entry.dayType == WORK
+- `Arbeit`
+- `Frei`
+- `Später`
 
-**Weekend/Feiertage:**
-- Über `autoOffWeekends` / `autoOffHolidays` konfigurierbar.
-- Manuelle DayType-Einträge überschreiben automatische Regeln.
+`Später` im Daily-Kontext erzeugt einen erneuten Daily-Reminder spaeter am selben Tag. Daily wird bewusst nicht fuer automatische Wochenend-/Feiertage angezeigt.
 
 ## Scheduling-Strategie
 
-### Keine exakten Alarme
+### WorkManager statt exakter Alarme
 
-**Warum nicht AlarmManager.setExact()?**
-- Permission-Hölle (SCHEDULE_EXACT_ALARM)
-- Battery Optimization killt Alarms
-- Samsung/MIUI Blockierungen
-- Doze Mode verzögert
+Die App nutzt bewusst WorkManager und keine exakten Alarme:
 
-**Lösung: WorkManager deferrable scheduling**
-```kotlin
-PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
-    .setInitialDelay(delayTo06:00)
-    .setConstraints(noNetworkRequired)
-    .setInputData(workDataOf("reminder_type" to "MORNING"))
-    .build()
-```
+- Morning und Evening sind fensterbasiert und wiederholen sich periodisch
+- Fallback und Daily werden als taegliche periodische WorkRequests geplant
+- echte Alarmgenauigkeit ist nicht Ziel des Produkts
+- Doze und Hersteller-Energiesparen koennen Ausfuehrungen verzoegern
 
-### Window Check Strategie
+### Boundary-Verhalten
 
-**Strategie**: Worker läuft mehrfach im Fenster
-- Morning: alle 2 Stunden im Morning Window
-- Evening: alle 3 Stunden im Evening Window
-- Fallback: 1x nach 22:30
+Wichtige aktuelle Details:
 
-**Implementierung**:
-```kotlin
-// Morning: Alle 2 Stunden im Fenster
-PeriodicWorkRequestBuilder<WindowCheckWorker>(2, TimeUnit.HOURS)
-    .setInitialDelay(delayTo06:00)
-    .setInputData(workDataOf("reminder_type" to "MORNING"))
-    .addTag("morning_reminder")
-    .build()
-// Worker prüft nur im Fenster und beendet sich sonst sofort
-```
+- Initial Delays fuer Fallback und Daily werden nicht mehr auf volle Minuten abgeschnitten.
+- Ein Worker-Lauf vor der Zielzeit zeigt keinen Reminder und erzeugt keinen stillen Tagesverlust.
+- `DAILY` prueft die Zielzeit im Worker ebenfalls explizit, statt sich nur auf das Scheduling zu verlassen.
+- Legacy-Worker ohne `reminder_type` enden absichtlich als no-op, um Doppeltrigger zu vermeiden.
 
-## Testing
+## Zusammenwirken mit DayType und Tagesabschluss
 
-### Unit Tests
-- `ReminderWindowEvaluatorTest`: Prüft Fensterlogik (ohne Android Framework)
-- `ReminderSettingsManagerTest`: Persistenz
+- `RecordDailyManualCheckIn` speichert einen manuellen Arbeitstagsabschluss inklusive Tagesort.
+- `ConfirmWorkDay` bestaetigt einen Arbeitstag mit Default-Arbeitszeiten, wenn keine Zeiten vorhanden sind.
+- `ConfirmOffDay` bestaetigt den Tag als `OFF`.
+- `COMP_TIME` gilt ebenfalls als abgeschlossener Tag und unterdrueckt Daily-Reminder.
+- Morning-, Evening- und Fallback-Reminder laufen nur sinnvoll fuer `WORK`-Pfad bzw. unvollstaendige Tage.
 
-### Instrumented Tests
-- `CheckInActionServiceTest`: Testet Actions
-  - Morning Check-in mit Location speichert DB-Entry
-  - Morning Check-in ohne Location setzt needsReview=true
-  - Evening Check-in analog
+## Nicht-Arbeitstage
 
-### Manuelle Tests
-1. Reminder Scheduler starten
-2. Time manipulieren (adb shell date)
-3. Notifications prüfen
-4. Actions auslösen
-5. DB-Einträge verifizieren
+Automatische Nicht-Arbeitstage werden ueber Settings gesteuert:
 
-## AndroidManifest Permissions
+- `autoOffWeekends`
+- `autoOffHolidays`
+- `holidayDates`
 
-```xml
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-```
+Wenn fuer einen Tag kein manueller Eintrag existiert und der Tag automatisch nicht arbeitsrelevant ist, unterdruecken die Worker die Reminder. Manuelle Eintraege ueberschreiben diese Automatik.
 
-## Initialisierung
+## Snooze- und "Später"-Logik
 
-In `MontageZeitApp.onCreate()`:
-```kotlin
-lifecycleScope.launch {
-    reminderScheduler.scheduleAll()
-}
-```
+- Morning, Evening und Fallback unterstuetzen `10 Min`, `+1 h` und `+2 h`.
+- Daily nutzt einen eigenen `Später`-Pfad fuer eine erneute taegliche Bestaetigung.
+- Beim Snooze wird nur der betroffene Reminder-Typ gecancelt und spaeter erneut geplant.
+- Vor dem erneuten Anzeigen prueft `ReminderLaterWorker` erneut, ob der Tag inzwischen schon abgeschlossen oder fachlich nicht mehr reminderfaehig ist.
 
-## Troubleshooting
+## Test- und Prüfbereiche
 
-### Reminder erscheinen nicht
+Die Reminder-Logik sollte mindestens in diesen Bereichen abgesichert bleiben:
 
-1. **Permissions prüfen**:
-   ```bash
-   adb shell pm grant de.montagezeit.app android.permission.POST_NOTIFICATIONS
-   ```
+- Window-Boundaries fuer Morning und Evening
+- taegliche Zielzeiten fuer Fallback und Daily
+- Nicht-Arbeitstage und manuelle Overrides
+- Snooze-/Reminder-Later-Pfade
+- terminale Daily-Zustaende (`OFF`, `COMP_TIME`, bestaetigte Tage)
+- Re-Scheduling nach Reboot, App-Update, Zeit- und Zeitzonenwechsel
 
-2. **Battery Optimization**:
-   - Settings → Apps → MontageZeit → Battery → Unrestricted
+## Bekannte Systemgrenzen
 
-3. **WorkManager Status**:
-   ```bash
-   adb shell dumpsys jobscheduler | grep de.montagezeit.app
-   ```
+- WorkManager ist robust, aber nicht sekundengenau.
+- OEM-Energiesparmechanismen und Doze koennen Reminder nach hinten verschieben.
+- Das Produkt modelliert Reminder bewusst als "im sinnvollen Fenster" statt als harte Alarmuhr.
+- Die App arbeitet ohne Standortberechtigung; Tagesort ist ein Textwert und kein GPS-Snapshot.
 
-### Notifications erscheinen aber Actions funktionieren nicht
-
-1. **Foreground Service prüfen**:
-   ```bash
-   adb shell dumpsys activity services de.montagezeit.app
-   ```
-
-2. **Logs prüfen**:
-   ```bash
-   adb logcat | grep -E "CheckInActionService|WindowCheckWorker"
-   ```
-
-## TODOs
-
-- [ ] Reminder History Screen
-- [ ] Snooze Action (erinnere in 10 Minuten)
-- [ ] Erweiterte, benutzerdefinierte Reminder-Slots
-
-## Referenzen
-
-- [WorkManager Documentation](https://developer.android.com/topic/libraries/architecture/workmanager)
-- [Notifications Guide](https://developer.android.com/develop/ui/views/notifications)
-- [Foreground Service Guide](https://developer.android.com/guide/components/foreground-services)
-- [Battery Optimization Guide](https://developer.android.com/topic/performance/power/background-restrictions)
+**Letzte Aktualisierung:** 2026-04-05

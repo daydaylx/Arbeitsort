@@ -61,11 +61,6 @@
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
-    <string name="today_stats_title">Statistik</string>
-    <string name="today_stats_week">Woche</string>
-    <string name="today_stats_month">Monat</string>
-    <string name="today_stats_year">Jahr</string>
-    <string name="today_stats_hours">%1$.1f Std. von %2$.1f Std.</string>
     <string name="today_confirmed">Heute bestätigt</string>
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
@@ -100,15 +95,9 @@
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
-    <string name="overtime_title">Überstunden</string>
-    <string name="overtime_year_value">Überstunden Jahr: %1$s</string>
-    <string name="overtime_month_value">Überstunden Monat: %1$s</string>
     <string name="overtime_actual_target">IST %1$s | SOLL %2$s</string>
     <string name="overtime_counted_days">Gezählte Tage: %1$d</string>
-    <string name="overtime_offday_travel_year">OFF-Reisezeit Jahr: %1$s (%2$d Tage)</string>
-    <string name="overtime_not_configured">Nicht konfiguriert</string>
     <string name="action_change_location">Arbeitsort ändern</string>
-    <string name="today_week_section_title">Deine Woche im Blick</string>
     <string name="day_location_dialog_title">Arbeitsort ändern</string>
     <string name="day_location_dialog_label">Arbeitsort</string>
     <string name="day_location_dialog_placeholder">z.B. Baustelle Nord</string>
@@ -119,54 +108,23 @@
     <string name="travel_time_range">%1$s - %2$s</string>
     <string name="travel_time_start">Start %1$s</string>
     <string name="travel_time_arrive">Ankunft %1$s</string>
-    <string name="overview_dashboard_title">Deine Zahlen im Blick</string>
-    <string name="overview_dashboard_subtitle">Wechsle zwischen Tag, Woche, Monat und Jahr und sieh sofort deine wichtigsten Werte.</string>
-    <string name="overview_selected_day_label">Bezugstag</string>
-    <string name="overview_selected_status_label">Status / Ort</string>
-    <string name="overview_status_empty">Kein Eintrag</string>
-    <string name="overview_status_confirmed">Bestätigt</string>
-    <string name="overview_status_unconfirmed">Nicht bestätigt</string>
-    <string name="overview_selected_total_label">Ausgewählter Tag gesamt</string>
-    <string name="overview_reference_title">Bezug und Zeitraum</string>
-    <string name="overview_reference_caption">Die Kennzahlen richten sich nach diesem Datum.</string>
     <string name="overview_reference_previous">Vorheriger Zeitraum</string>
     <string name="overview_reference_next">Nächster Zeitraum</string>
     <string name="overview_reference_pick_date">Datum wählen</string>
     <string name="overview_date_range">%1$s bis %2$s</string>
     <string name="overview_week_title">Woche %1$d</string>
     <string name="overview_year_title">Jahr %1$d</string>
-    <string name="overview_period_selector_title">Zeitraum wählen</string>
     <string name="overview_period_day">Tag</string>
     <string name="overview_period_week">Woche</string>
     <string name="overview_period_month">Monat</string>
     <string name="overview_period_year">Jahr</string>
-    <string name="overview_kpi_target">Sollstunden</string>
-    <string name="overview_kpi_actual">Ist-Stunden</string>
     <string name="overview_kpi_travel">Fahrstunden</string>
     <string name="overview_kpi_meal">Verpflegungspauschale</string>
     <string name="overview_counted_days_label">Gezählte Tage</string>
-    <string name="overview_kpi_target_caption">Ziel aus deinen Einstellungen</string>
-    <string name="overview_kpi_actual_caption">Gezählte Stunden im Zeitraum</string>
-    <string name="overview_kpi_travel_caption">Davon bezahlte Reisezeit</string>
-    <string name="overview_kpi_meal_caption">Summe der Pauschalen</string>
-    <string name="overview_quick_actions_title">Schnellzugriffe</string>
-    <string name="overview_action_edit_selected">Ausgewählten Tag bearbeiten</string>
     <string name="overview_balance_title">Saldo im Zeitraum</string>
-    <string name="overview_balance_empty">Noch keine bestätigten Tage im gewählten Zeitraum.</string>
-    <string name="overview_balance_progress">Ist %1$s von %2$s</string>
     <string name="overview_balance_positive">Über Soll</string>
     <string name="overview_balance_negative">Unter Soll</string>
     <string name="overview_balance_even">Im Soll</string>
-    <string name="overview_metrics_title">Kennzahlen</string>
-    <string name="overview_selected_day_title">Ausgewählter Tag</string>
-    <string name="overview_selected_day_empty">Für diesen Tag gibt es noch keinen Eintrag.</string>
-    <string name="overview_selected_day_type_label">Tagtyp</string>
-    <string name="overview_selected_day_note_label">Notiz</string>
-    <string name="overview_selected_day_unconfirmed_hint">Nicht bestätigte Arbeitstage zählen noch nicht in die Kennzahlen.</string>
-    <plurals name="overview_balance_days">
-        <item quantity="one">%d bestätigter Tag</item>
-        <item quantity="other">%d bestätigte Tage</item>
-    </plurals>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     
@@ -174,8 +132,6 @@
     <string name="loading">Laden…</string>
     <string name="work_hours_title">Arbeitszeit</string>
     <string name="total_paid_hours">Gesamt (bezahlt)</string>
-    <string name="work_time_breakdown">Arbeit: %1$s</string>
-    <string name="travel_time_breakdown">Reise: %1$s</string>
     
     <!-- Settings Screen -->
     <string name="settings_title">Einstellungen</string>
@@ -196,8 +152,14 @@
     <string name="settings_toggle_content_desc">%1$s: %2$s</string>
     <string name="settings_toggle_active">aktiviert</string>
     <string name="settings_toggle_inactive">deaktiviert</string>
-    <string name="settings_work_times_summary">%1$s – %2$s · %3$d Min Pause</string>
-    <string name="settings_break_minutes_value">%1$s: %2$d Min</string>
+    <plurals name="settings_work_times_summary">
+        <item quantity="one">%1$s – %2$s · %3$d Min Pause</item>
+        <item quantity="other">%1$s – %2$s · %3$d Min Pause</item>
+    </plurals>
+    <plurals name="settings_break_minutes_value">
+        <item quantity="one">%1$s: %2$d Min</item>
+        <item quantity="other">%1$s: %2$d Min</item>
+    </plurals>
     <string name="settings_reminders_summary">%1$d/4 aktiv</string>
     <string name="settings_summary_weekends_on">Wochenenden an</string>
     <string name="settings_summary_weekends_off">Wochenenden aus</string>
@@ -210,7 +172,6 @@
     <string name="settings_error_pdf_export_failed">PDF-Export fehlgeschlagen</string>
     <string name="settings_error_csv_export_failed">CSV-Export fehlgeschlagen</string>
     <string name="settings_error_export_failed">Export fehlgeschlagen</string>
-    <string name="settings_error_invalid_window">Endzeit muss nach der Startzeit liegen</string>
     
     <!-- Status -->
     <string name="status_active">Aktiv</string>
@@ -229,7 +190,6 @@
     <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_preview">Vorschau</string>
-    <string name="action_export">Exportieren</string>
     
     <!-- Labels -->
     <string name="label_work_start">Arbeitsbeginn</string>
@@ -278,7 +238,10 @@
     <string name="export_preview_action_open_pdf">PDF öffnen</string>
     <string name="export_preview_action_back_to_preview">Zurück zur Vorschau</string>
     <string name="export_preview_action_back">Zurück</string>
-    <string name="export_preview_pdf_view_title">PDF-Vorschau · %1$d Seiten</string>
+    <plurals name="export_preview_pdf_view_title">
+        <item quantity="one">PDF-Vorschau · %1$d Seite</item>
+        <item quantity="other">PDF-Vorschau · %1$d Seiten</item>
+    </plurals>
     <string name="export_preview_pdf_page_label">Seite %1$d</string>
     <string name="export_preview_pdf_render_failed">PDF-Vorschau konnte nicht geladen werden.</string>
     <string name="export_preview_totals_title">Summen</string>
@@ -382,8 +345,6 @@
     <string name="history_week_label">KW %1$d · %2$s – %3$s</string>
     <string name="history_summary_months">Monate</string>
     <string name="history_summary_weeks">Wochen</string>
-    <string name="history_day_overview_title">Tagesübersicht</string>
-    <string name="history_day_overview_no_entry">Für diesen Tag gibt es noch keinen Eintrag.</string>
     <string name="history_empty_title">Keine Einträge vorhanden</string>
     <string name="history_empty_subtitle">Check-in-Einträge erscheinen hier</string>
     <string name="history_action_pick_date">Datum wählen</string>
@@ -392,10 +353,6 @@
     <string name="history_cd_prev_week">Vorherige Woche</string>
     <string name="history_cd_next_week">Nächste Woche</string>
     <string name="history_week_header">KW %1$d · %2$s – %3$s</string>
-    <string name="history_cd_expand_week">Woche ausklappen</string>
-    <string name="history_cd_collapse_week">Woche einklappen</string>
-    <string name="history_cd_expand_month">Monat ausklappen</string>
-    <string name="history_cd_collapse_month">Monat einklappen</string>
     <string name="history_action_repeat">Wiederholen</string>
     <string name="history_weekday_mo">Mo</string>
     <string name="history_weekday_tu">Di</string>
@@ -408,18 +365,12 @@
     <string name="history_day_type_off_short">F</string>
     <string name="history_day_type_comp_time_short">Ü</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
-    <string name="history_summary_workdays">%1$d Arbeitstage</string>
-    <string name="history_dashboard_subtitle">Tag auswählen, prüfen und bei Bedarf direkt bearbeiten.</string>
-    <string name="history_stat_total">Gesamt:</string>
+    <plurals name="history_summary_workdays">
+        <item quantity="one">%1$d Arbeitstag</item>
+        <item quantity="other">%1$d Arbeitstage</item>
+    </plurals>
     <string name="history_stat_work">Arbeit:</string>
-    <string name="history_stat_paid">Bezahlt:</string>
-    <string name="history_stat_target">Ziel:</string>
-    <string name="history_stat_average">Durchschnitt:</string>
-    <string name="history_stat_days">Tage:</string>
     <string name="history_stat_travel">Reisezeit:</string>
-    <string name="history_average_hours_per_day">Ø %1$.1f Std./Tag</string>
-    <string name="history_days_breakdown_work_only">%1$d Arbeit</string>
-    <string name="history_days_breakdown_work_with_off">%1$d Arbeit, %2$d frei</string>
     <string name="history_entry_total_paid">Gesamt: %1$s</string>
     <string name="history_day_location_summary">%1$s: %2$s</string>
     <string name="history_travel_duration_inline">Fahrzeit %1$s</string>
@@ -441,17 +392,12 @@
     <string name="history_batch_no_changes">Keine Aenderungen zum Speichern gefunden.</string>
     <string name="history_batch_work_requires_location">Arbeitstage koennen im Bereich nur mit vorhandenem Arbeitsort gesetzt werden.</string>
     <string name="history_batch_apply">Anwenden</string>
-    <plurals name="history_remaining_days">
-        <item quantity="one">%d weiterer Tag</item>
-        <item quantity="other">%d weitere Tage</item>
-    </plurals>
 
     <!-- Edit Screen -->
     <string name="edit_not_found">Eintrag nicht gefunden</string>
     <string name="edit_error_unknown">Eintrag konnte nicht geladen werden</string>
     <string name="edit_error_save_failed">Eintrag konnte nicht gespeichert werden</string>
     <string name="error_validation_failed">Bitte überprüfen Sie Ihre Eingaben</string>
-    <string name="error_cannot_save">Speichern nicht möglich</string>
     <string name="edit_toast_no_previous_entry">Kein Eintrag am Vortag</string>
     <string name="edit_validation_title">Eingabefehler</string>
     <string name="edit_action_ok">OK</string>
@@ -489,7 +435,6 @@
     <string name="edit_placeholder_start_location">Startort</string>
     <string name="edit_label_to_optional">Nach (Optional)</string>
     <string name="edit_placeholder_destination">Zielort</string>
-    <string name="edit_action_clear_travel_data">Reisedaten löschen</string>
     <string name="edit_action_clear_all_travel">Alle löschen</string>
     <string name="edit_action_add_travel_leg">Fahrt hinzufügen</string>
     <string name="edit_travel_empty_hint">Noch keine Fahrten erfasst.</string>
@@ -512,15 +457,7 @@
     <string name="edit_validation_travel_incomplete">Eine Fahrt benötigt Start- und Ankunftszeit</string>
     <string name="edit_validation_travel_missing_time_window">Eine Fahrt ohne Zeitfenster kann nicht gespeichert werden</string>
     <string name="edit_validation_travel_not_allowed_comp_time">Fahrten sind bei Ü-Abbau nicht erlaubt</string>
-    <string name="edit_label_outbound">Hinfahrt</string>
-    <string name="edit_label_return">Rückfahrt</string>
-    <string name="edit_label_return_start">Abfahrt</string>
-    <string name="edit_label_return_arrival">Ankunft</string>
     <!-- Today Screen (additional) -->
-    <string name="cd_open_statistics">Statistiken anzeigen</string>
-    <string name="today_stats_label_days">%1$s · %2$d Tage</string>
-    <string name="today_stats_percent">%1$d%%</string>
-    <string name="meal_allowance_month_label">Verpflegung (Monat)</string>
 
     <!-- Week Overview Row -->
     <string name="week_back_to_today">Heute</string>
@@ -537,7 +474,10 @@
     <string name="error_value_range">Wert muss zwischen %1$.1f und %2$.1f liegen</string>
     <!-- Overview Redesign -->
     <string name="overview_kpi_action_needed">Aktion nötig</string>
-    <string name="overview_kpi_unconfirmed_count">%1$d unbestätigt</string>
+    <plurals name="overview_kpi_unconfirmed_count">
+        <item quantity="one">%1$d unbestätigt</item>
+        <item quantity="other">%1$d unbestätigt</item>
+    </plurals>
     <string name="overview_kpi_none_unconfirmed">Alles erledigt</string>
     <string name="overview_range_selector_hint">Zeitraum wählen</string>
     <string name="today_action_required">Aktion erforderlich</string>

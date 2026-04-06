@@ -11,7 +11,6 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
-import de.montagezeit.app.domain.usecase.DeleteTravelLegsForDate
 import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
 import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.UpsertWorkEntries
@@ -47,7 +46,6 @@ class HistoryViewModel @Inject constructor(
     private val observeWorkEntriesWithTravelByDateRange: ObserveWorkEntriesWithTravelByDateRange,
     private val getWorkEntriesByDateRange: GetWorkEntriesByDateRange,
     private val upsertWorkEntries: UpsertWorkEntries,
-    private val deleteTravelLegsForDate: DeleteTravelLegsForDate,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
 
