@@ -437,12 +437,13 @@ private fun PdfPageCard(
     renderer: PdfRenderer,
     pageIndex: Int
 ) {
-    val bitmapState by produceState<PdfPageRenderState>(
-        initialValue = PdfPageRenderState.Loading,
-        renderer,
-        pageIndex
-    ) {
-        value = try {
+    val bitmapState = remember(renderer, pageIndex) {
+        androidx.compose.runtime.mutableStateOf<PdfPageRenderState>(PdfPageRenderState.Loading)
+    }
+
+    LaunchedEffect(renderer, pageIndex) {
+        bitmapState.value = PdfPageRenderState.Loading
+        bitmapState.value = try {
             val bitmap = withContext(Dispatchers.IO) {
                 renderPdfPage(renderer, pageIndex)
             }
@@ -468,7 +469,7 @@ private fun PdfPageCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            when (val state = bitmapState) {
+            when (val state = bitmapState.value) {
                 PdfPageRenderState.Loading -> {
                     Box(
                         modifier = Modifier
