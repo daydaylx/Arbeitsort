@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import de.montagezeit.app.ui.theme.DeepNavy
+import de.montagezeit.app.ui.theme.Navy
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -67,26 +69,28 @@ fun MontageZeitNavGraph(
     
     Scaffold(
         bottomBar = {
+            // Hintergrund: tiefes Navy, nahtlos mit dem Screen-Hintergrund
             Surface(
                 tonalElevation = 0.dp,
-                color = MaterialTheme.colorScheme.background
+                color = DeepNavy
             ) {
+                // Glassmorphism Pill-Container
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                         .navigationBarsPadding(),
                     shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = Navy.copy(alpha = 0.90f),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)  // Teal-Glow-Kontur
                     )
                 ) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
                         tonalElevation = 0.dp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         listOf(Screen.Today, Screen.Overview, Screen.History, Screen.Settings).forEach { screen ->
                             NavigationBarItem(
@@ -94,9 +98,9 @@ fun MontageZeitNavGraph(
                                 label = { Text(stringResource(screen.labelRes)) },
                                 alwaysShowLabel = true,
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedIconColor   = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor   = MaterialTheme.colorScheme.primary,
+                                    indicatorColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),

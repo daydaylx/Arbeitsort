@@ -2,6 +2,16 @@ package de.montagezeit.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// ── Deep Dark Background ─────────────────────────────────────────────────────
+val DeepNavy  = Color(0xFF04080F)   // Tiefstes Background-Schwarz-Blau
+val Navy      = Color(0xFF070D1A)   // Surface (minimal heller)
+val NavyCard  = Color(0xFF0B1525)   // Card-Basis
+
+// ── Petrol / Teal Glow ───────────────────────────────────────────────────────
+val PetrolGlow = Color(0xFF00B4CC)  // Leuchtakzent für Orbs & aktive Borders
+val CyanSoft   = Color(0xFF29D9F0)  // Hellerer Teal-Highlight
+val TealDeep   = Color(0xFF003645)  // Dunkler Teal für Orbs & Container
+
 val Teal10 = Color(0xFF001F24)
 val Teal20 = Color(0xFF003640)
 val Teal30 = Color(0xFF004E5C)
