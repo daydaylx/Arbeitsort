@@ -68,7 +68,7 @@ internal fun TravelLegsSection(
         if (travelLegs.isEmpty()) {
             Text(
                 text = stringResource(R.string.edit_travel_empty_hint),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

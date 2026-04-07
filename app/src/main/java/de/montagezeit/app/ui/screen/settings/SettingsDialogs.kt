@@ -101,7 +101,7 @@ fun PdfSettingsDialog(
                 },
                 enabled = employeeName.isNotBlank()
             ) {
-                Text(stringResource(R.string.action_save))
+                Text(stringResource(R.string.settings_action_save))
             }
         },
         dismissButton = {

@@ -507,7 +507,7 @@ private fun OverviewPeriodPickerSheet(
         ) {
             Text(
                 text = stringResource(R.string.overview_range_selector_hint),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
             )
 

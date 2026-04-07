@@ -144,9 +144,9 @@ internal fun EditStickySaveBar(
                 )
                 Text(
                     if (isNewEntry) {
-                        stringResource(R.string.action_create)
+                        stringResource(R.string.edit_action_create_entry)
                     } else {
-                        stringResource(R.string.action_save)
+                        stringResource(R.string.edit_action_save_entry)
                     }
                 )
             }

@@ -467,7 +467,7 @@ private fun StatusCard(
                     ),
                     shape = RoundedCornerShape(MZTokens.RadiusChip)
                 ) {
-                    Text(stringResource(R.string.action_edit_entry_manual), style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.today_action_edit_entry), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -490,7 +490,7 @@ private fun StatusCard(
             }
         } ?: Text(
             text = stringResource(R.string.today_dashboard_empty_hint),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
         )
     }

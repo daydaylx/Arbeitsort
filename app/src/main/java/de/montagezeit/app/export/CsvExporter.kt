@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.storage.StorageManager
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
@@ -121,7 +122,7 @@ class CsvExporter @Inject constructor(
                     val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
 
                     val dayTypeLabel = when (entry.dayType) {
-                        DayType.COMP_TIME -> "Ü-Abbau"
+                        DayType.COMP_TIME -> context.getString(R.string.day_type_comp_time)
                         else -> entry.dayType.name
                     }
                     // Zeitfelder nur für WORK-Tage befüllen – bei OFF/COMP_TIME sind sie fachlich irrelevant
