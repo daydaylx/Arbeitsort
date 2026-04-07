@@ -8,6 +8,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +23,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+
+enum class SecondaryButtonStyle {
+    TONAL,
+    OUTLINED
+}
 
 @Composable
 fun PrimaryActionButton(
@@ -86,6 +92,7 @@ fun SecondaryActionButton(
     icon: ImageVector? = null,
     contentDescription: String? = null,
     minHeight: Dp = AccessibilityDefaults.SecondaryButtonHeight,
+    style: SecondaryButtonStyle = SecondaryButtonStyle.TONAL,
     shape: Shape? = null,
     colors: ButtonColors? = null,
     content: @Composable RowScope.() -> Unit
@@ -96,19 +103,7 @@ fun SecondaryActionButton(
         Modifier
     }
     val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    val resolvedColors = colors ?: ButtonDefaults.outlinedButtonColors(
-        contentColor = MaterialTheme.colorScheme.onSurface
-    )
-
-    OutlinedButton(
-        onClick = onClick,
-        modifier = semanticsModifier
-            .then(modifier)
-            .heightIn(min = minHeight),
-        enabled = enabled && !isLoading,
-        shape = resolvedShape,
-        colors = resolvedColors
-    ) {
+    val buttonContent: @Composable RowScope.() -> Unit = {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier
@@ -126,6 +121,40 @@ fun SecondaryActionButton(
             }
         }
         content()
+    }
+
+    when (style) {
+        SecondaryButtonStyle.TONAL -> {
+            val resolvedColors = colors ?: ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            FilledTonalButton(
+                onClick = onClick,
+                modifier = semanticsModifier
+                    .then(modifier)
+                    .heightIn(min = minHeight),
+                enabled = enabled && !isLoading,
+                shape = resolvedShape,
+                colors = resolvedColors,
+                content = buttonContent
+            )
+        }
+        SecondaryButtonStyle.OUTLINED -> {
+            val resolvedColors = colors ?: ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
+            OutlinedButton(
+                onClick = onClick,
+                modifier = semanticsModifier
+                    .then(modifier)
+                    .heightIn(min = minHeight),
+                enabled = enabled && !isLoading,
+                shape = resolvedShape,
+                colors = resolvedColors,
+                content = buttonContent
+            )
+        }
     }
 }
 
@@ -148,7 +177,9 @@ fun TertiaryActionButton(
         Modifier
     }
     val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    val resolvedColors = colors ?: ButtonDefaults.textButtonColors()
+    val resolvedColors = colors ?: ButtonDefaults.textButtonColors(
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
     TextButton(
         onClick = onClick,

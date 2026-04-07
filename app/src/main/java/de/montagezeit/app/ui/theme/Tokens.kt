@@ -28,9 +28,15 @@ object MZTokens {
     val OrbSecondaryRadiusDp  = 220.dp
 
     // Spacing
-    val ScreenPadding = 20.dp
-    val CardSpacing   = 14.dp
-    val InnerPadding  = 20.dp
+    val ScreenPadding = 16.dp
+    val CardSpacing   = 12.dp
+    val InnerPadding  = 16.dp
+
+    // Compact density (touch-safe)
+    val PrimaryButtonHeight = 52.dp
+    val SecondaryButtonHeight = 52.dp
+    val TertiaryButtonHeight = 48.dp
+    val ChipHeight = 40.dp
 
     // Elevation
     val CardElevation = 0.dp

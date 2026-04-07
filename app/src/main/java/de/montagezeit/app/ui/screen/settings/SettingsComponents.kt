@@ -46,7 +46,7 @@ internal fun CollapsibleSettingsCard(
     val expandLabel = stringResource(R.string.cd_expand_section, title)
     val collapseLabel = stringResource(R.string.cd_collapse_section, title)
 
-    MZCard(
+    MZContentCard(
         modifier = modifier.animateContentSize()
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

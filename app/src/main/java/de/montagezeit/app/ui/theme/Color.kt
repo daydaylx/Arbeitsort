@@ -7,14 +7,14 @@ val GlassBackground     = Color(0xFF04080F)  // DeepNavy
 val GlassSurface        = Color(0xFF070D1A)  // Navy
 val GlassSurfaceVariant = Color(0xFF0B1525)  // NavyCard
 
-// Primary: Petrol/Teal
+// Primary: Cyan/Turquoise
 val GlassPrimary          = Color(0xFF4FD8EB)  // Teal80
 val GlassPrimaryContainer = Color(0xFF003645)  // TealDeep
 val GlassPrimaryGlow      = Color(0xFF00B4CC)  // PetrolGlow — for borders and outlines
 
-// Secondary: Amber (warm contrast on Navy)
-val GlassSecondary          = Color(0xFFFFB786)  // Amber80
-val GlassSecondaryContainer = Color(0xFF7B2C00)  // Amber30
+// Secondary: Neutral role (no default action emphasis)
+val GlassSecondary          = Color(0xFFC2CCD4)  // Neutral80
+val GlassSecondaryContainer = Color(0xFF1A2730)  // Neutral30
 
 // Tertiary: Blue
 val GlassTertiary          = Color(0xFFA9C7F5)  // Blue80
