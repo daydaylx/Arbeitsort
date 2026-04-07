@@ -305,6 +305,7 @@ fun MZHeroCard(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
+    accentColor: Color? = null,
     badge: (@Composable () -> Unit)? = null,
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {}
@@ -318,6 +319,9 @@ fun MZHeroCard(
         start = Offset(0f, 0f),
         end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
     )
+    val accentOrbColors = accentColor?.let { c ->
+        remember(c) { listOf(c.copy(alpha = 0.08f), Color.Transparent) }
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -335,6 +339,15 @@ fun MZHeroCard(
             modifier = Modifier
                 .clip(heroShape)
                 .background(backgroundBrush)
+                .then(
+                    if (accentOrbColors != null) Modifier.drawBehind {
+                        drawOrb(
+                            colors = accentOrbColors,
+                            center = Offset(size.width * 0.85f, size.height * 0.80f),
+                            radius = 180.dp.toPx()
+                        )
+                    } else Modifier
+                )
                 .padding(GlassLayoutDefaults.HeroPadding),
             verticalArrangement = Arrangement.spacedBy(GlassLayoutDefaults.HeroContentSpacing)
         ) {

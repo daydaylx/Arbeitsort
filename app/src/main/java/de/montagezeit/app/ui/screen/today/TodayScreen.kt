@@ -16,7 +16,16 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -42,6 +51,9 @@ import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.*
+import de.montagezeit.app.ui.theme.GlassSuccess
+import de.montagezeit.app.ui.theme.GlassWarning
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
@@ -275,7 +287,7 @@ private fun TodayContent(
         }
 
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(MZTokens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             StatusCard(
@@ -324,17 +336,58 @@ private fun TodayActionsCard(
         
         MZCard {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                PrimaryActionButton(
-                    onClick = onOpenDailyCheckInDialog,
-                    isLoading = isDailyCheckInLoading,
-                    modifier = Modifier.fillMaxWidth().height(64.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                    Text(
-                        stringResource(R.string.action_daily_manual_check_in),
-                        style = MaterialTheme.typography.titleMedium
+                val showPulse = entry == null && !isDailyCheckInLoading
+                if (showPulse) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                    val pulseAlpha by infiniteTransition.animateFloat(
+                        initialValue = 0.35f, targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart
+                        ),
+                        label = "pulseAlpha"
                     )
+                    val pulseScale by infiniteTransition.animateFloat(
+                        initialValue = 1f, targetValue = 1.10f,
+                        animationSpec = infiniteRepeatable(
+                            tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart
+                        ),
+                        label = "pulseScale"
+                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale; alpha = pulseAlpha }
+                                .clip(RoundedCornerShape(MZTokens.RadiusButton))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.28f))
+                        )
+                        PrimaryActionButton(
+                            onClick = onOpenDailyCheckInDialog,
+                            isLoading = isDailyCheckInLoading,
+                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            shape = RoundedCornerShape(MZTokens.RadiusButton)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                            Text(
+                                stringResource(R.string.action_daily_manual_check_in),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
+                } else {
+                    PrimaryActionButton(
+                        onClick = onOpenDailyCheckInDialog,
+                        isLoading = isDailyCheckInLoading,
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        shape = RoundedCornerShape(MZTokens.RadiusButton)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                        Text(
+                            stringResource(R.string.action_daily_manual_check_in),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
 
                 if (showOffdayAction) {
@@ -373,6 +426,11 @@ private fun StatusCard(
     MZHeroCard(
         title = remember(date) { Formatters.formatDateLong(date) },
         subtitle = subtitle,
+        accentColor = when (status) {
+            StatusType.SUCCESS -> GlassSuccess
+            StatusType.WARNING -> GlassWarning
+            else -> null
+        },
         badge = {
             MZStatusBadge(
                 text = when (status) {
@@ -396,7 +454,7 @@ private fun StatusCard(
                         containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(MZTokens.RadiusChip)
                 ) {
                     Text(stringResource(R.string.action_change_location), style = MaterialTheme.typography.labelLarge)
                 }
@@ -407,7 +465,7 @@ private fun StatusCard(
                         containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(MZTokens.RadiusChip)
                 ) {
                     Text(stringResource(R.string.action_edit_entry_manual), style = MaterialTheme.typography.labelLarge)
                 }

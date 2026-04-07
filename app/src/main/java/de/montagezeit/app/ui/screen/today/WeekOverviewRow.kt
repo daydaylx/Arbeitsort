@@ -2,6 +2,8 @@ package de.montagezeit.app.ui.screen.today
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,6 +24,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.theme.MZTokens
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -66,12 +69,12 @@ private fun WeekDayChip(
         day.isToday -> {
             backgroundColor = MaterialTheme.colorScheme.primaryContainer
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            borderColor = MaterialTheme.colorScheme.primary
+            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
         }
         else -> {
             backgroundColor = MaterialTheme.colorScheme.surface
             contentColor = MaterialTheme.colorScheme.onSurface
-            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
         }
     }
 
@@ -136,15 +139,26 @@ private fun WeekDayChip(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Status dot
+            // Status dot with optional glow for confirmed days
+            val glowColor = statusIndicatorColor
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(
-                        statusIndicatorColor
-                            ?: contentColor.copy(alpha = 0.15f)
+                    .then(
+                        if (glowColor != null && day.status == WeekDayStatus.CONFIRMED_WORK) {
+                            Modifier.drawBehind {
+                                drawCircle(
+                                    brush = Brush.radialGradient(
+                                        listOf(glowColor.copy(alpha = 0.35f), Color.Transparent),
+                                        radius = 12.dp.toPx()
+                                    ),
+                                    radius = 12.dp.toPx()
+                                )
+                            }
+                        } else Modifier
                     )
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(glowColor ?: contentColor.copy(alpha = 0.15f))
             )
         }
     }

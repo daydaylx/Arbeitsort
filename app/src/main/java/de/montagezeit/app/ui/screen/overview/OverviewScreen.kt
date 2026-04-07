@@ -47,12 +47,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -66,6 +71,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.components.MZCard
 import de.montagezeit.app.ui.components.MZErrorState
@@ -337,33 +343,33 @@ private fun OverviewHeroSection(
             )
         }
     ) {
-        Text(
-            text = formatSignedHoursValue(metrics.overtimeHours),
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = stringResource(
-                R.string.overtime_actual_target,
-                Formatters.formatHours(metrics.actualHours),
-                Formatters.formatHours(metrics.targetHours)
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-        )
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        LinearProgressIndicator(
-            progress = { progressFraction },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape),
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = formatSignedHoursValue(metrics.overtimeHours),
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = stringResource(
+                        R.string.overtime_actual_target,
+                        Formatters.formatHours(metrics.actualHours),
+                        Formatters.formatHours(metrics.targetHours)
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+            }
+            ProgressArc(
+                progress = progressFraction,
+                modifier = Modifier.size(72.dp)
+            )
+        }
     }
 }
 
@@ -434,19 +440,21 @@ private fun KpiGridItem(
     onClick: (() -> Unit)? = null
 ) {
     MZCard(
-        modifier = if (onClick != null) {
-            modifier.clickable(onClick = onClick)
-        } else {
-            modifier
-        },
-        elevation = 8.dp
+        modifier = modifier
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .drawBehind {
+                drawRect(
+                    color = tint.copy(alpha = 0.75f),
+                    size = Size(3.dp.toPx(), size.height)
+                )
+            }
     ) {
         Column(
             modifier = Modifier.padding(vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(MZTokens.RadiusChip),
                 color = tint.copy(alpha = 0.1f),
                 modifier = Modifier.size(40.dp)
             ) {
@@ -605,3 +613,33 @@ private fun formatSignedHoursValue(hours: Double): String =
 
 private val shortDateFormatter = DateTimeFormatter.ofPattern("dd. MMM yyyy", Locale.GERMAN)
 private val monthTitleFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
+
+@Composable
+private fun ProgressArc(progress: Float, modifier: Modifier = Modifier) {
+    val primary = MaterialTheme.colorScheme.onPrimaryContainer
+    val percent = (progress * 100).toInt()
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val stroke = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
+            val sweepAngle = 240f * progress.coerceIn(0f, 1f)
+            drawArc(
+                color = primary.copy(alpha = 0.18f),
+                startAngle = 150f, sweepAngle = 240f,
+                useCenter = false, style = stroke
+            )
+            if (sweepAngle > 0f) {
+                drawArc(
+                    color = primary,
+                    startAngle = 150f, sweepAngle = sweepAngle,
+                    useCenter = false, style = stroke
+                )
+            }
+        }
+        Text(
+            text = "$percent%",
+            style = MaterialTheme.typography.labelLarge,
+            color = primary,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
