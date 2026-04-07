@@ -947,7 +947,7 @@ fun WeekGroupHeader(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.background,
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -998,7 +998,7 @@ fun MonthGroupHeader(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.background,
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

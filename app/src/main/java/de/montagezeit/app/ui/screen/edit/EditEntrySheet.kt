@@ -87,6 +87,7 @@ fun EditEntrySheet(
     ModalBottomSheet(
         onDismissRequest = handleDismiss,
         sheetState = sheetState,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         EditEntrySheetScaffold(

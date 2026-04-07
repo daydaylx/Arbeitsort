@@ -20,7 +20,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -51,7 +50,7 @@ private fun WeekDayChip(
     day: WeekDayUi,
     onClick: () -> Unit
 ) {
-    val chipShape = RoundedCornerShape(12.dp)
+    val chipShape = RoundedCornerShape(16.dp)
 
     val backgroundColor: Color
     val contentColor: Color
@@ -69,9 +68,9 @@ private fun WeekDayChip(
             borderColor = MaterialTheme.colorScheme.primary
         }
         else -> {
-            backgroundColor = MaterialTheme.colorScheme.surfaceVariant
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            borderColor = Color.Transparent
+            backgroundColor = MaterialTheme.colorScheme.surface
+            contentColor = MaterialTheme.colorScheme.onSurface
+            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         }
     }
 
@@ -88,63 +87,65 @@ private fun WeekDayChip(
         stringResource(R.string.week_chip_cd, day.dayLabel, day.dayNumber)
     }
 
-    Column(
+    Surface(
         modifier = Modifier
-            .width(48.dp)
+            .width(52.dp)
             .semantics {
                 contentDescription = cdText
                 selected = day.isSelected
             }
-            .padding(vertical = 8.dp, horizontal = 4.dp)
             .clip(chipShape)
-            .clickable(onClick = onClick)
-            .background(backgroundColor)
-            .then(
-                if (borderColor != Color.Transparent)
-                    Modifier.border(1.5.dp, borderColor, chipShape)
-                else
-                    Modifier
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .clickable(onClick = onClick),
+        shape = chipShape,
+        color = backgroundColor,
+        contentColor = contentColor,
+        border = if (borderColor != Color.Transparent) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null,
+        shadowElevation = if (day.isSelected) 4.dp else 0.dp
     ) {
-        Text(
-            text = day.dayLabel,
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            fontWeight = if (day.isToday || day.isSelected) FontWeight.Bold else FontWeight.Normal
-        )
-
-        Text(
-            text = day.dayNumber,
-            style = MaterialTheme.typography.titleSmall,
-            color = contentColor,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        if (day.workHours != null) {
-            val h = day.workHours.toInt()
-            val m = ((day.workHours - h) * 60).toInt()
-            val hoursText = if (m == 0) "${h}h" else "${h}h${m}min"
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Text(
-                text = hoursText,
-                fontSize = 9.sp,
-                color = contentColor.copy(alpha = 0.85f)
+                text = day.dayLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor.copy(alpha = 0.8f),
+                fontWeight = if (day.isToday || day.isSelected) FontWeight.Bold else FontWeight.Normal
             )
-        } else {
-            Spacer(modifier = Modifier.height(13.dp))
-        }
 
-        // Status dot
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(
-                    statusIndicatorColor
-                        ?: contentColor.copy(alpha = 0.2f)
+            Text(
+                text = day.dayNumber,
+                style = MaterialTheme.typography.titleMedium,
+                color = contentColor,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (day.workHours != null) {
+                val h = day.workHours.toInt()
+                val m = ((day.workHours - h) * 60).toInt()
+                val hoursText = if (m == 0) "${h}h" else "${h}h${m}m"
+                Text(
+                    text = hoursText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Medium
                 )
-        )
+            } else {
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // Status dot
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        statusIndicatorColor
+                            ?: contentColor.copy(alpha = 0.15f)
+                    )
+            )
+        }
     }
 }
 

@@ -25,7 +25,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.util.Formatters
@@ -283,8 +282,7 @@ internal fun SettingsTimeButtonRow(
                 Text(
                     text = disabledReason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 11.sp
+                    color = MaterialTheme.colorScheme.error
                 )
             }
         }

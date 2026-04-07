@@ -1,6 +1,5 @@
 package de.montagezeit.app.ui.screen.today
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -93,42 +92,9 @@ fun TodayScreen(
         viewModel.selectDate(LocalDate.now())
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                title = {
-                    Text(
-                        text = stringResource(R.string.today_title),
-                        modifier = Modifier.semantics { heading() }
-                    )
-                },
-                actions = {
-                    if (screenState.currentEntry != null) {
-                        IconButton(onClick = onDeleteDay) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.action_delete_day)
-                            )
-                        }
-                    }
-                    if (screenState.isViewingPastDay) {
-                        TextButton(onClick = onBackToToday) {
-                            Text(stringResource(R.string.week_back_to_today))
-                        }
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         MZPageBackground(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues
+            modifier = Modifier.fillMaxSize()
         ) {
             Box(
                 modifier = Modifier.fillMaxSize()
@@ -151,23 +117,56 @@ fun TodayScreen(
                     }
 
                     else -> {
-                        TodayContent(
-                            entry = screenState.currentEntry,
-                            travelLegs = screenState.currentTravelLegs,
-                            selectedDate = screenState.selectedDate,
-                            weekDaysUi = screenState.weekDaysUi,
-                            isDailyCheckInLoading = screenState.isDailyCheckInLoading,
-                            isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
-                            onSelectDay = onSelectDay,
-                            onEditDayLocation = onEditDayLocation,
-                            onEditToday = onEditToday,
-                            onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
-                            onConfirmOffDay = onConfirmOffDayAction
-                        )
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Secondary actions row (Delete/Back to Today)
+                            if (screenState.currentEntry != null || screenState.isViewingPastDay) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (screenState.isViewingPastDay) {
+                                        TextButton(onClick = onBackToToday) {
+                                            Text(stringResource(R.string.week_back_to_today))
+                                        }
+                                    }
+                                    if (screenState.currentEntry != null) {
+                                        IconButton(onClick = onDeleteDay) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.action_delete_day),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            TodayContent(
+                                entry = screenState.currentEntry,
+                                travelLegs = screenState.currentTravelLegs,
+                                selectedDate = screenState.selectedDate,
+                                weekDaysUi = screenState.weekDaysUi,
+                                isDailyCheckInLoading = screenState.isDailyCheckInLoading,
+                                isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
+                                onSelectDay = onSelectDay,
+                                onEditDayLocation = onEditDayLocation,
+                                onEditToday = onEditToday,
+                                onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
+                                onConfirmOffDay = onConfirmOffDayAction
+                            )
+                        }
                     }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+        )
 
         TodayDialogsHost(
             viewModel = viewModel,
@@ -315,32 +314,37 @@ private fun TodayActionsCard(
 ) {
     val showOffdayAction = entry?.dayType != DayType.COMP_TIME
 
-    MZCard {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = stringResource(R.string.today_action_required),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.today_action_required),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        MZCard {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                PrimaryActionButton(
+                    onClick = onOpenDailyCheckInDialog,
+                    isLoading = isDailyCheckInLoading,
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text(
+                        stringResource(R.string.action_daily_manual_check_in),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
                 if (showOffdayAction) {
                     SecondaryActionButton(
                         onClick = onConfirmOffDay,
                         isLoading = isConfirmOffdayLoading,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.action_confirm_offday))
                     }
-                }
-
-                PrimaryActionButton(
-                    onClick = onOpenDailyCheckInDialog,
-                    isLoading = isDailyCheckInLoading,
-                    modifier = if (showOffdayAction) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.action_daily_manual_check_in))
                 }
             }
         }
@@ -381,21 +385,31 @@ private fun StatusCard(
         },
         action = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SecondaryActionButton(
                     onClick = onEditDayLocation,
                     modifier = Modifier.weight(1f),
-                    enabled = entry != null
+                    enabled = entry != null,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(stringResource(R.string.action_change_location))
+                    Text(stringResource(R.string.action_change_location), style = MaterialTheme.typography.labelLarge)
                 }
-                PrimaryActionButton(
+                SecondaryActionButton(
                     onClick = onEditToday,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(stringResource(R.string.action_edit_entry_manual))
+                    Text(stringResource(R.string.action_edit_entry_manual), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -418,8 +432,8 @@ private fun StatusCard(
             }
         } ?: Text(
             text = stringResource(R.string.today_dashboard_empty_hint),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
         )
     }
 }
@@ -543,40 +557,16 @@ private fun DailyManualCheckInDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { role = Role.Checkbox }
-                        .clickable { onArrivalDepartureChanged(!isArrivalDeparture) }
-                ) {
-                    Checkbox(
-                        checked = isArrivalDeparture,
-                        onCheckedChange = onArrivalDepartureChanged
-                    )
-                    Text(
-                        text = stringResource(R.string.meal_allowance_arrival_departure_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { role = Role.Checkbox }
-                        .clickable { onBreakfastIncludedChanged(!breakfastIncluded) }
-                ) {
-                    Checkbox(
-                        checked = breakfastIncluded,
-                        onCheckedChange = onBreakfastIncludedChanged
-                    )
-                    Text(
-                        text = stringResource(R.string.meal_allowance_breakfast_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
+                CheckboxRow(
+                    checked = isArrivalDeparture,
+                    onCheckedChange = onArrivalDepartureChanged,
+                    label = stringResource(R.string.meal_allowance_arrival_departure_label)
+                )
+                CheckboxRow(
+                    checked = breakfastIncluded,
+                    onCheckedChange = onBreakfastIncludedChanged,
+                    label = stringResource(R.string.meal_allowance_breakfast_label)
+                )
                 Text(
                     text = stringResource(
                         R.string.meal_allowance_preview_label,
@@ -675,6 +665,28 @@ private fun DeleteDayConfirmDialog(
             }
         }
     )
+}
+
+@Composable
+private fun CheckboxRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { role = Role.Checkbox }
+            .clickable { onCheckedChange(!checked) }
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    }
 }
 
 @Composable

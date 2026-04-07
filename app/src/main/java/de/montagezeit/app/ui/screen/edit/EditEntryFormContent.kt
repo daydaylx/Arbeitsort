@@ -57,15 +57,14 @@ internal fun EditFormSectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
+    androidx.compose.material3.Surface(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-        )
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             content = content
         )
     }
@@ -578,37 +577,16 @@ internal fun MealAllowanceSection(
             style = MaterialTheme.typography.titleMedium
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-        ) {
-            Checkbox(
-                checked = isArrivalDeparture,
-                onCheckedChange = onArrivalDepartureChange
-            )
-            Text(
-                text = stringResource(R.string.meal_allowance_arrival_departure_label),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-        ) {
-            Checkbox(
-                checked = breakfastIncluded,
-                onCheckedChange = onBreakfastIncludedChange
-            )
-            Text(
-                text = stringResource(R.string.meal_allowance_breakfast_label),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        CheckboxRow(
+            checked = isArrivalDeparture,
+            onCheckedChange = onArrivalDepartureChange,
+            label = stringResource(R.string.meal_allowance_arrival_departure_label)
+        )
+        CheckboxRow(
+            checked = breakfastIncluded,
+            onCheckedChange = onBreakfastIncludedChange,
+            label = stringResource(R.string.meal_allowance_breakfast_label)
+        )
 
         Text(
             text = stringResource(
@@ -617,5 +595,20 @@ internal fun MealAllowanceSection(
             ),
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+@Composable
+private fun CheckboxRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
     }
 }

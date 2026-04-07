@@ -3,11 +3,14 @@ package de.montagezeit.app.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -22,14 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 
 @Composable
 fun MZStatusBadge(
@@ -38,27 +39,17 @@ fun MZStatusBadge(
     modifier: Modifier = Modifier,
     showIcon: Boolean = true
 ) {
-    val (backgroundColor, contentColor) = when (type) {
-        StatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to
-            MaterialTheme.colorScheme.onPrimaryContainer
-        StatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to
-            MaterialTheme.colorScheme.onTertiaryContainer
-        StatusType.ERROR -> MaterialTheme.colorScheme.errorContainer to
-            MaterialTheme.colorScheme.onErrorContainer
-        StatusType.INFO -> MaterialTheme.colorScheme.secondaryContainer to
-            MaterialTheme.colorScheme.onSecondaryContainer
-        StatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant to
-            MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val palette = statusPalette(type)
 
     Surface(
-        color = backgroundColor,
-        contentColor = contentColor,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = palette.containerColor,
+        contentColor = palette.accentColor,
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier
     ) {
-        androidx.compose.foundation.layout.Row(
+        Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             if (showIcon) {
@@ -70,17 +61,12 @@ fun MZStatusBadge(
                         StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
                     },
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .padding(end = 6.dp)
-                        .semantics { hideFromAccessibility() },
-                    tint = contentColor
+                    modifier = Modifier.size(16.dp)
                 )
             }
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
-                color = contentColor
+                style = MaterialTheme.typography.labelLarge
             )
         }
     }
@@ -100,26 +86,24 @@ fun MZLoadingState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        val indicatorModifier = Modifier.size(64.dp)
         if (progress != null) {
             CircularProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.size(64.dp),
-                strokeWidth = 6.dp,
-                color = MaterialTheme.colorScheme.primary
+                modifier = indicatorModifier,
+                strokeWidth = 6.dp
             )
         } else {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                strokeWidth = 6.dp,
-                color = MaterialTheme.colorScheme.primary
+                modifier = indicatorModifier,
+                strokeWidth = 6.dp
             )
         }
 
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -153,9 +137,8 @@ fun MZErrorState(
 
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.error
         )
 
@@ -200,23 +183,21 @@ fun MZEmptyState(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall.copy(
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Medium
-            ),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
             text = subtitle,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textAlign = TextAlign.Center
-            ),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         action?.let {
-            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             it()
         }
     }
@@ -227,7 +208,7 @@ fun MZDividerWithLabel(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
