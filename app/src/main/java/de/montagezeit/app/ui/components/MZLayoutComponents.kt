@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,21 +34,22 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.font.FontWeight
 import de.montagezeit.app.ui.theme.GlassError
 import de.montagezeit.app.ui.theme.GlassInfo
 import de.montagezeit.app.ui.theme.GlassSuccess
 import de.montagezeit.app.ui.theme.GlassWarning
+import de.montagezeit.app.ui.theme.MZTokens
 
 object AccessibilityDefaults {
     const val MinTouchTargetSize = 48
     val MinTouchTargetSpacing = 8.dp
     val CardPadding = 24.dp
-    val CardCornerRadius = 32.dp
-    val ButtonCornerRadius = 24.dp
+    val CardCornerRadius = MZTokens.RadiusCard   // 24.dp — aligned with Shape.large
+    val ButtonCornerRadius = MZTokens.RadiusButton  // 50.dp — pill
     val ButtonHeight = 56.dp
     val PrimaryButtonHeight = 56.dp
     val SecondaryButtonHeight = 56.dp
@@ -56,15 +58,10 @@ object AccessibilityDefaults {
 }
 
 private object GlassLayoutDefaults {
-    const val PageTopGlowAlpha = 0.15f
-    const val PageCenterGlowAlpha = 0.10f
-    val PageGlowRadius = 800.dp
-    const val CardSurfaceAlpha = 1.0f
     const val StatusSurfaceAlpha = 0.20f
     const val HeroStartAlpha = 1.0f
     const val HeroEndAlpha = 0.9f
     const val NeutralSurfaceAlpha = 0.8f
-    val HeroCornerRadius = 36.dp
     val HeroPadding = 28.dp
     val HeroContentSpacing = 20.dp
     val HeroTitleSpacing = 8.dp
@@ -79,13 +76,15 @@ private fun defaultCardShape() = RoundedCornerShape(AccessibilityDefaults.CardCo
 
 @Composable
 private fun defaultCardColors() = CardDefaults.cardColors(
-    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = GlassLayoutDefaults.CardSurfaceAlpha),
+    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.CardSurfaceAlpha),
     contentColor = MaterialTheme.colorScheme.onSurface
 )
 
-// Removing the border for a softer iOS-like feel. Using elevation instead.
 @Composable
-private fun defaultCardBorder(): BorderStroke? = null
+private fun defaultCardBorder() = BorderStroke(
+    width = 1.dp,
+    color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
+)
 
 @Composable
 internal fun statusPalette(status: StatusType): StatusPalette = when (status) {
@@ -111,27 +110,49 @@ internal fun statusPalette(status: StatusType): StatusPalette = when (status) {
     )
 }
 
+/**
+ * Seiten-Hintergrund mit tiefdunklem Navy-Grund und zwei Hintergrund-Orbs:
+ * Petrol oben-links (primary) und Blau unten-rechts (tertiary).
+ * Farblisten werden gecacht um Reallokierungen bei jeder Rekomposition zu vermeiden.
+ */
 @Composable
 fun MZPageBackground(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val base = MaterialTheme.colorScheme.background
-    val topGlow = MaterialTheme.colorScheme.primary.copy(alpha = GlassLayoutDefaults.PageTopGlowAlpha)
-    val centerGlow = MaterialTheme.colorScheme.tertiary.copy(alpha = GlassLayoutDefaults.PageCenterGlowAlpha)
-    val glowRadius = with(LocalDensity.current) { GlassLayoutDefaults.PageGlowRadius.toPx() }
+    val bg         = MaterialTheme.colorScheme.background
+    val orbPrimary = MaterialTheme.colorScheme.primary
+    val orbSecond  = MaterialTheme.colorScheme.tertiary
+
+    val primaryOrbColors = remember(orbPrimary) {
+        listOf(orbPrimary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent)
+    }
+    val secondaryOrbColors = remember(orbSecond) {
+        listOf(orbSecond.copy(alpha = MZTokens.OrbAlphaSecondary), Color.Transparent)
+    }
 
     Box(
-        modifier = modifier.drawBehind {
-            drawRect(
-                brush = Brush.radialGradient(
-                    colors = listOf(topGlow, centerGlow, base),
-                    center = Offset(size.width / 2f, 0f),
-                    radius = glowRadius
+        modifier = modifier
+            .background(bg)
+            .drawBehind {
+                drawOrb(
+                    colors = primaryOrbColors,
+                    center = Offset(
+                        size.width  * MZTokens.OrbPrimaryXFraction,
+                        size.height * MZTokens.OrbPrimaryYFraction
+                    ),
+                    radius = MZTokens.OrbPrimaryRadiusDp.toPx()
                 )
-            )
-        }
+                drawOrb(
+                    colors = secondaryOrbColors,
+                    center = Offset(
+                        size.width  * MZTokens.OrbSecondaryXFraction,
+                        size.height * MZTokens.OrbSecondaryYFraction
+                    ),
+                    radius = MZTokens.OrbSecondaryRadiusDp.toPx()
+                )
+            }
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
@@ -141,10 +162,18 @@ fun MZPageBackground(
     }
 }
 
+private fun DrawScope.drawOrb(colors: List<Color>, center: Offset, radius: Float) {
+    drawCircle(
+        brush = Brush.radialGradient(colors = colors, center = center, radius = radius),
+        radius = radius,
+        center = center
+    )
+}
+
 @Composable
 fun MZCard(
     modifier: Modifier = Modifier,
-    elevation: Dp = 12.dp, // Increased elevation for softer shadow
+    elevation: Dp = MZTokens.CardElevation,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -167,7 +196,7 @@ fun MZCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    elevation: Dp = 12.dp,
+    elevation: Dp = MZTokens.CardElevation,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -209,9 +238,10 @@ fun MZStatusCard(
         containerColor = palette.containerColor,
         contentColor = MaterialTheme.colorScheme.onSurface
     )
-
-    val cardBorder: BorderStroke? = null
-    val cardElevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    val cardBorder = BorderStroke(
+        1.dp, palette.accentColor.copy(alpha = MZTokens.BorderAlphaEmphasis)
+    )
+    val cardElevation = CardDefaults.cardElevation(defaultElevation = MZTokens.CardElevation)
 
     val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(
@@ -225,7 +255,7 @@ fun MZStatusCard(
                     imageVector = when (status) {
                         StatusType.SUCCESS -> Icons.Default.CheckCircle
                         StatusType.WARNING -> Icons.Default.Warning
-                        StatusType.ERROR -> Icons.Default.Error
+                        StatusType.ERROR   -> Icons.Default.Error
                         StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
                     },
                     contentDescription = null,
@@ -279,7 +309,7 @@ fun MZHeroCard(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
-    val heroShape = RoundedCornerShape(GlassLayoutDefaults.HeroCornerRadius)
+    val heroShape = RoundedCornerShape(MZTokens.RadiusHero)
     val backgroundBrush = Brush.linearGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = GlassLayoutDefaults.HeroStartAlpha),
@@ -292,8 +322,10 @@ fun MZHeroCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = heroShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
-        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = MZTokens.HeroElevation),
+        border = BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaEmphasis)
+        ),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -316,13 +348,13 @@ fun MZHeroCard(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.headlineLarge, // Increased from headlineSmall
+                        style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodyLarge, // Increased from bodyMedium
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
                     )
                 }

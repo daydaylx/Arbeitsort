@@ -2,6 +2,7 @@ package de.montagezeit.app.ui.navigation
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
@@ -96,16 +98,21 @@ fun MontageZeitNavGraph(
                     )
                 },
                 bottomBar = {
-                    // Modern compact tab indicator
-                    Surface(
+                    val navBarShape = RoundedCornerShape(MZTokens.RadiusCard)
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp,
-                        shadowElevation = 8.dp
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .clip(navBarShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f))
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(
+                                    alpha = MZTokens.BorderAlphaNormal
+                                ),
+                                shape = navBarShape
+                            )
                     ) {
                         Row(
                             modifier = Modifier
