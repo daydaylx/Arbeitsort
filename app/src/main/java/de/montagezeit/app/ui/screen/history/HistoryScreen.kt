@@ -1048,7 +1048,7 @@ fun HistoryEntryItem(
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
 
-    MZCard(
+    MZContentCard(
         onClick = { onEntryClick(entry.date) }
     ) {
         Column(

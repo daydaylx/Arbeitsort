@@ -47,13 +47,13 @@ import de.montagezeit.app.ui.theme.MZTokens
 object AccessibilityDefaults {
     const val MinTouchTargetSize = 48
     val MinTouchTargetSpacing = 8.dp
-    val CardPadding = 24.dp
+    val CardPadding = MZTokens.InnerPadding
     val CardCornerRadius = MZTokens.RadiusCard   // 24.dp — aligned with Shape.large
     val ButtonCornerRadius = MZTokens.RadiusButton  // 50.dp — pill
-    val ButtonHeight = 56.dp
-    val PrimaryButtonHeight = 56.dp
-    val SecondaryButtonHeight = 56.dp
-    val TertiaryButtonHeight = 48.dp
+    val ButtonHeight = MZTokens.PrimaryButtonHeight
+    val PrimaryButtonHeight = MZTokens.PrimaryButtonHeight
+    val SecondaryButtonHeight = MZTokens.SecondaryButtonHeight
+    val TertiaryButtonHeight = MZTokens.TertiaryButtonHeight
     val IconButtonSize = 48.dp
 }
 
@@ -75,15 +75,24 @@ internal data class StatusPalette(
 private fun defaultCardShape() = RoundedCornerShape(AccessibilityDefaults.CardCornerRadius)
 
 @Composable
-private fun defaultCardColors() = CardDefaults.cardColors(
-    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.CardSurfaceAlpha),
-    contentColor = MaterialTheme.colorScheme.onSurface
-)
+private fun defaultCardColors() = contentCardColors()
 
 @Composable
 private fun defaultCardBorder() = BorderStroke(
     width = 1.dp,
     color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
+)
+
+@Composable
+private fun contentCardColors() = CardDefaults.cardColors(
+    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+    contentColor = MaterialTheme.colorScheme.onSurface
+)
+
+@Composable
+private fun kpiCardColors() = CardDefaults.cardColors(
+    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+    contentColor = MaterialTheme.colorScheme.onSurface
 )
 
 @Composable
@@ -171,7 +180,7 @@ private fun DrawScope.drawOrb(colors: List<Color>, center: Offset, radius: Float
 }
 
 @Composable
-fun MZCard(
+fun MZContentCard(
     modifier: Modifier = Modifier,
     elevation: Dp = MZTokens.CardElevation,
     content: @Composable ColumnScope.() -> Unit
@@ -179,7 +188,7 @@ fun MZCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
-        colors = defaultCardColors(),
+        colors = contentCardColors(),
         border = defaultCardBorder(),
         shape = defaultCardShape()
     ) {
@@ -192,7 +201,7 @@ fun MZCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MZCard(
+fun MZContentCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -204,7 +213,7 @@ fun MZCard(
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
-        colors = defaultCardColors(),
+        colors = contentCardColors(),
         border = defaultCardBorder(),
         shape = defaultCardShape()
     ) {
@@ -214,6 +223,58 @@ fun MZCard(
         )
     }
 }
+
+@Composable
+fun MZKpiCard(
+    modifier: Modifier = Modifier,
+    elevation: Dp = MZTokens.CardElevation,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        colors = kpiCardColors(),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.BorderAlphaNormal)
+        ),
+        shape = defaultCardShape()
+    ) {
+        Column(
+            modifier = Modifier.padding(AccessibilityDefaults.CardPadding),
+            content = content
+        )
+    }
+}
+
+@Deprecated("Use MZContentCard for content surfaces.")
+@Composable
+fun MZCard(
+    modifier: Modifier = Modifier,
+    elevation: Dp = MZTokens.CardElevation,
+    content: @Composable ColumnScope.() -> Unit
+) = MZContentCard(
+    modifier = modifier,
+    elevation = elevation,
+    content = content
+)
+
+@Deprecated("Use MZContentCard for interactive content surfaces.")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MZCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    elevation: Dp = MZTokens.CardElevation,
+    content: @Composable ColumnScope.() -> Unit
+) = MZContentCard(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    elevation = elevation,
+    content = content
+)
 
 enum class StatusType {
     SUCCESS,

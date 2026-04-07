@@ -73,9 +73,9 @@ import de.montagezeit.app.R
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.components.DatePickerDialog
-import de.montagezeit.app.ui.components.MZCard
 import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZHeroCard
+import de.montagezeit.app.ui.components.MZKpiCard
 import de.montagezeit.app.ui.components.MZLoadingState
 import de.montagezeit.app.ui.components.MZPageBackground
 import de.montagezeit.app.ui.components.MZStatusBadge
@@ -439,7 +439,7 @@ private fun KpiGridItem(
     tint: Color,
     onClick: (() -> Unit)? = null
 ) {
-    MZCard(
+    MZKpiCard(
         modifier = modifier
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .drawBehind {
