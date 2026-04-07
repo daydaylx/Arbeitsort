@@ -107,13 +107,13 @@ fun MontageZeitNavGraph(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
                             .clip(navBarShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f))
+                            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.94f))
                             .border(
                                 width = 1.dp,
                                 color = MaterialTheme.colorScheme.outline.copy(
-                                    alpha = MZTokens.BorderAlphaNormal
+                                    alpha = MZTokens.BorderAlphaSubtle
                                 ),
                                 shape = navBarShape
                             )
@@ -126,7 +126,7 @@ fun MontageZeitNavGraph(
                         BoxWithConstraints(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(8.dp)
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
                         ) {
                             val tabWidth = maxWidth / tabs.size
                             val indicatorOffset by animateDpAsState(
@@ -140,11 +140,11 @@ fun MontageZeitNavGraph(
                             // Sliding pill behind labels
                             Box(
                                 modifier = Modifier
-                                    .offset(x = indicatorOffset)
-                                    .width(tabWidth)
-                                    .height(40.dp)
+                                    .offset(x = indicatorOffset + 6.dp)
+                                    .width(tabWidth - 12.dp)
+                                    .height(30.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
                             )
                             // Tab labels on top
                             Row(modifier = Modifier.fillMaxWidth()) {
@@ -153,7 +153,7 @@ fun MontageZeitNavGraph(
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(40.dp)
+                                            .height(48.dp)
                                             .clickable(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = null
@@ -168,7 +168,7 @@ fun MontageZeitNavGraph(
                                             text = stringResource(titleRes),
                                             color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                                             else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelLarge
+                                            style = MaterialTheme.typography.labelMedium
                                         )
                                     }
                                 }
