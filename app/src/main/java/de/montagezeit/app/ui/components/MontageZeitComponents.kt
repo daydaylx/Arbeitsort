@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -58,7 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.theme.Blue30
+import de.montagezeit.app.ui.theme.Blue40
 import de.montagezeit.app.ui.theme.PetrolGlow
+import de.montagezeit.app.ui.theme.Teal30
 import de.montagezeit.app.ui.theme.TealDeep
 
 
@@ -79,13 +82,24 @@ object MZTokens {
     val RadiusModal  = 32.dp
 
     // Glass
-    val GlassAlpha       = 0.07f   // Card-Hintergrund-Alpha
-    val GlassBorderAlpha = 0.18f   // Standard Leucht-Kontur
-    val GlowBorderAlpha  = 0.45f   // Hero / aktive Leucht-Kontur
+    val GlassAlpha       = 0.10f   // Card-Hintergrund-Alpha (erhöht auf 10 % für besseren Kontrast)
+    val GlassBorderAlpha = 0.18f   // Standard Leucht-Kontur (veraltet → BorderAlphaNormal bevorzugen)
+    val GlowBorderAlpha  = 0.45f   // Hero / aktive Leucht-Kontur (veraltet → BorderAlphaEmphasis bevorzugen)
 
-    // Background Orbs
-    val OrbAlphaPrimary   = 0.14f
-    val OrbAlphaSecondary = 0.07f
+    // Semantische Border-Alphas (vereinheitlicht für konsistente Hierarchie)
+    val BorderAlphaSubtle   = 0.12f  // Dezente Kontur – Divider, passive Elemente
+    val BorderAlphaNormal   = 0.22f  // Standard-Kontur – Karten, Nav-Bar
+    val BorderAlphaEmphasis = 0.45f  // Akzentuierte Kontur – Hero-Karte, aktive Elemente
+
+    // Background Orbs – als Konstanten statt Magic Numbers
+    val OrbAlphaPrimary       = 0.14f
+    val OrbAlphaSecondary     = 0.07f
+    val OrbPrimaryXFraction   = 0.15f
+    val OrbPrimaryYFraction   = 0.12f
+    val OrbSecondaryXFraction = 0.88f
+    val OrbSecondaryYFraction = 0.82f
+    val OrbPrimaryRadiusDp    = 320.dp
+    val OrbSecondaryRadiusDp  = 220.dp
 
     // Spacing
     val ScreenPadding = 20.dp
@@ -135,21 +149,29 @@ fun MZPageBackground(
     val orbPrimary = MaterialTheme.colorScheme.primary
     val orbBlue    = MaterialTheme.colorScheme.tertiary
 
+    // Farblisten werden gecacht um Neu-Allokierungen bei jeder Rekomposition zu vermeiden
+    val primaryOrbColors   = remember(orbPrimary) {
+        listOf(orbPrimary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent)
+    }
+    val secondaryOrbColors = remember(orbBlue) {
+        listOf(orbBlue.copy(alpha = MZTokens.OrbAlphaSecondary), Color.Transparent)
+    }
+
     Box(
         modifier = modifier
             .background(bg)
             .drawBehind {
+                val primaryRadius   = MZTokens.OrbPrimaryRadiusDp.toPx()
+                val secondaryRadius = MZTokens.OrbSecondaryRadiusDp.toPx()
                 drawOrb(
-                    color  = orbPrimary,
-                    alpha  = MZTokens.OrbAlphaPrimary,
-                    center = Offset(size.width * 0.15f, size.height * 0.12f),
-                    radius = 320.dp.toPx()
+                    colors = primaryOrbColors,
+                    center = Offset(size.width * MZTokens.OrbPrimaryXFraction, size.height * MZTokens.OrbPrimaryYFraction),
+                    radius = primaryRadius
                 )
                 drawOrb(
-                    color  = orbBlue,
-                    alpha  = MZTokens.OrbAlphaSecondary,
-                    center = Offset(size.width * 0.88f, size.height * 0.82f),
-                    radius = 220.dp.toPx()
+                    colors = secondaryOrbColors,
+                    center = Offset(size.width * MZTokens.OrbSecondaryXFraction, size.height * MZTokens.OrbSecondaryYFraction),
+                    radius = secondaryRadius
                 )
             }
     ) {
@@ -161,16 +183,9 @@ fun MZPageBackground(
     }
 }
 
-private fun DrawScope.drawOrb(color: Color, alpha: Float, center: Offset, radius: Float) {
+private fun DrawScope.drawOrb(colors: List<Color>, center: Offset, radius: Float) {
     drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(
-                color.copy(alpha = alpha),
-                color.copy(alpha = 0f)
-            ),
-            center = center,
-            radius = radius
-        ),
+        brush  = Brush.radialGradient(colors = colors, center = center, radius = radius),
         radius = radius,
         center = center
     )
@@ -198,7 +213,7 @@ fun MZCard(
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = primary.copy(alpha = MZTokens.GlassBorderAlpha)
+            color = primary.copy(alpha = MZTokens.BorderAlphaNormal)
         ),
         shape = RoundedCornerShape(MZTokens.RadiusCard)
     ) {
@@ -232,7 +247,7 @@ fun MZCard(
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = primary.copy(alpha = MZTokens.GlassBorderAlpha)
+            color = primary.copy(alpha = MZTokens.BorderAlphaNormal)
         ),
         shape = RoundedCornerShape(MZTokens.RadiusCard)
     ) {
@@ -265,7 +280,7 @@ fun MZStatusCard(
 
     val cardShape  = RoundedCornerShape(MZTokens.RadiusCard)
     val cardColors = CardDefaults.cardColors(containerColor = baseColor.copy(alpha = 0.12f))
-    val cardBorder = BorderStroke(1.dp, baseColor.copy(alpha = 0.35f))
+    val cardBorder = BorderStroke(1.dp, baseColor.copy(alpha = MZTokens.BorderAlphaEmphasis))
 
     val cardContent: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(AccessibilityDefaults.CardPadding)) {
@@ -331,7 +346,7 @@ fun MZHeroCard(
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
     val heroBrush = Brush.linearGradient(
-        colors = listOf(TealDeep, Blue30),
+        colors = listOf(Teal30, Blue40),  // Etwas heller als TealDeep→Blue30 für bessere Sichtbarkeit
         start  = Offset(0f, 0f),
         end    = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
     )
@@ -341,7 +356,7 @@ fun MZHeroCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(MZTokens.RadiusHero),
         elevation = CardDefaults.cardElevation(defaultElevation = MZTokens.HeroElevation),
-        border = BorderStroke(1.5.dp, primary.copy(alpha = MZTokens.GlowBorderAlpha)),
+        border = BorderStroke(1.5.dp, primary.copy(alpha = MZTokens.BorderAlphaEmphasis)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(

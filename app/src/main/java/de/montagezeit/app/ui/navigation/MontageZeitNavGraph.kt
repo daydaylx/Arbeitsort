@@ -1,6 +1,9 @@
 package de.montagezeit.app.ui.navigation
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -8,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import de.montagezeit.app.ui.components.MZTokens
 import de.montagezeit.app.ui.theme.DeepNavy
 import de.montagezeit.app.ui.theme.Navy
 import androidx.compose.runtime.*
@@ -80,11 +84,11 @@ fun MontageZeitNavGraph(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                         .navigationBarsPadding(),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(MZTokens.RadiusCard),
                     color = Navy.copy(alpha = 0.90f),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)  // Teal-Glow-Kontur
+                        MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.BorderAlphaNormal)
                     )
                 ) {
                     NavigationBar(
@@ -124,7 +128,11 @@ fun MontageZeitNavGraph(
         NavHost(
             navController = navController,
             startDestination = Screen.Today.route,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            enterTransition    = { fadeIn(animationSpec = tween(durationMillis = 220)) },
+            exitTransition     = { fadeOut(animationSpec = tween(durationMillis = 180)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(durationMillis = 220)) },
+            popExitTransition  = { fadeOut(animationSpec = tween(durationMillis = 180)) }
         ) {
             composable(Screen.Today.route) {
                 TodayScreen(

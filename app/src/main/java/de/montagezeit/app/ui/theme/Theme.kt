@@ -46,6 +46,9 @@ private val DarkColorScheme = darkColorScheme(
     scrim = DeepNavy
 )
 
+// Hinweis: Die App ist primär für Dark Mode gestaltet. Das Light-Schema ist funktional,
+// aber visuell weniger ausgearbeitet. Mittelfristig sollte die Light-Variante
+// vollständig an das Dashboard-Design angepasst oder Dark-only erzwungen werden.
 private val LightColorScheme = lightColorScheme(
     primary = Teal40,
     onPrimary = Neutral99,
