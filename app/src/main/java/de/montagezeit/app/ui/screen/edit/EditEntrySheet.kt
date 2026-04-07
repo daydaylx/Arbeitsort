@@ -138,7 +138,6 @@ private fun EditEntrySheetScaffold(
             if (uiState is EditUiState.NewEntry || uiState is EditUiState.Success) {
                 EditStickySaveBar(
                     isSaving = screenState.isSaving,
-                    isNewEntry = uiState is EditUiState.NewEntry,
                     onSave = viewModel::save
                 )
             }
@@ -149,8 +148,8 @@ private fun EditEntrySheetScaffold(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (onNavigateDate != null) {
                 DateNavigationRow(
@@ -164,7 +163,7 @@ private fun EditEntrySheetScaffold(
                     swipeThresholdPx = swipeThresholdPx,
                     onSwipePrevious = { onNavigateDate(date.minusDays(1)) },
                     onSwipeNext = { onNavigateDate(date.plusDays(1)) },
-                    modifier = Modifier.padding(bottom = 6.dp)
+                    modifier = Modifier.padding(bottom = 2.dp)
                 )
                 HorizontalDivider()
             }

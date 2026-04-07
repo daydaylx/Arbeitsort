@@ -1,7 +1,12 @@
 package de.montagezeit.app.ui.navigation
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -22,6 +27,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -37,6 +47,9 @@ import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+
+private const val TOP_BAR_TITLE_FADE_IN_DURATION_MS = 300
+private const val TOP_BAR_TITLE_FADE_OUT_DURATION_MS = 150
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,14 +92,23 @@ fun MontageZeitNavGraph(
                 topBar = {
                     TopAppBar(
                         title = {
-                            Text(
-                                text = when (pagerState.currentPage) {
-                                    0 -> stringResource(R.string.today_title)
-                                    1 -> stringResource(R.string.overview_title)
-                                    else -> stringResource(R.string.history_title)
+                            AnimatedContent(
+                                targetState = pagerState.currentPage,
+                                transitionSpec = {
+                                    fadeIn(tween(TOP_BAR_TITLE_FADE_IN_DURATION_MS)) togetherWith
+                                        fadeOut(tween(TOP_BAR_TITLE_FADE_OUT_DURATION_MS))
                                 },
-                                style = MaterialTheme.typography.titleLarge
-                            )
+                                label = "topBarTitle"
+                            ) { page ->
+                                Text(
+                                    text = when (page) {
+                                        0 -> stringResource(R.string.today_title)
+                                        1 -> stringResource(R.string.overview_title)
+                                        else -> stringResource(R.string.history_title)
+                                    },
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
                         },
                         actions = {
                             IconButton(onClick = { navController.navigate("settings") }) {
@@ -97,7 +119,7 @@ fun MontageZeitNavGraph(
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
+                            containerColor = Color.Transparent
                         )
                     )
                 },
@@ -107,9 +129,9 @@ fun MontageZeitNavGraph(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                             .clip(navBarShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f))
                             .border(
                                 width = 1.dp,
                                 color = MaterialTheme.colorScheme.outline.copy(
@@ -126,7 +148,7 @@ fun MontageZeitNavGraph(
                         BoxWithConstraints(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(8.dp)
+                                .padding(4.dp)
                         ) {
                             val tabWidth = maxWidth / tabs.size
                             val indicatorOffset by animateDpAsState(
@@ -142,8 +164,9 @@ fun MontageZeitNavGraph(
                                 modifier = Modifier
                                     .offset(x = indicatorOffset)
                                     .width(tabWidth)
-                                    .height(40.dp)
-                                    .clip(CircleShape)
+                                    .height(34.dp)
+                                    .padding(horizontal = 4.dp)
+                                    .clip(RoundedCornerShape(MZTokens.RadiusChip))
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                             )
                             // Tab labels on top
@@ -153,7 +176,7 @@ fun MontageZeitNavGraph(
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(40.dp)
+                                            .height(34.dp)
                                             .clickable(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = null
@@ -168,7 +191,7 @@ fun MontageZeitNavGraph(
                                             text = stringResource(titleRes),
                                             color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                                             else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelLarge
+                                            style = MaterialTheme.typography.labelMedium
                                         )
                                     }
                                 }

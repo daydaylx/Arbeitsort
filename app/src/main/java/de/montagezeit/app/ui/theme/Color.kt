@@ -2,26 +2,26 @@ package de.montagezeit.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Semantic palette for the app's fixed glass/dark theme.
-val GlassBackground     = Color(0xFF04080F)  // DeepNavy
-val GlassSurface        = Color(0xFF070D1A)  // Navy
-val GlassSurfaceVariant = Color(0xFF0B1525)  // NavyCard
+// Semantic palette for the app's fixed dark theme.
+val GlassBackground     = Color(0xFF04080F)
+val GlassSurface        = Color(0xFF09111D)
+val GlassSurfaceVariant = Color(0xFF0F1826)
 
 // Primary: Petrol/Teal
-val GlassPrimary          = Color(0xFF4FD8EB)  // Teal80
-val GlassPrimaryContainer = Color(0xFF003645)  // TealDeep
-val GlassPrimaryGlow      = Color(0xFF00B4CC)  // PetrolGlow — for borders and outlines
+val GlassPrimary          = Color(0xFF4FD8EB)
+val GlassPrimaryContainer = Color(0xFF0E3140)
+val GlassPrimaryGlow      = Color(0xFF1A7A8D)
 
-// Secondary: Amber (warm contrast on Navy)
-val GlassSecondary          = Color(0xFFFFB786)  // Amber80
-val GlassSecondaryContainer = Color(0xFF7B2C00)  // Amber30
+// Secondary: muted neutral surface accent
+val GlassSecondary          = Color(0xFFB7C5D2)
+val GlassSecondaryContainer = Color(0xFF182230)
 
-// Tertiary: Blue
-val GlassTertiary          = Color(0xFFA9C7F5)  // Blue80
-val GlassTertiaryContainer = Color(0xFF2B4D73)  // Blue30
+// Tertiary: cool blue for alternate informational accents
+val GlassTertiary          = Color(0xFF99BDF0)
+val GlassTertiaryContainer = Color(0xFF17344F)
 
 // Text
-val GlassOnDark      = Color(0xFFE1E3E4)  // slightly off-white
+val GlassOnDark      = Color(0xFFE6ECEF)
 val GlassOnDarkMuted = Color(0xFFAECDD0)
 
 // Status

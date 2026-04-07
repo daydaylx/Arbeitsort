@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.screen.today
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,20 +17,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -50,6 +46,7 @@ import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.components.staggeredAppear
 import de.montagezeit.app.ui.components.*
 import de.montagezeit.app.ui.theme.GlassSuccess
 import de.montagezeit.app.ui.theme.GlassWarning
@@ -59,6 +56,13 @@ import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private data class TodayStatusUi(
+    val type: StatusType,
+    val subtitleRes: Int,
+    val badgeTextRes: Int,
+    val accentColor: Color?
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +139,7 @@ fun TodayScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                        .padding(horizontal = MZTokens.ScreenPadding, vertical = 4.dp),
                                     horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -175,9 +179,12 @@ fun TodayScreen(
             }
         }
 
-        SnackbarHost(
+        MZSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 64.dp)
         )
 
         TodayDialogsHost(
@@ -271,6 +278,7 @@ private fun TodayContent(
     onOpenDailyCheckInDialog: () -> Unit,
     onConfirmOffDay: () -> Unit
 ) {
+    val swipeThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -288,117 +296,29 @@ private fun TodayContent(
 
         Column(
             modifier = Modifier.padding(MZTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(MZTokens.CardSpacing)
         ) {
             StatusCard(
                 entry = entry,
                 travelLegs = travelLegs,
                 date = selectedDate,
+                swipeThresholdPx = swipeThresholdPx,
+                onSelectDay = onSelectDay,
+                isDailyCheckInLoading = isDailyCheckInLoading,
+                isConfirmOffdayLoading = isConfirmOffdayLoading,
+                onOpenDailyCheckInDialog = onOpenDailyCheckInDialog,
+                onConfirmOffDay = onConfirmOffDay,
                 onEditToday = onEditToday,
-                onEditDayLocation = onEditDayLocation
+                onEditDayLocation = onEditDayLocation,
+                modifier = Modifier.staggeredAppear(index = 0)
             )
 
-            val isCompleted = entry?.confirmedWorkDay == true
-            if (!isCompleted) {
-                TodayActionsCard(
-                    entry = entry,
-                    isDailyCheckInLoading = isDailyCheckInLoading,
-                    isConfirmOffdayLoading = isConfirmOffdayLoading,
-                    onOpenDailyCheckInDialog = onOpenDailyCheckInDialog,
-                    onConfirmOffDay = onConfirmOffDay
-                )
-            }
-
             if (entry != null && (entry.dayType == DayType.WORK || travelLegs.isNotEmpty())) {
-                WorkHoursCard(entry = entry, travelLegs = travelLegs)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TodayActionsCard(
-    entry: WorkEntry?,
-    isDailyCheckInLoading: Boolean,
-    isConfirmOffdayLoading: Boolean,
-    onOpenDailyCheckInDialog: () -> Unit,
-    onConfirmOffDay: () -> Unit
-) {
-    val showOffdayAction = entry?.dayType != DayType.COMP_TIME
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.today_action_required),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-        
-        MZCard {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                val showPulse = entry == null && !isDailyCheckInLoading
-                if (showPulse) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                    val pulseAlpha by infiniteTransition.animateFloat(
-                        initialValue = 0.35f, targetValue = 0f,
-                        animationSpec = infiniteRepeatable(
-                            tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart
-                        ),
-                        label = "pulseAlpha"
-                    )
-                    val pulseScale by infiniteTransition.animateFloat(
-                        initialValue = 1f, targetValue = 1.10f,
-                        animationSpec = infiniteRepeatable(
-                            tween(2000, easing = FastOutSlowInEasing), RepeatMode.Restart
-                        ),
-                        label = "pulseScale"
-                    )
-                    Box(contentAlignment = Alignment.Center) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(64.dp)
-                                .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale; alpha = pulseAlpha }
-                                .clip(RoundedCornerShape(MZTokens.RadiusButton))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.28f))
-                        )
-                        PrimaryActionButton(
-                            onClick = onOpenDailyCheckInDialog,
-                            isLoading = isDailyCheckInLoading,
-                            modifier = Modifier.fillMaxWidth().height(64.dp),
-                            shape = RoundedCornerShape(MZTokens.RadiusButton)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                            Text(
-                                stringResource(R.string.action_daily_manual_check_in),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
-                } else {
-                    PrimaryActionButton(
-                        onClick = onOpenDailyCheckInDialog,
-                        isLoading = isDailyCheckInLoading,
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
-                        shape = RoundedCornerShape(MZTokens.RadiusButton)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                        Text(
-                            stringResource(R.string.action_daily_manual_check_in),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-
-                if (showOffdayAction) {
-                    SecondaryActionButton(
-                        onClick = onConfirmOffDay,
-                        isLoading = isConfirmOffdayLoading,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.action_confirm_offday))
-                    }
-                }
+                WorkHoursCard(
+                    entry = entry,
+                    travelLegs = travelLegs,
+                    modifier = Modifier.staggeredAppear(index = 1)
+                )
             }
         }
     }
@@ -409,91 +329,225 @@ private fun StatusCard(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
     date: LocalDate,
+    swipeThresholdPx: Float,
+    onSelectDay: (LocalDate) -> Unit,
+    isDailyCheckInLoading: Boolean,
+    isConfirmOffdayLoading: Boolean,
+    onOpenDailyCheckInDialog: () -> Unit,
+    onConfirmOffDay: () -> Unit,
     onEditToday: () -> Unit,
-    onEditDayLocation: () -> Unit
+    onEditDayLocation: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val status = when {
-        entry?.confirmedWorkDay == true -> StatusType.SUCCESS
-        entry != null -> StatusType.WARNING
-        else -> StatusType.INFO
-    }
-    val subtitle = when {
-        entry?.confirmedWorkDay == true -> stringResource(R.string.today_dashboard_subtitle_done)
-        entry != null -> stringResource(R.string.today_dashboard_subtitle_open)
-        else -> stringResource(R.string.today_dashboard_subtitle_empty)
-    }
+    val statusUi = remember(entry) { resolveTodayStatusUi(entry) }
+    var dragAccum = 0f
+    val isCompleted = entry?.confirmedWorkDay == true
+    val showOffdayAction = entry?.dayType != DayType.COMP_TIME && !isCompleted
 
-    MZHeroCard(
-        title = remember(date) { Formatters.formatDateLong(date) },
-        subtitle = subtitle,
-        accentColor = when (status) {
-            StatusType.SUCCESS -> GlassSuccess
-            StatusType.WARNING -> GlassWarning
-            else -> null
-        },
-        badge = {
-            MZStatusBadge(
-                text = when (status) {
-                    StatusType.SUCCESS -> stringResource(R.string.today_confirmed)
-                    StatusType.WARNING -> stringResource(R.string.today_unconfirmed)
-                    else -> stringResource(R.string.today_no_check_in)
+    MZCard(
+        modifier = modifier.pointerInput(date, swipeThresholdPx) {
+            detectHorizontalDragGestures(
+                onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                onDragEnd = {
+                    when {
+                        dragAccum > swipeThresholdPx -> onSelectDay(date.minusDays(1))
+                        dragAccum < -swipeThresholdPx -> onSelectDay(date.plusDays(1))
+                    }
+                    dragAccum = 0f
                 },
-                type = status
+                onDragCancel = { dragAccum = 0f }
             )
-        },
-        action = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SecondaryActionButton(
-                    onClick = onEditDayLocation,
-                    modifier = Modifier.weight(1f),
-                    enabled = entry != null,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    shape = RoundedCornerShape(MZTokens.RadiusChip)
-                ) {
-                    Text(stringResource(R.string.action_change_location), style = MaterialTheme.typography.labelLarge)
-                }
-                SecondaryActionButton(
-                    onClick = onEditToday,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    shape = RoundedCornerShape(MZTokens.RadiusChip)
-                ) {
-                    Text(stringResource(R.string.action_edit_entry_manual), style = MaterialTheme.typography.labelLarge)
-                }
-            }
         }
     ) {
-        entry?.let {
-            DayTypeRow(dayType = it.dayType)
-            Spacer(modifier = Modifier.height(8.dp))
-            MZKeyValueRow(
-                label = stringResource(R.string.day_location_label),
-                value = it.dayLocationLabel.trim().ifEmpty {
-                    stringResource(R.string.today_day_location_unset)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = remember(date) { Formatters.formatDateLong(date) },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            MZStatusBadge(
+                text = stringResource(statusUi.badgeTextRes),
+                type = statusUi.type
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(statusUi.subtitleRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        StatusCardContent(entry = entry, travelLegs = travelLegs)
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        PrimaryActionButton(
+            onClick = if (isCompleted) onEditToday else onOpenDailyCheckInDialog,
+            isLoading = if (isCompleted) false else isDailyCheckInLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = if (isCompleted) Icons.Default.Edit else Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(
+                text = if (isCompleted) {
+                    stringResource(R.string.action_edit_entry_manual)
+                } else {
+                    stringResource(R.string.action_daily_manual_check_in)
                 }
             )
-            if (it.dayType == DayType.WORK) {
-                MZKeyValueRow(
-                    label = stringResource(R.string.total_paid_hours),
-                    value = formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it, travelLegs)),
-                    emphasize = true
-                )
-            }
-        } ?: Text(
-            text = stringResource(R.string.today_dashboard_empty_hint),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        StatusCardActions(
+            hasEntry = entry != null,
+            showOffdayAction = showOffdayAction,
+            isConfirmOffdayLoading = isConfirmOffdayLoading,
+            onConfirmOffDay = onConfirmOffDay,
+            onEditDayLocation = onEditDayLocation,
+            onEditToday = onEditToday
         )
     }
+}
+
+private fun resolveTodayStatusUi(entry: WorkEntry?): TodayStatusUi = when {
+    entry?.confirmedWorkDay == true -> TodayStatusUi(
+        type = StatusType.SUCCESS,
+        subtitleRes = R.string.today_dashboard_subtitle_done,
+        badgeTextRes = R.string.today_confirmed,
+        accentColor = GlassSuccess
+    )
+    entry != null -> TodayStatusUi(
+        type = StatusType.WARNING,
+        subtitleRes = R.string.today_dashboard_subtitle_open,
+        badgeTextRes = R.string.today_unconfirmed,
+        accentColor = GlassWarning
+    )
+    else -> TodayStatusUi(
+        type = StatusType.INFO,
+        subtitleRes = R.string.today_dashboard_subtitle_empty,
+        badgeTextRes = R.string.today_no_check_in,
+        accentColor = null
+    )
+}
+
+@Composable
+private fun StatusCardActions(
+    hasEntry: Boolean,
+    showOffdayAction: Boolean,
+    isConfirmOffdayLoading: Boolean,
+    onConfirmOffDay: () -> Unit,
+    onEditDayLocation: () -> Unit,
+    onEditToday: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (showOffdayAction) {
+            StatusCardActionButton(
+                text = stringResource(R.string.action_confirm_offday),
+                onClick = onConfirmOffDay,
+                enabled = true,
+                isOutline = true,
+                isLoading = isConfirmOffdayLoading,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        StatusCardActionButton(
+            text = stringResource(R.string.action_edit_entry_manual),
+            onClick = onEditToday,
+            modifier = Modifier.weight(1f)
+        )
+        if (hasEntry) {
+            StatusCardActionButton(
+                text = stringResource(R.string.action_change_location),
+                onClick = onEditDayLocation,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusCardActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isOutline: Boolean = false,
+    isLoading: Boolean = false
+) {
+    if (isOutline) {
+        SecondaryActionButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            isLoading = isLoading,
+            shape = RoundedCornerShape(MZTokens.RadiusChip)
+        ) {
+            Text(text, style = MaterialTheme.typography.labelLarge)
+        }
+    } else {
+        TertiaryActionButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            shape = RoundedCornerShape(MZTokens.RadiusChip)
+        ) {
+            Text(text, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
+private fun StatusCardContent(
+    entry: WorkEntry?,
+    travelLegs: List<TravelLeg>
+) {
+    entry?.let {
+        DayTypeRow(dayType = it.dayType)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = it.dayLocationLabel.trim().ifEmpty {
+                stringResource(R.string.today_day_location_unset)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (it.dayType == DayType.WORK) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(
+                    R.string.today_paid_hours_summary,
+                    formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it, travelLegs))
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        return
+    }
+
+    Text(
+        text = stringResource(R.string.today_dashboard_empty_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -546,7 +600,11 @@ private fun DayTypeRow(dayType: DayType) {
 }
 
 @Composable
-private fun WorkHoursCard(entry: WorkEntry, travelLegs: List<TravelLeg>) {
+private fun WorkHoursCard(
+    entry: WorkEntry,
+    travelLegs: List<TravelLeg>,
+    modifier: Modifier = Modifier
+) {
     val (workMinutes, travelMinutes, totalMinutes) = remember(entry, travelLegs) {
         Triple(
             TimeCalculator.calculateWorkMinutes(entry),
@@ -555,7 +613,7 @@ private fun WorkHoursCard(entry: WorkEntry, travelLegs: List<TravelLeg>) {
         )
     }
 
-    MZCard {
+    MZCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MZSectionHeader(title = stringResource(R.string.work_hours_title))
             MZKeyValueRow(
@@ -594,7 +652,7 @@ private fun DailyManualCheckInDialog(
     onConfirm: () -> Unit
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = { keyboardController?.hide(); onDismiss() },
         title = { Text(stringResource(R.string.daily_check_in_dialog_title)) },
         text = {
@@ -661,7 +719,7 @@ private fun DayLocationDialog(
     onConfirm: () -> Unit
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = { keyboardController?.hide(); onDismiss() },
         title = { Text(stringResource(R.string.day_location_dialog_title)) },
         text = {
@@ -706,7 +764,7 @@ private fun DeleteDayConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_delete_day_title)) },
         text = { Text(stringResource(R.string.dialog_delete_day_message)) },

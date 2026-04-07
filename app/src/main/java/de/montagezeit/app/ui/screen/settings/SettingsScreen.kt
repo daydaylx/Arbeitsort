@@ -109,7 +109,7 @@ fun SettingsScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { MZSnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         MZPageBackground(
             modifier = Modifier.fillMaxSize(),
@@ -241,45 +241,19 @@ private fun SettingsContent(
 
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        MZHeroCard(
-            title = stringResource(R.string.settings_dashboard_title),
-            subtitle = stringResource(R.string.settings_dashboard_subtitle),
-            badge = {
-                MZStatusBadge(
-                    text = stringResource(R.string.settings_reminders_summary, enabledReminderCount),
-                    type = if (enabledReminderCount > 0) StatusType.SUCCESS else StatusType.WARNING,
-                    showIcon = false
-                )
-            }
-        ) {
-            MZKeyValueRow(
-                label = stringResource(R.string.label_work_start),
-                value = Formatters.formatTime(settings.workStart)
-            )
-            MZKeyValueRow(
-                label = stringResource(R.string.label_work_end),
-                value = Formatters.formatTime(settings.workEnd)
-            )
-            MZKeyValueRow(
-                label = stringResource(R.string.settings_export),
-                value = settings.pdfEmployeeName?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.settings_export_name_missing)
-            )
-        }
-
-        val needsSetupAttention = !hasNotificationPermission || !isIgnoringBatteryOptimizations
-        AnimatedVisibility(visible = needsSetupAttention) {
-            SetupSection(
-                hasNotificationPermission = hasNotificationPermission,
-                isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-                onRequestNotificationPermission = onRequestNotificationPermission,
-                onOpenNotificationSettings = onOpenNotificationSettings,
-                onOpenBatterySettings = onOpenBatterySettings,
-                onSendTestReminder = onSendTestReminder
-            )
-        }
+        SetupSection(
+            hasNotificationPermission = hasNotificationPermission,
+            isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+            enabledReminderCount = enabledReminderCount,
+            workStartLabel = Formatters.formatTime(settings.workStart),
+            workEndLabel = Formatters.formatTime(settings.workEnd),
+            onRequestNotificationPermission = onRequestNotificationPermission,
+            onOpenNotificationSettings = onOpenNotificationSettings,
+            onOpenBatterySettings = onOpenBatterySettings,
+            onSendTestReminder = onSendTestReminder
+        )
 
         WorkTimesSection(
             workStart = settings.workStart,

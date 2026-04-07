@@ -121,7 +121,7 @@ class CsvExporter @Inject constructor(
                     val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
 
                     val dayTypeLabel = when (entry.dayType) {
-                        DayType.COMP_TIME -> "Ü-Abbau"
+                        DayType.COMP_TIME -> "Ausgleich"
                         else -> entry.dayType.name
                     }
                     // Zeitfelder nur für WORK-Tage befüllen – bei OFF/COMP_TIME sind sie fachlich irrelevant

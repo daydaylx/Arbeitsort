@@ -1,9 +1,12 @@
 package de.montagezeit.app.ui.screen.today
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,10 +16,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -25,9 +32,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.NumberStyles
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+
+private const val SELECTED_CHIP_SCALE = 1.01f
 
 @Composable
 fun WeekOverviewRow(
@@ -37,7 +47,7 @@ fun WeekOverviewRow(
 ) {
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = MZTokens.ScreenPadding),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(weekDays, key = { it.date.toString() }) { day ->
@@ -54,29 +64,45 @@ private fun WeekDayChip(
     day: WeekDayUi,
     onClick: () -> Unit
 ) {
-    val chipShape = RoundedCornerShape(16.dp)
+    val chipShape = RoundedCornerShape(MZTokens.RadiusChip)
 
-    val backgroundColor: Color
-    val contentColor: Color
-    val borderColor: Color
+    val targetBg: Color
+    val targetContent: Color
+    val targetBorder: Color
 
     when {
         day.isSelected -> {
-            backgroundColor = MaterialTheme.colorScheme.primary
-            contentColor = MaterialTheme.colorScheme.onPrimary
-            borderColor = Color.Transparent
+            targetBg = MaterialTheme.colorScheme.primaryContainer
+            targetContent = MaterialTheme.colorScheme.onPrimaryContainer
+            targetBorder = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
         }
         day.isToday -> {
-            backgroundColor = MaterialTheme.colorScheme.primaryContainer
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
+            targetBg = MaterialTheme.colorScheme.surfaceVariant
+            targetContent = MaterialTheme.colorScheme.onSurface
+            targetBorder = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
         }
         else -> {
-            backgroundColor = MaterialTheme.colorScheme.surface
-            contentColor = MaterialTheme.colorScheme.onSurface
-            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
+            targetBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+            targetContent = MaterialTheme.colorScheme.onSurfaceVariant
+            targetBorder = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
         }
     }
+
+    val backgroundColor by animateColorAsState(targetBg, label = "chipBg")
+    val contentColor by animateColorAsState(targetContent, label = "chipContent")
+    val borderColor by animateColorAsState(
+        targetBorder, label = "chipBorder"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (day.isSelected) 1.dp else 0.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "chipElev"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (day.isSelected) SELECTED_CHIP_SCALE else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "chipScale"
+    )
 
     val statusIndicatorColor: Color? = when (day.status) {
         WeekDayStatus.CONFIRMED_WORK -> MaterialTheme.colorScheme.primary
@@ -93,7 +119,11 @@ private fun WeekDayChip(
 
     Surface(
         modifier = Modifier
-            .width(52.dp)
+            .width(46.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .semantics {
                 contentDescription = cdText
                 selected = day.isSelected
@@ -103,13 +133,17 @@ private fun WeekDayChip(
         shape = chipShape,
         color = backgroundColor,
         contentColor = contentColor,
-        border = if (borderColor != Color.Transparent) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null,
-        shadowElevation = if (day.isSelected) 4.dp else 0.dp
+        border = if (targetBorder != Color.Transparent) {
+            BorderStroke(1.dp, borderColor)
+        } else {
+            null
+        },
+        shadowElevation = elevation
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
                 text = day.dayLabel,
@@ -131,19 +165,17 @@ private fun WeekDayChip(
                 val hoursText = if (m == 0) "${h}h" else "${h}h${m}m"
                 Text(
                     text = hoursText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.Medium
+                    style = NumberStyles.labelSmall,
+                    color = contentColor.copy(alpha = 0.8f)
                 )
             } else {
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Status dot with optional glow for confirmed days
             val glowColor = statusIndicatorColor
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(5.dp)
                     .then(
                         if (glowColor != null && day.status == WeekDayStatus.CONFIRMED_WORK) {
                             Modifier.drawBehind {
