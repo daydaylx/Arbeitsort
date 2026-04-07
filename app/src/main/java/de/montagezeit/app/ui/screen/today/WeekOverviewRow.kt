@@ -1,9 +1,6 @@
 package de.montagezeit.app.ui.screen.today
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -62,9 +59,9 @@ private fun WeekDayChip(
 
     when {
         day.isSelected -> {
-            backgroundColor = MaterialTheme.colorScheme.primary
-            contentColor = MaterialTheme.colorScheme.onPrimary
-            borderColor = Color.Transparent
+            backgroundColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            borderColor = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.BorderAlphaNormal)
         }
         day.isToday -> {
             backgroundColor = MaterialTheme.colorScheme.primaryContainer
@@ -104,7 +101,7 @@ private fun WeekDayChip(
         color = backgroundColor,
         contentColor = contentColor,
         border = if (borderColor != Color.Transparent) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null,
-        shadowElevation = if (day.isSelected) 4.dp else 0.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp),
@@ -139,27 +136,16 @@ private fun WeekDayChip(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Status dot with optional glow for confirmed days
-            val glowColor = statusIndicatorColor
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .then(
-                        if (glowColor != null && day.status == WeekDayStatus.CONFIRMED_WORK) {
-                            Modifier.drawBehind {
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        listOf(glowColor.copy(alpha = 0.35f), Color.Transparent),
-                                        radius = 12.dp.toPx()
-                                    ),
-                                    radius = 12.dp.toPx()
-                                )
-                            }
-                        } else Modifier
-                    )
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(glowColor ?: contentColor.copy(alpha = 0.15f))
-            )
+            if (statusIndicatorColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(statusIndicatorColor)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(6.dp))
+            }
         }
     }
 }
