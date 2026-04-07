@@ -5,12 +5,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -207,8 +205,8 @@ fun HistoryContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = MZTokens.ScreenPadding, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = MZTokens.ScreenPadding, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         stickyHeader(key = "history-controls") {
             Box(
@@ -361,13 +359,12 @@ private fun HistoryMiniFilterBar(
     onPickDate: () -> Unit
 ) {
     MZCard {
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
                 .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterChip(
                 selected = !showCalendar,
@@ -936,25 +933,20 @@ fun EmptyContent(
 fun WeekGroupHeader(
     week: WeekGroup
 ) {
-    val summaryText = buildString {
-        append(stringResource(R.string.history_hours_decimal, week.totalHours))
-        append(" · ")
-        append(
-            pluralStringResource(
-                R.plurals.history_summary_workdays,
-                week.workDaysCount,
-                week.workDaysCount
-            )
-        )
-    }
+    val hoursText = stringResource(R.string.history_hours_decimal, week.totalHours)
+    val workDaysText = pluralStringResource(
+        R.plurals.history_summary_workdays,
+        week.workDaysCount,
+        week.workDaysCount
+    )
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
+            .padding(vertical = 6.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
             shape = RoundedCornerShape(MZTokens.RadiusBadge),
@@ -969,15 +961,22 @@ fun WeekGroupHeader(
             )
         }
         Text(
-            text = summaryText,
-            style = MaterialTheme.typography.bodySmall,
+            text = hoursText,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = workDaysText,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.weight(1f))
         week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-            Text(
-                text = year,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            AssistChip(
+                onClick = {},
+                enabled = false,
+                label = { Text(year) }
             )
         }
     }
@@ -1043,6 +1042,10 @@ fun HistoryEntryItem(
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
     val totalPaidHours = remember(entry, travelLegs) { TimeCalculator.calculatePaidTotalHours(entry, travelLegs) }
+    val hasLocationInfo = remember(entry.dayLocationLabel, entry.morningCapturedAt, entry.eveningCapturedAt) {
+        entry.dayLocationLabel.isNotBlank() || entry.morningCapturedAt != null || entry.eveningCapturedAt != null
+    }
+    val hasTravelInfo = remember(travelLegs) { travelLegs.isNotEmpty() }
 
     // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
@@ -1053,57 +1056,70 @@ fun HistoryEntryItem(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = formatEntryDate(entry.date),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    DayTypeIndicator(dayType = entry.dayType)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatEntryDate(entry.date),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        DayTypeIndicator(dayType = entry.dayType)
+                    }
+                    if (hasLocationInfo) {
+                        LocationSummary(entry = entry)
+                    }
+                    if (hasTravelInfo) {
+                        TravelSummaryRow(travelLegs = travelLegs)
+                    }
                 }
 
-                if (entry.dayType == DayType.WORK || travelMinutes > 0) {
-                    Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (entry.dayType == DayType.WORK || travelMinutes > 0) {
                         val displayHours = if (workHours > 0.0) workHours else totalPaidHours
                         Text(
                             text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-
-                        if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
-                            Text(
-                                text = stringResource(
-                                    R.string.history_entry_total_paid,
-                                    formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (!entry.confirmedWorkDay) {
-                            Text(
-                                text = stringResource(R.string.today_unconfirmed),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
+                    }
+                    if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+                        AssistChip(
+                            onClick = {},
+                            enabled = false,
+                            label = {
+                                Text(
+                                    stringResource(
+                                        R.string.history_entry_total_paid,
+                                        formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
+                                    )
+                                )
+                            }
+                        )
+                    }
+                    if (!entry.confirmedWorkDay) {
+                        SuggestionChip(
+                            onClick = {},
+                            enabled = false,
+                            label = { Text(stringResource(R.string.today_unconfirmed)) }
+                        )
                     }
                 }
             }
-            LocationSummary(entry = entry)
-            TravelSummaryRow(travelLegs = travelLegs)
         }
     }
 }
@@ -1138,37 +1154,28 @@ fun LocationSummary(entry: WorkEntry) {
         }
     )
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = locationLabel,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1
+        )
+        if (checkInSummary.isNotEmpty()) {
             Text(
-                text = stringResource(
-                    R.string.history_day_location_summary,
-                    stringResource(R.string.day_location_label),
-                    locationLabel
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
+                text = checkInSummary.joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Text(
-            text = checkInSummary.ifEmpty {
-                listOf(stringResource(R.string.history_label_no_checkin))
-            }.joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -1188,7 +1195,7 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
 
     if (orderedLegs.isEmpty()) return
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         orderedLegs.forEach { leg ->
             val labelText = when {
                 !leg.startLabel.isNullOrBlank() && !leg.endLabel.isNullOrBlank() ->
@@ -1240,14 +1247,14 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
                     if (summaryText.isNotBlank()) {
                         Text(
                             text = summaryText,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                         )
                     }
                     labelText?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
                         )
                     }
