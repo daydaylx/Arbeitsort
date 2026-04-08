@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList", "MaxLineLength")
+
 package de.montagezeit.app.ui.screen.settings
 
 import androidx.compose.animation.AnimatedVisibility
@@ -46,7 +48,7 @@ internal fun CollapsibleSettingsCard(
     val expandLabel = stringResource(R.string.cd_expand_section, title)
     val collapseLabel = stringResource(R.string.cd_collapse_section, title)
 
-    MZCard(
+    MZAppPanel(
         modifier = modifier.animateContentSize()
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -122,10 +124,23 @@ internal fun SetupSection(
 ) {
     val allHealthy = hasNotificationPermission && isIgnoringBatteryOptimizations
 
-    MZStatusCard(
-        title = stringResource(R.string.settings_setup_title),
-        status = if (allHealthy) StatusType.SUCCESS else StatusType.WARNING
-    ) {
+    MZAppPanel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.settings_setup_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            MZStatusChip(
+                text = if (allHealthy) stringResource(R.string.status_active) else stringResource(R.string.today_action_required),
+                color = if (allHealthy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = stringResource(

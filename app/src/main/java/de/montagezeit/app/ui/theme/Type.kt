@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.sp
 
 private val DisplayFont = FontFamily.SansSerif
 private val BodyFont = FontFamily.SansSerif
+private val MonoFont = FontFamily.Monospace
 
 val Typography = Typography(
     displayLarge = TextStyle(
@@ -17,12 +18,26 @@ val Typography = Typography(
         lineHeight = 36.sp,
         letterSpacing = (-0.5).sp
     ),
+    displayMedium = TextStyle(
+        fontFamily = MonoFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = 0.sp
+    ),
     headlineLarge = TextStyle(
         fontFamily = DisplayFont,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
         letterSpacing = (-0.2).sp
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = DisplayFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
         fontFamily = DisplayFont,
@@ -74,11 +89,11 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = BodyFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 13.sp,
+        fontFamily = MonoFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.1.sp
+        letterSpacing = 1.1.sp
     ),
     labelMedium = TextStyle(
         fontFamily = BodyFont,
@@ -88,11 +103,11 @@ val Typography = Typography(
         letterSpacing = 0.2.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = BodyFont,
+        fontFamily = MonoFont,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        lineHeight = 13.sp,
-        letterSpacing = 0.2.sp
+        lineHeight = 14.sp,
+        letterSpacing = 0.8.sp
     )
 )
 
@@ -104,6 +119,14 @@ object NumberStyles {
         fontSize = 30.sp,
         lineHeight = 36.sp,
         letterSpacing = (-0.5).sp,
+        fontFeatureSettings = "tnum"
+    )
+    val displayMedium = TextStyle(
+        fontFamily = MonoFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum"
     )
     val headlineLarge = TextStyle(
@@ -144,19 +167,19 @@ object NumberStyles {
         fontFeatureSettings = "tnum"
     )
     val labelLarge = TextStyle(
-        fontFamily = BodyFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 13.sp,
+        fontFamily = MonoFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.1.sp,
+        letterSpacing = 1.1.sp,
         fontFeatureSettings = "tnum"
     )
     val labelSmall = TextStyle(
-        fontFamily = BodyFont,
+        fontFamily = MonoFont,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        lineHeight = 13.sp,
-        letterSpacing = 0.2.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.8.sp,
         fontFeatureSettings = "tnum"
     )
 }

@@ -12,7 +12,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * BroadcastReceiver für Zeitänderungen
@@ -43,7 +45,9 @@ class TimeChangeReceiver : BroadcastReceiver() {
                 scope.launch {
                     try {
                         logger.i("TimeChangeReceiver", "Zeitänderung erkannt: ${intent.action}, Reschedule Reminder")
-                        reminderScheduler.scheduleAll()
+                        withTimeoutOrNull(10.seconds) {
+                            reminderScheduler.scheduleAll()
+                        }
                     } catch (e: Exception) {
                         logger.e("TimeChangeReceiver", "Fehler beim Reschedule nach Zeitänderung", e)
                     } finally {

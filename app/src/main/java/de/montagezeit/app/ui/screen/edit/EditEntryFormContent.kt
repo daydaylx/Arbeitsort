@@ -1,6 +1,7 @@
+@file:Suppress("TooManyFunctions", "MaxLineLength", "MagicNumber", "LongMethod", "LongParameterList")
+
 package de.montagezeit.app.ui.screen.edit
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -9,9 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
@@ -24,10 +23,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,18 +37,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.components.DestructiveActionButton
+import de.montagezeit.app.ui.components.MZContentCard
+import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.MZSegmentedControl
 import de.montagezeit.app.ui.components.MZSegmentedOption
+import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
-import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.Formatters
 
 @Composable
@@ -59,26 +57,14 @@ internal fun EditFormSectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(MZTokens.RadiusCard),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(MZTokens.InnerPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content
-        )
-    }
+    MZContentCard(
+        modifier = modifier,
+        content = content
+    )
 }
 
 @Composable
 internal fun EditFormContent(
-    entry: WorkEntry,
     formData: EditFormData,
     validationErrors: List<ValidationError> = emptyList(),
     dailyTargetHours: Double = 8.0,
@@ -389,7 +375,7 @@ internal fun EditWorkTimesSection(
             }
 
             if (onApplyDefaults != null) {
-                TextButton(
+                TertiaryActionButton(
                     onClick = onApplyDefaults,
                     modifier = Modifier.align(Alignment.End)
                 ) {
@@ -510,10 +496,8 @@ internal fun MealAllowanceSection(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold
+    MZSectionHeader(
+        title = text
     )
 }
 

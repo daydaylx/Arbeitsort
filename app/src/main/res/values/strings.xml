@@ -58,6 +58,9 @@
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
     <string name="overview_title">Übersicht</string>
+    <string name="home_shell_today_subtitle">Tagesstatus und nächster Schritt</string>
+    <string name="home_shell_overview_subtitle">Zeitraum, Bilanz und Kennzahlen</string>
+    <string name="home_shell_history_subtitle">Verlauf, Kalender und Bearbeitung</string>
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
@@ -68,7 +71,12 @@
     <string name="today_dashboard_subtitle_open">Eintrag vorhanden, aber noch nicht vollständig bestätigt.</string>
     <string name="today_dashboard_subtitle_empty">Starte mit dem nächsten sinnvollen Schritt für diesen Tag.</string>
     <string name="today_dashboard_empty_hint">Noch kein Eintrag für diesen Tag.</string>
+    <string name="today_empty_notice_title">Tag noch offen</string>
     <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
+    <string name="today_status_metric_label">Status</string>
+    <string name="today_status_panel_support">Arbeitsort, Tagesart und Primäraktion im Blick</string>
+    <string name="today_detail_type_label">Tagesart</string>
+    <string name="today_work_panel_support">Arbeits- und Reisezeit im selben System</string>
     <string name="today_error_unknown">Daten konnten nicht geladen werden</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
@@ -126,6 +134,9 @@
     <string name="overview_balance_positive">Über Soll</string>
     <string name="overview_balance_negative">Unter Soll</string>
     <string name="overview_balance_even">Im Soll</string>
+    <string name="overview_section_metrics_title">Kennzahlen</string>
+    <string name="overview_section_metrics_support">Fahrzeit, Verpflegung und offene Tage im gleichen Panel-System</string>
+    <string name="overview_action_required_title">Prüfung offen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     
@@ -138,6 +149,11 @@
     <string name="settings_title">Einstellungen</string>
     <string name="settings_dashboard_title">App einrichten</string>
     <string name="settings_dashboard_subtitle">Hier findest du die wichtigsten Grundeinstellungen für Arbeitszeit, Erinnerungen und Export.</string>
+    <string name="settings_group_general">Grundlage</string>
+    <string name="settings_group_automation">Automatisierung</string>
+    <string name="settings_group_data">Daten und Export</string>
+    <string name="settings_metric_schedule">Tag</string>
+    <string name="settings_metric_profile">Profil</string>
     <string name="settings_setup_title">Einrichtung</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_battery_optimization">Akku-Optimierung</string>
@@ -200,6 +216,12 @@
     <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_preview">Vorschau</string>
+    <string name="edit_sheet_title_new">Neuen Tag anlegen</string>
+    <string name="edit_sheet_title_existing">Tag bearbeiten</string>
+    <string name="edit_sheet_support">Formular, Validierung und Aktionen folgen derselben Panel-Grammatik wie die Hauptscreens.</string>
+    <string name="edit_sheet_metric_state">Status</string>
+    <string name="edit_sheet_metric_mode">Modus</string>
+    <string name="edit_sheet_metric_unsaved">Ungespeichert</string>
     
     <!-- Labels -->
     <string name="label_work_start">Arbeitsbeginn</string>
@@ -357,6 +379,11 @@
     <string name="history_summary_weeks">Wochen</string>
     <string name="history_empty_title">Keine Einträge vorhanden</string>
     <string name="history_empty_subtitle">Check-in-Einträge erscheinen hier</string>
+    <string name="history_hero_title">Verlauf im selben System</string>
+    <string name="history_hero_support">Kalender, Gruppen und Einträge teilen sich denselben ruhigen Screen-Rahmen.</string>
+    <string name="history_metric_entries">Einträge</string>
+    <string name="history_metric_workdays">Arbeitstage</string>
+    <string name="history_metric_open">Offen</string>
     <string name="history_action_pick_date">Datum wählen</string>
     <string name="history_cd_prev_month">Vorheriger Monat</string>
     <string name="history_cd_next_month">Nächster Monat</string>

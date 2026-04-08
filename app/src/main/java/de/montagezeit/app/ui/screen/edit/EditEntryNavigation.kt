@@ -17,14 +17,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +29,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.theme.MZTokens
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -61,14 +61,14 @@ internal fun DateNavigationRow(
             modifier = Modifier.weight(1f),
             contentAlignment = Alignment.Center
         ) {
-            TextButton(onClick = onPickDate) {
+            SecondaryActionButton(onClick = onPickDate) {
                 Text(
                     text = formatShortDate(date),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
         }
-        TextButton(onClick = onToday) {
+        TertiaryActionButton(onClick = onToday) {
             Text(stringResource(R.string.edit_action_today))
         }
         IconButton(onClick = onNext) {
@@ -116,21 +116,17 @@ internal fun DateNavigationSwipeZone(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EditStickySaveBar(
     isSaving: Boolean,
     onSave: () -> Unit
 ) {
-    Surface(
-        shadowElevation = 2.dp,
-        tonalElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
+    MZAppPanel(
+        emphasized = true
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = MZTokens.ScreenPadding, vertical = 8.dp)
                 .navigationBarsPadding()
                 .imePadding()
         ) {

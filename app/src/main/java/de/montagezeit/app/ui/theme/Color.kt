@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber")
+
 package de.montagezeit.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
@@ -24,9 +26,16 @@ val GlassTertiaryContainer = Color(0xFF17344F)
 val GlassOnDark      = Color(0xFFE6ECEF)
 val GlassOnDarkMuted = Color(0xFFAECDD0)
 
-// Status
-val GlassError          = Color(0xFFFF453A)
+// Status / Semantic Palette
+val Mint500  = Color(0xFF37E3A5)
+val Cyan500  = Color(0xFF43B9FF)
+val Amber500 = Color(0xFFFFC95C)
+val Rose500  = Color(0xFFFF6F7D)
+
+// Status Aliases
+val GlassError   = Rose500
+val GlassWarning = Amber500
+val GlassSuccess = Mint500
+val GlassInfo    = Cyan500
+
 val GlassErrorContainer = Color(0xFF4D000E)
-val GlassSuccess        = Color(0xFF32D74B)
-val GlassWarning        = Color(0xFFFF9F0A)
-val GlassInfo           = Color(0xFF64D2FF)

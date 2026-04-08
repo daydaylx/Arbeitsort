@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName", "MagicNumber")
+
 package de.montagezeit.app.ui.components
 
 import androidx.compose.foundation.background

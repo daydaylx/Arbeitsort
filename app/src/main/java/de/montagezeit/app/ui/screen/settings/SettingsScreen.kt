@@ -1,3 +1,5 @@
+@file:Suppress("LongMethod", "MagicNumber")
+
 package de.montagezeit.app.ui.screen.settings
 
 import android.Manifest
@@ -10,23 +12,21 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +40,7 @@ import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.Duration
 
 /**
  * Verbesserter SettingsScreen mit besserer Accessibility und neuen Komponenten
@@ -48,7 +49,7 @@ import java.time.LocalTime
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onOpenEditSheet: (LocalDate, () -> Unit) -> Unit
+    onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -93,99 +94,82 @@ fun SettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        modifier = Modifier.semantics { heading() }
-                    )
-                }
-            )
+    MZScreenScaffold(
+        title = stringResource(R.string.settings_title),
+        navigationIcon = {
+            FilledTonalIconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.action_close)
+                )
+            }
         },
         snackbarHost = { MZSnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        MZPageBackground(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues
-        ) {
-            if (settings != null) {
-                SettingsContent(
-                    settings = settings!!,
-                    uiState = uiState,
-                    onUpdateMorningWindow = { startH, startM, endH, endM ->
-                        viewModel.updateMorningWindow(startH, startM, endH, endM)
-                    },
-                    onUpdateEveningWindow = { startH, startM, endH, endM ->
-                        viewModel.updateEveningWindow(startH, startM, endH, endM)
-                    },
-                    onUpdateWorkStart = { viewModel.updateWorkStart(it) },
-                    onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
-                    onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
-                    onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
-                    onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
-                    onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
-                    onUpdateFallbackTime = { viewModel.updateFallbackTime(it) },
-                    onUpdateDailyEnabled = { viewModel.updateDailyReminderEnabled(it) },
-                    onUpdateDailyTime = { viewModel.updateDailyReminderTime(it) },
-                    onUpdateAutoOffWeekends = { viewModel.updateAutoOffWeekends(it) },
-                    onUpdateAutoOffHolidays = { viewModel.updateAutoOffHolidays(it) },
-                    onAddHolidayDate = { viewModel.addHolidayDate(it) },
-                    onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
-                    onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
-                    onExportCsvCurrentMonth = { viewModel.exportCsvCurrentMonth() },
-                    onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
-                    onExportCsvLast30Days = { viewModel.exportCsvLast30Days() },
-                    onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
-                    onExportCsvCustomRange = { start, end -> viewModel.exportCsvCustomRange(start, end) },
-                    onOpenExportPreview = { start, end ->
-                        previewRange = start to end
-                        showPreviewSheet = true
-                    },
-                    onUpdatePdfSettings = { name, company, project, personnel ->
-                        viewModel.updatePdfSettings(name, company, project, personnel)
-                    },
-                    onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
-                    onResetExportState = { viewModel.resetExportState() },
-                    hasNotificationPermission = hasNotificationPermission,
-                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-                    onRequestNotificationPermission = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    },
-                    onOpenNotificationSettings = { openNotificationSettings(context) },
-                    onOpenBatterySettings = { openBatterySettings(context) },
-                    onSendTestReminder = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.sendTestReminder()
-                    },
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    MZLoadingState(message = stringResource(R.string.loading))
-                }
+        if (settings != null) {
+            SettingsContent(
+                settings = settings!!,
+                uiState = uiState,
+                onUpdateMorningWindow = { startH, startM, endH, endM ->
+                    viewModel.updateMorningWindow(startH, startM, endH, endM)
+                },
+                onUpdateEveningWindow = { startH, startM, endH, endM ->
+                    viewModel.updateEveningWindow(startH, startM, endH, endM)
+                },
+                onUpdateWorkStart = { viewModel.updateWorkStart(it) },
+                onUpdateWorkEnd = { viewModel.updateWorkEnd(it) },
+                onUpdateBreakMinutes = { viewModel.updateBreakMinutes(it) },
+                onUpdateMorningEnabled = { viewModel.updateMorningReminderEnabled(it) },
+                onUpdateEveningEnabled = { viewModel.updateEveningReminderEnabled(it) },
+                onUpdateFallbackEnabled = { viewModel.updateFallbackReminderEnabled(it) },
+                onUpdateFallbackTime = { viewModel.updateFallbackTime(it) },
+                onUpdateDailyEnabled = { viewModel.updateDailyReminderEnabled(it) },
+                onUpdateDailyTime = { viewModel.updateDailyReminderTime(it) },
+                onUpdateAutoOffWeekends = { viewModel.updateAutoOffWeekends(it) },
+                onUpdateAutoOffHolidays = { viewModel.updateAutoOffHolidays(it) },
+                onAddHolidayDate = { viewModel.addHolidayDate(it) },
+                onRemoveHolidayDate = { viewModel.removeHolidayDate(it) },
+                onExportPdfCurrentMonth = { viewModel.exportPdfCurrentMonth() },
+                onExportCsvCurrentMonth = { viewModel.exportCsvCurrentMonth() },
+                onExportPdfLast30Days = { viewModel.exportPdfLast30Days() },
+                onExportCsvLast30Days = { viewModel.exportCsvLast30Days() },
+                onExportPdfCustomRange = { start, end -> viewModel.exportPdfCustomRange(start, end) },
+                onExportCsvCustomRange = { start, end -> viewModel.exportCsvCustomRange(start, end) },
+                onOpenExportPreview = { start, end ->
+                    previewRange = start to end
+                    showPreviewSheet = true
+                },
+                onUpdatePdfSettings = { name, company, project, personnel ->
+                    viewModel.updatePdfSettings(name, company, project, personnel)
+                },
+                onUpdateDailyTargetHours = { viewModel.updateDailyTargetHours(it) },
+                onResetExportState = { viewModel.resetExportState() },
+                hasNotificationPermission = hasNotificationPermission,
+                isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                onRequestNotificationPermission = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+                onOpenNotificationSettings = { openNotificationSettings(context) },
+                onOpenBatterySettings = { openBatterySettings(context) },
+                onSendTestReminder = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.sendTestReminder()
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(paddingValues)
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                MZLoadingState(message = stringResource(R.string.loading))
             }
         }
-    }
-
-    val activeRange = previewRange
-    if (showPreviewSheet && activeRange != null) {
-        ExportPreviewBottomSheet(
-            range = activeRange,
-            onDismiss = { showPreviewSheet = false },
-            onOpenEditSheet = onOpenEditSheet
-        )
     }
 }
 
@@ -238,11 +222,56 @@ private fun SettingsContent(
         settings.dailyReminderEnabled
     ).count { it }
     val reminderError = (uiState as? SettingsUiState.ReminderError)?.message
+    val defaultWorkMinutes = remember(settings.workStart, settings.workEnd, settings.breakMinutes) {
+        (Duration.between(settings.workStart, settings.workEnd).toMinutes().toInt() - settings.breakMinutes)
+            .coerceAtLeast(0)
+    }
+    val exportProfileReady = settings.pdfEmployeeName.orEmpty().isNotBlank()
 
     Column(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        MZHeroPanel {
+            MZSectionIntro(
+                eyebrow = stringResource(R.string.settings_title),
+                title = stringResource(R.string.settings_dashboard_title),
+                supportingText = stringResource(R.string.settings_dashboard_subtitle)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MZMetricChip(
+                    label = stringResource(R.string.settings_reminders),
+                    value = "$enabledReminderCount/4",
+                    modifier = Modifier.weight(1f)
+                )
+                MZMetricChip(
+                    label = stringResource(R.string.settings_metric_schedule),
+                    value = formatMinutesAsHoursMinutes(defaultWorkMinutes),
+                    modifier = Modifier.weight(1f),
+                    accentColor = MaterialTheme.colorScheme.secondary
+                )
+                MZMetricChip(
+                    label = stringResource(R.string.settings_metric_profile),
+                    value = if (exportProfileReady) {
+                        stringResource(R.string.status_active)
+                    } else {
+                        stringResource(R.string.settings_export_name_missing)
+                    },
+                    modifier = Modifier.weight(1f),
+                    accentColor = if (exportProfileReady) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    }
+                )
+            }
+        }
+
+        MZSectionHeader(title = stringResource(R.string.settings_group_general))
+
         SetupSection(
             hasNotificationPermission = hasNotificationPermission,
             isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
@@ -272,6 +301,8 @@ private fun SettingsContent(
             onExpandedChange = { overtimeExpanded = it },
             onUpdateDailyTarget = onUpdateDailyTargetHours
         )
+
+        MZSectionHeader(title = stringResource(R.string.settings_group_automation))
 
         ReminderSettingsSection(
             morningReminderEnabled = settings.morningReminderEnabled,
@@ -309,6 +340,8 @@ private fun SettingsContent(
             onExpandedChange = { nonWorkingExpanded = it }
         )
 
+        MZSectionHeader(title = stringResource(R.string.settings_group_data))
+
         ExportSection(
             uiState = uiState,
             onExportPdfCurrentMonth = onExportPdfCurrentMonth,
@@ -328,7 +361,7 @@ private fun SettingsContent(
             onExpandedChange = { exportExpanded = it }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -370,5 +403,15 @@ private fun openBatterySettings(context: Context) {
     }
     if (intent.resolveActivity(context.packageManager) != null) {
         context.startActivity(intent)
+    }
+}
+
+private fun formatMinutesAsHoursMinutes(totalMinutes: Int): String {
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (minutes == 0) {
+        "${hours}h"
+    } else {
+        "${hours}h ${minutes}m"
     }
 }

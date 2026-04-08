@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.components.MZHeroPanel
+import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
@@ -81,7 +83,7 @@ fun ExportPreviewBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
     ) {
         Column(
             modifier = Modifier
@@ -195,11 +197,13 @@ fun ExportPreviewBottomSheet(
 @Composable
 private fun PreviewHeader(text: String) {
     if (text.isBlank()) return
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold
-    )
+    MZHeroPanel {
+        MZSectionIntro(
+            eyebrow = stringResource(R.string.settings_export),
+            title = stringResource(R.string.action_preview),
+            supportingText = text
+        )
+    }
 }
 
 @Composable

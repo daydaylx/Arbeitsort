@@ -107,7 +107,7 @@ class TodayViewModel @Inject constructor(
     val dailyCheckInAllowancePreviewCents: StateFlow<Int> = dialogsStateHolder.dailyCheckInAllowancePreviewCents
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Eagerly,
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = MealAllowanceCalculator.BASE_NORMAL_CENTS
         )
 

@@ -1,3 +1,5 @@
+@file:Suppress("LongMethod", "MaxLineLength")
+
 package de.montagezeit.app.ui.screen.edit
 
 import androidx.compose.foundation.BorderStroke

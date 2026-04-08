@@ -2,26 +2,22 @@ package de.montagezeit.app.ui.screen.edit
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
+import de.montagezeit.app.ui.components.MZAlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.DestructiveActionButton
+import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
 
 @Composable
@@ -31,46 +27,30 @@ internal fun EditValidationCard(
     modifier: Modifier = Modifier
 ) {
     if (validationErrors.isEmpty()) return
+    val errorMessages = validationErrors.map { stringResource(it.messageRes) }
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        ),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-                Text(
-                    text = stringResource(R.string.edit_validation_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
+    MZInlineNotice(
+        title = stringResource(R.string.edit_validation_title),
+        message = errorMessages.joinToString("\n"),
+        type = StatusType.ERROR,
+        modifier = modifier.fillMaxWidth(),
+        action = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                errorMessages.forEach { errorMessage ->
+                    Text(
+                        text = "• $errorMessage",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-
-            validationErrors.forEach { error ->
-                Text(
-                    text = "• ${stringResource(error.messageRes)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-
             TertiaryActionButton(onClick = onDismiss) {
-                Text(stringResource(R.string.edit_action_ok))
+                Text(
+                    stringResource(R.string.edit_action_ok)
+                )
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -79,7 +59,7 @@ internal fun DeleteDayConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = {
             if (!isLoading) {
                 onDismiss()
@@ -118,7 +98,7 @@ internal fun DiscardChangesDialog(
     onDiscard: () -> Unit,
     onKeepEditing: () -> Unit
 ) {
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = onKeepEditing,
         title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
         text = {

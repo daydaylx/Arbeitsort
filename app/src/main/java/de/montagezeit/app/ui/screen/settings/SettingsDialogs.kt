@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import de.montagezeit.app.ui.components.MZAlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +40,7 @@ fun PdfSettingsDialog(
     var project by remember { mutableStateOf(initialProject.orEmpty()) }
     var personnelNumber by remember { mutableStateOf(initialPersonnelNumber.orEmpty()) }
 
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pdf_settings_title)) },
         text = {
@@ -124,7 +124,7 @@ fun ExportRangeDialog(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pdf_custom_range_title)) },
         text = {
