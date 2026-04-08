@@ -11,6 +11,13 @@ The binding references for behavior and architecture are:
 
 When implementation changes make either document stale, update the docs in the same change. Files under `docs/ARCHIVE/` are historical and should not be refreshed unless the task explicitly targets archived material.
 
+For AI-assisted work:
+
+- `AGENTS.md` is the canonical repo instruction set for Codex-style agents.
+- `CLAUDE.md` and `.claude/*` are compatibility surfaces and should stay thinner than `AGENTS.md`.
+- Repo-local Codex plugin and skills live under `plugins/montagezeit-android/`.
+- Prefer GitHub as the only external connector for PR and CI workflows; keep Android implementation work local and shell-first.
+
 ## Local Setup
 
 Prerequisites:

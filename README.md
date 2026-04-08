@@ -139,6 +139,7 @@ Optional auf Gerät/Emulator:
 - `CONTRIBUTING.md` beschreibt den lokalen Setup- und Review-Workflow.
 - `README_ANDROID_DEV.md` beschreibt Geräte-Deployment, `adb`-Flows und VS-Code-Tasks.
 - `AGENTS.md` bündelt die repo-spezifischen Arbeitsregeln für Coding-Agents.
+- Repo-lokale Codex-Plugin- und Skill-Metadaten liegen unter `plugins/montagezeit-android/` sowie `.agents/plugins/marketplace.json`; fuer PR- und CI-Arbeit ist GitHub der bevorzugte externe Connector, die Android-Entwicklung bleibt lokal shell-zentriert.
 
 ## APK-Update ohne Datenverlust
 
