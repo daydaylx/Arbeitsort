@@ -29,7 +29,7 @@ class CsvExporterLogicTest {
         val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
         val isWorkDay = entry.dayType == DayType.WORK
         val dayTypeLabel = when (entry.dayType) {
-            DayType.COMP_TIME -> "Ü-Abbau"
+            DayType.COMP_TIME -> "Ausgleich"
             else -> entry.dayType.name
         }
         return buildString {
@@ -214,7 +214,7 @@ class CsvExporterLogicTest {
     fun `COMP_TIME Tag hat leere Zeitfelder`() {
         val line = buildCsvLine(entry(dayType = DayType.COMP_TIME))
         val cols = line.trimEnd('\n').split(";")
-        assertEquals("Ü-Abbau", cols[1])
+        assertEquals("Ausgleich", cols[1])
         assertEquals("", cols[4])
         assertEquals("", cols[5])
         assertEquals("", cols[6])

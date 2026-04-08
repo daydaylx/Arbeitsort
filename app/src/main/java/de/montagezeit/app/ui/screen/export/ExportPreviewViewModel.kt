@@ -5,11 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -155,7 +155,7 @@ sealed class PreviewState {
 
 @HiltViewModel
 class ExportPreviewViewModel @Inject constructor(
-    private val workEntryDao: WorkEntryDao,
+    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
     private val reminderSettingsManager: ReminderSettingsManager,
     private val pdfExporter: PdfExporter
 ) : ViewModel() {
@@ -326,7 +326,7 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     private suspend fun loadEntries(range: DateRange): List<WorkEntryWithTravelLegs> {
-        val entries = workEntryDao.getByDateRangeWithTravel(range.start, range.end)
+        val entries = getWorkEntriesWithTravelByDateRange(range.start, range.end)
             .filter(::isStatisticsEligible)
         cachedPreviewEntries = CachedPreviewEntries(range = range, entries = entries)
         return entries

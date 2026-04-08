@@ -1,3 +1,5 @@
+@file:Suppress("LongMethod", "CyclomaticComplexMethod", "MaxLineLength")
+
 package de.montagezeit.app.ui.screen.history
 
 import androidx.compose.animation.animateContentSize
@@ -5,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -34,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.text.font.FontWeight
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.NumberStyles
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -100,73 +105,44 @@ fun HistoryScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                title = { Text(stringResource(R.string.history_title)) },
-                actions = {
-                    IconButton(
-                        onClick = { onOpenEditSheet(LocalDate.now()) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Today,
-                            contentDescription = stringResource(R.string.cd_edit_today)
-                        )
-                    }
-                    IconButton(
-                        onClick = { showBatchEditDialog = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = stringResource(R.string.cd_batch_edit)
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        MZPageBackground(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                when (uiState) {
-                    is HistoryUiState.Loading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (uiState) {
+            is HistoryUiState.Loading -> {
+                MZLoadingState(
+                    message = stringResource(R.string.loading),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
-                    is HistoryUiState.Success -> {
-                        val successState = uiState as HistoryUiState.Success
-                        HistoryContent(
-                            weeks = successState.weeks,
-                            months = successState.months,
-                            entriesByDate = successState.entriesByDate,
-                            travelLegsByDate = successState.travelLegsByDate,
-                            onEntryClick = onOpenEditSheet,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+            is HistoryUiState.Success -> {
+                val successState = uiState as HistoryUiState.Success
+                HistoryContent(
+                    weeks = successState.weeks,
+                    months = successState.months,
+                    entriesByDate = successState.entriesByDate,
+                    travelLegsByDate = successState.travelLegsByDate,
+                    onEntryClick = onOpenEditSheet,
+                    onOpenBatchEdit = { showBatchEditDialog = true },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-                    is HistoryUiState.Error -> {
-                        ErrorContent(
-                            message = (uiState as HistoryUiState.Error).message.asString(context),
-                            onRetry = { viewModel.loadHistory() },
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
+            is HistoryUiState.Error -> {
+                MZErrorState(
+                    message = (uiState as HistoryUiState.Error).message.asString(context),
+                    onRetry = { viewModel.loadHistory() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
+
+        MZSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = MZTokens.ScreenPadding, vertical = 12.dp)
+        )
     }
 
     if (showBatchEditDialog) {
@@ -187,6 +163,7 @@ fun HistoryContent(
     entriesByDate: Map<LocalDate, WorkEntry>,
     travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
     onEntryClick: (java.time.LocalDate) -> Unit,
+    onOpenBatchEdit: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
@@ -195,8 +172,11 @@ fun HistoryContent(
     var calendarMode by rememberSaveable(stateSaver = calendarModeSaver) { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by rememberSaveable(stateSaver = yearMonthSaver) { mutableStateOf(YearMonth.now()) }
     var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
-    val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
-    val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }
+    val entries = remember(entriesByDate) { entriesByDate.values.sortedByDescending(WorkEntry::date) }
+    val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
+    val unconfirmedCount = remember(entries) {
+        entries.count { it.dayType == DayType.WORK && !it.confirmedWorkDay }
+    }
     val hasGroupedContent = weeks.isNotEmpty() || months.isNotEmpty()
     val openEntryForDate: (LocalDate) -> Unit = { date ->
         selectedDate = date
@@ -210,11 +190,47 @@ fun HistoryContent(
             .padding(horizontal = MZTokens.ScreenPadding, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item(key = "history-hero") {
+            MZHeroPanel {
+                MZSectionIntro(
+                    eyebrow = stringResource(R.string.history_title),
+                    title = stringResource(R.string.history_hero_title),
+                    supportingText = stringResource(R.string.history_hero_support)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_entries),
+                        value = entries.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_workdays),
+                        value = workEntryCount.toString(),
+                        modifier = Modifier.weight(1f),
+                        accentColor = MaterialTheme.colorScheme.secondary
+                    )
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_open),
+                        value = unconfirmedCount.toString(),
+                        modifier = Modifier.weight(1f),
+                        accentColor = if (unconfirmedCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.tertiary
+                        }
+                    )
+                }
+            }
+        }
+
         stickyHeader(key = "history-controls") {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
                     .padding(bottom = 8.dp)
             ) {
                 HistoryMiniFilterBar(
@@ -225,7 +241,8 @@ fun HistoryContent(
                     onShowCalendarChange = { showCalendar = it },
                     onCalendarModeChange = { calendarMode = it },
                     onShowMonthsChange = { showMonths = it },
-                    onPickDate = { showDatePicker = true }
+                    onPickDate = { showDatePicker = true },
+                    onOpenBatchEdit = onOpenBatchEdit
                 )
             }
         }
@@ -235,7 +252,7 @@ fun HistoryContent(
         when {
             showCalendar -> {
                 item(key = "calendar") {
-                    MZCard {
+                    MZAppPanel {
                         if (calendarMode == CalendarMode.MONTH) {
                             CalendarView(
                                 month = selectedMonth,
@@ -263,20 +280,7 @@ fun HistoryContent(
                         modifier = Modifier.fillMaxWidth(),
                         title = stringResource(R.string.history_empty_title),
                         subtitle = stringResource(R.string.history_empty_subtitle),
-                        icon = Icons.Default.History,
-                        action = {
-                            PrimaryActionButton(
-                                onClick = { showDatePicker = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(stringResource(R.string.history_action_add_past_day))
-                            }
-                        }
+                        icon = Icons.Default.History
                     )
                 }
             }
@@ -358,62 +362,69 @@ private fun HistoryMiniFilterBar(
     onShowCalendarChange: (Boolean) -> Unit,
     onCalendarModeChange: (CalendarMode) -> Unit,
     onShowMonthsChange: (Boolean) -> Unit,
-    onPickDate: () -> Unit
+    onPickDate: () -> Unit,
+    onOpenBatchEdit: () -> Unit = {}
 ) {
-    MZCard {
+    MZAppPanel {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
                 .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            FilterChip(
-                selected = !showCalendar,
-                onClick = { onShowCalendarChange(false) },
-                label = { Text(stringResource(R.string.history_summary_list)) }
-            )
-            FilterChip(
-                selected = showCalendar,
-                onClick = { onShowCalendarChange(true) },
-                label = { Text(stringResource(R.string.history_summary_calendar)) }
-            )
-
-            if (showCalendar) {
-                FilterChip(
-                    selected = calendarMode == CalendarMode.WEEK,
-                    onClick = { onCalendarModeChange(CalendarMode.WEEK) },
-                    label = { Text(stringResource(R.string.history_summary_week)) }
-                )
-                FilterChip(
-                    selected = calendarMode == CalendarMode.MONTH,
-                    onClick = { onCalendarModeChange(CalendarMode.MONTH) },
-                    label = { Text(stringResource(R.string.history_summary_month)) }
-                )
-            } else if (canToggleMonths) {
-                FilterChip(
-                    selected = !showMonths,
-                    onClick = { onShowMonthsChange(false) },
-                    label = { Text(stringResource(R.string.history_summary_weeks)) }
-                )
-                FilterChip(
-                    selected = showMonths,
-                    onClick = { onShowMonthsChange(true) },
-                    label = { Text(stringResource(R.string.history_summary_months)) }
+            Box(modifier = Modifier.width(190.dp)) {
+                MZSegmentedControl(
+                    options = listOf(
+                        MZSegmentedOption(false, stringResource(R.string.history_summary_list)),
+                        MZSegmentedOption(true, stringResource(R.string.history_summary_calendar))
+                    ),
+                    selectedValue = showCalendar,
+                    onValueSelected = onShowCalendarChange
                 )
             }
 
-            AssistChip(
-                onClick = onPickDate,
-                label = { Text(stringResource(R.string.history_action_pick_date)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = stringResource(R.string.history_action_pick_date)
+            if (showCalendar) {
+                Box(modifier = Modifier.width(190.dp)) {
+                    MZSegmentedControl(
+                        options = listOf(
+                            MZSegmentedOption(CalendarMode.WEEK, stringResource(R.string.history_summary_week)),
+                            MZSegmentedOption(CalendarMode.MONTH, stringResource(R.string.history_summary_month))
+                        ),
+                        selectedValue = calendarMode,
+                        onValueSelected = onCalendarModeChange
                     )
                 }
-            )
+            } else if (canToggleMonths) {
+                Box(modifier = Modifier.width(210.dp)) {
+                    MZSegmentedControl(
+                        options = listOf(
+                            MZSegmentedOption(false, stringResource(R.string.history_summary_weeks)),
+                            MZSegmentedOption(true, stringResource(R.string.history_summary_months))
+                        ),
+                        selectedValue = showMonths,
+                        onValueSelected = onShowMonthsChange
+                    )
+                }
+            }
+
+            SecondaryActionButton(onClick = onPickDate) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text(stringResource(R.string.history_action_pick_date))
+            }
+
+            TertiaryActionButton(onClick = onOpenBatchEdit) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text(stringResource(R.string.cd_batch_edit))
+            }
         }
     }
 }
@@ -577,7 +588,7 @@ fun CalendarDayCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(MZTokens.RadiusSmall)
     val containerColor = when {
         !day.inMonth -> MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
         entry?.dayType == DayType.OFF -> MaterialTheme.colorScheme.secondaryContainer
@@ -684,12 +695,12 @@ fun CalendarDayCell(
 @Composable
 fun StatusDot(
     active: Boolean,
-    activeColor: androidx.compose.ui.graphics.Color
+    activeColor: Color
 ) {
     val color = if (active) {
         activeColor
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MZTokens.AlphaDisabled)
     }
     Box(
         modifier = Modifier
@@ -721,7 +732,7 @@ fun BatchEditDialog(
     val hasSelection = applyDayType || applyDefaults || applyNote
     val canApply = validRange && hasSelection && !isSubmitting
 
-    AlertDialog(
+    MZAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.history_batch_title)) },
         text = {
@@ -884,101 +895,55 @@ fun BatchEditDialog(
 }
 
 @Composable
-fun EmptyContent(
-    modifier: Modifier = Modifier,
-    onAddPastDay: () -> Unit = {},
-    showAddButton: Boolean = true,
-    title: String = stringResource(R.string.history_empty_title),
-    subtitle: String = stringResource(R.string.history_empty_subtitle)
-) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.History,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        if (showAddButton) {
-            Spacer(modifier = Modifier.height(24.dp))
-            PrimaryActionButton(
-                onClick = onAddPastDay,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(stringResource(R.string.history_action_add_past_day))
-            }
-        }
-    }
-}
-
-@Composable
 fun WeekGroupHeader(
     week: WeekGroup
 ) {
-    val summaryText = buildString {
-        append(stringResource(R.string.history_hours_decimal, week.totalHours))
-        append(" · ")
-        append(
-            pluralStringResource(
-                R.plurals.history_summary_workdays,
-                week.workDaysCount,
-                week.workDaysCount
-            )
-        )
-    }
-
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(MZTokens.RadiusBadge),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            Text(
-                text = "KW ${week.week}",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        }
-        Text(
-            text = summaryText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        MZSectionHeader(
+            title = stringResource(R.string.history_week_header, week.week, "", "").substringBefore("·").trim()
         )
-        week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-            Text(
-                text = year,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
+        
+        MZAppPanel(emphasized = false) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MZStatusChip(
+                    text = "KW ${week.week}",
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.history_hours_decimal, week.totalHours),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.history_summary_workdays,
+                            week.workDaysCount,
+                            week.workDaysCount
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                    Text(
+                        text = year,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
@@ -987,53 +952,55 @@ fun WeekGroupHeader(
 fun MonthGroupHeader(
     month: MonthGroup
 ) {
-    val summaryText = buildString {
-        append(stringResource(R.string.history_hours_decimal, month.totalHours))
-        append(" · ")
-        append(
-            pluralStringResource(
-                R.plurals.history_summary_workdays,
-                month.workDaysCount,
-                month.workDaysCount
-            )
-        )
-    }
-
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(MZTokens.RadiusBadge),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            Text(
-                text = month.displayText,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        }
-        Text(
-            text = summaryText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-            Text(
-                text = year,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
+        MZSectionHeader(title = month.displayText)
+        
+        MZAppPanel(emphasized = false) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MZStatusChip(
+                    text = month.displayText,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.history_hours_decimal, month.totalHours),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.history_summary_workdays,
+                            month.workDaysCount,
+                            month.workDaysCount
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                    Text(
+                        text = year,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HistoryEntryItem(
     entry: WorkEntry,
@@ -1043,17 +1010,53 @@ fun HistoryEntryItem(
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
     val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
     val totalPaidHours = remember(entry, travelLegs) { TimeCalculator.calculatePaidTotalHours(entry, travelLegs) }
-
-    // Format strings for hour formatting (resolved once to avoid @Composable calls in string templates)
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
+    val locationLabel = entry.dayLocationLabel.ifBlank {
+        stringResource(R.string.today_day_location_unset)
+    }
+    var dragAccum by remember(entry.date) { mutableStateOf(0f) }
+    
+    val statusChipInfo: Pair<String, Color>? = when {
+        !entry.confirmedWorkDay && entry.dayType == DayType.WORK -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
+        entry.dayType == DayType.OFF -> stringResource(R.string.history_day_type_off) to MaterialTheme.colorScheme.outline
+        entry.dayType == DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time) to MaterialTheme.colorScheme.secondary
+        else -> null
+    }
 
-    MZCard(
-        onClick = { onEntryClick(entry.date) }
+    val travelSummary = remember(travelLegs) {
+        travelLegs
+            .sortedBy(TravelLeg::sortOrder)
+            .firstOrNull()
+            ?.let { leg ->
+                listOfNotNull(
+                    leg.startLabel?.takeIf { it.isNotBlank() },
+                    leg.endLabel?.takeIf { it.isNotBlank() }
+                ).joinToString(" → ")
+            }
+            .orEmpty()
+    }
+
+    MZAppPanel(
+        modifier = Modifier
+            .clickable { onEntryClick(entry.date) }
+            .pointerInput(entry.date) {
+                val swipeThresholdPx = 52.dp.toPx()
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                    onDragEnd = {
+                        if (kotlin.math.abs(dragAccum) > swipeThresholdPx) {
+                            onEntryClick(entry.date)
+                        }
+                        dragAccum = 0f
+                    },
+                    onDragCancel = { dragAccum = 0f }
+                )
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1061,49 +1064,72 @@ fun HistoryEntryItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = formatEntryDate(entry.date),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    DayTypeIndicator(dayType = entry.dayType)
+                    if (entry.dayType == DayType.WORK) {
+                        Icon(
+                            imageVector = Icons.Default.Work,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaSecondary),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 if (entry.dayType == DayType.WORK || travelMinutes > 0) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        val displayHours = if (workHours > 0.0) workHours else totalPaidHours
-                        Text(
-                            text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
-                            Text(
-                                text = stringResource(
-                                    R.string.history_entry_total_paid,
-                                    formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (!entry.confirmedWorkDay) {
-                            Text(
-                                text = stringResource(R.string.today_unconfirmed),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
-                    }
+                    val displayHours = if (workHours > 0.0) workHours else totalPaidHours
+                    Text(
+                        text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
+                        style = NumberStyles.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
-            LocationSummary(entry = entry)
-            TravelSummaryRow(travelLegs = travelLegs)
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                MZStatusChip(
+                    text = locationLabel,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                statusChipInfo?.let { (text, color) ->
+                    MZStatusChip(
+                        text = text,
+                        color = color
+                    )
+                }
+
+                if (travelSummary.isNotBlank()) {
+                    MZStatusChip(
+                        text = travelSummary,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+
+            if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01 && travelSummary.isBlank()) {
+                Text(
+                    text = stringResource(
+                        R.string.history_entry_total_paid,
+                        formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                )
+            }
         }
     }
 }
@@ -1231,7 +1257,7 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
                 Icon(
                     imageVector = Icons.Default.DirectionsCar,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary),
                     modifier = Modifier
                         .size(14.dp)
                         .padding(top = 2.dp)
@@ -1241,7 +1267,7 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
                         Text(
                             text = summaryText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary)
                         )
                     }
                     labelText?.let {

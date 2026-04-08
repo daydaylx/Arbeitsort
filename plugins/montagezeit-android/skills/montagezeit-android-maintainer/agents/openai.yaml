@@ -1,0 +1,7 @@
+interface:
+  display_name: "MontageZeit Android"
+  short_description: "Repo workflow for Android maintenance"
+  default_prompt: "Use $montagezeit-android-maintainer to inspect, change, and verify this MontageZeit Android task."
+
+policy:
+  allow_implicit_invocation: true

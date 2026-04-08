@@ -1,34 +1,36 @@
+@file:Suppress("LongMethod")
+
 package de.montagezeit.app.ui.navigation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.components.MZHomeShellScaffold
+import de.montagezeit.app.ui.components.MZScreenScaffold
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
 import de.montagezeit.app.ui.screen.history.HistoryScreen
@@ -38,7 +40,26 @@ import de.montagezeit.app.ui.screen.today.TodayScreen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
+private data class HomePageChrome(
+    val titleRes: Int,
+    val subtitleRes: Int
+)
+
+private val homePages = listOf(
+    HomePageChrome(
+        titleRes = R.string.today_title,
+        subtitleRes = R.string.home_shell_today_subtitle
+    ),
+    HomePageChrome(
+        titleRes = R.string.overview_title,
+        subtitleRes = R.string.home_shell_overview_subtitle
+    ),
+    HomePageChrome(
+        titleRes = R.string.history_title,
+        subtitleRes = R.string.home_shell_history_subtitle
+    )
+)
+
 @Composable
 fun MontageZeitNavGraph(
     editRequestDate: String? = null,
@@ -46,7 +67,6 @@ fun MontageZeitNavGraph(
 ) {
     val navController = rememberNavController()
 
-    // Edit Sheet State
     var showEditSheet by rememberSaveable { mutableStateOf(false) }
     var editDate by rememberSaveable { mutableStateOf<String?>(null) }
     var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
@@ -72,116 +92,35 @@ fun MontageZeitNavGraph(
         modifier = Modifier.fillMaxSize()
     ) {
         composable("home") {
-            val pagerState = rememberPagerState(pageCount = { 3 })
+            val pagerState = rememberPagerState(pageCount = { homePages.size })
             val coroutineScope = rememberCoroutineScope()
+            val currentPage = homePages[pagerState.currentPage]
 
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = when (pagerState.currentPage) {
-                                    0 -> stringResource(R.string.today_title)
-                                    1 -> stringResource(R.string.overview_title)
-                                    else -> stringResource(R.string.history_title)
-                                },
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        actions = {
-                            IconButton(onClick = { navController.navigate("settings") }) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = stringResource(R.string.settings_title)
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
-                        )
-                    )
+            MZHomeShellScaffold(
+                title = stringResource(currentPage.titleRes),
+                subtitle = stringResource(currentPage.subtitleRes),
+                tabs = homePages.map { stringResource(it.titleRes) },
+                selectedTabIndex = pagerState.currentPage,
+                onTabSelected = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
                 },
-                bottomBar = {
-                    val navBarShape = RoundedCornerShape(MZTokens.RadiusCard)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .clip(navBarShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f))
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outline.copy(
-                                    alpha = MZTokens.BorderAlphaNormal
-                                ),
-                                shape = navBarShape
-                            )
-                    ) {
-                        val tabs = listOf(
-                            R.string.today_title,
-                            R.string.overview_title,
-                            R.string.history_title
+                actions = {
+                    FilledTonalIconButton(onClick = { navController.navigate("settings") }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings_title)
                         )
-                        BoxWithConstraints(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            val tabWidth = maxWidth / tabs.size
-                            val indicatorOffset by animateDpAsState(
-                                targetValue = tabWidth * pagerState.currentPage,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMedium
-                                ),
-                                label = "tab_indicator"
-                            )
-                            // Sliding pill behind labels
-                            Box(
-                                modifier = Modifier
-                                    .offset(x = indicatorOffset)
-                                    .width(tabWidth)
-                                    .height(40.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
-                            )
-                            // Tab labels on top
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                tabs.forEachIndexed { index, titleRes ->
-                                    val isSelected = pagerState.currentPage == index
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(40.dp)
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null
-                                            ) {
-                                                coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(index)
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = stringResource(titleRes),
-                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
-            ) { paddingValues ->
+            ) { paddingValues: PaddingValues ->
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    beyondViewportPageCount = 1,
+                    contentPadding = paddingValues
                 ) { page ->
                     when (page) {
                         0 -> TodayScreen(
@@ -190,6 +129,7 @@ fun MontageZeitNavGraph(
                                 coroutineScope.launch { pagerState.animateScrollToPage(1) }
                             }
                         )
+
                         1 -> OverviewScreen(
                             onOpenToday = {
                                 coroutineScope.launch { pagerState.animateScrollToPage(0) }
@@ -200,18 +140,18 @@ fun MontageZeitNavGraph(
                             onOpenSettings = { navController.navigate("settings") },
                             onOpenEditSheet = { date -> openEditSheet(date) }
                         )
-                        2 -> HistoryScreen(
+
+                        else -> HistoryScreen(
                             onOpenEditSheet = { date -> openEditSheet(date) }
                         )
                     }
                 }
             }
         }
+
         composable("settings") {
             SettingsScreen(
-                onOpenEditSheet = { date, onDismissed ->
-                    openEditSheet(date, onDismissed)
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

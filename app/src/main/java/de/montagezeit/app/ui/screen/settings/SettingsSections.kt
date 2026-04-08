@@ -71,7 +71,7 @@ internal fun WorkTimesSection(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -617,10 +617,23 @@ private fun ExportSuccessCard(
     onShare: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    MZStatusCard(
-        title = stringResource(R.string.export_success_title),
-        status = StatusType.SUCCESS
-    ) {
+    MZAppPanel(emphasized = true) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.export_success_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            MZStatusChip(
+                text = stringResource(R.string.today_confirmed),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         val formatLabel = stringResource(
             when (format) {
                 ExportFormat.PDF -> R.string.export_format_pdf

@@ -48,8 +48,11 @@ class EditEntryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val editTimeZone: ZoneId = ZoneId.systemDefault()
-    private var currentDate: LocalDate =
+    private var currentDate: LocalDate = try {
         savedStateHandle.get<String>("date")?.let(LocalDate::parse) ?: LocalDate.now()
+    } catch (e: Exception) {
+        LocalDate.now()
+    }
 
     private val _screenState = MutableStateFlow(EditScreenState())
     val screenState: StateFlow<EditScreenState> = _screenState.asStateFlow()

@@ -58,6 +58,9 @@
     <!-- Today Screen -->
     <string name="today_title">Heute</string>
     <string name="overview_title">Übersicht</string>
+    <string name="home_shell_today_subtitle">Tagesstatus und nächster Schritt</string>
+    <string name="home_shell_overview_subtitle">Zeitraum, Bilanz und Kennzahlen</string>
+    <string name="home_shell_history_subtitle">Verlauf, Kalender und Bearbeitung</string>
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
@@ -65,10 +68,15 @@
     <string name="today_unconfirmed">Unbestätigt</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
     <string name="today_dashboard_subtitle_done">Alles für heute ist erfasst.</string>
-    <string name="today_dashboard_subtitle_open">Heute ist schon etwas da, aber noch nicht komplett bestätigt.</string>
-    <string name="today_dashboard_subtitle_empty">Starte hier deinen Tag und trage die wichtigsten Infos direkt ein.</string>
-    <string name="today_dashboard_empty_hint">Noch kein Eintrag für diesen Tag. Unten kannst du direkt Arbeit oder frei erfassen.</string>
+    <string name="today_dashboard_subtitle_open">Eintrag vorhanden, aber noch nicht vollständig bestätigt.</string>
+    <string name="today_dashboard_subtitle_empty">Starte mit dem nächsten sinnvollen Schritt für diesen Tag.</string>
+    <string name="today_dashboard_empty_hint">Noch kein Eintrag für diesen Tag.</string>
+    <string name="today_empty_notice_title">Tag noch offen</string>
     <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
+    <string name="today_status_metric_label">Status</string>
+    <string name="today_status_panel_support">Arbeitsort, Tagesart und Primäraktion im Blick</string>
+    <string name="today_detail_type_label">Tagesart</string>
+    <string name="today_work_panel_support">Arbeits- und Reisezeit im selben System</string>
     <string name="today_error_unknown">Daten konnten nicht geladen werden</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
@@ -88,10 +96,11 @@
     <string name="meal_allowance_arrival_departure_label">Anreise/Abreise (14,00 € statt 28,00 €)</string>
     <string name="meal_allowance_breakfast_label">Frühstück erhalten (−5,80 €)</string>
     <string name="meal_allowance_preview_label">Verpflegungspauschale: %1$s</string>
+    <string name="today_paid_hours_summary">Bezahlt: %1$s</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="day_type_work">Arbeitstag</string>
     <string name="day_type_off">Freier Tag</string>
-    <string name="day_type_comp_time">Ü-Abbau</string>
+    <string name="day_type_comp_time">Ausgleich</string>
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
@@ -125,6 +134,9 @@
     <string name="overview_balance_positive">Über Soll</string>
     <string name="overview_balance_negative">Unter Soll</string>
     <string name="overview_balance_even">Im Soll</string>
+    <string name="overview_section_metrics_title">Kennzahlen</string>
+    <string name="overview_section_metrics_support">Fahrzeit, Verpflegung und offene Tage im gleichen Panel-System</string>
+    <string name="overview_action_required_title">Prüfung offen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     
@@ -137,6 +149,11 @@
     <string name="settings_title">Einstellungen</string>
     <string name="settings_dashboard_title">App einrichten</string>
     <string name="settings_dashboard_subtitle">Hier findest du die wichtigsten Grundeinstellungen für Arbeitszeit, Erinnerungen und Export.</string>
+    <string name="settings_group_general">Grundlage</string>
+    <string name="settings_group_automation">Automatisierung</string>
+    <string name="settings_group_data">Daten und Export</string>
+    <string name="settings_metric_schedule">Tag</string>
+    <string name="settings_metric_profile">Profil</string>
     <string name="settings_setup_title">Einrichtung</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_battery_optimization">Akku-Optimierung</string>
@@ -161,6 +178,7 @@
         <item quantity="other">%1$s: %2$d Min</item>
     </plurals>
     <string name="settings_reminders_summary">%1$d/4 aktiv</string>
+    <string name="settings_setup_summary">%1$d Erinnerungen aktiv · Standard %2$s bis %3$s</string>
     <string name="settings_summary_weekends_on">Wochenenden an</string>
     <string name="settings_summary_weekends_off">Wochenenden aus</string>
     <string name="settings_summary_holidays_off">Feiertage aus</string>
@@ -178,6 +196,14 @@
     <string name="status_not_allowed">Nicht erlaubt</string>
     <string name="status_excluded">Ausgenommen</string>
     <string name="status_optimized">Optimiert</string>
+    <string name="settings_notifications_ready">Erlaubt</string>
+    <string name="settings_notifications_missing">Nicht erlaubt</string>
+    <string name="settings_notifications_ready_support">Benachrichtigungen sind freigegeben.</string>
+    <string name="settings_notifications_missing_support">Ohne Freigabe erscheinen keine Erinnerungen.</string>
+    <string name="settings_battery_optimization_active">Aktiv</string>
+    <string name="settings_battery_optimization_disabled">Deaktiviert</string>
+    <string name="settings_battery_optimization_active_support">Kann Benachrichtigungen verzögern.</string>
+    <string name="settings_battery_optimization_disabled_support">Benachrichtigungen laufen zuverlässiger.</string>
     
     <!-- Actions -->
     <string name="action_settings">Einstellungen</string>
@@ -190,6 +216,12 @@
     <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_preview">Vorschau</string>
+    <string name="edit_sheet_title_new">Neuen Tag anlegen</string>
+    <string name="edit_sheet_title_existing">Tag bearbeiten</string>
+    <string name="edit_sheet_support">Formular, Validierung und Aktionen folgen derselben Panel-Grammatik wie die Hauptscreens.</string>
+    <string name="edit_sheet_metric_state">Status</string>
+    <string name="edit_sheet_metric_mode">Modus</string>
+    <string name="edit_sheet_metric_unsaved">Ungespeichert</string>
     
     <!-- Labels -->
     <string name="label_work_start">Arbeitsbeginn</string>
@@ -347,6 +379,11 @@
     <string name="history_summary_weeks">Wochen</string>
     <string name="history_empty_title">Keine Einträge vorhanden</string>
     <string name="history_empty_subtitle">Check-in-Einträge erscheinen hier</string>
+    <string name="history_hero_title">Verlauf im selben System</string>
+    <string name="history_hero_support">Kalender, Gruppen und Einträge teilen sich denselben ruhigen Screen-Rahmen.</string>
+    <string name="history_metric_entries">Einträge</string>
+    <string name="history_metric_workdays">Arbeitstage</string>
+    <string name="history_metric_open">Offen</string>
     <string name="history_action_pick_date">Datum wählen</string>
     <string name="history_cd_prev_month">Vorheriger Monat</string>
     <string name="history_cd_next_month">Nächster Monat</string>
@@ -363,7 +400,7 @@
     <string name="history_weekday_su">So</string>
     <string name="history_day_type_off">Frei</string>
     <string name="history_day_type_off_short">F</string>
-    <string name="history_day_type_comp_time_short">Ü</string>
+    <string name="history_day_type_comp_time_short">A</string>
     <string name="history_hours_decimal">%1$.1f Std.</string>
     <plurals name="history_summary_workdays">
         <item quantity="one">%1$d Arbeitstag</item>
@@ -384,7 +421,7 @@
     <string name="history_batch_daytype_set">Tagtyp setzen</string>
     <string name="history_batch_workday">Arbeitstag</string>
     <string name="history_batch_offday">Frei</string>
-    <string name="history_batch_comp_time">Ü-Abbau</string>
+    <string name="history_batch_comp_time">Ausgleich</string>
     <string name="history_batch_set_defaults">Standardzeiten setzen</string>
     <string name="history_batch_set_note">Notiz setzen</string>
     <string name="history_batch_note_placeholder">Notiz (leer = loeschen)</string>
@@ -406,6 +443,7 @@
     <string name="edit_cd_next_day">Nächster Tag</string>
     <string name="edit_action_today">Heute</string>
     <string name="action_create">Erstellen</string>
+    <string name="action_save_entry">Eintrag speichern</string>
     <string name="edit_action_copy_previous">Vortag kopieren</string>
     <string name="edit_action_copy_entry">Eintrag kopieren</string>
     <string name="dialog_discard_changes_title">Änderungen verwerfen?</string>
@@ -415,8 +453,8 @@
     <string name="edit_section_day_type">Tagtyp</string>
     <string name="edit_day_type_workday">Arbeitstag</string>
     <string name="edit_day_type_off">Frei</string>
-    <string name="edit_day_type_comp_time">Ü-Abbau</string>
-    <string name="edit_comp_time_info">Ü-Abbau: −%1$d Std.</string>
+    <string name="edit_day_type_comp_time">Ausgleich</string>
+    <string name="edit_comp_time_info">Ausgleich: −%1$d Std.</string>
     <string name="edit_section_work_times">Arbeitszeiten</string>
     <string name="edit_toggle_work_times">Erfassen</string>
     <string name="edit_work_times_disabled_hint">Arbeitszeiten sind für diesen Tag deaktiviert.</string>
@@ -437,13 +475,19 @@
     <string name="edit_placeholder_destination">Zielort</string>
     <string name="edit_action_clear_all_travel">Alle löschen</string>
     <string name="edit_action_add_travel_leg">Fahrt hinzufügen</string>
-    <string name="edit_travel_empty_hint">Noch keine Fahrten erfasst.</string>
+    <string name="edit_travel_empty_title">Noch keine Fahrt erfasst</string>
+    <string name="edit_travel_empty_hint">Füge eine Fahrt hinzu, wenn Reise- oder Fahrzeit bezahlt wird.</string>
     <string name="edit_travel_leg_title">Fahrt %1$d</string>
     <string name="edit_travel_legacy_override">Altbestand ohne Zeitfenster: %1$d min</string>
     <string name="edit_section_location">Standort</string>
-    <string name="edit_label_day_location_required">Arbeitsort (Pflicht)</string>
+    <string name="edit_label_day_location_required">Arbeitsort</string>
     <string name="edit_placeholder_work_location">z.B. Baustelle Nord</string>
     <string name="edit_section_meal_allowance">Verpflegungspauschale</string>
+    <string name="meal_allowance_arrival_departure_short_label">An- oder Abreise</string>
+    <string name="meal_allowance_arrival_departure_amount">14,00 €</string>
+    <string name="meal_allowance_breakfast_short_label">Frühstück enthalten</string>
+    <string name="meal_allowance_breakfast_amount">−5,80 €</string>
+    <string name="edit_meal_total_label">Gesamtsumme</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen…</string>
     <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
@@ -481,4 +525,8 @@
     <string name="overview_kpi_none_unconfirmed">Alles erledigt</string>
     <string name="overview_range_selector_hint">Zeitraum wählen</string>
     <string name="today_action_required">Aktion erforderlich</string>
+    <string name="overview_actual_label">IST</string>
+    <string name="overview_target_label">SOLL</string>
+    <string name="overview_difference_label">Differenz</string>
+    <string name="overview_progress_label">Fortschritt im Zeitraum</string>
 </resources>

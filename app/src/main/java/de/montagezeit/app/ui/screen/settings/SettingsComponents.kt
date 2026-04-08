@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList", "MaxLineLength")
+
 package de.montagezeit.app.ui.screen.settings
 
 import androidx.compose.animation.AnimatedVisibility
@@ -46,10 +48,10 @@ internal fun CollapsibleSettingsCard(
     val expandLabel = stringResource(R.string.cd_expand_section, title)
     val collapseLabel = stringResource(R.string.cd_collapse_section, title)
 
-    MZCard(
+    MZAppPanel(
         modifier = modifier.animateContentSize()
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,7 +101,7 @@ internal fun CollapsibleSettingsCard(
             }
 
             AnimatedVisibility(visible = expanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HorizontalDivider()
                     content()
                 }
@@ -112,24 +114,59 @@ internal fun CollapsibleSettingsCard(
 internal fun SetupSection(
     hasNotificationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
+    enabledReminderCount: Int,
+    workStartLabel: String,
+    workEndLabel: String,
     onRequestNotificationPermission: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onSendTestReminder: () -> Unit
 ) {
-    val allPermissionsGranted = hasNotificationPermission
+    val allHealthy = hasNotificationPermission && isIgnoringBatteryOptimizations
 
-    MZStatusCard(
-        title = stringResource(R.string.settings_setup_title),
-        status = if (allPermissionsGranted) StatusType.SUCCESS else StatusType.WARNING
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    MZAppPanel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.settings_setup_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            MZStatusChip(
+                text = if (allHealthy) stringResource(R.string.status_active) else stringResource(R.string.today_action_required),
+                color = if (allHealthy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringResource(
+                    R.string.settings_setup_summary,
+                    enabledReminderCount,
+                    workStartLabel,
+                    workEndLabel
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
             SetupRow(
                 title = stringResource(R.string.settings_notifications),
-                status = if (hasNotificationPermission)
-                    stringResource(R.string.status_active)
-                else
-                    stringResource(R.string.status_not_allowed),
+                status = if (hasNotificationPermission) {
+                    stringResource(R.string.settings_notifications_ready)
+                } else {
+                    stringResource(R.string.settings_notifications_missing)
+                },
+                supportingText = if (hasNotificationPermission) {
+                    stringResource(R.string.settings_notifications_ready_support)
+                } else {
+                    stringResource(R.string.settings_notifications_missing_support)
+                },
                 actionLabel = if (hasNotificationPermission)
                     stringResource(R.string.action_settings)
                 else
@@ -142,10 +179,16 @@ internal fun SetupSection(
 
             SetupRow(
                 title = stringResource(R.string.settings_battery_optimization),
-                status = if (isIgnoringBatteryOptimizations)
-                    stringResource(R.string.status_excluded)
-                else
-                    stringResource(R.string.status_optimized),
+                status = if (isIgnoringBatteryOptimizations) {
+                    stringResource(R.string.settings_battery_optimization_disabled)
+                } else {
+                    stringResource(R.string.settings_battery_optimization_active)
+                },
+                supportingText = if (isIgnoringBatteryOptimizations) {
+                    stringResource(R.string.settings_battery_optimization_disabled_support)
+                } else {
+                    stringResource(R.string.settings_battery_optimization_active_support)
+                },
                 actionLabel = stringResource(R.string.action_disable_optimization),
                 onAction = onOpenBatterySettings,
                 isOk = isIgnoringBatteryOptimizations
@@ -168,16 +211,17 @@ internal fun SetupSection(
 private fun SetupRow(
     title: String,
     status: String,
+    supportingText: String,
     actionLabel: String,
     onAction: () -> Unit,
     isOk: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -196,9 +240,14 @@ private fun SetupRow(
                 Text(
                     text = status,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isOk) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
+            Text(
+                text = supportingText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         TertiaryActionButton(onClick = onAction) {
             Text(actionLabel)

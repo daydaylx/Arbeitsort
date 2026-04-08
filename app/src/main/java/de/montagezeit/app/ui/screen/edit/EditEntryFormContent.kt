@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions", "MaxLineLength", "MagicNumber", "LongMethod", "LongParameterList")
+
 package de.montagezeit.app.ui.screen.edit
 
 import androidx.compose.foundation.layout.Arrangement
@@ -5,34 +7,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,14 +33,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
-import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.components.DestructiveActionButton
+import de.montagezeit.app.ui.components.MZContentCard
+import de.montagezeit.app.ui.components.MZInlineNotice
+import de.montagezeit.app.ui.components.MZSegmentedControl
+import de.montagezeit.app.ui.components.MZSegmentedOption
+import de.montagezeit.app.ui.components.MZSectionHeader
+import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.StatusType
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
 import de.montagezeit.app.ui.util.Formatters
 
@@ -57,22 +57,14 @@ internal fun EditFormSectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    androidx.compose.material3.Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            content = content
-        )
-    }
+    MZContentCard(
+        modifier = modifier,
+        content = content
+    )
 }
 
 @Composable
 internal fun EditFormContent(
-    entry: WorkEntry,
     formData: EditFormData,
     validationErrors: List<ValidationError> = emptyList(),
     dailyTargetHours: Double = 8.0,
@@ -103,42 +95,26 @@ internal fun EditFormContent(
 ) {
     val isCompTime = formData.dayType == DayType.COMP_TIME
 
-    Text(
-        text = Formatters.formatDateLong(entry.date),
-        style = MaterialTheme.typography.headlineSmall
-    )
-
-    EditFormSectionCard {
-        DayTypeSelector(
-            selectedType = formData.dayType,
-            onTypeChange = onDayTypeChange
-        )
-        if (isCompTime) {
-            SuggestionChip(
-                onClick = {},
-                label = {
-                    Text(
-                        text = stringResource(
-                            R.string.edit_comp_time_info,
-                            dailyTargetHours.toInt()
-                        ),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Bedtime,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        EditFormSectionCard {
+            DayTypeSelector(
+                selectedType = formData.dayType,
+                onTypeChange = onDayTypeChange
             )
+            if (isCompTime) {
+                MZStatusBadge(
+                    text = stringResource(
+                        R.string.edit_comp_time_info,
+                        dailyTargetHours.toInt()
+                    ),
+                    type = StatusType.NEUTRAL,
+                    modifier = Modifier.fillMaxWidth(),
+                    showIcon = false
+                )
+            }
         }
-    }
 
-    if (!isCompTime) {
-        if (formData.dayType == DayType.WORK) {
+        if (!isCompTime && formData.dayType == DayType.WORK) {
             EditFormSectionCard {
                 EditWorkTimesSection(
                     enabled = formData.hasWorkTimes,
@@ -155,165 +131,136 @@ internal fun EditFormContent(
             }
         }
 
-        EditFormSectionCard {
-            TravelLegsSection(
-                travelLegs = formData.travelLegs,
-                validationErrors = validationErrors,
-                onAddTravelLeg = onAddTravelLeg,
-                onTravelLegStartChange = onTravelLegStartChange,
-                onTravelLegArriveChange = onTravelLegArriveChange,
-                onTravelLegStartLabelChange = onTravelLegStartLabelChange,
-                onTravelLegEndLabelChange = onTravelLegEndLabelChange,
-                onRemoveTravelLeg = onRemoveTravelLeg,
-                onClearTravel = onTravelClear
-            )
-        }
-
-        EditFormSectionCard {
-            LocationLabelsSection(
-                dayLocationLabel = formData.dayLocationLabel,
-                onDayLocationChange = onDayLocationChange
-            )
-        }
-    }
-
-    if (formData.dayType == DayType.WORK) {
-        EditFormSectionCard {
-            MealAllowanceSection(
-                isArrivalDeparture = formData.mealIsArrivalDeparture,
-                breakfastIncluded = formData.mealBreakfastIncluded,
-                allowancePreviewCents = formData.mealAllowancePreviewCents(),
-                onArrivalDepartureChange = onMealArrivalDepartureChange,
-                onBreakfastIncludedChange = onMealBreakfastIncludedChange
-            )
-        }
-    }
-
-    EditFormSectionCard {
-        NoteSection(
-            note = formData.note,
-            onNoteChange = onNoteChange
-        )
-    }
-
-    val showSecondaryActions = onCopyPrevious != null ||
-        (onCopy != null && !isNewEntry) ||
-        (onDeleteDay != null && !isNewEntry)
-
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (onCopyPrevious != null) {
-            SecondaryActionButton(
-                onClick = onCopyPrevious,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
+        if (!isCompTime) {
+            EditFormSectionCard {
+                TravelLegsSection(
+                    travelLegs = formData.travelLegs,
+                    validationErrors = validationErrors,
+                    onAddTravelLeg = onAddTravelLeg,
+                    onTravelLegStartChange = onTravelLegStartChange,
+                    onTravelLegArriveChange = onTravelLegArriveChange,
+                    onTravelLegStartLabelChange = onTravelLegStartLabelChange,
+                    onTravelLegEndLabelChange = onTravelLegEndLabelChange,
+                    onRemoveTravelLeg = onRemoveTravelLeg,
+                    onClearTravel = onTravelClear
                 )
-                Text(stringResource(R.string.edit_action_copy_previous))
+            }
+
+            EditFormSectionCard {
+                LocationLabelsSection(
+                    dayLocationLabel = formData.dayLocationLabel,
+                    validationErrors = validationErrors,
+                    onDayLocationChange = onDayLocationChange
+                )
             }
         }
 
-        if (onCopy != null && !isNewEntry) {
-            SecondaryActionButton(
-                onClick = onCopy,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
+        if (formData.dayType == DayType.WORK) {
+            EditFormSectionCard {
+                MealAllowanceSection(
+                    isArrivalDeparture = formData.mealIsArrivalDeparture,
+                    breakfastIncluded = formData.mealBreakfastIncluded,
+                    allowancePreviewCents = formData.mealAllowancePreviewCents(),
+                    onArrivalDepartureChange = onMealArrivalDepartureChange,
+                    onBreakfastIncludedChange = onMealBreakfastIncludedChange
                 )
-                Text(stringResource(R.string.edit_action_copy_entry))
             }
         }
 
-        if (onDeleteDay != null && !isNewEntry) {
-            DestructiveActionButton(
-                onClick = onDeleteDay,
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(stringResource(R.string.action_delete_day))
-            }
+        EditFormSectionCard {
+            NoteSection(
+                note = formData.note,
+                onNoteChange = onNoteChange
+            )
         }
 
-        if (showSecondaryActions && showPrimarySaveButton) {
-            HorizontalDivider()
-        }
-
-        if (showPrimarySaveButton) {
-            PrimaryActionButton(
-                onClick = onSave,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !isSaving
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .padding(end = 8.dp),
-                        strokeWidth = 2.dp
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (onCopyPrevious != null) {
+                SecondaryActionButton(
+                    onClick = onCopyPrevious,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
                     )
+                    Text(stringResource(R.string.edit_action_copy_previous))
                 }
-                Icon(
-                    imageVector = Icons.Default.Save,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    if (isNewEntry) {
-                        stringResource(R.string.action_create)
+            }
+
+            if (onCopy != null && !isNewEntry) {
+                TertiaryActionButton(
+                    onClick = onCopy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(stringResource(R.string.edit_action_copy_entry))
+                }
+            }
+
+            if (onDeleteDay != null && !isNewEntry) {
+                DestructiveActionButton(
+                    onClick = onDeleteDay,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(stringResource(R.string.action_delete_day))
+                }
+            }
+
+            if (showPrimarySaveButton) {
+                PrimaryActionButton(
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(end = 8.dp),
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        stringResource(R.string.action_save)
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
                     }
-                )
+                    Text(stringResource(R.string.action_save_entry))
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DayTypeSelector(
     selectedType: DayType,
     onTypeChange: (DayType) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_day_type),
-            style = MaterialTheme.typography.titleMedium
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionTitle(text = stringResource(R.string.edit_section_day_type))
+        MZSegmentedControl(
+            options = listOf(
+                MZSegmentedOption(DayType.WORK, stringResource(R.string.edit_day_type_workday)),
+                MZSegmentedOption(DayType.OFF, stringResource(R.string.edit_day_type_off)),
+                MZSegmentedOption(DayType.COMP_TIME, stringResource(R.string.edit_day_type_comp_time))
+            ),
+            selectedValue = selectedType,
+            onValueSelected = onTypeChange
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            DayType.values().forEach { type ->
-                FilterChip(
-                    selected = selectedType == type,
-                    onClick = { onTypeChange(type) },
-                    label = {
-                        Text(
-                            when (type) {
-                                DayType.WORK -> stringResource(R.string.edit_day_type_workday)
-                                DayType.OFF -> stringResource(R.string.edit_day_type_off)
-                                DayType.COMP_TIME -> stringResource(R.string.edit_day_type_comp_time)
-                            }
-                        )
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
     }
 }
 
@@ -333,10 +280,10 @@ internal fun EditWorkTimesSection(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
-    val hasWorkTimeError = validationErrors.any {
+    val workTimeError = validationErrors.firstOrNull {
         it is ValidationError.WorkEndBeforeStart || it is ValidationError.WorkDayTooLong
     }
-    val hasBreakError = validationErrors.any {
+    val breakError = validationErrors.firstOrNull {
         it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime
     }
 
@@ -346,14 +293,12 @@ internal fun EditWorkTimesSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.edit_section_work_times),
-                style = MaterialTheme.typography.titleMedium
-            )
+            SectionTitle(text = stringResource(R.string.edit_section_work_times))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.edit_toggle_work_times),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Switch(
                     checked = enabled,
@@ -365,74 +310,35 @@ internal fun EditWorkTimesSection(
         if (!enabled) {
             Text(
                 text = stringResource(R.string.edit_work_times_disabled_hint),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedButton(
+                TimeValueButton(
+                    label = stringResource(R.string.edit_label_start),
+                    value = Formatters.formatTime(workStart),
+                    isError = workTimeError != null,
                     onClick = { showStartPicker = true },
-                    modifier = Modifier.weight(1f),
-                    colors = if (hasWorkTimeError) {
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    } else {
-                        ButtonDefaults.outlinedButtonColors()
-                    }
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.edit_label_start),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = Formatters.formatTime(workStart),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-
-                OutlinedButton(
+                    modifier = Modifier.weight(1f)
+                )
+                TimeValueButton(
+                    label = stringResource(R.string.edit_label_end),
+                    value = Formatters.formatTime(workEnd),
+                    isError = workTimeError != null,
                     onClick = { showEndPicker = true },
-                    modifier = Modifier.weight(1f),
-                    colors = if (hasWorkTimeError) {
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    } else {
-                        ButtonDefaults.outlinedButtonColors()
-                    }
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.edit_label_end),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = Formatters.formatTime(workEnd),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-            }
-
-            if (hasWorkTimeError) {
-                Text(
-                    text = stringResource(
-                        R.string.edit_error_prefix,
-                        stringResource(ValidationError.WorkEndBeforeStart.messageRes)
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(start = 4.dp)
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            workTimeError?.let {
+                ValidationMessage(it)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -441,22 +347,20 @@ internal fun EditWorkTimesSection(
                     Text(
                         text = stringResource(R.string.edit_label_break_minutes),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = stringResource(R.string.edit_break_minutes_value, breakMinutes),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (breakError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                     )
                 }
-
                 Slider(
                     value = breakMinutes.toFloat(),
-                    onValueChange = { onBreakChange(it.toInt()) },
+                    onValueChange = { onBreakChange((it / 5f).toInt() * 5) },
                     valueRange = 0f..120f,
-                    steps = 120,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = if (hasBreakError) {
+                    steps = 23,
+                    colors = if (breakError != null) {
                         SliderDefaults.colors(
                             thumbColor = MaterialTheme.colorScheme.error,
                             activeTrackColor = MaterialTheme.colorScheme.error
@@ -465,27 +369,13 @@ internal fun EditWorkTimesSection(
                         SliderDefaults.colors()
                     }
                 )
-
-                if (hasBreakError) {
-                    val breakError = validationErrors.firstOrNull {
-                        it is ValidationError.NegativeBreakMinutes || it is ValidationError.BreakLongerThanWorkTime
-                    }
-                    breakError?.let {
-                        Text(
-                            text = stringResource(
-                                R.string.edit_error_prefix,
-                                stringResource(it.messageRes)
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
+                breakError?.let {
+                    ValidationMessage(it)
                 }
             }
 
             if (onApplyDefaults != null) {
-                TextButton(
+                TertiaryActionButton(
                     onClick = onApplyDefaults,
                     modifier = Modifier.align(Alignment.End)
                 ) {
@@ -520,23 +410,25 @@ internal fun EditWorkTimesSection(
 @Composable
 internal fun LocationLabelsSection(
     dayLocationLabel: String?,
+    validationErrors: List<ValidationError> = emptyList(),
     onDayLocationChange: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_location),
-            style = MaterialTheme.typography.titleMedium
-        )
+    val locationError = validationErrors.firstOrNull { it is ValidationError.MissingDayLocation }
 
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionTitle(text = stringResource(R.string.edit_section_location))
         OutlinedTextField(
             value = dayLocationLabel ?: "",
             onValueChange = { if (it.length <= 100) onDayLocationChange(it) },
-            label = { Text(stringResource(R.string.edit_label_day_location_required)) },
+            label = { Text(stringResource(R.string.day_location_label)) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
-            isError = dayLocationLabel?.isBlank() == true,
+            isError = locationError != null,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
+        locationError?.let {
+            ValidationMessage(it)
+        }
     }
 }
 
@@ -546,19 +438,16 @@ internal fun NoteSection(
     onNoteChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_note_optional),
-            style = MaterialTheme.typography.titleMedium
-        )
-
+        SectionTitle(text = stringResource(R.string.edit_section_note_optional))
         OutlinedTextField(
             value = note ?: "",
             onValueChange = { if (it.length <= 500) onNoteChange(it) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_note)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
-            maxLines = 5
+                .heightIn(min = 72.dp),
+            minLines = 3,
+            maxLines = 4
         )
     }
 }
@@ -571,44 +460,113 @@ internal fun MealAllowanceSection(
     onArrivalDepartureChange: (Boolean) -> Unit,
     onBreakfastIncludedChange: (Boolean) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.edit_section_meal_allowance),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        CheckboxRow(
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionTitle(text = stringResource(R.string.edit_section_meal_allowance))
+        MealAllowanceRow(
             checked = isArrivalDeparture,
-            onCheckedChange = onArrivalDepartureChange,
-            label = stringResource(R.string.meal_allowance_arrival_departure_label)
+            label = stringResource(R.string.meal_allowance_arrival_departure_short_label),
+            amount = stringResource(R.string.meal_allowance_arrival_departure_amount),
+            onCheckedChange = onArrivalDepartureChange
         )
-        CheckboxRow(
+        MealAllowanceRow(
             checked = breakfastIncluded,
-            onCheckedChange = onBreakfastIncludedChange,
-            label = stringResource(R.string.meal_allowance_breakfast_label)
+            label = stringResource(R.string.meal_allowance_breakfast_short_label),
+            amount = stringResource(R.string.meal_allowance_breakfast_amount),
+            onCheckedChange = onBreakfastIncludedChange
         )
-
-        Text(
-            text = stringResource(
-                R.string.meal_allowance_preview_label,
-                MealAllowanceCalculator.formatEuro(allowancePreviewCents)
-            ),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        HorizontalDivider()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.edit_meal_total_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = MealAllowanceCalculator.formatEuro(allowancePreviewCents),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 
 @Composable
-private fun CheckboxRow(
+private fun SectionTitle(text: String) {
+    MZSectionHeader(
+        title = text
+    )
+}
+
+@Composable
+private fun TimeValueButton(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
+) {
+    SecondaryActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            contentColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun ValidationMessage(error: ValidationError) {
+    Text(
+        text = stringResource(
+            R.string.edit_error_prefix,
+            stringResource(error.messageRes)
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error
+    )
+}
+
+@Composable
+private fun MealAllowanceRow(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    label: String
+    label: String,
+    amount: String,
+    onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        androidx.compose.material3.Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = amount,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

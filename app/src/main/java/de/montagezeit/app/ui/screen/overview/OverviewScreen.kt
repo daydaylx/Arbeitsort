@@ -1,6 +1,9 @@
+@file:Suppress("MaxLineLength")
+
 package de.montagezeit.app.ui.screen.overview
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,9 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -23,8 +29,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,12 +37,8 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,17 +47,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -72,14 +67,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.NumberStyles
 import de.montagezeit.app.ui.components.DatePickerDialog
-import de.montagezeit.app.ui.components.MZCard
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZErrorState
-import de.montagezeit.app.ui.components.MZHeroCard
+import de.montagezeit.app.ui.components.MZSegmentedControl
+import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.MZLoadingState
-import de.montagezeit.app.ui.components.MZPageBackground
+import de.montagezeit.app.ui.components.MZHeroPanel
+import de.montagezeit.app.ui.components.MZInlineNotice
+import de.montagezeit.app.ui.components.MZMetricChip
+import de.montagezeit.app.ui.components.MZSectionIntro
+import de.montagezeit.app.ui.components.MZSectionHeader
+import de.montagezeit.app.ui.components.MZSnackbarHost
+import de.montagezeit.app.ui.components.AnimatedCounter
 import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.StatusType
+import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.components.staggeredAppear
+import de.montagezeit.app.ui.theme.panelBorder
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
@@ -112,63 +118,49 @@ fun OverviewScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                title = {
-                    Text(
-                        text = stringResource(R.string.overview_title),
-                        modifier = Modifier.semantics { heading() }
-                    )
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        MZPageBackground(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                val errorMessage = screenState.errorMessage
-                val metrics = screenState.metrics
+    val errorMessage = screenState.errorMessage
+    val metrics = screenState.metrics
 
-                when {
-                    screenState.showFullscreenError && errorMessage != null -> {
-                        MZErrorState(
-                            message = errorMessage.asString(context),
-                            onRetry = { viewModel.onResetError() },
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        when {
+            screenState.showFullscreenError && errorMessage != null -> {
+                MZErrorState(
+                    message = errorMessage.asString(context),
+                    onRetry = { viewModel.onResetError() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
-                    screenState.showInitialLoading -> {
-                        MZLoadingState(
-                            message = stringResource(R.string.loading),
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+            screenState.showInitialLoading -> {
+                MZLoadingState(
+                    message = stringResource(R.string.loading),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
-                    metrics != null -> {
-                        OverviewContent(
-                            selectedDate = screenState.selectedDate,
-                            selectedPeriod = screenState.selectedPeriod,
-                            metrics = metrics,
-                            onPreviousRange = viewModel::goToPreviousRange,
-                            onNextRange = viewModel::goToNextRange,
-                            onSelectPeriod = viewModel::selectPeriod,
-                            onOpenPeriodPicker = { showPeriodPicker = true },
-                            onActionNeededClick = onOpenHistory
-                        )
-                    }
-                }
+            metrics != null -> {
+                OverviewContent(
+                    selectedDate = screenState.selectedDate,
+                    selectedPeriod = screenState.selectedPeriod,
+                    metrics = metrics,
+                    onPreviousRange = viewModel::goToPreviousRange,
+                    onNextRange = viewModel::goToNextRange,
+                    onSelectPeriod = viewModel::selectPeriod,
+                    onOpenPeriodPicker = { showPeriodPicker = true },
+                    onActionNeededClick = onOpenHistory
+                )
             }
         }
+
+        MZSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = MZTokens.ScreenPadding, vertical = 12.dp)
+        )
     }
 
     if (showPeriodPicker) {
@@ -197,32 +189,56 @@ private fun OverviewContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = MZTokens.ScreenPadding, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OverviewTopRangeBar(
-            selectedDate = selectedDate,
-            selectedPeriod = selectedPeriod,
-            onPreviousRange = onPreviousRange,
-            onNextRange = onNextRange,
-            onOpenPicker = onOpenPeriodPicker
-        )
+        MZHeroPanel {
+            OverviewTopRangeBar(
+                selectedDate = selectedDate,
+                selectedPeriod = selectedPeriod,
+                onPreviousRange = onPreviousRange,
+                onNextRange = onNextRange,
+                onOpenPicker = onOpenPeriodPicker
+            )
 
-        OverviewPeriodQuickSelector(
-            selectedPeriod = selectedPeriod,
-            onSelectPeriod = onSelectPeriod
-        )
+            OverviewPeriodQuickSelector(
+                selectedPeriod = selectedPeriod,
+                onSelectPeriod = onSelectPeriod
+            )
 
-        OverviewHeroSection(
-            selectedDate = selectedDate,
-            selectedPeriod = selectedPeriod,
-            metrics = metrics
-        )
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.panelBorder.copy(alpha = 0.5f)
+            )
+
+            OverviewHeroSection(
+                selectedDate = selectedDate,
+                selectedPeriod = selectedPeriod,
+                metrics = metrics
+            )
+        }
 
         OverviewKpiGrid(
             metrics = metrics,
             onActionNeededClick = onActionNeededClick
         )
+
+        if (metrics.unconfirmedDaysCount > 0) {
+            MZInlineNotice(
+                title = stringResource(R.string.overview_action_required_title),
+                message = pluralStringResource(
+                    R.plurals.overview_kpi_unconfirmed_count,
+                    metrics.unconfirmedDaysCount,
+                    metrics.unconfirmedDaysCount
+                ),
+                type = StatusType.WARNING,
+                action = {
+                    TertiaryActionButton(onClick = onActionNeededClick) {
+                        Text(stringResource(R.string.history_title))
+                    }
+                }
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -233,29 +249,13 @@ private fun OverviewPeriodQuickSelector(
     selectedPeriod: OverviewPeriod,
     onSelectPeriod: (OverviewPeriod) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OverviewPeriod.values().forEach { period ->
-            FilterChip(
-                selected = selectedPeriod == period,
-                onClick = { onSelectPeriod(period) },
-                label = { 
-                    Text(
-                        text = stringResource(period.labelRes),
-                        style = MaterialTheme.typography.labelMedium
-                    ) 
-                },
-                modifier = Modifier.weight(1f),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    }
+    MZSegmentedControl(
+        options = OverviewPeriod.values().map { period ->
+            MZSegmentedOption(period, stringResource(period.labelRes))
+        },
+        selectedValue = selectedPeriod,
+        onValueSelected = onSelectPeriod
+    )
 }
 
 @Composable
@@ -266,15 +266,32 @@ private fun OverviewTopRangeBar(
     onNextRange: () -> Unit,
     onOpenPicker: () -> Unit
 ) {
+    var dragAccum by remember { mutableStateOf(0f) }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(selectedDate, selectedPeriod) {
+                val swipeThresholdPx = 56.dp.toPx()
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                    onDragEnd = {
+                        when {
+                            dragAccum > swipeThresholdPx -> onPreviousRange()
+                            dragAccum < -swipeThresholdPx -> onNextRange()
+                        }
+                        dragAccum = 0f
+                    },
+                    onDragCancel = { dragAccum = 0f }
+                )
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(onClick = onPreviousRange) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.overview_reference_previous)
+                contentDescription = stringResource(R.string.overview_reference_previous),
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -284,7 +301,7 @@ private fun OverviewTopRangeBar(
                     onClick = onOpenPicker,
                     onClickLabel = stringResource(R.string.overview_range_selector_hint)
                 )
-                .padding(vertical = 8.dp, horizontal = 12.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -292,7 +309,8 @@ private fun OverviewTopRangeBar(
                 Text(
                     text = formatPeriodTitle(selectedPeriod, selectedDate),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -313,7 +331,8 @@ private fun OverviewTopRangeBar(
         IconButton(onClick = onNextRange) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.overview_reference_next)
+                contentDescription = stringResource(R.string.overview_reference_next),
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -332,43 +351,71 @@ private fun OverviewHeroSection(
         0f
     }
 
-    MZHeroCard(
-        title = stringResource(R.string.overview_balance_title),
-        subtitle = formatPeriodSubtitle(selectedPeriod, selectedDate),
-        badge = {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            MZSectionIntro(
+                eyebrow = formatPeriodSubtitle(selectedPeriod, selectedDate),
+                title = stringResource(R.string.overview_balance_title),
+                modifier = Modifier.weight(1f)
+            )
             MZStatusBadge(
                 text = balanceBadge.text,
                 type = balanceBadge.type,
                 showIcon = false
             )
         }
-    ) {
+
+        AnimatedCounter(
+            targetValue = metrics.overtimeHours,
+            formatter = { formatSignedHoursValue(it) },
+            style = NumberStyles.displayLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            MZMetricChip(
+                label = stringResource(R.string.overview_actual_label),
+                value = Formatters.formatHours(metrics.actualHours),
+                modifier = Modifier.weight(1f)
+            )
+            MZMetricChip(
+                label = stringResource(R.string.overview_target_label),
+                value = Formatters.formatHours(metrics.targetHours),
+                modifier = Modifier.weight(1f),
+                accentColor = MaterialTheme.colorScheme.secondary
+            )
+            MZMetricChip(
+                label = stringResource(R.string.overview_difference_label),
+                value = formatSignedHoursValue(metrics.overtimeHours),
+                modifier = Modifier.weight(1f),
+                accentColor = if (metrics.overtimeHours >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+        }
+
+        if (metrics.targetHours > 0.0) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = formatSignedHoursValue(metrics.overtimeHours),
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.overview_progress_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = stringResource(
-                        R.string.overtime_actual_target,
-                        Formatters.formatHours(metrics.actualHours),
-                        Formatters.formatHours(metrics.targetHours)
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            ProgressArc(
-                progress = progressFraction,
-                modifier = Modifier.size(72.dp)
-            )
         }
     }
 }
@@ -379,19 +426,23 @@ private fun OverviewKpiGrid(
     onActionNeededClick: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        MZSectionHeader(
+            title = stringResource(R.string.overview_section_metrics_title),
+            supportingText = stringResource(R.string.overview_section_metrics_support)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KpiGridItem(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).staggeredAppear(index = 0),
                 icon = Icons.Default.DirectionsCar,
                 label = stringResource(R.string.overview_kpi_travel),
                 value = Formatters.formatHours(metrics.travelHours),
                 tint = MaterialTheme.colorScheme.primary
             )
             KpiGridItem(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).staggeredAppear(index = 1),
                 icon = Icons.Default.Restaurant,
                 label = stringResource(R.string.overview_kpi_meal),
                 value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents),
@@ -403,7 +454,7 @@ private fun OverviewKpiGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KpiGridItem(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).staggeredAppear(index = 2),
                 icon = Icons.Default.Today,
                 label = stringResource(R.string.overview_counted_days_label),
                 value = stringResource(R.string.overtime_counted_days, metrics.countedDays),
@@ -411,7 +462,7 @@ private fun OverviewKpiGrid(
             )
             val actionNeeded = metrics.unconfirmedDaysCount > 0
             KpiGridItem(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).staggeredAppear(index = 3),
                 icon = if (actionNeeded) Icons.Default.ErrorOutline else Icons.Default.CalendarMonth,
                 label = stringResource(R.string.overview_kpi_action_needed),
                 value = if (actionNeeded) {
@@ -439,23 +490,18 @@ private fun KpiGridItem(
     tint: Color,
     onClick: (() -> Unit)? = null
 ) {
-    MZCard(
-        modifier = modifier
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .drawBehind {
-                drawRect(
-                    color = tint.copy(alpha = 0.75f),
-                    size = Size(3.dp.toPx(), size.height)
-                )
-            }
+    MZAppPanel(
+        modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(MZTokens.RadiusChip),
-                color = tint.copy(alpha = 0.1f),
+                color = tint.copy(alpha = MZTokens.AlphaSubtle),
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -463,19 +509,20 @@ private fun KpiGridItem(
                         imageVector = icon,
                         contentDescription = null,
                         tint = tint,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -613,33 +660,3 @@ private fun formatSignedHoursValue(hours: Double): String =
 
 private val shortDateFormatter = DateTimeFormatter.ofPattern("dd. MMM yyyy", Locale.GERMAN)
 private val monthTitleFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.GERMAN)
-
-@Composable
-private fun ProgressArc(progress: Float, modifier: Modifier = Modifier) {
-    val primary = MaterialTheme.colorScheme.onPrimaryContainer
-    val percent = (progress * 100).toInt()
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val stroke = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
-            val sweepAngle = 240f * progress.coerceIn(0f, 1f)
-            drawArc(
-                color = primary.copy(alpha = 0.18f),
-                startAngle = 150f, sweepAngle = 240f,
-                useCenter = false, style = stroke
-            )
-            if (sweepAngle > 0f) {
-                drawArc(
-                    color = primary,
-                    startAngle = 150f, sweepAngle = sweepAngle,
-                    useCenter = false, style = stroke
-                )
-            }
-        }
-        Text(
-            text = "$percent%",
-            style = MaterialTheme.typography.labelLarge,
-            color = primary,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}

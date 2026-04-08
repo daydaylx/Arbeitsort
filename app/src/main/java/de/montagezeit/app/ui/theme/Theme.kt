@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber")
+
 package de.montagezeit.app.ui.theme
 
 import android.app.Activity
@@ -5,9 +7,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+
+import androidx.compose.material3.ColorScheme
+
+/** Semantic Color Aliases as per sshterm */
+val ColorScheme.success: Color get() = GlassSuccess
+val ColorScheme.warning: Color get() = GlassWarning
+val ColorScheme.danger: Color get() = GlassError
+val ColorScheme.info: Color get() = GlassInfo
+val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.9f)
+val ColorScheme.panelColor: Color get() = surface.copy(alpha = 0.94f)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.98f)
+
+val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
+    listOf(Color(0xFF08131A), Color(0xFF0B1720), Color(0xFF04080C))
+)
+
+val ColorScheme.heroBrush: Brush get() = Brush.linearGradient(
+    listOf(Color(0xFF123142), Color(0xFF10222E), Color(0xFF0A141B))
+)
 
 private val GlassColorScheme = darkColorScheme(
     primary = GlassPrimary,

@@ -17,13 +17,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +29,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.theme.MZTokens
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -49,24 +51,31 @@ internal fun DateNavigationRow(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        androidx.compose.material3.IconButton(onClick = onPrevious) {
+        IconButton(onClick = onPrevious) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.edit_cd_prev_day)
             )
         }
-        TextButton(onClick = onPickDate) {
-            Text(formatShortDate(date))
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            SecondaryActionButton(onClick = onPickDate) {
+                Text(
+                    text = formatShortDate(date),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         }
-        androidx.compose.material3.IconButton(onClick = onNext) {
+        TertiaryActionButton(onClick = onToday) {
+            Text(stringResource(R.string.edit_action_today))
+        }
+        IconButton(onClick = onNext) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = stringResource(R.string.edit_cd_next_day)
             )
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        TextButton(onClick = onToday) {
-            Text(stringResource(R.string.edit_action_today))
         }
     }
 }
@@ -81,7 +90,7 @@ internal fun DateNavigationSwipeZone(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(30.dp)
             .pointerInput(swipeThresholdPx, onSwipePrevious, onSwipeNext) {
                 var dragAccum = 0f
                 detectHorizontalDragGestures(
@@ -100,33 +109,30 @@ internal fun DateNavigationSwipeZone(
         contentAlignment = Alignment.Center
     ) {
         HorizontalDivider(
-            modifier = Modifier.width(44.dp),
+            modifier = Modifier.width(56.dp),
             thickness = 2.dp,
             color = MaterialTheme.colorScheme.outlineVariant
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EditStickySaveBar(
     isSaving: Boolean,
-    isNewEntry: Boolean,
     onSave: () -> Unit
 ) {
-    Surface(shadowElevation = 4.dp, tonalElevation = 2.dp) {
+    MZAppPanel(
+        emphasized = true
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .navigationBarsPadding()
                 .imePadding()
         ) {
             PrimaryActionButton(
                 onClick = onSave,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth(),
                 enabled = !isSaving
             ) {
                 if (isSaving) {
@@ -143,11 +149,7 @@ internal fun EditStickySaveBar(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
-                    if (isNewEntry) {
-                        stringResource(R.string.action_create)
-                    } else {
-                        stringResource(R.string.action_save)
-                    }
+                    stringResource(R.string.action_save_entry)
                 )
             }
         }

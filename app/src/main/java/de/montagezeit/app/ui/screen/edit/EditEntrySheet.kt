@@ -1,14 +1,18 @@
+@file:Suppress("LongParameterList")
+
 package de.montagezeit.app.ui.screen.edit
 
 import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,9 +38,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.ui.components.DatePickerDialog
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZErrorState
+import de.montagezeit.app.ui.components.MZHeroPanel
+import de.montagezeit.app.ui.components.MZMetricChip
+import de.montagezeit.app.ui.components.MZSectionIntro
+import de.montagezeit.app.ui.components.MZStatusChip
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 
@@ -87,8 +96,8 @@ fun EditEntrySheet(
     ModalBottomSheet(
         onDismissRequest = handleDismiss,
         sheetState = sheetState,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        containerColor = MaterialTheme.colorScheme.surface
+        shape = RoundedCornerShape(topStart = MZTokens.RadiusSheet, topEnd = MZTokens.RadiusSheet),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaGlassSheet)
     ) {
         EditEntrySheetScaffold(
             date = date,
@@ -138,7 +147,6 @@ private fun EditEntrySheetScaffold(
             if (uiState is EditUiState.NewEntry || uiState is EditUiState.Success) {
                 EditStickySaveBar(
                     isSaving = screenState.isSaving,
-                    isNewEntry = uiState is EditUiState.NewEntry,
                     onSave = viewModel::save
                 )
             }
@@ -149,24 +157,32 @@ private fun EditEntrySheetScaffold(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            EditSheetHero(
+                date = date,
+                isSaving = screenState.isSaving,
+                isDirty = screenState.isDirty,
+                uiState = uiState
+            )
+
             if (onNavigateDate != null) {
-                DateNavigationRow(
-                    date = date,
-                    onPrevious = { onNavigateDate(date.minusDays(1)) },
-                    onNext = { onNavigateDate(date.plusDays(1)) },
-                    onToday = { onNavigateDate(LocalDate.now()) },
-                    onPickDate = onOpenNavigateDatePicker
-                )
-                DateNavigationSwipeZone(
-                    swipeThresholdPx = swipeThresholdPx,
-                    onSwipePrevious = { onNavigateDate(date.minusDays(1)) },
-                    onSwipeNext = { onNavigateDate(date.plusDays(1)) },
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
-                HorizontalDivider()
+                MZAppPanel {
+                    DateNavigationRow(
+                        date = date,
+                        onPrevious = { onNavigateDate(date.minusDays(1)) },
+                        onNext = { onNavigateDate(date.plusDays(1)) },
+                        onToday = { onNavigateDate(LocalDate.now()) },
+                        onPickDate = onOpenNavigateDatePicker
+                    )
+                    DateNavigationSwipeZone(
+                        swipeThresholdPx = swipeThresholdPx,
+                        onSwipePrevious = { onNavigateDate(date.minusDays(1)) },
+                        onSwipeNext = { onNavigateDate(date.plusDays(1)) },
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
             }
 
             EditEntryStateContent(
@@ -176,6 +192,58 @@ private fun EditEntrySheetScaffold(
                 onDismiss = onDismiss,
                 onOpenDeleteDialog = onOpenDeleteDialog,
                 onOpenCopyDatePicker = onOpenCopyDatePicker
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditSheetHero(
+    date: LocalDate,
+    isSaving: Boolean,
+    isDirty: Boolean,
+    uiState: EditUiState
+) {
+    MZHeroPanel {
+        MZSectionIntro(
+            eyebrow = date.toString(),
+            title = stringResource(
+                if (uiState is EditUiState.NewEntry) {
+                    R.string.edit_sheet_title_new
+                } else {
+                    R.string.edit_sheet_title_existing
+                }
+            ),
+            supportingText = stringResource(R.string.edit_sheet_support)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MZMetricChip(
+                label = stringResource(R.string.edit_sheet_metric_state),
+                value = when {
+                    isSaving -> stringResource(R.string.loading)
+                    isDirty -> stringResource(R.string.edit_sheet_metric_unsaved)
+                    else -> stringResource(R.string.today_confirmed)
+                },
+                modifier = Modifier.weight(1f)
+            )
+            MZMetricChip(
+                label = stringResource(R.string.edit_sheet_metric_mode),
+                value = if (uiState is EditUiState.NewEntry) {
+                    stringResource(R.string.action_add)
+                } else {
+                    stringResource(R.string.action_edit_entry_manual)
+                },
+                modifier = Modifier.weight(1f),
+                accentColor = MaterialTheme.colorScheme.secondary
+            )
+        }
+        if (isDirty) {
+            MZStatusChip(
+                text = stringResource(R.string.edit_sheet_metric_unsaved),
+                color = MaterialTheme.colorScheme.error
             )
         }
     }
@@ -208,7 +276,6 @@ private fun ColumnScope.EditEntryStateContent(
 
         is EditUiState.NewEntry -> {
             EditEntryFormStateContent(
-                entry = draftEntryFor(state.date, screenState.formData),
                 formData = screenState.formData,
                 validationErrors = state.validationErrors,
                 dailyTargetHours = screenState.dailyTargetHours,
@@ -230,7 +297,6 @@ private fun ColumnScope.EditEntryStateContent(
 
         is EditUiState.Success -> {
             EditEntryFormStateContent(
-                entry = state.entry,
                 formData = screenState.formData,
                 validationErrors = state.validationErrors,
                 dailyTargetHours = screenState.dailyTargetHours,
@@ -251,7 +317,6 @@ private fun ColumnScope.EditEntryStateContent(
 
 @Composable
 private fun EditEntryFormStateContent(
-    entry: WorkEntry,
     formData: EditFormData,
     validationErrors: List<ValidationError>,
     dailyTargetHours: Double,
@@ -263,7 +328,6 @@ private fun EditEntryFormStateContent(
     onCopy: (() -> Unit)?
 ) {
     EditFormContent(
-        entry = entry,
         formData = formData,
         validationErrors = validationErrors,
         dailyTargetHours = dailyTargetHours,
@@ -378,7 +442,7 @@ private fun RowSavingState() {
             .padding(vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.layout.Row(
+        Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -386,18 +450,6 @@ private fun RowSavingState() {
             Text(text = stringResource(R.string.edit_saved))
         }
     }
-}
-
-private fun draftEntryFor(date: LocalDate, formData: EditFormData): WorkEntry {
-    return WorkEntry(
-        date = date,
-        dayType = formData.dayType,
-        workStart = if (formData.hasWorkTimes) formData.workStart else null,
-        workEnd = if (formData.hasWorkTimes) formData.workEnd else null,
-        breakMinutes = if (formData.hasWorkTimes) formData.breakMinutes else 0,
-        dayLocationLabel = formData.dayLocationLabel.orEmpty(),
-        note = formData.note
-    )
 }
 
 private fun showMissingPreviousEntryToast(context: Context) {

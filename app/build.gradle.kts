@@ -6,6 +6,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("io.gitlab.arturbosch.detekt")
+    jacoco
 }
 
 val releaseSigningProperties = Properties().apply {
@@ -30,8 +32,8 @@ android {
         applicationId = "de.montagezeit.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.1.1"
+        versionCode = 6
+        versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -162,4 +164,45 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// --- Detekt ---
+detekt {
+    config.setFrom(rootProject.file("detekt-config.yml"))
+    buildUponDefaultConfig = true
+    autoCorrect = false
+    baseline = file("detekt-baseline.xml")
+}
+
+// --- JaCoCo ---
+tasks.register<JacocoReport>("jacocoTestDebugUnitTestReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    val debugTree = fileTree(
+        "${layout.buildDirectory.get()}/intermediates/classes/debug/transformDebugClassesWithAsm/dirs"
+    ) {
+        exclude(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*Test*.*",
+            "**/Hilt_*.*",
+            "**/*_Factory*.*",
+            "**/*_Provide*Factory*.*",
+            "**/*_MembersInjector*.*",
+            "**/*_HiltModules*.*",
+            "**/Dagger*.*",
+            "**/dagger/hilt/internal/**",
+            "**/*ComposableSingletons*.*"
+        )
+    }
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+    classDirectories.setFrom(debugTree)
+    executionData.setFrom(fileTree(layout.buildDirectory.get()) {
+        include("jacoco/testDebugUnitTest.exec", "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+    })
 }

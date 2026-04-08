@@ -9,7 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * BroadcastReceiver für Boot-Completed und App-Update Events
@@ -35,7 +37,9 @@ class BootReceiver : BroadcastReceiver() {
             val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
             scope.launch {
                 try {
-                    reminderScheduler.scheduleAll()
+                    withTimeoutOrNull(10.seconds) {
+                        reminderScheduler.scheduleAll()
+                    }
                 } finally {
                     pendingResult.finish()
                 }
