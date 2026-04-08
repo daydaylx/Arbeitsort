@@ -20,9 +20,12 @@ val ColorScheme.success: Color get() = GlassSuccess
 val ColorScheme.warning: Color get() = GlassWarning
 val ColorScheme.danger: Color get() = GlassError
 val ColorScheme.info: Color get() = GlassInfo
-val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.9f)
-val ColorScheme.panelColor: Color get() = surface.copy(alpha = 0.94f)
-val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.98f)
+val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.5f)
+val ColorScheme.panelBorderBrush: Brush get() = Brush.linearGradient(
+    listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.02f))
+)
+val ColorScheme.panelColor: Color get() = surface.copy(alpha = 0.60f)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.75f)
 
 val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
     listOf(Color(0xFF08131A), Color(0xFF0B1720), Color(0xFF04080C))

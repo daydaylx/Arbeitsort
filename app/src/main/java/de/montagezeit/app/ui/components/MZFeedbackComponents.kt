@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,8 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.theme.GlassSurfaceVariant
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.panelBorderBrush
+import de.montagezeit.app.ui.theme.panelStrongColor
 
 @Composable
 fun MZInlineNotice(
@@ -294,8 +296,13 @@ fun MZAlertDialog(
         text = text,
         confirmButton = confirmButton,
         dismissButton = dismissButton,
-        modifier = modifier,
-        containerColor = GlassSurfaceVariant
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                brush = MaterialTheme.colorScheme.panelBorderBrush,
+                shape = RoundedCornerShape(28.dp)
+            ),
+        containerColor = MaterialTheme.colorScheme.panelStrongColor
     )
 }
 
@@ -312,7 +319,12 @@ fun MZSnackbarHost(
         Snackbar(
             snackbarData = data,
             shape = RoundedCornerShape(MZTokens.RadiusCard),
-            containerColor = GlassSurfaceVariant.copy(alpha = 0.95f),
+            containerColor = MaterialTheme.colorScheme.panelStrongColor,
+            modifier = Modifier.border(
+                width = 1.dp,
+                brush = MaterialTheme.colorScheme.panelBorderBrush,
+                shape = RoundedCornerShape(MZTokens.RadiusCard)
+            ),
             contentColor = MaterialTheme.colorScheme.onSurface,
             actionColor = MaterialTheme.colorScheme.primary
         )

@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -54,6 +55,7 @@ import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.theme.backgroundBrush
 import de.montagezeit.app.ui.theme.heroBrush
 import de.montagezeit.app.ui.theme.panelBorder
+import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelColor
 import de.montagezeit.app.ui.theme.panelStrongColor
 
@@ -192,21 +194,33 @@ fun MZAppBackdrop(
         modifier = modifier
             .fillMaxSize()
             .background(colorScheme.backgroundBrush)
-            .drawBehind {
-                // Glow circle top left (220 dp)
-                drawOrb(
-                    colors = listOf(colorScheme.primary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent),
-                    center = Offset(-56.dp.toPx(), -48.dp.toPx()),
-                    radius = MZTokens.OrbPrimaryRadiusDp.toPx()
-                )
-                // Glow circle bottom right (280 dp)
-                drawOrb(
-                    colors = listOf(colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary), Color.Transparent),
-                    center = Offset(size.width + 84.dp.toPx(), size.height + 96.dp.toPx()),
-                    radius = MZTokens.OrbSecondaryRadiusDp.toPx()
-                )
-            }
     ) {
+        // Ambient Glow Orbs for Glassmorphism
+        Box(
+            modifier = Modifier
+                .offset(x = (-100).dp, y = (-80).dp)
+                .size(MZTokens.OrbPrimaryRadiusDp * 2)
+                .blur(80.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(colorScheme.primary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent)
+                    )
+                )
+        )
+        
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 100.dp, y = 100.dp)
+                .size(MZTokens.OrbSecondaryRadiusDp * 2)
+                .blur(100.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary), Color.Transparent)
+                    )
+                )
+        )
+
         // Darkening overlay gradient (Transparent -> Black 0.22)
         Box(
             modifier = Modifier
@@ -219,14 +233,6 @@ fun MZAppBackdrop(
         )
         content()
     }
-}
-
-private fun DrawScope.drawOrb(colors: List<Color>, center: Offset, radius: Float) {
-    drawCircle(
-        brush = Brush.radialGradient(colors = colors, center = center, radius = radius),
-        radius = radius,
-        center = center
-    )
 }
 
 @Composable
@@ -245,7 +251,7 @@ private fun MZHomeTabBar(
             .background(MaterialTheme.colorScheme.panelStrongColor)
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = MaterialTheme.colorScheme.panelBorder,
+                brush = MaterialTheme.colorScheme.panelBorderBrush,
                 shape = navBarShape
             )
     ) {
@@ -318,7 +324,7 @@ fun MZHeroPanel(
             .background(colorScheme.heroBrush)
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = colorScheme.panelBorder,
+                brush = colorScheme.panelBorderBrush,
                 shape = RoundedCornerShape(MZTokens.RadiusHero)
             )
             .padding(horizontal = 22.dp, vertical = 24.dp)
@@ -384,7 +390,7 @@ fun MZAppPanel(
             .background(backgroundColor)
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = colorScheme.panelBorder,
+                brush = colorScheme.panelBorderBrush,
                 shape = RoundedCornerShape(MZTokens.RadiusMedium)
             )
             .padding(20.dp)
@@ -474,7 +480,7 @@ fun MZStatusChip(
             .background(color.copy(alpha = 0.1f))
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = color.copy(alpha = 0.24f),
+                brush = MaterialTheme.colorScheme.panelBorderBrush,
                 shape = RoundedCornerShape(MZTokens.RadiusSmall)
             )
             .padding(horizontal = 12.dp, vertical = 8.dp)

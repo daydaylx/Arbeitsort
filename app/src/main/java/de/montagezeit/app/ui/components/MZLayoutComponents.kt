@@ -25,7 +25,7 @@ object AccessibilityDefaults {
 
 private object GlassLayoutDefaults {
     const val StatusSurfaceAlpha = 0.14f
-    const val NeutralSurfaceAlpha = 0.92f
+    const val NeutralSurfaceAlpha = 0.70f
 }
 
 enum class StatusType {

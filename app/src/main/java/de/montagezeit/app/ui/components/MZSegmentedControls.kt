@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.panelBorderBrush
+import de.montagezeit.app.ui.theme.panelStrongColor
 
 data class MZSegmentedOption<T>(
     val value: T,
@@ -41,14 +43,15 @@ fun <T> MZSegmentedControl(
     modifier: Modifier = Modifier
 ) {
     val containerShape = RoundedCornerShape(MZTokens.RadiusCard)
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(containerShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+            .background(colorScheme.panelStrongColor)
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal),
+                brush = colorScheme.panelBorderBrush,
                 shape = containerShape
             )
             .padding(4.dp),

@@ -128,6 +128,11 @@ fun SecondaryActionButton(
         animationSpec = tween(BUTTON_PRESS_ANIMATION_MS),
         label = "secondaryButtonScale"
     )
+    val alpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = tween(BUTTON_PRESS_ANIMATION_MS),
+        label = "secondaryButtonAlpha"
+    )
 
     OutlinedButton(
         onClick = onClick,
@@ -136,6 +141,7 @@ fun SecondaryActionButton(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
+                this.alpha = alpha
             }
             .heightIn(min = minHeight),
         enabled = enabled && !isLoading,
