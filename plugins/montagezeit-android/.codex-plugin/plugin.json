@@ -1,0 +1,29 @@
+{
+  "name": "montagezeit-android",
+  "version": "0.1.0",
+  "description": "Project-local Android workflow plugin for MontageZeit with repo-specific maintenance guidance.",
+  "keywords": [
+    "android",
+    "kotlin",
+    "jetpack-compose",
+    "room",
+    "workmanager",
+    "montagezeit"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MontageZeit Android",
+    "shortDescription": "Repo-local Android maintenance workflow",
+    "longDescription": "Use repo-local guidance for Compose, Room, WorkManager, export, and local quality-gate workflows in the MontageZeit Android project.",
+    "developerName": "MontageZeit",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use the MontageZeit Android workflow to inspect, change, and verify this Android task."
+    ],
+    "brandColor": "#1F6B5C"
+  }
+}
