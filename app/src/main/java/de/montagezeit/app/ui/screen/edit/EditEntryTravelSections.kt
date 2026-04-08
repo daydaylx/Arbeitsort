@@ -21,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +32,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalTime
@@ -62,7 +63,7 @@ internal fun TravelLegsSection(
             )
 
             if (travelLegs.isNotEmpty()) {
-                TextButton(onClick = onClearTravel) {
+                TertiaryActionButton(onClick = onClearTravel) {
                     Text(stringResource(R.string.edit_action_clear_all_travel))
                 }
             }
@@ -74,7 +75,7 @@ internal fun TravelLegsSection(
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                 border = BorderStroke(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.AlphaSubtle)
                 )
             ) {
                 Row(
@@ -86,7 +87,7 @@ internal fun TravelLegsSection(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaSubtle)
                     ) {
                         Icon(
                             imageVector = Icons.Default.DirectionsCar,
@@ -169,7 +170,7 @@ private fun TravelLegCard(
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = MZTokens.AlphaSecondary),
         border = BorderStroke(
             width = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f)

@@ -19,6 +19,7 @@ object MZTokens {
     val RadiusBadge  = RadiusSmall
     val RadiusChip   = RadiusSmall
     val RadiusModal  = RadiusMedium
+    val RadiusSheet  = RadiusExtraLarge
 
     // Border
     val PanelBorderWidth = 1.dp
@@ -28,6 +29,13 @@ object MZTokens {
     const val BorderAlphaNormal   = 0.16f
     const val BorderAlphaEmphasis = 0.26f
     const val CardSurfaceAlpha    = 0.82f
+
+    // Content alphas
+    const val AlphaGlassSheet   = 0.98f  // Bottom Sheets und Modal-Overlays
+    const val AlphaGlassOverlay = 0.96f  // Screen-Hintergrund-Overlays
+    const val AlphaSecondary    = 0.70f  // Sekundärer Text und Icons
+    const val AlphaDisabled     = 0.40f  // Disabled-State
+    const val AlphaSubtle       = 0.12f  // Hover-Overlays, subtile Trenner
 
     // Background Orbs
     const val OrbAlphaPrimary       = 0.18f // Increased to match sshterm 0.18

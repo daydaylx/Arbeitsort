@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import de.montagezeit.app.ui.components.MZAlertDialog
+import de.montagezeit.app.ui.components.PrimaryActionButton
+import de.montagezeit.app.ui.components.SecondaryActionButton
+import de.montagezeit.app.ui.components.TertiaryActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,7 +90,7 @@ fun PdfSettingsDialog(
             }
         },
         confirmButton = {
-            Button(
+            PrimaryActionButton(
                 onClick = {
                     onSave(
                         employeeName.ifBlank { null },
@@ -105,7 +105,7 @@ fun PdfSettingsDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         }
@@ -133,7 +133,7 @@ fun ExportRangeDialog(
                     text = stringResource(R.string.pdf_range_from),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { showStartDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -144,7 +144,7 @@ fun ExportRangeDialog(
                     text = stringResource(R.string.pdf_range_to),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { showEndDatePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -163,19 +163,19 @@ fun ExportRangeDialog(
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { onPreviewRangeSelected(startDate, endDate) },
                     enabled = !startDate.isAfter(endDate)
                 ) {
                     Text(stringResource(R.string.action_preview))
                 }
-                OutlinedButton(
+                SecondaryActionButton(
                     onClick = { onCsvRangeSelected(startDate, endDate) },
                     enabled = !startDate.isAfter(endDate)
                 ) {
                     Text(stringResource(R.string.export_format_csv))
                 }
-                Button(
+                PrimaryActionButton(
                     onClick = { onPdfRangeSelected(startDate, endDate) },
                     enabled = !startDate.isAfter(endDate)
                 ) {
@@ -184,7 +184,7 @@ fun ExportRangeDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TertiaryActionButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         }

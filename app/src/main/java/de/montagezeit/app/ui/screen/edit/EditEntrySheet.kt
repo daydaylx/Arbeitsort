@@ -6,6 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import de.montagezeit.app.ui.components.MZHeroPanel
 import de.montagezeit.app.ui.components.MZMetricChip
 import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.MZStatusChip
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 
@@ -94,8 +96,8 @@ fun EditEntrySheet(
     ModalBottomSheet(
         onDismissRequest = handleDismiss,
         sheetState = sheetState,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+        shape = RoundedCornerShape(topStart = MZTokens.RadiusSheet, topEnd = MZTokens.RadiusSheet),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaGlassSheet)
     ) {
         EditEntrySheetScaffold(
             date = date,

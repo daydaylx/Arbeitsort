@@ -230,7 +230,7 @@ fun HistoryContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
                     .padding(bottom = 8.dp)
             ) {
                 HistoryMiniFilterBar(
@@ -700,7 +700,7 @@ fun StatusDot(
     val color = if (active) {
         activeColor
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MZTokens.AlphaDisabled)
     }
     Box(
         modifier = Modifier
@@ -901,7 +901,7 @@ fun WeekGroupHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -955,7 +955,7 @@ fun MonthGroupHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -1078,7 +1078,7 @@ fun HistoryEntryItem(
                         Icon(
                             imageVector = Icons.Default.Work,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaSecondary),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1257,7 +1257,7 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
                 Icon(
                     imageVector = Icons.Default.DirectionsCar,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary),
                     modifier = Modifier
                         .size(14.dp)
                         .padding(top = 2.dp)
@@ -1267,7 +1267,7 @@ fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
                         Text(
                             text = summaryText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary)
                         )
                     }
                     labelText?.let {

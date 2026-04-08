@@ -501,7 +501,7 @@ private fun KpiGridItem(
         ) {
             Surface(
                 shape = RoundedCornerShape(MZTokens.RadiusChip),
-                color = tint.copy(alpha = 0.12f),
+                color = tint.copy(alpha = MZTokens.AlphaSubtle),
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {

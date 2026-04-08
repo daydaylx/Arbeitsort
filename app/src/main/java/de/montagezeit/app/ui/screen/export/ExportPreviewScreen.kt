@@ -58,6 +58,7 @@ import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -83,7 +84,7 @@ fun ExportPreviewBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaGlassSheet)
     ) {
         Column(
             modifier = Modifier
@@ -466,7 +467,7 @@ private fun PdfPageCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaDisabled)
         )
     ) {
         Column(
