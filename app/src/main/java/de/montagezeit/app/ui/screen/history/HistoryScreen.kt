@@ -1,3 +1,5 @@
+@file:Suppress("LongMethod", "CyclomaticComplexMethod", "MaxLineLength")
+
 package de.montagezeit.app.ui.screen.history
 
 import androidx.compose.animation.animateContentSize
@@ -104,42 +106,42 @@ fun HistoryScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        MZPageBackground(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                when (uiState) {
-                    is HistoryUiState.Loading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+        when (uiState) {
+            is HistoryUiState.Loading -> {
+                MZLoadingState(
+                    message = stringResource(R.string.loading),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
-                    is HistoryUiState.Success -> {
-                        val successState = uiState as HistoryUiState.Success
-                        HistoryContent(
-                            weeks = successState.weeks,
-                            months = successState.months,
-                            entriesByDate = successState.entriesByDate,
-                            travelLegsByDate = successState.travelLegsByDate,
-                            onEntryClick = onOpenEditSheet,
-                            onOpenBatchEdit = { showBatchEditDialog = true },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+            is HistoryUiState.Success -> {
+                val successState = uiState as HistoryUiState.Success
+                HistoryContent(
+                    weeks = successState.weeks,
+                    months = successState.months,
+                    entriesByDate = successState.entriesByDate,
+                    travelLegsByDate = successState.travelLegsByDate,
+                    onEntryClick = onOpenEditSheet,
+                    onOpenBatchEdit = { showBatchEditDialog = true },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-                    is HistoryUiState.Error -> {
-                        MZErrorState(
-                            message = (uiState as HistoryUiState.Error).message.asString(context),
-                            onRetry = { viewModel.loadHistory() },
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
+            is HistoryUiState.Error -> {
+                MZErrorState(
+                    message = (uiState as HistoryUiState.Error).message.asString(context),
+                    onRetry = { viewModel.loadHistory() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
 
         MZSnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = MZTokens.ScreenPadding, vertical = 12.dp)
         )
     }
 
@@ -170,8 +172,11 @@ fun HistoryContent(
     var calendarMode by rememberSaveable(stateSaver = calendarModeSaver) { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by rememberSaveable(stateSaver = yearMonthSaver) { mutableStateOf(YearMonth.now()) }
     var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
-    val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }
-    val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }
+    val entries = remember(entriesByDate) { entriesByDate.values.sortedByDescending(WorkEntry::date) }
+    val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
+    val unconfirmedCount = remember(entries) {
+        entries.count { it.dayType == DayType.WORK && !it.confirmedWorkDay }
+    }
     val hasGroupedContent = weeks.isNotEmpty() || months.isNotEmpty()
     val openEntryForDate: (LocalDate) -> Unit = { date ->
         selectedDate = date
@@ -185,11 +190,47 @@ fun HistoryContent(
             .padding(horizontal = MZTokens.ScreenPadding, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item(key = "history-hero") {
+            MZHeroPanel {
+                MZSectionIntro(
+                    eyebrow = stringResource(R.string.history_title),
+                    title = stringResource(R.string.history_hero_title),
+                    supportingText = stringResource(R.string.history_hero_support)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_entries),
+                        value = entries.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_workdays),
+                        value = workEntryCount.toString(),
+                        modifier = Modifier.weight(1f),
+                        accentColor = MaterialTheme.colorScheme.secondary
+                    )
+                    MZMetricChip(
+                        label = stringResource(R.string.history_metric_open),
+                        value = unconfirmedCount.toString(),
+                        modifier = Modifier.weight(1f),
+                        accentColor = if (unconfirmedCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.tertiary
+                        }
+                    )
+                }
+            }
+        }
+
         stickyHeader(key = "history-controls") {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
                     .padding(bottom = 8.dp)
             ) {
                 HistoryMiniFilterBar(
@@ -211,7 +252,7 @@ fun HistoryContent(
         when {
             showCalendar -> {
                 item(key = "calendar") {
-                    MZCard {
+                    MZAppPanel {
                         if (calendarMode == CalendarMode.MONTH) {
                             CalendarView(
                                 month = selectedMonth,
@@ -239,20 +280,7 @@ fun HistoryContent(
                         modifier = Modifier.fillMaxWidth(),
                         title = stringResource(R.string.history_empty_title),
                         subtitle = stringResource(R.string.history_empty_subtitle),
-                        icon = Icons.Default.History,
-                        action = {
-                            PrimaryActionButton(
-                                onClick = { showDatePicker = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(stringResource(R.string.history_action_add_past_day))
-                            }
-                        }
+                        icon = Icons.Default.History
                     )
                 }
             }
@@ -337,7 +365,7 @@ private fun HistoryMiniFilterBar(
     onPickDate: () -> Unit,
     onOpenBatchEdit: () -> Unit = {}
 ) {
-    MZCard {
+    MZAppPanel {
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
@@ -380,27 +408,23 @@ private fun HistoryMiniFilterBar(
                 }
             }
 
-            AssistChip(
-                onClick = onPickDate,
-                label = { Text(stringResource(R.string.history_action_pick_date)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = stringResource(R.string.history_action_pick_date)
-                    )
-                }
-            )
+            SecondaryActionButton(onClick = onPickDate) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text(stringResource(R.string.history_action_pick_date))
+            }
 
-            AssistChip(
-                onClick = onOpenBatchEdit,
-                label = { Text(stringResource(R.string.cd_batch_edit)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null
-                    )
-                }
-            )
+            TertiaryActionButton(onClick = onOpenBatchEdit) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+                Text(stringResource(R.string.cd_batch_edit))
+            }
         }
     }
 }
@@ -671,7 +695,7 @@ fun CalendarDayCell(
 @Composable
 fun StatusDot(
     active: Boolean,
-    activeColor: androidx.compose.ui.graphics.Color
+    activeColor: Color
 ) {
     val color = if (active) {
         activeColor
@@ -874,48 +898,51 @@ fun BatchEditDialog(
 fun WeekGroupHeader(
     week: WeekGroup
 ) {
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MZStatusBadge(
-                text = "KW ${week.week}",
-                type = StatusType.INFO,
-                showIcon = false
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.history_hours_decimal, week.totalHours),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
+        MZSectionHeader(
+            title = stringResource(R.string.history_week_header, week.week, "", "").substringBefore("·").trim()
+        )
+        
+        MZAppPanel(emphasized = false) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MZStatusChip(
+                    text = "KW ${week.week}",
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.history_summary_workdays,
-                        week.workDaysCount,
-                        week.workDaysCount
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                Text(
-                    text = year,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.history_hours_decimal, week.totalHours),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.history_summary_workdays,
+                            week.workDaysCount,
+                            week.workDaysCount
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                    Text(
+                        text = year,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -925,53 +952,55 @@ fun WeekGroupHeader(
 fun MonthGroupHeader(
     month: MonthGroup
 ) {
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.96f))
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MZStatusBadge(
-                text = month.displayText,
-                type = StatusType.INFO,
-                showIcon = false
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.history_hours_decimal, month.totalHours),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
+        MZSectionHeader(title = month.displayText)
+        
+        MZAppPanel(emphasized = false) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MZStatusChip(
+                    text = month.displayText,
+                    color = MaterialTheme.colorScheme.secondary
                 )
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.history_summary_workdays,
-                        month.workDaysCount,
-                        month.workDaysCount
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                Text(
-                    text = year,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.history_hours_decimal, month.totalHours),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.history_summary_workdays,
+                            month.workDaysCount,
+                            month.workDaysCount
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+                    Text(
+                        text = year,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HistoryEntryItem(
     entry: WorkEntry,
@@ -987,12 +1016,14 @@ fun HistoryEntryItem(
         stringResource(R.string.today_day_location_unset)
     }
     var dragAccum by remember(entry.date) { mutableStateOf(0f) }
-    val statusBadge: Pair<String, StatusType>? = when {
-        !entry.confirmedWorkDay && entry.dayType == DayType.WORK -> stringResource(R.string.today_unconfirmed) to StatusType.WARNING
-        entry.dayType == DayType.OFF -> stringResource(R.string.history_day_type_off) to StatusType.NEUTRAL
-        entry.dayType == DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time) to StatusType.INFO
+    
+    val statusChipInfo: Pair<String, Color>? = when {
+        !entry.confirmedWorkDay && entry.dayType == DayType.WORK -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
+        entry.dayType == DayType.OFF -> stringResource(R.string.history_day_type_off) to MaterialTheme.colorScheme.outline
+        entry.dayType == DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time) to MaterialTheme.colorScheme.secondary
         else -> null
     }
+
     val travelSummary = remember(travelLegs) {
         travelLegs
             .sortedBy(TravelLeg::sortOrder)
@@ -1006,25 +1037,26 @@ fun HistoryEntryItem(
             .orEmpty()
     }
 
-    MZCard(
-        onClick = { onEntryClick(entry.date) },
-        modifier = Modifier.pointerInput(entry.date) {
-            val swipeThresholdPx = 52.dp.toPx()
-            detectHorizontalDragGestures(
-                onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                onDragEnd = {
-                    if (kotlin.math.abs(dragAccum) > swipeThresholdPx) {
-                        onEntryClick(entry.date)
-                    }
-                    dragAccum = 0f
-                },
-                onDragCancel = { dragAccum = 0f }
-            )
-        }
+    MZAppPanel(
+        modifier = Modifier
+            .clickable { onEntryClick(entry.date) }
+            .pointerInput(entry.date) {
+                val swipeThresholdPx = 52.dp.toPx()
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
+                    onDragEnd = {
+                        if (kotlin.math.abs(dragAccum) > swipeThresholdPx) {
+                            onEntryClick(entry.date)
+                        }
+                        dragAccum = 0f
+                    },
+                    onDragCancel = { dragAccum = 0f }
+                )
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1038,55 +1070,64 @@ fun HistoryEntryItem(
                 ) {
                     Text(
                         text = formatEntryDate(entry.date),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
                     )
                     if (entry.dayType == DayType.WORK) {
-                        DayTypeIndicator(dayType = entry.dayType)
+                        Icon(
+                            imageVector = Icons.Default.Work,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    if (entry.dayType == DayType.WORK || travelMinutes > 0) {
-                        val displayHours = if (workHours > 0.0) workHours else totalPaidHours
-                        Text(
-                            text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
-                            style = NumberStyles.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    statusBadge?.let { (text, type) ->
-                        MZStatusBadge(
-                            text = text,
-                            type = type,
-                            showIcon = false
-                        )
-                    }
+                if (entry.dayType == DayType.WORK || travelMinutes > 0) {
+                    val displayHours = if (workHours > 0.0) workHours else totalPaidHours
+                    Text(
+                        text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
+                        style = NumberStyles.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
-            Text(
-                text = locationLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-
-            if (travelSummary.isNotBlank()) {
-                Text(
-                    text = travelSummary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                MZStatusChip(
+                    text = locationLabel,
+                    color = MaterialTheme.colorScheme.outline
                 )
-            } else if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01) {
+
+                statusChipInfo?.let { (text, color) ->
+                    MZStatusChip(
+                        text = text,
+                        color = color
+                    )
+                }
+
+                if (travelSummary.isNotBlank()) {
+                    MZStatusChip(
+                        text = travelSummary,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+
+            if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01 && travelSummary.isBlank()) {
                 Text(
                     text = stringResource(
                         R.string.history_entry_total_paid,
                         formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
                     ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                 )
             }
         }
