@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import de.montagezeit.app.ui.components.MZAlertDialog
+import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
@@ -52,6 +53,7 @@ fun PdfSettingsDialog(
                     placeholder = { Text(stringResource(R.string.pdf_settings_employee_name_placeholder)) },
                     singleLine = true,
                     isError = employeeName.isBlank(),
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -61,6 +63,7 @@ fun PdfSettingsDialog(
                     label = { Text(stringResource(R.string.pdf_settings_company_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_company_placeholder)) },
                     singleLine = true,
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -70,6 +73,7 @@ fun PdfSettingsDialog(
                     label = { Text(stringResource(R.string.pdf_settings_project_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_project_placeholder)) },
                     singleLine = true,
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -79,6 +83,7 @@ fun PdfSettingsDialog(
                     label = { Text(stringResource(R.string.pdf_settings_personnel_number_label)) },
                     placeholder = { Text(stringResource(R.string.pdf_settings_personnel_number_placeholder)) },
                     singleLine = true,
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
 

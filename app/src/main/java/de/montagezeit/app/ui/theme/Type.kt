@@ -12,18 +12,18 @@ private val MonoFont = FontFamily.Monospace
 
 val Typography = Typography(
     displayLarge = TextStyle(
-        fontFamily = DisplayFont,
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp
-    ),
-    displayMedium = TextStyle(
         fontFamily = MonoFont,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 34.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = DisplayFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 30.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.5).sp
     ),
     headlineLarge = TextStyle(
         fontFamily = DisplayFont,
@@ -114,19 +114,19 @@ val Typography = Typography(
 /** Tabular-number styles — same metrics per digit, no layout jumps. */
 object NumberStyles {
     val displayLarge = TextStyle(
-        fontFamily = DisplayFont,
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp,
-        fontFeatureSettings = "tnum"
-    )
-    val displayMedium = TextStyle(
         fontFamily = MonoFont,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 34.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp,
+        fontFeatureSettings = "tnum"
+    )
+    val displayMedium = TextStyle(
+        fontFamily = DisplayFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 30.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.5).sp,
         fontFeatureSettings = "tnum"
     )
     val headlineLarge = TextStyle(

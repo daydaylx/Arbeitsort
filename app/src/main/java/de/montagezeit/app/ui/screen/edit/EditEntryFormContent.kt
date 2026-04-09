@@ -50,6 +50,7 @@ import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
+import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.util.Formatters
 
 @Composable
@@ -423,6 +424,7 @@ internal fun LocationLabelsSection(
             label = { Text(stringResource(R.string.day_location_label)) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
             isError = locationError != null,
+            colors = mzOutlinedTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -443,6 +445,7 @@ internal fun NoteSection(
             value = note ?: "",
             onValueChange = { if (it.length <= 500) onNoteChange(it) },
             placeholder = { Text(stringResource(R.string.edit_placeholder_note)) },
+            colors = mzOutlinedTextFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 72.dp),
@@ -474,7 +477,7 @@ internal fun MealAllowanceSection(
             amount = stringResource(R.string.meal_allowance_breakfast_amount),
             onCheckedChange = onBreakfastIncludedChange
         )
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

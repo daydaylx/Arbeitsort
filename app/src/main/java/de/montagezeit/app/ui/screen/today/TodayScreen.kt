@@ -74,6 +74,7 @@ import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.components.staggeredAppear
 import de.montagezeit.app.ui.theme.GlassInfo
 import de.montagezeit.app.ui.theme.GlassSuccess
@@ -598,7 +599,7 @@ private fun WorkHoursCard(
         )
 
         if (travelMinutes > 0 && workMinutes > 0) {
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             MZKeyValueRow(
                 label = stringResource(R.string.history_stat_work),
                 value = formatMinutes(workMinutes)
@@ -610,7 +611,7 @@ private fun WorkHoursCard(
         }
 
         entry.note?.takeIf { it.isNotBlank() }?.let { note ->
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             MZInlineNotice(
                 title = stringResource(R.string.edit_section_note_optional),
                 message = note,
@@ -648,6 +649,7 @@ private fun DailyManualCheckInDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
@@ -715,6 +717,7 @@ private fun DayLocationDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(

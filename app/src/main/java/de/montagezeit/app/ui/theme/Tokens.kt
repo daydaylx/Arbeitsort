@@ -28,7 +28,7 @@ object MZTokens {
     const val BorderAlphaSubtle   = 0.10f
     const val BorderAlphaNormal   = 0.16f
     const val BorderAlphaEmphasis = 0.26f
-    const val CardSurfaceAlpha    = 0.42f
+    const val CardSurfaceAlpha    = 0.55f
     const val GlassBorderAlpha    = 0.30f
     const val GlassBorderFadeAlpha = 0.04f
     const val GlassHighlightAlpha = 0.22f
@@ -48,9 +48,11 @@ object MZTokens {
     val OrbSecondaryRadiusDp  = 280.dp // Matched to sshterm (280 dp)
 
     // Spacing
-    val ScreenPadding = 20.dp // Matched to sshterm (20 dp)
-    val CardSpacing   = 14.dp // Matched to sshterm (14 dp)
-    val InnerPadding  = 20.dp // Matched to sshterm (20 dp)
+    val ScreenPadding  = 20.dp // Matched to sshterm (20 dp)
+    val CardSpacing    = 16.dp // Between cards — wider than ContentSpacing for clearer rhythm
+    val ContentSpacing = 12.dp // Within panels (vertical arrangement)
+    val InnerPadding   = 20.dp // Matched to sshterm (20 dp)
+    val HeroPadding    = 20.dp // HeroPanel uniform padding (was 22h/24v)
 
     // Elevation
     val CardElevation = 0.dp

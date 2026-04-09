@@ -761,7 +761,7 @@ fun BatchEditDialog(
                     )
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -821,6 +821,7 @@ fun BatchEditDialog(
                         value = note,
                         onValueChange = { note = it },
                         placeholder = { Text(stringResource(R.string.history_batch_note_placeholder)) },
+                        colors = mzOutlinedTextFieldColors(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

@@ -496,8 +496,8 @@ private fun KpiGridItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .heightIn(min = 88.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(MZTokens.RadiusChip),
@@ -574,7 +574,7 @@ private fun OverviewPeriodPickerSheet(
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
             ListItem(
                 modifier = Modifier.clickable {

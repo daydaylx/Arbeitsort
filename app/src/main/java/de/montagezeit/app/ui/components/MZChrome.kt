@@ -48,7 +48,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.theme.backgroundBrush
@@ -102,7 +109,7 @@ fun MZScreenScaffold(
                     actions = actions,
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
                         navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         actionIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -125,6 +132,7 @@ fun MZHomeShellScaffold(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    tabIcons: List<ImageVector>? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -162,7 +170,7 @@ fun MZHomeShellScaffold(
                     actions = actions,
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
                         navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         actionIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -172,6 +180,7 @@ fun MZHomeShellScaffold(
             bottomBar = {
                 MZHomeTabBar(
                     tabs = tabs,
+                    tabIcons = tabIcons,
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = onTabSelected
                 )
@@ -243,7 +252,8 @@ fun MZAppBackdrop(
 private fun MZHomeTabBar(
     tabs: List<String>,
     selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit
+    onTabSelected: (Int) -> Unit,
+    tabIcons: List<ImageVector>? = null
 ) {
     val navBarShape = RoundedCornerShape(MZTokens.RadiusCard)
     Box(
@@ -277,7 +287,7 @@ private fun MZHomeTabBar(
                 modifier = Modifier
                     .offset(x = indicatorOffset)
                     .width(tabWidth)
-                    .height(38.dp)
+                    .height(44.dp)
                     .padding(horizontal = 4.dp)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
                     .background(
@@ -291,36 +301,65 @@ private fun MZHomeTabBar(
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 tabs.forEachIndexed { index, label ->
-                    val isSelected = selectedTabIndex == index
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(38.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onTabSelected(index) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
+                    MZTabItem(
+                        label = label,
+                        icon = tabIcons?.getOrNull(index),
+                        isSelected = selectedTabIndex == index,
+                        onClick = { onTabSelected(index) }
+                    )
                 }
             }
         }
     }
 }
 
+@Composable
+private fun RowScope.MZTabItem(
+    label: String,
+    icon: ImageVector?,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val contentColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(44.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            icon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = contentColor
+                )
+            }
+            Text(
+                text = label,
+                color = contentColor,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    }
+}
+
 /**
  * Featured intro area per screen.
- * Brush background, 1 dp border, 30dp radius, 22dp horizontal / 24dp vertical padding.
+ * Brush background, 1 dp border, 30dp radius, 20dp padding.
  */
 @Composable
 fun MZHeroPanel(
@@ -341,7 +380,7 @@ fun MZHeroPanel(
                 brush = colorScheme.panelBorderBrush,
                 shape = RoundedCornerShape(MZTokens.RadiusHero)
             )
-            .padding(horizontal = 22.dp, vertical = 24.dp)
+            .padding(MZTokens.HeroPadding)
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -367,7 +406,7 @@ fun MZSectionIntro(
         Text(
             text = eyebrow.uppercase(),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = title,
@@ -413,7 +452,7 @@ fun MZAppPanel(
             .padding(20.dp)
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(MZTokens.ContentSpacing),
             content = content
         )
     }
@@ -470,12 +509,14 @@ fun MZMetricChip(
         Column(horizontalAlignment = Alignment.Start) {
             Text(
                 text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = accentColor
+                style = MaterialTheme.typography.labelLarge,
+                color = accentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -494,7 +535,7 @@ fun MZStatusChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(color.copy(alpha = 0.1f))
+            .background(color.copy(alpha = 0.18f))
             .border(
                 width = MZTokens.PanelBorderWidth,
                 brush = MaterialTheme.colorScheme.panelBorderBrush,

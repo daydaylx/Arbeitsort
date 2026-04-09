@@ -138,7 +138,7 @@ fun MZLoadingState(
     onCancel: (() -> Unit)? = null
 ) {
     MZAppPanel(
-        modifier = modifier.padding(32.dp),
+        modifier = modifier.padding(24.dp),
         emphasized = true
     ) {
         Column(
@@ -296,11 +296,12 @@ fun MZAlertDialog(
         text = text,
         confirmButton = confirmButton,
         dismissButton = dismissButton,
+        shape = RoundedCornerShape(MZTokens.RadiusExtraLarge),
         modifier = modifier
             .border(
                 width = 1.dp,
                 brush = MaterialTheme.colorScheme.panelBorderBrush,
-                shape = RoundedCornerShape(28.dp)
+                shape = RoundedCornerShape(MZTokens.RadiusExtraLarge)
             ),
         containerColor = MaterialTheme.colorScheme.panelStrongColor
     )

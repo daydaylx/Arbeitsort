@@ -51,7 +51,7 @@ fun WeekOverviewRow(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = MZTokens.ScreenPadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items(weekDays, key = { it.date.toString() }) { day ->
             WeekDayChip(
@@ -122,7 +122,7 @@ private fun WeekDayChip(
 
     Surface(
         modifier = Modifier
-            .width(46.dp)
+            .width(44.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale

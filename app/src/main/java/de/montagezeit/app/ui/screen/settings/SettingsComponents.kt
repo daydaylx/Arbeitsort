@@ -102,7 +102,7 @@ internal fun CollapsibleSettingsCard(
 
             AnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     content()
                 }
             }
@@ -153,7 +153,7 @@ internal fun SetupSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             SetupRow(
                 title = stringResource(R.string.settings_notifications),
@@ -175,7 +175,7 @@ internal fun SetupSection(
                 isOk = hasNotificationPermission
             )
 
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             SetupRow(
                 title = stringResource(R.string.settings_battery_optimization),
@@ -195,7 +195,7 @@ internal fun SetupSection(
             )
 
             if (hasNotificationPermission) {
-                HorizontalDivider()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 SecondaryActionButton(
                     onClick = onSendTestReminder,
@@ -486,6 +486,7 @@ internal fun NumericInputRow(
                     }
                 ),
                 singleLine = true,
+                colors = mzOutlinedTextFieldColors(),
                 modifier = Modifier
                     .weight(1f)
                     .onFocusChanged { focusState ->

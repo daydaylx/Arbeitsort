@@ -29,7 +29,7 @@ val ColorScheme.panelBorderBrush: Brush get() = Brush.linearGradient(
     )
 )
 val ColorScheme.panelColor: Color get() = surface.copy(alpha = MZTokens.CardSurfaceAlpha)
-val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.55f)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.72f)
 
 val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
     listOf(Color(0xFF08131A), Color(0xFF0B1720), Color(0xFF04080C))
@@ -115,8 +115,8 @@ private val GlassColorScheme = darkColorScheme(
     onSurface = GlassOnDark,
     surfaceVariant = GlassSurfaceVariant,
     onSurfaceVariant = GlassOnDarkMuted,
-    outline = GlassPrimaryGlow,
-    outlineVariant = GlassPrimary,
+    outline = Color(0xFF3A4A5C),         // Neutral slate — prevents orange bleed into borders/dividers
+    outlineVariant = Color(0xFF1E2D3D),  // Dark slate for HorizontalDivider
     inverseSurface = GlassOnDark,
     inverseOnSurface = GlassBackground,
     inversePrimary = GlassPrimaryContainer,

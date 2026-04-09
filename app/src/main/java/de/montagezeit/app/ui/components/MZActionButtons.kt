@@ -181,7 +181,7 @@ fun SecondaryActionButton(
                 baseModifier
                     .clip(resolvedShape)
                     .background(
-                        color = Color.White.copy(alpha = 0.05f),
+                        color = Color.White.copy(alpha = 0.10f),
                         shape = resolvedShape
                     )
             } else {

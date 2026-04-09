@@ -34,6 +34,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
+import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
@@ -249,6 +250,7 @@ private fun TravelLegCard(
                 onValueChange = { if (it.length <= 100) onStartLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_from_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
+                colors = mzOutlinedTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -258,6 +260,7 @@ private fun TravelLegCard(
                 onValueChange = { if (it.length <= 100) onEndLabelChange(it) },
                 label = { Text(stringResource(R.string.edit_label_to_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
+                colors = mzOutlinedTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )

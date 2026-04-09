@@ -1,6 +1,8 @@
 package de.montagezeit.app.ui.components
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,18 @@ enum class StatusType {
 internal data class StatusPalette(
     val containerColor: Color,
     val accentColor: Color
+)
+
+/**
+ * Consistent OutlinedTextField colors for the glass dark theme.
+ * Focused state stays orange (primary), unfocused border uses neutral slate outline.
+ */
+@Composable
+fun mzOutlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
 )
 
 @Composable

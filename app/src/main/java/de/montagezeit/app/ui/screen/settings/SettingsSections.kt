@@ -194,7 +194,7 @@ internal fun ReminderSettingsSection(
                 type = StatusType.ERROR,
                 modifier = Modifier.fillMaxWidth()
             )
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
         SettingsToggleRow(
@@ -215,7 +215,7 @@ internal fun ReminderSettingsSection(
             )
         }
 
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_evening),
@@ -235,7 +235,7 @@ internal fun ReminderSettingsSection(
             )
         }
 
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_fallback),
@@ -250,7 +250,7 @@ internal fun ReminderSettingsSection(
             modifier = Modifier.padding(start = 12.dp)
         )
 
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_daily),
@@ -339,7 +339,7 @@ internal fun NonWorkingDaysSection(
             onCheckedChange = onUpdateAutoOffWeekends
         )
 
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         SettingsToggleRow(
             title = stringResource(R.string.label_auto_off_holidays),

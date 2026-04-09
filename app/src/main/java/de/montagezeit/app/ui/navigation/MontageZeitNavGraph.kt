@@ -4,7 +4,10 @@ package de.montagezeit.app.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -100,6 +103,7 @@ fun MontageZeitNavGraph(
                 title = stringResource(currentPage.titleRes),
                 subtitle = stringResource(currentPage.subtitleRes),
                 tabs = homePages.map { stringResource(it.titleRes) },
+                tabIcons = listOf(Icons.Default.Today, Icons.Default.BarChart, Icons.Default.History),
                 selectedTabIndex = pagerState.currentPage,
                 onTabSelected = { index ->
                     coroutineScope.launch {
