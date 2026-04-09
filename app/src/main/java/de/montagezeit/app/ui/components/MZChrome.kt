@@ -206,41 +206,32 @@ fun MZAppBackdrop(
             .background(colorScheme.backgroundBrush)
     ) {
         // Ambient Glow Orbs for Glassmorphism
+        // Solid color orb — top-left, primary (orange)
         Box(
             modifier = Modifier
                 .offset(x = (-100).dp, y = (-80).dp)
                 .size(MZTokens.OrbPrimaryRadiusDp * 2)
-                .blur(80.dp)
+                .blur(20.dp)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(colorScheme.primary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent)
                     )
                 )
         )
-        
+
+        // Solid color orb — bottom-right, secondary (teal)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .offset(x = 100.dp, y = 100.dp)
                 .size(MZTokens.OrbSecondaryRadiusDp * 2)
-                .blur(100.dp)
+                .blur(24.dp)
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
                             colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary),
                             Color.Transparent
                         )
-                    )
-                )
-        )
-
-        // Darkening overlay gradient (Transparent -> Black 0.22)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f))
                     )
                 )
         )
@@ -535,12 +526,7 @@ fun MZStatusChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(color.copy(alpha = 0.18f))
-            .border(
-                width = MZTokens.PanelBorderWidth,
-                brush = MaterialTheme.colorScheme.panelBorderBrush,
-                shape = RoundedCornerShape(MZTokens.RadiusSmall)
-            )
+            .background(color.copy(alpha = 0.14f))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(

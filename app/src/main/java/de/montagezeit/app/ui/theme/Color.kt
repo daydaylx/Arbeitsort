@@ -5,9 +5,9 @@ package de.montagezeit.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Semantic palette for the app's fixed dark theme.
-val GlassBackground     = Color(0xFF04080F)
-val GlassSurface        = Color(0xFF09111D)
-val GlassSurfaceVariant = Color(0xFF0F1826)
+val GlassBackground     = Color(0xFF060D15)
+val GlassSurface        = Color(0xFF0C1622)
+val GlassSurfaceVariant = Color(0xFF121E2E)
 
 // Primary: Warm Orange/Amber
 val GlassPrimary          = Color(0xFFFF9800)

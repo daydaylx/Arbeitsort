@@ -20,23 +20,23 @@ val ColorScheme.success: Color get() = GlassSuccess
 val ColorScheme.warning: Color get() = GlassWarning
 val ColorScheme.danger: Color get() = GlassError
 val ColorScheme.info: Color get() = GlassInfo
-val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.5f)
+val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.4f)
 val ColorScheme.panelBorderBrush: Brush get() = Brush.linearGradient(
     colorStops = arrayOf(
         0.0f to Color.White.copy(alpha = MZTokens.GlassBorderAlpha),
-        0.35f to Color.White.copy(alpha = 0.10f),
+        0.35f to Color.White.copy(alpha = 0.07f),
         1.0f to Color.White.copy(alpha = MZTokens.GlassBorderFadeAlpha)
     )
 )
 val ColorScheme.panelColor: Color get() = surface.copy(alpha = MZTokens.CardSurfaceAlpha)
-val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.72f)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.55f)
 
 val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
-    listOf(Color(0xFF08131A), Color(0xFF0B1720), Color(0xFF04080C))
+    listOf(Color(0xFF0B1722), Color(0xFF0E1C28), Color(0xFF091018))
 )
 
 val ColorScheme.heroBrush: Brush get() = Brush.linearGradient(
-    listOf(Color(0xFF1A3E52), Color(0xFF112A3A), Color(0xFF0C1C26))
+    listOf(Color(0xFF143040), Color(0xFF0F2430), Color(0xFF0A1A24))
 )
 
 val ColorScheme.glassHighlightBrush: Brush get() = Brush.verticalGradient(
@@ -49,46 +49,46 @@ val ColorScheme.glassHighlightBrush: Brush get() = Brush.verticalGradient(
 
 val ColorScheme.glassPrimaryButtonBrush: Brush get() = Brush.linearGradient(
     colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.18f),
-        0.5f to primary.copy(alpha = 0.40f),
-        1.0f to primary.copy(alpha = 0.25f)
+        0.0f to Color.White.copy(alpha = 0.08f),
+        0.5f to primary.copy(alpha = 0.28f),
+        1.0f to primary.copy(alpha = 0.16f)
     )
 )
 
 val ColorScheme.glassPrimaryButtonBorderBrush: Brush get() = Brush.linearGradient(
     colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.35f),
-        1.0f to primary.copy(alpha = MZTokens.GlassBorderAlpha)
+        0.0f to Color.White.copy(alpha = 0.18f),
+        1.0f to primary.copy(alpha = 0.20f)
     )
 )
 
 val ColorScheme.glassSelectionBrush: Brush get() = Brush.linearGradient(
     colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.14f),
-        0.5f to primary.copy(alpha = 0.32f),
-        1.0f to primary.copy(alpha = 0.18f)
+        0.0f to Color.White.copy(alpha = 0.08f),
+        0.5f to primary.copy(alpha = 0.22f),
+        1.0f to primary.copy(alpha = 0.12f)
     )
 )
 
 val ColorScheme.glassSelectionBorderBrush: Brush get() = Brush.linearGradient(
     colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.25f),
-        1.0f to primary.copy(alpha = 0.20f)
+        0.0f to Color.White.copy(alpha = 0.14f),
+        1.0f to primary.copy(alpha = 0.12f)
     )
 )
 
 fun ColorScheme.glassAccentBrush(accentColor: Color): Brush = Brush.linearGradient(
     colorStops = arrayOf(
         0.0f to Color.White.copy(alpha = MZTokens.GlassInnerGlowAlpha),
-        0.5f to accentColor.copy(alpha = 0.18f),
-        1.0f to accentColor.copy(alpha = 0.10f)
+        0.5f to accentColor.copy(alpha = 0.10f),
+        1.0f to accentColor.copy(alpha = 0.06f)
     )
 )
 
 fun ColorScheme.glassAccentBorderBrush(accentColor: Color): Brush = Brush.linearGradient(
     colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.24f),
-        1.0f to accentColor.copy(alpha = 0.22f)
+        0.0f to Color.White.copy(alpha = 0.12f),
+        1.0f to accentColor.copy(alpha = 0.12f)
     )
 )
 
@@ -116,7 +116,7 @@ private val GlassColorScheme = darkColorScheme(
     surfaceVariant = GlassSurfaceVariant,
     onSurfaceVariant = GlassOnDarkMuted,
     outline = Color(0xFF3A4A5C),         // Neutral slate — prevents orange bleed into borders/dividers
-    outlineVariant = Color(0xFF1E2D3D),  // Dark slate for HorizontalDivider
+    outlineVariant = Color(0xFF223344),  // Subtle slate for HorizontalDivider
     inverseSurface = GlassOnDark,
     inverseOnSurface = GlassBackground,
     inversePrimary = GlassPrimaryContainer,

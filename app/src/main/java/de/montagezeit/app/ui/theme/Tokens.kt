@@ -24,26 +24,26 @@ object MZTokens {
     // Border
     val PanelBorderWidth = 1.dp
 
-    // Surface hierarchy
-    const val BorderAlphaSubtle   = 0.10f
-    const val BorderAlphaNormal   = 0.16f
-    const val BorderAlphaEmphasis = 0.26f
-    const val CardSurfaceAlpha    = 0.55f
-    const val GlassBorderAlpha    = 0.30f
-    const val GlassBorderFadeAlpha = 0.04f
-    const val GlassHighlightAlpha = 0.22f
+    // Surface hierarchy — transparent glass over solid orbs
+    const val BorderAlphaSubtle   = 0.08f
+    const val BorderAlphaNormal   = 0.14f
+    const val BorderAlphaEmphasis = 0.22f
+    const val CardSurfaceAlpha    = 0.38f
+    const val GlassBorderAlpha    = 0.15f
+    const val GlassBorderFadeAlpha = 0.03f
+    const val GlassHighlightAlpha = 0.18f
     const val GlassInnerGlowAlpha = 0.06f
 
     // Content alphas
-    const val AlphaGlassSheet   = 0.98f  // Bottom Sheets und Modal-Overlays
+    const val AlphaGlassSheet   = 0.88f  // Bottom Sheets und Modal-Overlays
     const val AlphaGlassOverlay = 0.85f  // Screen-Hintergrund-Overlays
     const val AlphaSecondary    = 0.70f  // Sekundärer Text und Icons
     const val AlphaDisabled     = 0.40f  // Disabled-State
     const val AlphaSubtle       = 0.12f  // Hover-Overlays, subtile Trenner
 
-    // Background Orbs
-    const val OrbAlphaPrimary       = 0.40f // Increased for blur effect
-    const val OrbAlphaSecondary     = 0.25f // Increased for blur effect
+    // Background Orbs — solid bodies visible through glass panels
+    const val OrbAlphaPrimary       = 0.55f
+    const val OrbAlphaSecondary     = 0.40f
     val OrbPrimaryRadiusDp    = 220.dp // Matched to sshterm (220 dp)
     val OrbSecondaryRadiusDp  = 280.dp // Matched to sshterm (280 dp)
 

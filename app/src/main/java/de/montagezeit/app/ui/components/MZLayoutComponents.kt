@@ -26,7 +26,7 @@ object AccessibilityDefaults {
 }
 
 private object GlassLayoutDefaults {
-    const val StatusSurfaceAlpha = 0.14f
+    const val StatusSurfaceAlpha = 0.10f
     const val NeutralSurfaceAlpha = 0.70f
 }
 
@@ -49,10 +49,10 @@ internal data class StatusPalette(
  */
 @Composable
 fun mzOutlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     cursorColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
 )
 
 @Composable
