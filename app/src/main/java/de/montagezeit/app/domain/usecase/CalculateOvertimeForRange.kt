@@ -2,6 +2,8 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.diagnostics.DiagnosticTrace
+import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
 import de.montagezeit.app.domain.model.DayClassification
 import de.montagezeit.app.domain.util.TimeCalculator
 
@@ -18,7 +20,11 @@ class CalculateOvertimeForRange {
 
     private val classifyDay = ClassifyDay()
 
-    operator fun invoke(entries: List<WorkEntryWithTravelLegs>, dailyTargetHours: Double): OvertimeResult {
+    operator fun invoke(
+        entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetHours: Double,
+        trace: DiagnosticTrace? = null
+    ): OvertimeResult {
         require(dailyTargetHours > 0) { "dailyTargetHours must be > 0" }
 
         if (entries.isEmpty()) {
@@ -44,6 +50,18 @@ class CalculateOvertimeForRange {
             }
             
             val classification = classifyDay(entry)
+            val workMinutes = TimeCalculator.calculateWorkMinutes(entry.workEntry)
+            val travelMinutes = TimeCalculator.calculateTravelMinutes(entry.orderedTravelLegs)
+            trace?.event(
+                name = "overtime_entry",
+                payload = mapOf(
+                    "classification" to classification.name,
+                    "dailyTargetHours" to dailyTargetHours,
+                    "workMinutes" to workMinutes,
+                    "travelMinutes" to travelMinutes,
+                    "entry" to entry.toSanitizedDiagnosticPayload()
+                )
+            )
 
             when (classification) {
                 DayClassification.ARBEITSTAG_MIT_ARBEIT,
@@ -88,6 +106,19 @@ class CalculateOvertimeForRange {
             countedDays = countedDays,
             offDayTravelHours = offDayTravelHours,
             offDayTravelDays = offDayTravelDays
-        )
+        ).also { result ->
+            trace?.event(
+                name = "overtime_result",
+                phase = de.montagezeit.app.diagnostics.DiagnosticPhase.RESULT,
+                payload = mapOf(
+                    "totalOvertimeHours" to result.totalOvertimeHours,
+                    "totalActualHours" to result.totalActualHours,
+                    "totalTargetHours" to result.totalTargetHours,
+                    "countedDays" to result.countedDays,
+                    "offDayTravelHours" to result.offDayTravelHours,
+                    "offDayTravelDays" to result.offDayTravelDays
+                )
+            )
+        }
     }
 }

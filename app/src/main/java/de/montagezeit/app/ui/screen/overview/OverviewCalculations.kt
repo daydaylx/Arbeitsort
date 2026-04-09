@@ -3,6 +3,9 @@ package de.montagezeit.app.ui.screen.overview
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.diagnostics.DiagnosticTrace
+import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
+import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
@@ -42,15 +45,37 @@ internal fun OverviewPeriod.shiftReferenceDate(referenceDate: LocalDate, step: L
 internal fun buildOverviewMetrics(
     period: OverviewPeriod,
     entries: List<WorkEntryWithTravelLegs>,
-    settings: ReminderSettings
+    settings: ReminderSettings,
+    trace: DiagnosticTrace? = null
 ): OverviewMetrics {
-    val stats = AggregateWorkStats()(entries)
-    val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours)
+    trace?.event(
+        name = "overview_inputs",
+        payload = mapOf(
+            "period" to period.name,
+            "entryCount" to entries.size,
+            "dailyTargetHours" to settings.dailyTargetHours
+        )
+    )
+
+    val stats = AggregateWorkStats()(entries, trace)
+    val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours, trace)
     val unconfirmedCount = entries.count { 
         val entry = it.workEntry
         val hasTravel = it.orderedTravelLegs.isNotEmpty()
         !isStatisticsEligible(it) && (entry.dayType == DayType.WORK || hasTravel)
     }
+    entries
+        .filterNot(::isStatisticsEligible)
+        .filter {
+            val entry = it.workEntry
+            entry.dayType == DayType.WORK || it.orderedTravelLegs.isNotEmpty()
+        }
+        .forEach { excluded ->
+            trace?.warning(
+                DiagnosticWarningCodes.UNCONFIRMED_DAY_EXCLUDED,
+                payload = excluded.toSanitizedDiagnosticPayload()
+            )
+        }
 
     return OverviewMetrics(
         overtimeHours = overtime.totalOvertimeHours,
@@ -61,5 +86,20 @@ internal fun buildOverviewMetrics(
         countedDays = overtime.countedDays,
         unconfirmedDaysCount = unconfirmedCount,
         compTimeDays = stats.compTimeDays
-    )
+    ).also { metrics ->
+        trace?.event(
+            name = "overview_metrics_built",
+            phase = de.montagezeit.app.diagnostics.DiagnosticPhase.RESULT,
+            payload = mapOf(
+                "overtimeHours" to metrics.overtimeHours,
+                "targetHours" to metrics.targetHours,
+                "actualHours" to metrics.actualHours,
+                "travelHours" to metrics.travelHours,
+                "mealAllowanceCents" to metrics.mealAllowanceCents,
+                "countedDays" to metrics.countedDays,
+                "unconfirmedDaysCount" to metrics.unconfirmedDaysCount,
+                "compTimeDays" to metrics.compTimeDays
+            )
+        )
+    }
 }

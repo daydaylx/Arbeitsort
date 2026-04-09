@@ -7,6 +7,10 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
+import de.montagezeit.app.diagnostics.DiagnosticCategory
+import de.montagezeit.app.diagnostics.DiagnosticDateRange
+import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
 import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
 import de.montagezeit.app.ui.util.UiText
@@ -245,22 +249,55 @@ class OverviewViewModel @Inject constructor(
         val selectedPeriod = _selectedPeriod.value
 
         refreshJob = viewModelScope.launch {
+            val range = selectedPeriod.rangeFor(selectedDate)
+            val trace = AppDiagnosticsRuntime.startTrace(
+                DiagnosticTraceRequest(
+                    category = DiagnosticCategory.CALCULATION_RUN,
+                    name = "overview_refresh",
+                    sourceClass = "OverviewViewModel",
+                    screenOrWorker = "OverviewScreen",
+                    entityDate = selectedDate,
+                    dateRange = DiagnosticDateRange(range.startDate, range.endDate),
+                    payload = mapOf(
+                        "period" to selectedPeriod.name,
+                        "clearMetrics" to clearMetrics,
+                        "showLoading" to showLoading,
+                        "resetError" to resetError
+                    )
+                )
+            )
             try {
                 val settings = reminderSettingsManager.settings.first()
-                val range = selectedPeriod.rangeFor(selectedDate)
                 val entries = withContext(Dispatchers.IO) {
                     getWorkEntriesWithTravelByDateRange(range.startDate, range.endDate)
                 }
+                trace.event(
+                    name = "overview_entries_loaded",
+                    payload = mapOf("entryCount" to entries.size)
+                )
 
                 _metrics.value = buildOverviewMetrics(
                     period = selectedPeriod,
                     entries = entries,
-                    settings = settings
+                    settings = settings,
+                    trace = trace
+                )
+                trace.finish(
+                    payload = mapOf(
+                        "metricsPresent" to (_metrics.value != null),
+                        "errorMessage" to null
+                    )
                 )
             } catch (e: CancellationException) {
+                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.CANCELLED)
                 throw e
             } catch (e: Exception) {
                 _errorMessage.value = e.toUiText(R.string.today_error_unknown)
+                trace.error(
+                    name = "overview_refresh_failed",
+                    throwable = e
+                )
+                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.ERROR)
             } finally {
                 if (isActive) {
                     _isLoading.value = false

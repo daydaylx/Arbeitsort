@@ -4,13 +4,17 @@ import android.content.Context
 import androidx.work.*
 import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
+import de.montagezeit.app.diagnostics.DiagnosticCategory
+import de.montagezeit.app.diagnostics.DiagnosticTrace
+import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.data.preferences.ReminderSettings
+import kotlinx.coroutines.flow.first
 
 /**
  * Scheduler für Reminder-Worker
@@ -42,10 +46,26 @@ class ReminderScheduler @Inject constructor(
      */
     suspend fun scheduleAll() {
         val settings = reminderSettingsManager.settings.first()
-        scheduleMorningWorker(settings)
-        scheduleEveningWorker(settings)
-        scheduleFallbackWorker(settings)
-        scheduleDailyWorker(settings)
+        val trace = AppDiagnosticsRuntime.startTrace(
+            DiagnosticTraceRequest(
+                category = DiagnosticCategory.REMINDER_SCHEDULE,
+                name = "schedule_all_reminders",
+                sourceClass = "ReminderScheduler",
+                screenOrWorker = "WorkManager",
+                payload = settings.toDiagnosticPayload()
+            )
+        )
+        try {
+            scheduleMorningWorker(settings, trace)
+            scheduleEveningWorker(settings, trace)
+            scheduleFallbackWorker(settings, trace)
+            scheduleDailyWorker(settings, trace)
+            trace.finish(payload = mapOf("status" to "scheduled"))
+        } catch (e: Exception) {
+            trace.error("schedule_all_failed", throwable = e)
+            trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.ERROR)
+            throw e
+        }
     }
 
     /**
@@ -66,9 +86,13 @@ class ReminderScheduler @Inject constructor(
      * - Periodic (im konfigurierten Intervall, mindestens 15 Minuten)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
-    private suspend fun scheduleMorningWorker(settings: ReminderSettings) {
+    private suspend fun scheduleMorningWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.morningReminderEnabled) {
             workManager.cancelUniqueWork(MORNING_WORK_NAME)
+            trace?.event(
+                name = "schedule_morning_cancelled",
+                payload = mapOf("reason" to "disabled")
+            )
             return
         }
 
@@ -103,6 +127,15 @@ class ReminderScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
+        trace?.event(
+            name = "schedule_morning_enqueued",
+            payload = mapOf(
+                "initialDelayMs" to initialDelay.toMillis(),
+                "repeatIntervalMinutes" to repeatIntervalMinutes,
+                "windowStart" to morningWindowStart.toString(),
+                "windowEnd" to morningWindowEnd.toString()
+            )
+        )
     }
 
     /**
@@ -113,9 +146,13 @@ class ReminderScheduler @Inject constructor(
      * - Periodic (im konfigurierten Intervall, mindestens 15 Minuten)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
-    private suspend fun scheduleEveningWorker(settings: ReminderSettings) {
+    private suspend fun scheduleEveningWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.eveningReminderEnabled) {
             workManager.cancelUniqueWork(EVENING_WORK_NAME)
+            trace?.event(
+                name = "schedule_evening_cancelled",
+                payload = mapOf("reason" to "disabled")
+            )
             return
         }
 
@@ -150,6 +187,15 @@ class ReminderScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
+        trace?.event(
+            name = "schedule_evening_enqueued",
+            payload = mapOf(
+                "initialDelayMs" to initialDelay.toMillis(),
+                "repeatIntervalMinutes" to repeatIntervalMinutes,
+                "windowStart" to eveningWindowStart.toString(),
+                "windowEnd" to eveningWindowEnd.toString()
+            )
+        )
     }
 
     /**
@@ -160,9 +206,13 @@ class ReminderScheduler @Inject constructor(
      * - Periodic (einmal pro Tag)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
-    private suspend fun scheduleFallbackWorker(settings: ReminderSettings) {
+    private suspend fun scheduleFallbackWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.fallbackEnabled) {
             workManager.cancelUniqueWork(FALLBACK_WORK_NAME)
+            trace?.event(
+                name = "schedule_fallback_cancelled",
+                payload = mapOf("reason" to "disabled")
+            )
             return
         }
 
@@ -190,6 +240,13 @@ class ReminderScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
+        trace?.event(
+            name = "schedule_fallback_enqueued",
+            payload = mapOf(
+                "initialDelayMs" to initialDelay.toMillis(),
+                "fallbackTime" to fallbackTime.toString()
+            )
+        )
     }
 
     /**
@@ -200,9 +257,13 @@ class ReminderScheduler @Inject constructor(
      * - Periodic (einmal pro Tag)
      * - Keine Battery/Storage Constraints (Reminders sind kritisch)
      */
-    private suspend fun scheduleDailyWorker(settings: ReminderSettings) {
+    private suspend fun scheduleDailyWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.dailyReminderEnabled) {
             workManager.cancelUniqueWork(DAILY_WORK_NAME)
+            trace?.event(
+                name = "schedule_daily_cancelled",
+                payload = mapOf("reason" to "disabled")
+            )
             return
         }
 
@@ -229,6 +290,31 @@ class ReminderScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
             workRequest
         )
+        trace?.event(
+            name = "schedule_daily_enqueued",
+            payload = mapOf(
+                "initialDelayMs" to initialDelay.toMillis(),
+                "dailyTime" to dailyTime.toString()
+            )
+        )
     }
 
 }
+
+private fun ReminderSettings.toDiagnosticPayload(): Map<String, Any?> = mapOf(
+    "morningReminderEnabled" to morningReminderEnabled,
+    "morningWindowStart" to morningWindowStart.toString(),
+    "morningWindowEnd" to morningWindowEnd.toString(),
+    "morningCheckIntervalMinutes" to morningCheckIntervalMinutes,
+    "eveningReminderEnabled" to eveningReminderEnabled,
+    "eveningWindowStart" to eveningWindowStart.toString(),
+    "eveningWindowEnd" to eveningWindowEnd.toString(),
+    "eveningCheckIntervalMinutes" to eveningCheckIntervalMinutes,
+    "fallbackEnabled" to fallbackEnabled,
+    "fallbackTime" to fallbackTime.toString(),
+    "dailyReminderEnabled" to dailyReminderEnabled,
+    "dailyReminderTime" to dailyReminderTime.toString(),
+    "autoOffWeekends" to autoOffWeekends,
+    "autoOffHolidays" to autoOffHolidays,
+    "holidayCount" to holidayDates.size
+)

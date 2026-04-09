@@ -155,9 +155,12 @@ fun MontageZeitNavGraph(
 
         composable("settings") {
             SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToRoute = { route -> navController.navigate(route) }
             )
         }
+
+        registerDeveloperDiagnosticsRoutes(navController)
     }
 
     if (showEditSheet && editDate != null) {

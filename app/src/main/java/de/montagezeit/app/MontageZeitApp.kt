@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.montagezeit.app.data.local.database.AppDatabase
+import de.montagezeit.app.diagnostics.DiagnosticsBootstrap
 import de.montagezeit.app.work.ReminderScheduler
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,9 @@ class MontageZeitApp : Application(), Configuration.Provider {
     @Inject
     lateinit var reminderScheduler: ReminderScheduler
 
+    @Inject
+    lateinit var diagnosticsBootstrap: DiagnosticsBootstrap
+
     private val applicationScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO +
             CoroutineExceptionHandler { _, e ->
@@ -44,6 +48,7 @@ class MontageZeitApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        diagnosticsBootstrap.initialize(applicationScope)
         applicationScope.launch {
             try {
                 appDatabase.openHelper.writableDatabase

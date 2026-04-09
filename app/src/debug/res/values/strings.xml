@@ -1,0 +1,28 @@
+<resources>
+    <string name="developer_diagnostics_title">Developer diagnostics</string>
+    <string name="developer_diagnostics_settings_summary">Structured traces, anomalies, and export bundles</string>
+    <string name="developer_diagnostics_settings_body">Open the debug-only diagnostics viewer to inspect calculation traces, reminder decisions, integrity scans, and export bundles.</string>
+    <string name="developer_diagnostics_open">Open diagnostics</string>
+    <string name="developer_diagnostics_summary_title">Current debug session</string>
+    <string name="developer_diagnostics_current_session">Session</string>
+    <string name="developer_diagnostics_total_traces">Stored traces</string>
+    <string name="developer_diagnostics_warning_traces">Traces with warnings</string>
+    <string name="developer_diagnostics_error_traces">Traces with errors</string>
+    <string name="developer_diagnostics_total_events">Stored events</string>
+    <string name="developer_diagnostics_search">Search trace, date, warning, or source</string>
+    <string name="developer_diagnostics_filter_all">All</string>
+    <string name="developer_diagnostics_filter_warnings">Warnings only</string>
+    <string name="developer_diagnostics_empty">No traces match the current filters.</string>
+    <string name="developer_diagnostics_run_scan">Run scan</string>
+    <string name="developer_diagnostics_export_visible">Export visible</string>
+    <string name="developer_diagnostics_clear">Clear</string>
+    <string name="developer_diagnostics_trace_title">Trace detail</string>
+    <string name="developer_diagnostics_export_trace">Export trace</string>
+    <string name="developer_diagnostics_inputs_title">Inputs</string>
+    <string name="developer_diagnostics_result_title">Result</string>
+    <string name="developer_diagnostics_events_title">Events</string>
+    <string name="developer_diagnostics_no_events">No child events were recorded for this trace.</string>
+    <string name="developer_diagnostics_scan_finished">%1$d anomalies across %2$d entries</string>
+    <string name="developer_diagnostics_export_empty">No diagnostics were available for export.</string>
+    <string name="developer_diagnostics_cleared">Diagnostics storage cleared.</string>
+</resources>

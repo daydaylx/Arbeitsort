@@ -11,6 +11,13 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
+import de.montagezeit.app.diagnostics.DiagnosticCategory
+import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
+import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
+import de.montagezeit.app.diagnostics.redactedTextSummary
+import de.montagezeit.app.diagnostics.toDiagnosticPayload
+import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
 import de.montagezeit.app.domain.util.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.domain.usecase.DeleteWorkEntryByDate
@@ -260,19 +267,106 @@ class EditEntryViewModel @Inject constructor(
             if (stateSnapshot.isSaving) return@launch
 
             val data = stateSnapshot.formData
-            val validationErrors = data.validate()
             val currentState = stateSnapshot.uiState
+            val traceDate = when (currentState) {
+                is EditUiState.Success -> currentState.entry.date
+                is EditUiState.NewEntry -> currentState.date
+                else -> currentDate
+            }
+            val trace = AppDiagnosticsRuntime.startTrace(
+                DiagnosticTraceRequest(
+                    category = DiagnosticCategory.STATE_MUTATION,
+                    name = "edit_entry_save",
+                    sourceClass = "EditEntryViewModel",
+                    screenOrWorker = "EditEntrySheet",
+                    entityDate = traceDate,
+                    payload = mapOf(
+                        "formData" to data.toSanitizedDiagnosticPayload(),
+                        "uiState" to currentState::class.simpleName,
+                        "isDirty" to stateSnapshot.isDirty
+                    )
+                )
+            )
+
+            if (data.dayType == DayType.WORK && data.hasWorkTimes && data.workEnd.isBefore(data.workStart)) {
+                trace.warning(
+                    DiagnosticWarningCodes.WORK_DURATION_OVERNIGHT_NORMALIZED,
+                    payload = mapOf(
+                        "workStart" to data.workStart.toString(),
+                        "workEnd" to data.workEnd.toString()
+                    )
+                )
+            }
+            data.normalizedTravelLegs()
+                .filter { it.startTime != null && it.arriveTime != null && requireNotNull(it.arriveTime).isBefore(requireNotNull(it.startTime)) }
+                .forEachIndexed { index, leg ->
+                    trace.warning(
+                        DiagnosticWarningCodes.TRAVEL_DURATION_OVERNIGHT_NORMALIZED,
+                        payload = mapOf(
+                            "index" to index,
+                            "startTime" to leg.startTime?.toString(),
+                            "arriveTime" to leg.arriveTime?.toString()
+                        )
+                    )
+                }
+
+            val validationErrors = data.validate()
             if (validationErrors.isNotEmpty()) {
+                trace.event(
+                    name = "edit_validation_failed",
+                    phase = de.montagezeit.app.diagnostics.DiagnosticPhase.ANOMALY,
+                    severity = de.montagezeit.app.diagnostics.DiagnosticSeverity.WARNING,
+                    payload = mapOf(
+                        "errors" to validationErrors.map(ValidationError::diagnosticCode)
+                    )
+                )
+                validationErrors.forEach { error ->
+                    trace.warning(
+                        code = error.diagnosticCode(),
+                        payload = mapOf("messageRes" to error.messageRes)
+                    )
+                }
+                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.WARNING)
                 showValidationErrors(currentState, validationErrors)
                 return@launch
             }
 
             try {
                 val pendingSave = buildPendingSave(currentState, data) ?: return@launch
+                trace.event(
+                    name = "edit_pending_save_built",
+                    payload = mapOf(
+                        "entry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
+                        "travelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload),
+                        "mealAllowanceAmountCents" to pendingSave.entry.mealAllowanceAmountCents
+                    )
+                )
+                if (pendingSave.entry.dayType == DayType.WORK &&
+                    pendingSave.entry.workStart != null &&
+                    pendingSave.entry.workEnd != null &&
+                    pendingSave.entry.breakMinutes > data.calculateEffectiveWorkMinutes() + data.breakMinutes
+                ) {
+                    trace.warning(
+                        DiagnosticWarningCodes.BREAK_EXCEEDS_DURATION,
+                        payload = mapOf("breakMinutes" to pendingSave.entry.breakMinutes)
+                    )
+                }
                 _screenState.update { it.copy(isSaving = true) }
                 replaceWorkEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
+                trace.finish(
+                    payload = mapOf(
+                        "savedEntry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
+                        "savedTravelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload)
+                    )
+                )
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved, originalFormData = data) }
             } catch (e: Exception) {
+                trace.error(
+                    name = "edit_entry_save_failed",
+                    throwable = e,
+                    payload = mapOf("formData" to data.toSanitizedDiagnosticPayload())
+                )
+                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.ERROR)
                 showErrorState(e, R.string.edit_error_save_failed)
             }
         }
@@ -800,4 +894,45 @@ private fun toUiText(message: String?, @StringRes fallbackRes: Int): UiText {
         ?.takeIf { it.isNotBlank() }
         ?.let(UiText::DynamicString)
         ?: UiText.StringResource(fallbackRes)
+}
+
+private fun EditFormData.toSanitizedDiagnosticPayload(): Map<String, Any?> {
+    return mapOf(
+        "dayType" to dayType.name,
+        "hasWorkTimes" to hasWorkTimes,
+        "workStart" to workStart.toString(),
+        "workEnd" to workEnd.toString(),
+        "breakMinutes" to breakMinutes,
+        "dayLocation" to redactedTextSummary(dayLocationLabel),
+        "mealIsArrivalDeparture" to mealIsArrivalDeparture,
+        "mealBreakfastIncluded" to mealBreakfastIncluded,
+        "note" to redactedTextSummary(note),
+        "travelLegCount" to normalizedTravelLegs().size,
+        "travelLegs" to normalizedTravelLegs().mapIndexed { index, leg ->
+            mapOf(
+                "index" to index,
+                "startTime" to leg.startTime?.toString(),
+                "arriveTime" to leg.arriveTime?.toString(),
+                "startLabel" to redactedTextSummary(leg.startLabel),
+                "endLabel" to redactedTextSummary(leg.endLabel),
+                "paidMinutesOverride" to leg.paidMinutesOverride
+            )
+        }
+    )
+}
+
+private fun ValidationError.diagnosticCode(): String {
+    return when (this) {
+        ValidationError.MissingWorkOrTravel -> "VALIDATION_MISSING_WORK_OR_TRAVEL"
+        ValidationError.MissingDayLocation -> "VALIDATION_MISSING_DAY_LOCATION"
+        ValidationError.WorkEndBeforeStart -> "VALIDATION_WORK_END_BEFORE_START"
+        ValidationError.NegativeBreakMinutes -> "VALIDATION_NEGATIVE_BREAK"
+        ValidationError.BreakLongerThanWorkTime -> "VALIDATION_BREAK_LONGER_THAN_WORK"
+        ValidationError.WorkDayTooLong -> "VALIDATION_WORK_DAY_TOO_LONG"
+        is ValidationError.TravelArriveBeforeStart -> "VALIDATION_TRAVEL_ARRIVE_BEFORE_START_${legIndex + 1}"
+        is ValidationError.TravelTooLong -> "VALIDATION_TRAVEL_TOO_LONG_${legIndex + 1}"
+        is ValidationError.TravelLegIncomplete -> "VALIDATION_TRAVEL_LEG_INCOMPLETE_${legIndex + 1}"
+        is ValidationError.TravelLegMissingTimeWindow -> "VALIDATION_TRAVEL_LEG_MISSING_TIME_WINDOW_${legIndex + 1}"
+        ValidationError.TravelNotAllowedForCompTime -> "VALIDATION_TRAVEL_NOT_ALLOWED_COMP_TIME"
+    }
 }

@@ -49,7 +49,8 @@ import java.time.Duration
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onNavigateToRoute: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -157,6 +158,7 @@ fun SettingsScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     viewModel.sendTestReminder()
                 },
+                onNavigateToRoute = onNavigateToRoute,
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
@@ -208,6 +210,7 @@ private fun SettingsContent(
     onOpenNotificationSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onSendTestReminder: () -> Unit,
+    onNavigateToRoute: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var workTimesExpanded by rememberSaveable { mutableStateOf(true) }
@@ -359,6 +362,11 @@ private fun SettingsContent(
             onResetState = onResetExportState,
             expanded = exportExpanded,
             onExpandedChange = { exportExpanded = it }
+        )
+
+        SettingsDeveloperSection(
+            onNavigateToRoute = onNavigateToRoute,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(24.dp))
