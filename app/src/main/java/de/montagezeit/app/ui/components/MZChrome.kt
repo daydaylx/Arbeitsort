@@ -48,13 +48,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.theme.backgroundBrush
+import de.montagezeit.app.ui.theme.glassAccentBorderBrush
+import de.montagezeit.app.ui.theme.glassAccentBrush
+import de.montagezeit.app.ui.theme.glassHighlightBrush
 import de.montagezeit.app.ui.theme.heroBrush
-import de.montagezeit.app.ui.theme.panelBorder
 import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelColor
 import de.montagezeit.app.ui.theme.panelStrongColor
@@ -216,7 +217,10 @@ fun MZAppBackdrop(
                 .blur(100.dp)
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary), Color.Transparent)
+                        colors = listOf(
+                            colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary),
+                            Color.Transparent
+                        )
                     )
                 )
         )
@@ -276,7 +280,14 @@ private fun MZHomeTabBar(
                     .height(38.dp)
                     .padding(horizontal = 4.dp)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
-                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .background(
+                        brush = Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                            )
+                        )
+                    )
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 tabs.forEachIndexed { index, label ->
@@ -322,6 +333,9 @@ fun MZHeroPanel(
             .fillMaxWidth()
             .clip(RoundedCornerShape(MZTokens.RadiusHero))
             .background(colorScheme.heroBrush)
+            .drawBehind {
+                drawRect(brush = colorScheme.glassHighlightBrush)
+            }
             .border(
                 width = MZTokens.PanelBorderWidth,
                 brush = colorScheme.panelBorderBrush,
@@ -388,6 +402,9 @@ fun MZAppPanel(
             .fillMaxWidth()
             .clip(RoundedCornerShape(MZTokens.RadiusMedium))
             .background(backgroundColor)
+            .drawBehind {
+                drawRect(brush = colorScheme.glassHighlightBrush)
+            }
             .border(
                 width = MZTokens.PanelBorderWidth,
                 brush = colorScheme.panelBorderBrush,
@@ -442,10 +459,10 @@ fun MZMetricChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(accentColor.copy(alpha = 0.12f))
+            .background(MaterialTheme.colorScheme.glassAccentBrush(accentColor))
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = accentColor.copy(alpha = 0.2f),
+                brush = MaterialTheme.colorScheme.glassAccentBorderBrush(accentColor),
                 shape = RoundedCornerShape(MZTokens.RadiusSmall)
             )
             .padding(horizontal = 14.dp, vertical = 10.dp)

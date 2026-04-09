@@ -7,6 +7,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.theme.NumberStyles
+import de.montagezeit.app.ui.theme.glassSelectionBorderBrush
+import de.montagezeit.app.ui.theme.glassSelectionBrush
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -72,7 +75,7 @@ private fun WeekDayChip(
 
     when {
         day.isSelected -> {
-            targetBg = MaterialTheme.colorScheme.primaryContainer
+            targetBg = Color.Transparent
             targetContent = MaterialTheme.colorScheme.onPrimaryContainer
             targetBorder = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
         }
@@ -129,11 +132,32 @@ private fun WeekDayChip(
                 selected = day.isSelected
             }
             .clip(chipShape)
+            .then(
+                if (day.isSelected) {
+                    Modifier.background(
+                        brush = MaterialTheme.colorScheme.glassSelectionBrush,
+                        shape = chipShape
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .then(
+                if (day.isSelected) {
+                    Modifier.border(
+                        width = 1.dp,
+                        brush = MaterialTheme.colorScheme.glassSelectionBorderBrush,
+                        shape = chipShape
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(onClick = onClick),
         shape = chipShape,
         color = backgroundColor,
         contentColor = contentColor,
-        border = if (targetBorder != Color.Transparent) {
+        border = if (!day.isSelected && targetBorder != Color.Transparent) {
             BorderStroke(1.dp, borderColor)
         } else {
             null

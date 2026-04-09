@@ -28,7 +28,11 @@ object MZTokens {
     const val BorderAlphaSubtle   = 0.10f
     const val BorderAlphaNormal   = 0.16f
     const val BorderAlphaEmphasis = 0.26f
-    const val CardSurfaceAlpha    = 0.60f
+    const val CardSurfaceAlpha    = 0.42f
+    const val GlassBorderAlpha    = 0.30f
+    const val GlassBorderFadeAlpha = 0.04f
+    const val GlassHighlightAlpha = 0.22f
+    const val GlassInnerGlowAlpha = 0.06f
 
     // Content alphas
     const val AlphaGlassSheet   = 0.98f  // Bottom Sheets und Modal-Overlays

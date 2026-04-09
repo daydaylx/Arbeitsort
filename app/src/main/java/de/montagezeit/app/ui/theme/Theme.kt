@@ -22,17 +22,74 @@ val ColorScheme.danger: Color get() = GlassError
 val ColorScheme.info: Color get() = GlassInfo
 val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.5f)
 val ColorScheme.panelBorderBrush: Brush get() = Brush.linearGradient(
-    listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.02f))
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = MZTokens.GlassBorderAlpha),
+        0.35f to Color.White.copy(alpha = 0.10f),
+        1.0f to Color.White.copy(alpha = MZTokens.GlassBorderFadeAlpha)
+    )
 )
-val ColorScheme.panelColor: Color get() = surface.copy(alpha = 0.60f)
-val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.75f)
+val ColorScheme.panelColor: Color get() = surface.copy(alpha = MZTokens.CardSurfaceAlpha)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.55f)
 
 val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
     listOf(Color(0xFF08131A), Color(0xFF0B1720), Color(0xFF04080C))
 )
 
 val ColorScheme.heroBrush: Brush get() = Brush.linearGradient(
-    listOf(Color(0xFF123142), Color(0xFF10222E), Color(0xFF0A141B))
+    listOf(Color(0xFF1A3E52), Color(0xFF112A3A), Color(0xFF0C1C26))
+)
+
+val ColorScheme.glassHighlightBrush: Brush get() = Brush.verticalGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = MZTokens.GlassHighlightAlpha),
+        0.45f to Color.White.copy(alpha = MZTokens.GlassInnerGlowAlpha),
+        1.0f to Color.Transparent
+    )
+)
+
+val ColorScheme.glassPrimaryButtonBrush: Brush get() = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = 0.18f),
+        0.5f to primary.copy(alpha = 0.40f),
+        1.0f to primary.copy(alpha = 0.25f)
+    )
+)
+
+val ColorScheme.glassPrimaryButtonBorderBrush: Brush get() = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = 0.35f),
+        1.0f to primary.copy(alpha = MZTokens.GlassBorderAlpha)
+    )
+)
+
+val ColorScheme.glassSelectionBrush: Brush get() = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = 0.14f),
+        0.5f to primary.copy(alpha = 0.32f),
+        1.0f to primary.copy(alpha = 0.18f)
+    )
+)
+
+val ColorScheme.glassSelectionBorderBrush: Brush get() = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = 0.25f),
+        1.0f to primary.copy(alpha = 0.20f)
+    )
+)
+
+fun ColorScheme.glassAccentBrush(accentColor: Color): Brush = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = MZTokens.GlassInnerGlowAlpha),
+        0.5f to accentColor.copy(alpha = 0.18f),
+        1.0f to accentColor.copy(alpha = 0.10f)
+    )
+)
+
+fun ColorScheme.glassAccentBorderBrush(accentColor: Color): Brush = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.0f to Color.White.copy(alpha = 0.24f),
+        1.0f to accentColor.copy(alpha = 0.22f)
+    )
 )
 
 private val GlassColorScheme = darkColorScheme(

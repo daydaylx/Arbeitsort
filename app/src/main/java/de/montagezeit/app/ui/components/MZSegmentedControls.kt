@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.glassSelectionBorderBrush
+import de.montagezeit.app.ui.theme.glassSelectionBrush
 import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelStrongColor
 
@@ -65,11 +67,22 @@ fun <T> MZSegmentedControl(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
-                    .background(
+                    .then(
                         if (selected) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            Modifier.background(MaterialTheme.colorScheme.glassSelectionBrush)
                         } else {
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.01f)
+                            Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.01f))
+                        }
+                    )
+                    .then(
+                        if (selected) {
+                            Modifier.border(
+                                width = 1.dp,
+                                brush = MaterialTheme.colorScheme.glassSelectionBorderBrush,
+                                shape = RoundedCornerShape(MZTokens.RadiusChip)
+                            )
+                        } else {
+                            Modifier
                         }
                     )
                     .graphicsLayer {
