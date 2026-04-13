@@ -80,6 +80,7 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 workStart = null,
                 workEnd = null,
                 breakMinutes = 0,
+                dayLocationLabel = "",
                 confirmedWorkDay = confirmationState.confirmedWorkDay,
                 confirmationAt = confirmationState.confirmationAt,
                 confirmationSource = confirmationState.confirmationSource
@@ -94,6 +95,7 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 workStart = null,
                 workEnd = null,
                 breakMinutes = 0,
+                dayLocationLabel = "",
                 confirmedWorkDay = confirmationState.confirmedWorkDay,
                 confirmationAt = confirmationState.confirmationAt,
                 confirmationSource = confirmationState.confirmationSource
@@ -116,7 +118,7 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
     return if (transitioned == this) this else transitioned.copy(updatedAt = now)
 }
 
-fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocationLabel: String): WorkEntry {
+fun WorkEntry.withConfirmedOffDay(source: String, now: Long): WorkEntry {
     return copy(
         dayType = DayType.OFF,
         workStart = null,
@@ -125,7 +127,7 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
         confirmedWorkDay = true,
         confirmationAt = now,
         confirmationSource = source,
-        dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { "" } },
+        dayLocationLabel = "",
         updatedAt = now
     )
         .withMealAllowanceCleared()
@@ -134,9 +136,8 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
 fun createConfirmedOffDayEntry(
     date: LocalDate,
     source: String,
-    now: Long,
-    fallbackDayLocationLabel: String
+    now: Long
 ): WorkEntry {
     return WorkEntry(date = date, createdAt = now)
-        .withConfirmedOffDay(source = source, now = now, fallbackDayLocationLabel = fallbackDayLocationLabel)
+        .withConfirmedOffDay(source = source, now = now)
 }

@@ -58,7 +58,7 @@ class ConfirmOffDayTest {
     }
 
     @Test
-    fun `invoke converts existing work entry to OFF and keeps manual day location`() = runTest {
+    fun `invoke converts existing work entry to OFF and clears manual day location`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,
@@ -72,7 +72,7 @@ class ConfirmOffDayTest {
         val result = useCase(date, source = "UI")
 
         assertEquals(DayType.OFF, result.dayType)
-        assertEquals("Berlin", result.dayLocationLabel)
+        assertEquals("", result.dayLocationLabel)
         assertFalse(result.mealIsArrivalDeparture)
         assertFalse(result.mealBreakfastIncluded)
         assertEquals(0, result.mealAllowanceBaseCents)

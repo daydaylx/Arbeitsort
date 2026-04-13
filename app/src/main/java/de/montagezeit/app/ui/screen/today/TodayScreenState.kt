@@ -23,10 +23,19 @@ data class TodayScreenState(
             if (uiState is TodayUiState.Loading && selectedEntry?.date != selectedDate) return null
             // Fehler → nichts zeigen
             if (uiState is TodayUiState.Error) return null
+
+            val stateEntry = (uiState as? TodayUiState.Success)?.entry
+
+            if (selectedEntry?.date == selectedDate && stateEntry?.date == selectedDate) {
+                // If both are available for the same date, use the one with the more recent updatedAt timestamp
+                // to prevent the reactive flow from temporarily overwriting the immediate imperative result.
+                return if (stateEntry.updatedAt >= selectedEntry.updatedAt) stateEntry else selectedEntry
+            }
+
             // Reaktiver Flow zuerst: immer frisch (Background-Updates, Notification-Aktionen etc.)
             if (selectedEntry?.date == selectedDate) return selectedEntry
             // Fallback: uiState-Eintrag (kurzes Fenster bevor DB-Flow nach Datumswechsel emittiert)
-            return (uiState as? TodayUiState.Success)?.entry
+            return stateEntry
         }
 
     val currentTravelLegs: List<TravelLeg>

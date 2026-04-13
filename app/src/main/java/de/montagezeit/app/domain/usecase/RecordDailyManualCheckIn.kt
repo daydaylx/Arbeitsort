@@ -91,12 +91,12 @@ class RecordDailyManualCheckIn(
                     )
                 )
                 val updatedEntry = if (existingEntry != null) {
-                    val hasExistingWorkSchedule = existingEntry.workStart != null && existingEntry.workEnd != null
+                    val hasAnyWorkTime = existingEntry.workStart != null || existingEntry.workEnd != null
                     existingEntry.copy(
                         dayType = DayType.WORK,
-                        workStart = existingEntry.workStart ?: defaults.workStart,
-                        workEnd = existingEntry.workEnd ?: defaults.workEnd,
-                        breakMinutes = if (hasExistingWorkSchedule) existingEntry.breakMinutes else defaults.breakMinutes,
+                        workStart = existingEntry.workStart ?: if (!hasAnyWorkTime) defaults.workStart else null,
+                        workEnd = existingEntry.workEnd ?: if (!hasAnyWorkTime) defaults.workEnd else null,
+                        breakMinutes = if (hasAnyWorkTime) existingEntry.breakMinutes else defaults.breakMinutes,
                         dayLocationLabel = resolvedLabel,
                         mealIsArrivalDeparture = input.isArrivalDeparture,
                         mealBreakfastIncluded = input.breakfastIncluded,

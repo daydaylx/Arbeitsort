@@ -202,7 +202,7 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun loadTodayEntry() {
-        loadEntryForDate(selectedDate.value, preferCachedSelection = true)
+        loadEntryForDate(selectedDate.value, preferCachedSelection = false)
     }
 
     private fun observeTodayDate() {
@@ -280,7 +280,7 @@ class TodayViewModel @Inject constructor(
             loadWeekOverview()
         }
 
-        loadEntryForDate(date, preferCachedSelection = wasAlreadySelected)
+        loadEntryForDate(date, preferCachedSelection = false)
     }
 
     fun openDailyCheckInDialog() {
@@ -344,7 +344,7 @@ class TodayViewModel @Inject constructor(
     fun onResetError() = loadSelectedDateEntry()
 
     private fun loadSelectedDateEntry() {
-        loadEntryForDate(selectedDate.value, preferCachedSelection = true)
+        loadEntryForDate(selectedDate.value, preferCachedSelection = false)
     }
 
     private fun loadEntryForDate(
@@ -438,7 +438,7 @@ class TodayViewModel @Inject constructor(
     }
 
     private companion object {
-        private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L
+        private const val ENTRY_UPDATE_DEBOUNCE_MS = 50L
 
         private data class EntryRefreshKey(
             val selectedDate: LocalDate,
