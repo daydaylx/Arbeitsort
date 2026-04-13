@@ -269,7 +269,6 @@ class TodayViewModel @Inject constructor(
     }
 
     fun selectDate(date: LocalDate) {
-        val wasAlreadySelected = selectedDate.value == date
         val isDateInCurrentWeek = _weekDaysUi.value.any { it.date == date }
 
         dateCoordinator.selectDate(date)
