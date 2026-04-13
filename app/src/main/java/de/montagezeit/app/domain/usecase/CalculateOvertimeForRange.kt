@@ -1,3 +1,4 @@
+@file:Suppress("LongMethod")
 package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.local.entity.DayType

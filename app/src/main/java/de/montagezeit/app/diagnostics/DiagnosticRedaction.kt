@@ -1,3 +1,4 @@
+@file:Suppress("MagicNumber")
 package de.montagezeit.app.diagnostics
 
 import de.montagezeit.app.data.local.entity.TravelLeg

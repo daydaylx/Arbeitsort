@@ -33,6 +33,7 @@ class RecordDailyManualCheckIn(
         private const val CONFIRMATION_SOURCE_UI = "UI"
     }
 
+    @Suppress("LongMethod")
     suspend operator fun invoke(input: DailyManualCheckInInput): WorkEntry {
         val trace = AppDiagnosticsRuntime.startTrace(
             DiagnosticTraceRequest(

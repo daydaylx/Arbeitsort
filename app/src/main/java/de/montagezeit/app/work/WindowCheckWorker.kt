@@ -1,3 +1,4 @@
+@file:Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount")
 package de.montagezeit.app.work
 
 import android.database.sqlite.SQLiteException

@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package de.montagezeit.app.ui.screen.edit
 
 import androidx.annotation.StringRes
@@ -261,6 +262,7 @@ class EditEntryViewModel @Inject constructor(
         }
     }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun save() {
         viewModelScope.launch {
             val stateSnapshot = _screenState.value

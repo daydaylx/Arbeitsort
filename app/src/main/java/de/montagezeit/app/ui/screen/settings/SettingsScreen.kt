@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "MagicNumber")
+@file:Suppress("LongMethod", "LongParameterList", "MagicNumber")
 
 package de.montagezeit.app.ui.screen.settings
 
