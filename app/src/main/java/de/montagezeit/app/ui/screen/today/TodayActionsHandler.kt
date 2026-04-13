@@ -2,12 +2,12 @@ package de.montagezeit.app.ui.screen.today
 
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
-import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
@@ -23,7 +23,7 @@ class TodayActionsHandler @Inject constructor(
     private val confirmOffDay: ConfirmOffDay,
     private val setDayLocation: SetDayLocation,
     private val deleteDayEntry: DeleteDayEntry,
-    private val replaceWorkEntryWithTravelLegs: ReplaceWorkEntryWithTravelLegs
+    private val workEntryRepository: WorkEntryRepository
 ) {
     private val _loadingActions = MutableStateFlow<Set<TodayAction>>(emptySet())
     val loadingActions: StateFlow<Set<TodayAction>> = _loadingActions.asStateFlow()
@@ -39,8 +39,8 @@ class TodayActionsHandler @Inject constructor(
         addLoadingAction(TodayAction.DAILY_MANUAL_CHECK_IN)
         return try {
             recordDailyManualCheckIn(input).also {
+                clearDeletedEntryUndo()
                 _snackbarMessage.value = UiText.StringResource(R.string.toast_check_in_day_saved)
-                _deletedEntryForUndo.value = null
             }
         } catch (e: Exception) {
             _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
@@ -55,6 +55,7 @@ class TodayActionsHandler @Inject constructor(
         addLoadingAction(TodayAction.CONFIRM_OFFDAY)
         return try {
             confirmOffDay(selectedDate, source = "UI").also {
+                clearDeletedEntryUndo()
                 _snackbarMessage.value = UiText.StringResource(R.string.toast_off_day_saved)
             }
         } catch (e: Exception) {
@@ -69,7 +70,9 @@ class TodayActionsHandler @Inject constructor(
         if (TodayAction.UPDATE_DAY_LOCATION in _loadingActions.value) return null
         addLoadingAction(TodayAction.UPDATE_DAY_LOCATION)
         return try {
-            setDayLocation(selectedDate, label)
+            setDayLocation(selectedDate, label).also {
+                clearDeletedEntryUndo()
+            }
         } catch (e: Exception) {
             _snackbarMessage.value = e.toUiText(R.string.today_error_day_location_save_failed)
             null
@@ -94,9 +97,9 @@ class TodayActionsHandler @Inject constructor(
 
     suspend fun undoDeleteDay(onRestoredDate: (LocalDate) -> Unit): WorkEntry? {
         val snapshot = _deletedEntryForUndo.value ?: return null
-        _deletedEntryForUndo.value = null
         return try {
-            replaceWorkEntryWithTravelLegs(snapshot.entry, snapshot.travelLegs)
+            workEntryRepository.replaceEntryWithTravelLegs(snapshot.entry, snapshot.travelLegs)
+            clearDeletedEntryUndo()
             onRestoredDate(snapshot.entry.date)
             snapshot.entry
         } catch (e: Exception) {
@@ -110,7 +113,7 @@ class TodayActionsHandler @Inject constructor(
     }
 
     fun onUndoWindowClosed() {
-        _deletedEntryForUndo.value = null
+        clearDeletedEntryUndo()
     }
 
     fun onSnackbarShown() {
@@ -123,5 +126,9 @@ class TodayActionsHandler @Inject constructor(
 
     private fun removeLoadingAction(action: TodayAction) {
         _loadingActions.update { it - action }
+    }
+
+    private fun clearDeletedEntryUndo() {
+        _deletedEntryForUndo.value = null
     }
 }

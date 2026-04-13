@@ -129,10 +129,6 @@ fun TodayScreen(
         snackbarHostState = snackbarHostState
     )
 
-    LaunchedEffect(Unit) {
-        viewModel.selectDate(LocalDate.now())
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         val errorState = screenState.errorState
         when {

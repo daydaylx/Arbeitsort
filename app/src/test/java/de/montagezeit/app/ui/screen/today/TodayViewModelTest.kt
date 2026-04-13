@@ -5,15 +5,10 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.repository.WorkEntryRepository
+import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
-import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
-import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
-import de.montagezeit.app.domain.usecase.ObserveWorkEntryByDate
-import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
-import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
-import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.util.WeekCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -119,7 +114,7 @@ class TodayViewModelTest {
     }
 
     @Test
-    fun `openDailyCheckInDialog falls back to last used label when empty`() {
+    fun `openDailyCheckInDialog stays empty when current day has no label even if history exists`() {
         val today = LocalDate.now()
         val existing = WorkEntry(
             date = today,
@@ -144,23 +139,17 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("Letzte Baustelle", viewModel.dailyCheckInLocationInput.value)
-        coVerify(exactly = 1) { repository.getLatestDayLocationLabelByDayType(DayType.WORK) }
+        assertEquals("", viewModel.dailyCheckInLocationInput.value)
+        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
 
     @Test
     fun `openDailyCheckInDialog falls back to empty string when no location known`() {
-        val today = LocalDate.now()
-        val existing = WorkEntry(
-            date = today,
-            dayType = DayType.WORK,
-            dayLocationLabel = ""
-        )
         val repository = mockk<WorkEntryRepository>(relaxed = true)
 
-        coEvery { repository.getByDate(any()) } returns existing
-        coEvery { repository.getLatestDayLocationLabelByDayType(DayType.WORK) } returns null
+        coEvery { repository.getByDate(any()) } returns null
+        coEvery { repository.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Letzte Baustelle"
 
         val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
@@ -176,7 +165,24 @@ class TodayViewModelTest {
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
         assertEquals("", viewModel.dailyCheckInLocationInput.value)
+        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
+    }
+
+    @Test
+    fun `openDayLocationDialog does not prefill from historical work entries`() {
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
+
+        coEvery { repository.getByDate(any()) } returns null
+        coEvery { repository.getLatestDayLocationLabelByDayType(DayType.WORK) } returns "Historischer Ort"
+
+        val viewModel = createViewModel(repository)
+
+        viewModel.openDayLocationDialog()
+
+        assertTrue(viewModel.showDayLocationDialog.value)
+        assertEquals("", viewModel.dayLocationInput.value)
+        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
     }
 
     @Test
@@ -406,6 +412,27 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun `syncTodayDate reloads the new today when current selection follows today`() {
+        val today = LocalDate.now()
+        val tomorrow = today.plusDays(1)
+        val tomorrowEntry = WorkEntry(date = tomorrow, dayType = DayType.WORK, dayLocationLabel = "Morgen")
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
+
+        coEvery { repository.getByDate(today) } returns null
+        coEvery { repository.getByDate(tomorrow) } returns tomorrowEntry
+
+        val viewModel = createViewModel(repository)
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(null) }
+
+        assertTrue(viewModel.syncTodayDate(tomorrow))
+
+        waitUntil {
+            viewModel.selectedDate.value == tomorrow &&
+                viewModel.uiState.value == TodayUiState.Success(tomorrowEntry)
+        }
+    }
+
+    @Test
     fun `confirmDeleteDay removes entry and exposes it for undo`() {
         val today = LocalDate.now()
         val existingEntry = WorkEntry(date = today, dayType = DayType.WORK)
@@ -468,6 +495,36 @@ class TodayViewModelTest {
         assertTrue(viewModel.uiState.value is TodayUiState.Success)
         assertEquals(existingEntry, (viewModel.uiState.value as TodayUiState.Success).entry)
         collectJob.cancel()
+    }
+
+    @Test
+    fun `undoDeleteDay does not restore deleted entry after off day confirmation`() {
+        val today = LocalDate.now()
+        val deletedEntry = WorkEntry(date = today, dayType = DayType.WORK, dayLocationLabel = "Werk")
+        val offEntry = deletedEntry.copy(dayType = DayType.OFF, confirmedWorkDay = true)
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
+        val confirmOffDay = mockk<ConfirmOffDay>()
+
+        coEvery { repository.getByDateWithTravel(today) } returns record(deletedEntry)
+        coEvery { confirmOffDay(today, source = "UI") } returns offEntry
+
+        val viewModel = createViewModel(
+            repository = repository,
+            confirmOffDay = confirmOffDay
+        )
+
+        viewModel.confirmDeleteDay()
+        waitUntil { viewModel.deletedEntryForUndo.value != null }
+
+        viewModel.onConfirmOffDay()
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(offEntry) }
+
+        assertEquals(null, viewModel.deletedEntryForUndo.value)
+
+        viewModel.undoDeleteDay()
+
+        coVerify(exactly = 0) { repository.replaceEntryWithTravelLegs(any(), any()) }
+        assertEquals(TodayUiState.Success(offEntry), viewModel.uiState.value)
     }
 
     @Test
@@ -561,7 +618,8 @@ class TodayViewModelTest {
 
     private fun createViewModel(
         repository: WorkEntryRepository = mockk(relaxed = true),
-        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true)
+        recordDailyManualCheckIn: RecordDailyManualCheckIn = mockk(relaxed = true),
+        confirmOffDay: ConfirmOffDay = mockk(relaxed = true)
     ): TodayViewModel {
         every { repository.getByDateFlow(any()) } returns flowOf(null)
         every { repository.getByDateWithTravelFlow(any()) } returns flowOf(null)
@@ -569,17 +627,13 @@ class TodayViewModelTest {
 
         val actionsHandler = TodayActionsHandler(
             recordDailyManualCheckIn = recordDailyManualCheckIn,
-            confirmOffDay = mockk(relaxed = true),
+            confirmOffDay = confirmOffDay,
             setDayLocation = mockk(relaxed = true),
             deleteDayEntry = DeleteDayEntry(repository),
-            replaceWorkEntryWithTravelLegs = ReplaceWorkEntryWithTravelLegs(repository)
+            workEntryRepository = repository
         )
         return TodayViewModel(
-            observeWorkEntryByDate = ObserveWorkEntryByDate(repository),
-            observeWorkEntryWithTravelByDate = ObserveWorkEntryWithTravelByDate(repository),
-            getWorkEntryByDate = GetWorkEntryByDate(repository),
-            getWorkEntriesByDateRange = GetWorkEntriesByDateRange(repository),
-            resolveDayLocationPrefill = ResolveDayLocationPrefill(repository),
+            workEntryRepository = repository,
             dateCoordinator = TodayDateCoordinator(),
             weekOverviewUseCase = TodayWeekOverviewUseCase(),
             dialogsStateHolder = TodayDialogsStateHolder(),

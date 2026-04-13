@@ -7,21 +7,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
-import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
-import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
-import de.montagezeit.app.domain.usecase.ObserveWorkEntryByDate
-import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
-import de.montagezeit.app.domain.usecase.ResolveDayLocationPrefill
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,11 +61,7 @@ enum class TodayAction {
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class TodayViewModel @Inject constructor(
-    private val observeWorkEntryByDate: ObserveWorkEntryByDate,
-    private val observeWorkEntryWithTravelByDate: ObserveWorkEntryWithTravelByDate,
-    private val getWorkEntryByDate: GetWorkEntryByDate,
-    private val getWorkEntriesByDateRange: GetWorkEntriesByDateRange,
-    private val resolveDayLocationPrefill: ResolveDayLocationPrefill,
+    private val workEntryRepository: WorkEntryRepository,
     private val dateCoordinator: TodayDateCoordinator,
     private val weekOverviewUseCase: TodayWeekOverviewUseCase,
     private val dialogsStateHolder: TodayDialogsStateHolder,
@@ -82,15 +75,15 @@ class TodayViewModel @Inject constructor(
     private val todayDate: StateFlow<LocalDate> = dateCoordinator.todayDate
 
     val todayEntry: StateFlow<WorkEntry?> = todayDate
-        .flatMapLatest { date -> observeWorkEntryByDate(date) }
+        .flatMapLatest { date -> workEntryRepository.getByDateFlow(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val selectedEntry: StateFlow<WorkEntry?> = selectedDate
-        .flatMapLatest { date -> observeWorkEntryByDate(date) }
+        .flatMapLatest { date -> workEntryRepository.getByDateFlow(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val selectedEntryWithTravel: StateFlow<WorkEntryWithTravelLegs?> = selectedDate
-        .flatMapLatest { date -> observeWorkEntryWithTravelByDate(date) }
+        .flatMapLatest { date -> workEntryRepository.getByDateWithTravelFlow(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
@@ -115,89 +108,92 @@ class TodayViewModel @Inject constructor(
     val snackbarMessage: StateFlow<UiText?> = actionsHandler.snackbarMessage
     val deletedEntryForUndo = actionsHandler.deletedEntryForUndo
 
-    private var selectDateJob: Job? = null
-    private var weekOverviewJob: Job? = null
-    private var entryLoadRequestId = 0L
-    private var weekOverviewRequestId = 0L
-
-    private data class ScreenCorePart(
-        val uiState: TodayUiState,
-        val selectedEntry: WorkEntry?,
-        val selectedDate: LocalDate,
-        val todayDate: LocalDate,
-        val loadingActions: Set<TodayAction>
+    private val entryLoadRequests = MutableSharedFlow<EntryLoadRequest>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    private val weekOverviewRefreshRequests = MutableSharedFlow<LocalDate>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    private data class ScreenWeekMonthPart(
-        val weekDaysUi: List<WeekDayUi>,
-        val selectedEntryWithTravel: WorkEntryWithTravelLegs?
-    )
-
-    private data class DialogCheckInPart(
-        val showDailyCheckInDialog: Boolean,
-        val locationInput: String,
-        val isArrivalDeparture: Boolean,
-        val breakfastIncluded: Boolean,
-        val allowancePreviewCents: Int
-    )
-
-    private data class DialogLocationDeletePart(
-        val showDayLocationDialog: Boolean,
-        val dayLocationInput: String,
-        val showDeleteDayDialog: Boolean,
-        val loadingActions: Set<TodayAction>
-    )
+    private val selectedEntryState = combine(
+        uiState,
+        selectedEntry,
+        selectedEntryWithTravel
+    ) { ui, entry, entryWithTravel ->
+        Triple(ui, entry, entryWithTravel)
+    }
 
     val screenState: StateFlow<TodayScreenState> = combine(
-        combine(uiState, selectedEntry, selectedDate, todayDate, loadingActions) { ui, entry, date, today, loading ->
-            ScreenCorePart(ui, entry, date, today, loading)
-        },
-        combine(weekDaysUi, selectedEntryWithTravel) { days, entryWithTravel ->
-            ScreenWeekMonthPart(days, entryWithTravel)
-        }
-    ) { core, weekMonth ->
+        selectedEntryState,
+        selectedDate,
+        todayDate,
+        weekDaysUi,
+        loadingActions
+    ) { entryState, date, today, days, loading ->
+        val (ui, entry, entryWithTravel) = entryState
         TodayScreenState(
-            uiState = core.uiState,
-            selectedEntry = core.selectedEntry,
-            selectedEntryWithTravel = weekMonth.selectedEntryWithTravel,
-            selectedDate = core.selectedDate,
-            todayDate = core.todayDate,
-            weekDaysUi = weekMonth.weekDaysUi,
-            loadingActions = core.loadingActions
+            uiState = ui,
+            selectedEntry = entry,
+            selectedEntryWithTravel = entryWithTravel,
+            selectedDate = date,
+            todayDate = today,
+            weekDaysUi = days,
+            loadingActions = loading
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialScreenState())
 
+    private val dailyCheckInDialogState = combine(
+        showDailyCheckInDialog,
+        dailyCheckInLocationInput,
+        dailyCheckInIsArrivalDeparture,
+        dailyCheckInBreakfastIncluded,
+        dailyCheckInAllowancePreviewCents
+    ) { showCheckIn, locationInput, isArrivalDeparture, breakfastIncluded, allowancePreviewCents ->
+        (showCheckIn to locationInput) to Triple(
+            isArrivalDeparture,
+            breakfastIncluded,
+            allowancePreviewCents
+        )
+    }
+
+    private val secondaryDialogState = combine(
+        showDayLocationDialog,
+        dayLocationInput,
+        showDeleteDayDialog
+    ) { showLocationDialog, dayLocationValue, showDeleteDialog ->
+        Triple(showLocationDialog, dayLocationValue, showDeleteDialog)
+    }
+
     val dialogState: StateFlow<TodayDialogState> = combine(
-        combine(
-            showDailyCheckInDialog,
-            dailyCheckInLocationInput,
-            dailyCheckInIsArrivalDeparture,
-            dailyCheckInBreakfastIncluded,
-            dailyCheckInAllowancePreviewCents
-        ) { show, loc, arrival, breakfast, allowance ->
-            DialogCheckInPart(show, loc, arrival, breakfast, allowance)
-        },
-        combine(showDayLocationDialog, dayLocationInput, showDeleteDayDialog, loadingActions) { showLoc, locInput, showDel, loading ->
-            DialogLocationDeletePart(showLoc, locInput, showDel, loading)
-        }
-    ) { checkIn, locDel ->
+        dailyCheckInDialogState,
+        secondaryDialogState,
+        loadingActions
+    ) { checkInState, secondaryState, loading ->
+        val (visibilityAndLocation, mealState) = checkInState
+        val (showCheckIn, locationInput) = visibilityAndLocation
+        val (isArrivalDeparture, breakfastIncluded, allowancePreviewCents) = mealState
+        val (showLocationDialog, dayLocationValue, showDeleteDialog) = secondaryState
         TodayDialogState(
-            showDailyCheckInDialog = checkIn.showDailyCheckInDialog,
-            dailyCheckInLocationInput = checkIn.locationInput,
-            dailyCheckInIsArrivalDeparture = checkIn.isArrivalDeparture,
-            dailyCheckInBreakfastIncluded = checkIn.breakfastIncluded,
-            dailyCheckInAllowancePreviewCents = checkIn.allowancePreviewCents,
-            showDayLocationDialog = locDel.showDayLocationDialog,
-            dayLocationInput = locDel.dayLocationInput,
-            showDeleteDayDialog = locDel.showDeleteDayDialog,
-            loadingActions = locDel.loadingActions
+            showDailyCheckInDialog = showCheckIn,
+            dailyCheckInLocationInput = locationInput,
+            dailyCheckInIsArrivalDeparture = isArrivalDeparture,
+            dailyCheckInBreakfastIncluded = breakfastIncluded,
+            dailyCheckInAllowancePreviewCents = allowancePreviewCents,
+            showDayLocationDialog = showLocationDialog,
+            dayLocationInput = dayLocationValue,
+            showDeleteDayDialog = showDeleteDialog,
+            loadingActions = loading
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialDialogState())
 
     init {
         observeTodayDate()
+        observeEntryLoadRequests()
         loadTodayEntry()
         observeEntryUpdates()
+        observeWeekOverviewRefreshes()
         loadWeekOverview()
     }
 
@@ -208,12 +204,27 @@ class TodayViewModel @Inject constructor(
     private fun observeTodayDate() {
         viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
-                if (dateCoordinator.syncWithSystemDate()) {
-                    requestWeekOverviewRefresh(selectedDate.value)
-                }
+                syncTodayDate()
                 delay(dateCoordinator.millisUntilNextDay())
             }
         }
+    }
+
+    internal fun syncTodayDate(systemToday: LocalDate = LocalDate.now()): Boolean {
+        if (!dateCoordinator.syncWithSystemDate(systemToday)) return false
+
+        val selectedDateSnapshot = selectedDate.value
+        _weekDaysUi.update { days ->
+            days.map { day ->
+                day.copy(
+                    isToday = day.date == todayDate.value,
+                    isSelected = day.date == selectedDateSnapshot
+                )
+            }
+        }
+        loadEntryForDate(selectedDateSnapshot, preferCachedSelection = false)
+        requestWeekOverviewRefresh(selectedDateSnapshot)
+        return true
     }
 
     private fun observeEntryUpdates() {
@@ -229,42 +240,65 @@ class TodayViewModel @Inject constructor(
         }
     }
 
+    private fun observeEntryLoadRequests() {
+        viewModelScope.launch {
+            entryLoadRequests.collectLatest { request ->
+                val cachedEntry = if (request.preferCachedSelection) {
+                    selectedEntry.value?.takeIf { it.date == request.targetDate }
+                } else {
+                    null
+                }
+
+                _uiState.value = TodayUiState.Loading
+                try {
+                    val entry = cachedEntry ?: withContext(Dispatchers.IO) {
+                        workEntryRepository.getByDate(request.targetDate)
+                    }
+                    if (selectedDate.value == request.targetDate) {
+                        _uiState.value = TodayUiState.Success(entry)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (selectedDate.value == request.targetDate) {
+                        _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
+                    }
+                }
+            }
+        }
+    }
+
     private fun loadWeekOverview() {
         requestWeekOverviewRefresh(selectedDate.value)
     }
 
     private fun requestWeekOverviewRefresh(selectedDateSnapshot: LocalDate) {
-        weekOverviewJob?.cancel()
-        val requestId = ++weekOverviewRequestId
-        weekOverviewJob = viewModelScope.launch {
-            loadWeekOverviewInternal(
-                selectedDateSnapshot = selectedDateSnapshot,
-                requestId = requestId
-            )
-        }
+        weekOverviewRefreshRequests.tryEmit(selectedDateSnapshot)
     }
 
-    private suspend fun loadWeekOverviewInternal(
-        selectedDateSnapshot: LocalDate,
-        requestId: Long
-    ) {
-        try {
-            val weekDates = de.montagezeit.app.domain.util.WeekCalculator.weekDays(
-                de.montagezeit.app.domain.util.WeekCalculator.weekStart(selectedDateSnapshot)
-            )
-            val entries = withContext(Dispatchers.IO) {
-                getWorkEntriesByDateRange(weekDates.first(), weekDates.last())
+    private fun observeWeekOverviewRefreshes() {
+        viewModelScope.launch {
+            weekOverviewRefreshRequests.collectLatest { selectedDateSnapshot ->
+                try {
+                    val weekDates = de.montagezeit.app.domain.util.WeekCalculator.weekDays(
+                        de.montagezeit.app.domain.util.WeekCalculator.weekStart(selectedDateSnapshot)
+                    )
+                    val entries = withContext(Dispatchers.IO) {
+                        workEntryRepository.getByDateRange(weekDates.first(), weekDates.last())
+                    }
+                    if (selectedDate.value == selectedDateSnapshot) {
+                        _weekDaysUi.value = weekOverviewUseCase(
+                            selectedDate = selectedDateSnapshot,
+                            todayDate = todayDate.value,
+                            entries = entries
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("TodayViewModel", "loadWeekOverview failed: ${e.message}")
+                }
             }
-            if (!isLatestWeekOverviewRequest(selectedDateSnapshot, requestId)) return
-            _weekDaysUi.value = weekOverviewUseCase(
-                selectedDate = selectedDateSnapshot,
-                todayDate = todayDate.value,
-                entries = entries
-            )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.w("TodayViewModel", "loadWeekOverview failed: ${e.message}")
         }
     }
 
@@ -286,11 +320,10 @@ class TodayViewModel @Inject constructor(
     fun openDailyCheckInDialog() {
         viewModelScope.launch {
             try {
-                val existingEntry = currentSelectedEntryOrNull() ?: getWorkEntryByDate(selectedDate.value)
-                val prefill = resolveDayLocationPrefill(existingEntry)
+                val existingEntry = currentSelectedEntryOrNull() ?: workEntryRepository.getByDate(selectedDate.value)
                 dialogsStateHolder.openDailyCheckInDialog(
                     selectedDate = selectedDate.value,
-                    locationPrefill = prefill,
+                    locationPrefill = existingEntry?.dayLocationLabel?.trim().orEmpty(),
                     isArrivalDeparture = existingEntry?.mealIsArrivalDeparture ?: false,
                     breakfastIncluded = existingEntry?.mealBreakfastIncluded ?: false
                 )
@@ -308,9 +341,8 @@ class TodayViewModel @Inject constructor(
     fun openDayLocationDialog() {
         viewModelScope.launch {
             try {
-                val existingEntry = currentSelectedEntryOrNull() ?: getWorkEntryByDate(selectedDate.value)
-                val prefill = resolveDayLocationPrefill(existingEntry)
-                dialogsStateHolder.openDayLocationDialog(prefill)
+                val existingEntry = currentSelectedEntryOrNull() ?: workEntryRepository.getByDate(selectedDate.value)
+                dialogsStateHolder.openDayLocationDialog(existingEntry?.dayLocationLabel?.trim().orEmpty())
             } catch (e: Exception) {
                 actionsHandler.publishSnackbar(e.toUiText(R.string.today_error_day_location_save_failed))
             }
@@ -351,29 +383,7 @@ class TodayViewModel @Inject constructor(
         targetDate: LocalDate,
         preferCachedSelection: Boolean
     ) {
-        selectDateJob?.cancel()
-        val requestId = ++entryLoadRequestId
-        val cachedEntry = if (preferCachedSelection) {
-            selectedEntry.value?.takeIf { it.date == targetDate }
-        } else {
-            null
-        }
-
-        _uiState.value = TodayUiState.Loading
-        selectDateJob = viewModelScope.launch {
-            try {
-                val entry = cachedEntry ?: withContext(Dispatchers.IO) { getWorkEntryByDate(targetDate) }
-                if (isLatestEntryLoad(targetDate, requestId)) {
-                    _uiState.value = TodayUiState.Success(entry)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (isLatestEntryLoad(targetDate, requestId)) {
-                    _uiState.value = TodayUiState.Error(e.toUiText(R.string.today_error_unknown))
-                }
-            }
-        }
+        entryLoadRequests.tryEmit(EntryLoadRequest(targetDate, preferCachedSelection))
     }
 
     fun ensureTodayEntryThen(onDone: () -> Unit) = onDone()
@@ -429,16 +439,13 @@ class TodayViewModel @Inject constructor(
     private fun currentSelectedEntryOrNull(): WorkEntry? =
         selectedEntry.value?.takeIf { it.date == selectedDate.value }
 
-    private fun isLatestEntryLoad(targetDate: LocalDate, requestId: Long): Boolean {
-        return requestId == entryLoadRequestId && selectedDate.value == targetDate
-    }
-
-    private fun isLatestWeekOverviewRequest(selectedDateSnapshot: LocalDate, requestId: Long): Boolean {
-        return requestId == weekOverviewRequestId && selectedDate.value == selectedDateSnapshot
-    }
-
     private companion object {
         private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L
+
+        private data class EntryLoadRequest(
+            val targetDate: LocalDate,
+            val preferCachedSelection: Boolean
+        )
 
         private data class EntryRefreshKey(
             val selectedDate: LocalDate,

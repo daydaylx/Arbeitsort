@@ -26,7 +26,7 @@ data class TodayScreenState(
             // Reaktiver Flow zuerst: immer frisch (Background-Updates, Notification-Aktionen etc.)
             if (selectedEntry?.date == selectedDate) return selectedEntry
             // Fallback: uiState-Eintrag (kurzes Fenster bevor DB-Flow nach Datumswechsel emittiert)
-            return (uiState as? TodayUiState.Success)?.entry
+            return (uiState as? TodayUiState.Success)?.entry?.takeIf { it.date == selectedDate }
         }
 
     val currentTravelLegs: List<TravelLeg>

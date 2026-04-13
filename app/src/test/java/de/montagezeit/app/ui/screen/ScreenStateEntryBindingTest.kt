@@ -50,6 +50,23 @@ class ScreenStateEntryBindingTest {
     }
 
     @Test
+    fun `today screen does not expose success fallback from a different date`() {
+        val selectedDate = LocalDate.of(2026, 3, 21)
+        val staleSuccessEntry = WorkEntry(date = selectedDate.minusDays(1))
+
+        val state = TodayScreenState(
+            uiState = TodayUiState.Success(staleSuccessEntry),
+            selectedEntry = null,
+            selectedDate = selectedDate,
+            todayDate = selectedDate,
+            weekDaysUi = emptyList(),
+            loadingActions = emptySet()
+        )
+
+        assertNull(state.currentEntry)
+    }
+
+    @Test
     fun `overview screen hides stale selected entry for a different date`() {
         val selectedDate = LocalDate.of(2026, 3, 21)
         val staleEntry = WorkEntry(date = selectedDate.minusDays(1))
