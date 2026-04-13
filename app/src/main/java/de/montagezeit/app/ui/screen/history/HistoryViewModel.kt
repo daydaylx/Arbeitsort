@@ -10,10 +10,8 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
-import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
-import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
-import de.montagezeit.app.domain.usecase.UpsertWorkEntries
 import de.montagezeit.app.domain.util.transitionToDayType
 import android.util.Log
 import androidx.compose.runtime.Stable
@@ -43,9 +41,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val observeWorkEntriesWithTravelByDateRange: ObserveWorkEntriesWithTravelByDateRange,
-    private val getWorkEntriesByDateRange: GetWorkEntriesByDateRange,
-    private val upsertWorkEntries: UpsertWorkEntries,
+    private val workEntryRepository: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
 
@@ -58,9 +54,7 @@ class HistoryViewModel @Inject constructor(
 
     val uiState: StateFlow<HistoryUiState> = _refreshTrigger
         .flatMapLatest {
-            val endDate = LocalDate.now()
-            val startDate = endDate.minusDays(364)
-            observeWorkEntriesWithTravelByDateRange(startDate, endDate)
+            workEntryRepository.getAllWithTravelFlow()
                 .distinctUntilChanged()
                 .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
                     withContext(Dispatchers.Default) {
@@ -107,25 +101,39 @@ class HistoryViewModel @Inject constructor(
             _batchEditState.value = BatchEditState.InProgress
             try {
                 val settings = reminderSettingsManager.settings.first()
-                val existingEntries = getWorkEntriesByDateRange(request.startDate, request.endDate)
+                val existingEntries = workEntryRepository.getByDateRange(request.startDate, request.endDate)
                 val entriesByDate = existingEntries.associateBy { it.date }
                 val dates = buildDateRange(request.startDate, request.endDate)
+                val missingDates = dates.filterNot(entriesByDate::containsKey)
+                if (missingDates.isNotEmpty()) {
+                    _batchEditState.value = BatchEditState.Failure(
+                        UiText.StringResource(R.string.history_batch_missing_entries)
+                    )
+                    return@launch
+                }
                 val now = System.currentTimeMillis()
 
                 val entriesToUpsert = mutableListOf<WorkEntry>()
+                val travelLegDatesToDelete = mutableSetOf<LocalDate>()
                 for (date in dates) {
-                    val existing = entriesByDate[date] ?: continue
+                    val existing = requireNotNull(entriesByDate[date])
                     val baseEntry = existing
 
                     var updated = baseEntry
                     if (request.dayType != null) {
                         updated = updated.transitionToDayType(dayType = request.dayType, now = now)
-                        if (request.dayType == DayType.WORK && updated.dayLocationLabel.isBlank()) {
-                            _batchEditState.value = BatchEditState.Failure(
-                                UiText.StringResource(R.string.history_batch_work_requires_location)
-                            )
-                            return@launch
-                        }
+                    }
+                    if (request.applyDayLocation) {
+                        updated = updated.copy(dayLocationLabel = request.dayLocationLabel?.trim().orEmpty())
+                    }
+                    if (request.dayType == DayType.COMP_TIME) {
+                        travelLegDatesToDelete += date
+                    }
+                    if (updated.dayType == DayType.WORK && updated.dayLocationLabel.isBlank()) {
+                        _batchEditState.value = BatchEditState.Failure(
+                            UiText.StringResource(R.string.history_batch_work_requires_location)
+                        )
+                        return@launch
                     }
                     if (request.applyDefaultTimes && updated.dayType == DayType.WORK) {
                         updated = updated.copy(
@@ -143,8 +151,11 @@ class HistoryViewModel @Inject constructor(
                         entriesToUpsert.add(updated)
                     }
                 }
-                if (entriesToUpsert.isNotEmpty()) {
-                    upsertWorkEntries(entriesToUpsert)
+                if (entriesToUpsert.isNotEmpty() || travelLegDatesToDelete.isNotEmpty()) {
+                    workEntryRepository.upsertAllAndDeleteTravelLegs(
+                        entries = entriesToUpsert,
+                        travelLegDatesToDelete = travelLegDatesToDelete.toList()
+                    )
                 } else {
                     _batchEditState.value = BatchEditState.Failure(
                         UiText.StringResource(R.string.history_batch_no_changes)
@@ -243,8 +254,11 @@ class HistoryViewModel @Inject constructor(
         if (request.startDate.isAfter(request.endDate)) {
             return UiText.StringResource(R.string.history_batch_invalid_range)
         }
-        if (request.dayType == null && !request.applyDefaultTimes && !request.applyNote) {
+        if (request.dayType == null && !request.applyDefaultTimes && !request.applyDayLocation && !request.applyNote) {
             return UiText.StringResource(R.string.history_batch_select_action)
+        }
+        if (request.applyDayLocation && request.dayLocationLabel.isNullOrBlank()) {
+            return UiText.StringResource(R.string.history_batch_location_required)
         }
         return null
     }
@@ -300,6 +314,8 @@ data class BatchEditRequest(
     val endDate: LocalDate,
     val dayType: DayType?,
     val applyDefaultTimes: Boolean,
+    val dayLocationLabel: String?,
+    val applyDayLocation: Boolean,
     val note: String?,
     val applyNote: Boolean
 )

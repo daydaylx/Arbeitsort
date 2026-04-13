@@ -69,6 +69,7 @@ internal fun EditFormContent(
     formData: EditFormData,
     validationErrors: List<ValidationError> = emptyList(),
     dailyTargetHours: Double = 8.0,
+    mealAllowancePreviewCents: Int = 0,
     onDayTypeChange: (DayType) -> Unit,
     onHasWorkTimesChange: (Boolean) -> Unit,
     onWorkStartChange: (Int, Int) -> Unit,
@@ -161,7 +162,7 @@ internal fun EditFormContent(
                 MealAllowanceSection(
                     isArrivalDeparture = formData.mealIsArrivalDeparture,
                     breakfastIncluded = formData.mealBreakfastIncluded,
-                    allowancePreviewCents = formData.mealAllowancePreviewCents(),
+                    allowancePreviewCents = mealAllowancePreviewCents,
                     onArrivalDepartureChange = onMealArrivalDepartureChange,
                     onBreakfastIncludedChange = onMealBreakfastIncludedChange
                 )

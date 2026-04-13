@@ -48,6 +48,10 @@ abstract class WorkEntryDao {
         endDate: LocalDate
     ): Flow<List<WorkEntryWithTravelLegs>>
 
+    @Transaction
+    @Query("SELECT * FROM work_entries ORDER BY date DESC")
+    abstract fun getAllWithTravelFlow(): Flow<List<WorkEntryWithTravelLegs>>
+
     @Query("SELECT * FROM work_entries ORDER BY date DESC")
     abstract suspend fun getAll(): List<WorkEntry>
 
@@ -91,6 +95,9 @@ abstract class WorkEntryDao {
     @Query("DELETE FROM travel_legs WHERE workEntryDate = :date")
     abstract suspend fun deleteTravelLegsByDate(date: LocalDate)
 
+    @Query("DELETE FROM travel_legs WHERE id IN (:ids)")
+    abstract suspend fun deleteTravelLegsByIds(ids: List<Long>)
+
     @Query("DELETE FROM work_entries WHERE date = :date")
     abstract suspend fun deleteByDate(date: LocalDate)
 
@@ -105,8 +112,10 @@ abstract class WorkEntryDao {
         entries: List<WorkEntry>,
         travelLegDatesToDelete: List<LocalDate>
     ) {
-        upsertAll(entries)
-        for (date in travelLegDatesToDelete) {
+        if (entries.isNotEmpty()) {
+            upsertAll(entries)
+        }
+        for (date in travelLegDatesToDelete.distinct()) {
             deleteTravelLegsByDate(date)
         }
     }
@@ -114,17 +123,27 @@ abstract class WorkEntryDao {
     @Transaction
     open suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>) {
         upsert(entry)
-        deleteTravelLegsByDate(entry.date)
-        if (legs.isNotEmpty()) {
-            upsertTravelLegs(
-                legs.mapIndexed { index, leg ->
-                    leg.copy(
-                        workEntryDate = entry.date,
-                        sortOrder = index
-                    )
-                }
+        val existingLegs = getTravelLegsByDate(entry.date)
+        val existingBySortOrder = existingLegs.associateBy(TravelLeg::sortOrder)
+        val desiredLegs = legs.mapIndexed { index, leg ->
+            val existing = existingBySortOrder[index]
+            leg.copy(
+                id = existing?.id ?: leg.id,
+                workEntryDate = entry.date,
+                sortOrder = index,
+                createdAt = existing?.createdAt ?: leg.createdAt
             )
+        }
+
+        val desiredIds = desiredLegs.mapNotNull { it.id.takeIf { id -> id > 0 } }.toSet()
+        val idsToDelete = existingLegs
+            .map(TravelLeg::id)
+            .filter { id -> id > 0 && id !in desiredIds }
+        if (idsToDelete.isNotEmpty()) {
+            deleteTravelLegsByIds(idsToDelete)
+        }
+        if (desiredLegs.isNotEmpty()) {
+            upsertTravelLegs(desiredLegs)
         }
     }
 }
-

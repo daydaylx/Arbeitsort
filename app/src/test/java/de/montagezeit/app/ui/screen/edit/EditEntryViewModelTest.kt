@@ -2,13 +2,12 @@ package de.montagezeit.app.ui.screen.edit
 
 import androidx.lifecycle.SavedStateHandle
 import de.montagezeit.app.data.local.dao.WorkEntryDao
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.DeleteWorkEntryByDate
-import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
-import de.montagezeit.app.domain.usecase.GetWorkEntryWithTravelByDate
-import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.testRepository
 import io.mockk.coVerify
 import io.mockk.coEvery
@@ -25,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -37,6 +37,9 @@ class EditEntryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val workEntryDao = mockk<WorkEntryDao>(relaxed = true)
     private val reminderSettingsManager = mockk<ReminderSettingsManager>()
+    private val draftRules = EditEntryDraftRules()
+    private val saveBuilder = EditEntrySaveBuilder(draftRules)
+    private val diagnostics = EditEntryDiagnostics(draftRules)
 
     @Before
     fun setUp() {
@@ -62,11 +65,11 @@ class EditEntryViewModelTest {
 
         val repository = testRepository(workEntryDao)
         val viewModel = EditEntryViewModel(
-            getWorkEntryByDate = GetWorkEntryByDate(repository),
-            getWorkEntryWithTravelByDate = GetWorkEntryWithTravelByDate(repository),
-            deleteWorkEntryByDate = DeleteWorkEntryByDate(repository),
-            replaceWorkEntryWithTravelLegs = ReplaceWorkEntryWithTravelLegs(repository),
+            workEntryRepository = repository,
             reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
 
@@ -91,11 +94,11 @@ class EditEntryViewModelTest {
 
         val repository = testRepository(workEntryDao)
         val viewModel = EditEntryViewModel(
-            getWorkEntryByDate = GetWorkEntryByDate(repository),
-            getWorkEntryWithTravelByDate = GetWorkEntryWithTravelByDate(repository),
-            deleteWorkEntryByDate = DeleteWorkEntryByDate(repository),
-            replaceWorkEntryWithTravelLegs = ReplaceWorkEntryWithTravelLegs(repository),
+            workEntryRepository = repository,
             reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
 
@@ -128,5 +131,63 @@ class EditEntryViewModelTest {
             savedLeg.arriveAt
         )
         coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(any(), any()) }
+    }
+
+    @Test
+    fun `save refreshes existing entry before persisting to avoid overwriting newer fields`() = runTest {
+        val date = LocalDate.of(2026, 4, 2)
+        val settings = ReminderSettings(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        val staleEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            dayLocationLabel = "Berlin",
+            confirmedWorkDay = false
+        )
+        val freshEntry = staleEntry.copy(
+            confirmedWorkDay = true,
+            confirmationAt = 1234L,
+            confirmationSource = "SYNC"
+        )
+        val capturedEntry = slot<WorkEntry>()
+
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        coEvery {
+            workEntryDao.getByDateWithTravel(date)
+        } returnsMany listOf(
+            WorkEntryWithTravelLegs(staleEntry, emptyList()),
+            WorkEntryWithTravelLegs(freshEntry, emptyList())
+        )
+        coEvery {
+            workEntryDao.replaceEntryWithTravelLegs(capture(capturedEntry), any())
+        } returns Unit
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+
+        advanceUntilIdle()
+
+        viewModel.updateNote("Nachtrag")
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertTrue(capturedEntry.isCaptured)
+        assertEquals(true, capturedEntry.captured.confirmedWorkDay)
+        assertEquals(1234L, capturedEntry.captured.confirmationAt)
+        assertEquals("SYNC", capturedEntry.captured.confirmationSource)
+        assertEquals("Nachtrag", capturedEntry.captured.note)
     }
 }

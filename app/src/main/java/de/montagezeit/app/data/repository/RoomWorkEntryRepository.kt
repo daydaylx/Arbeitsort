@@ -32,6 +32,9 @@ class RoomWorkEntryRepository @Inject constructor(
         endDate: LocalDate
     ): List<WorkEntryWithTravelLegs> = workEntryDao.getByDateRangeWithTravel(startDate, endDate)
 
+    override fun getAllWithTravelFlow(): Flow<List<WorkEntryWithTravelLegs>> =
+        workEntryDao.getAllWithTravelFlow()
+
     override fun getByDateRangeWithTravelFlow(
         startDate: LocalDate,
         endDate: LocalDate
@@ -43,6 +46,11 @@ class RoomWorkEntryRepository @Inject constructor(
     override suspend fun upsert(entry: WorkEntry) = workEntryDao.upsert(entry)
 
     override suspend fun upsertAll(entries: List<WorkEntry>) = workEntryDao.upsertAll(entries)
+
+    override suspend fun upsertAllAndDeleteTravelLegs(
+        entries: List<WorkEntry>,
+        travelLegDatesToDelete: List<LocalDate>
+    ) = workEntryDao.upsertAllAndDeleteTravelLegs(entries, travelLegDatesToDelete)
 
     override suspend fun getTravelLegsByDate(date: LocalDate): List<TravelLeg> =
         workEntryDao.getTravelLegsByDate(date)

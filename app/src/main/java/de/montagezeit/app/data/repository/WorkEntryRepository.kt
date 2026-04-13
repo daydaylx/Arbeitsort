@@ -16,6 +16,7 @@ interface WorkEntryRepository {
 
     suspend fun getByDateRange(startDate: LocalDate, endDate: LocalDate): List<WorkEntry>
     suspend fun getByDateRangeWithTravel(startDate: LocalDate, endDate: LocalDate): List<WorkEntryWithTravelLegs>
+    fun getAllWithTravelFlow(): Flow<List<WorkEntryWithTravelLegs>>
     fun getByDateRangeWithTravelFlow(
         startDate: LocalDate,
         endDate: LocalDate
@@ -25,6 +26,7 @@ interface WorkEntryRepository {
 
     suspend fun upsert(entry: WorkEntry)
     suspend fun upsertAll(entries: List<WorkEntry>)
+    suspend fun upsertAllAndDeleteTravelLegs(entries: List<WorkEntry>, travelLegDatesToDelete: List<LocalDate>)
 
     suspend fun getTravelLegsByDate(date: LocalDate): List<TravelLeg>
     suspend fun deleteTravelLegsByDate(date: LocalDate)

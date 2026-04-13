@@ -8,22 +8,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
-import de.montagezeit.app.data.local.entity.TravelLegCategory
-import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
-import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
-import de.montagezeit.app.diagnostics.DiagnosticCategory
-import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
-import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
 import de.montagezeit.app.diagnostics.redactedTextSummary
-import de.montagezeit.app.diagnostics.toDiagnosticPayload
-import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
-import de.montagezeit.app.domain.util.transitionToDayType
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.DeleteWorkEntryByDate
-import de.montagezeit.app.domain.usecase.GetWorkEntryByDate
-import de.montagezeit.app.domain.usecase.GetWorkEntryWithTravelByDate
-import de.montagezeit.app.domain.usecase.ReplaceWorkEntryWithTravelLegs
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
@@ -46,11 +34,11 @@ import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class EditEntryViewModel @Inject constructor(
-    private val getWorkEntryByDate: GetWorkEntryByDate,
-    private val getWorkEntryWithTravelByDate: GetWorkEntryWithTravelByDate,
-    private val deleteWorkEntryByDate: DeleteWorkEntryByDate,
-    private val replaceWorkEntryWithTravelLegs: ReplaceWorkEntryWithTravelLegs,
+    private val workEntryRepository: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager,
+    private val draftRules: EditEntryDraftRules,
+    private val saveBuilder: EditEntrySaveBuilder,
+    private val editEntryDiagnostics: EditEntryDiagnostics,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -78,19 +66,7 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun setFormData(data: EditFormData) {
-        _screenState.update { it.copy(formData = data) }
-        viewModelScope.launch {
-            val entry = getWorkEntryByDate(currentDate)
-            _screenState.update { state ->
-                state.copy(
-                    uiState = if (entry == null) {
-                        EditUiState.NewEntry(currentDate)
-                    } else {
-                        EditUiState.Success(entry)
-                    }
-                )
-            }
-        }
+        _screenState.update { state -> state.withFormData(data, draftRules) }
     }
 
     private fun loadEntry(date: LocalDate) {
@@ -102,7 +78,7 @@ class EditEntryViewModel @Inject constructor(
                 val settings = reminderSettingsManager.settings.first()
                 val dailyTargetHours = settings.dailyTargetHours
 
-                val record = getWorkEntryWithTravelByDate(date)
+                val record = workEntryRepository.getByDateWithTravel(date)
                 if (record != null) {
                     showExistingEntry(record, dailyTargetHours)
                 } else {
@@ -215,14 +191,14 @@ class EditEntryViewModel @Inject constructor(
         if (_screenState.value.isSaving) { onResult(false); return }
         viewModelScope.launch(Dispatchers.IO) {
             val previousDate = currentDate.minusDays(1)
-            val record = getWorkEntryWithTravelByDate(previousDate)
+            val record = workEntryRepository.getByDateWithTravel(previousDate)
             withContext(Dispatchers.Main) {
                 if (record != null) {
                     val copied = EditFormData.fromEntry(
                         entry = record.workEntry,
                         travelLegs = record.orderedTravelLegs
                     )
-                    _screenState.update { it.copy(formData = copied) }
+                    _screenState.update { state -> state.withFormData(copied, draftRules) }
                     onResult(true)
                 } else {
                     onResult(false)
@@ -237,14 +213,14 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 _screenState.update { it.copy(isSaving = true) }
-                val existingEntry = getWorkEntryByDate(currentDate)
+                val existingEntry = workEntryRepository.getByDate(currentDate)
                 if (existingEntry == null) {
                     _screenState.update { it.copy(isSaving = false, uiState = EditUiState.NewEntry(currentDate)) }
                     onResult(false)
                     return@launch
                 }
 
-                deleteWorkEntryByDate(currentDate)
+                workEntryRepository.deleteByDate(currentDate)
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
                 onResult(true)
             } catch (e: Exception) {
@@ -268,105 +244,41 @@ class EditEntryViewModel @Inject constructor(
 
             val data = stateSnapshot.formData
             val currentState = stateSnapshot.uiState
-            val traceDate = when (currentState) {
-                is EditUiState.Success -> currentState.entry.date
-                is EditUiState.NewEntry -> currentState.date
-                else -> currentDate
-            }
-            val trace = AppDiagnosticsRuntime.startTrace(
-                DiagnosticTraceRequest(
-                    category = DiagnosticCategory.STATE_MUTATION,
-                    name = "edit_entry_save",
-                    sourceClass = "EditEntryViewModel",
-                    screenOrWorker = "EditEntrySheet",
-                    entityDate = traceDate,
-                    payload = mapOf(
-                        "formData" to data.toSanitizedDiagnosticPayload(),
-                        "uiState" to currentState::class.simpleName,
-                        "isDirty" to stateSnapshot.isDirty
-                    )
-                )
+            val trace = editEntryDiagnostics.startSaveTrace(
+                currentState = currentState,
+                fallbackDate = currentDate,
+                data = data,
+                isDirty = stateSnapshot.isDirty
             )
 
-            if (data.dayType == DayType.WORK && data.hasWorkTimes && data.workEnd.isBefore(data.workStart)) {
-                trace.warning(
-                    DiagnosticWarningCodes.WORK_DURATION_OVERNIGHT_NORMALIZED,
-                    payload = mapOf(
-                        "workStart" to data.workStart.toString(),
-                        "workEnd" to data.workEnd.toString()
-                    )
-                )
-            }
-            data.normalizedTravelLegs()
-                .filter { it.startTime != null && it.arriveTime != null && requireNotNull(it.arriveTime).isBefore(requireNotNull(it.startTime)) }
-                .forEachIndexed { index, leg ->
-                    trace.warning(
-                        DiagnosticWarningCodes.TRAVEL_DURATION_OVERNIGHT_NORMALIZED,
-                        payload = mapOf(
-                            "index" to index,
-                            "startTime" to leg.startTime?.toString(),
-                            "arriveTime" to leg.arriveTime?.toString()
-                        )
-                    )
-                }
-
-            val validationErrors = data.validate()
+            val validationErrors = draftRules.validate(data)
             if (validationErrors.isNotEmpty()) {
-                trace.event(
-                    name = "edit_validation_failed",
-                    phase = de.montagezeit.app.diagnostics.DiagnosticPhase.ANOMALY,
-                    severity = de.montagezeit.app.diagnostics.DiagnosticSeverity.WARNING,
-                    payload = mapOf(
-                        "errors" to validationErrors.map(ValidationError::diagnosticCode)
-                    )
-                )
-                validationErrors.forEach { error ->
-                    trace.warning(
-                        code = error.diagnosticCode(),
-                        payload = mapOf("messageRes" to error.messageRes)
-                    )
-                }
-                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.WARNING)
+                trace.validationFailed(validationErrors)
                 showValidationErrors(currentState, validationErrors)
                 return@launch
             }
 
             try {
-                val pendingSave = buildPendingSave(currentState, data) ?: return@launch
-                trace.event(
-                    name = "edit_pending_save_built",
-                    payload = mapOf(
-                        "entry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
-                        "travelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload),
-                        "mealAllowanceAmountCents" to pendingSave.entry.mealAllowanceAmountCents
-                    )
-                )
-                if (pendingSave.entry.dayType == DayType.WORK &&
-                    pendingSave.entry.workStart != null &&
-                    pendingSave.entry.workEnd != null &&
-                    pendingSave.entry.breakMinutes > data.calculateEffectiveWorkMinutes() + data.breakMinutes
-                ) {
-                    trace.warning(
-                        DiagnosticWarningCodes.BREAK_EXCEEDS_DURATION,
-                        payload = mapOf("breakMinutes" to pendingSave.entry.breakMinutes)
+                val latestState = resolveLatestSaveState(currentState) ?: return@launch
+                val pendingSave = saveBuilder.build(
+                    currentState = latestState,
+                    data = data,
+                    zoneId = editTimeZone
+                ) ?: return@launch
+                trace.pendingSaveBuilt(pendingSave)
+                _screenState.update { it.copy(isSaving = true) }
+                workEntryRepository.replaceEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
+                trace.saveSucceeded(pendingSave)
+                _screenState.update {
+                    it.copy(
+                        isSaving = false,
+                        uiState = EditUiState.Saved,
+                        originalFormData = data,
+                        mealAllowancePreviewCents = draftRules.mealAllowancePreviewCents(data)
                     )
                 }
-                _screenState.update { it.copy(isSaving = true) }
-                replaceWorkEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
-                trace.finish(
-                    payload = mapOf(
-                        "savedEntry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
-                        "savedTravelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload)
-                    )
-                )
-                _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved, originalFormData = data) }
             } catch (e: Exception) {
-                trace.error(
-                    name = "edit_entry_save_failed",
-                    throwable = e,
-                    payload = mapOf("formData" to data.toSanitizedDiagnosticPayload())
-                )
-                trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.ERROR)
+                trace.saveFailed(e)
                 showErrorState(e, R.string.edit_error_save_failed)
             }
         }
@@ -394,6 +306,25 @@ class EditEntryViewModel @Inject constructor(
 
     fun copyEntryData(): EditFormData = _screenState.value.formData.copy()
 
+    private suspend fun resolveLatestSaveState(currentState: EditUiState): EditUiState? {
+        val validationErrors = when (currentState) {
+            is EditUiState.Success -> currentState.validationErrors
+            is EditUiState.NewEntry -> currentState.validationErrors
+            else -> return null
+        }
+        val date = when (currentState) {
+            is EditUiState.Success -> currentState.entry.date
+            is EditUiState.NewEntry -> currentState.date
+            else -> return null
+        }
+        val latestRecord = workEntryRepository.getByDateWithTravel(date)
+        return if (latestRecord != null) {
+            EditUiState.Success(latestRecord.workEntry, validationErrors)
+        } else {
+            EditUiState.NewEntry(date, validationErrors)
+        }
+    }
+
     private fun showExistingEntry(
         record: de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs,
         dailyTargetHours: Double
@@ -404,8 +335,7 @@ class EditEntryViewModel @Inject constructor(
             zoneId = editTimeZone
         )
         _screenState.update {
-            it.copy(
-                formData = formData,
+            it.withFormData(formData, draftRules).copy(
                 originalFormData = formData,
                 uiState = EditUiState.Success(record.workEntry),
                 isSaving = false,
@@ -436,8 +366,7 @@ class EditEntryViewModel @Inject constructor(
             dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null }
         )
         _screenState.update {
-            it.copy(
-                formData = finalFormData,
+            it.withFormData(finalFormData, draftRules).copy(
                 originalFormData = finalFormData,
                 uiState = EditUiState.NewEntry(date),
                 isSaving = false,
@@ -465,97 +394,6 @@ class EditEntryViewModel @Inject constructor(
         }
     }
 
-    private fun buildPendingSave(
-        currentState: EditUiState,
-        data: EditFormData
-    ): PendingSave? {
-        val date = when (currentState) {
-            is EditUiState.Success -> currentState.entry.date
-            is EditUiState.NewEntry -> currentState.date
-            else -> return null
-        }
-        val now = System.currentTimeMillis()
-        val mealAllowance = resolveMealAllowanceForSave(
-            dayType = data.dayType,
-            isArrivalDeparture = data.mealIsArrivalDeparture,
-            breakfastIncluded = data.mealBreakfastIncluded,
-            workMinutes = data.calculateEffectiveWorkMinutes(),
-            travelMinutes = data.calculateEffectiveTravelMinutes()
-        )
-        return PendingSave(
-            entry = buildEntryToSave(currentState, data, now, mealAllowance),
-            legs = buildTravelLegsToSave(data, date, now)
-        )
-    }
-
-    private fun buildEntryToSave(
-        currentState: EditUiState,
-        data: EditFormData,
-        now: Long,
-        mealAllowance: ResolvedMealAllowanceForSave
-    ): WorkEntry {
-        val date = when (currentState) {
-            is EditUiState.Success -> currentState.entry.date
-            is EditUiState.NewEntry -> currentState.date
-            else -> error("Unsupported save state: $currentState")
-        }
-        val originalEntry = (currentState as? EditUiState.Success)?.entry
-        val baseEntry = originalEntry?.transitionToDayType(dayType = data.dayType, now = now)
-            ?: WorkEntry(
-                date = date,
-                createdAt = now,
-                updatedAt = now
-            ).transitionToDayType(dayType = data.dayType, now = now)
-
-        val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
-        return baseEntry.copy(
-            dayType = data.dayType,
-            workStart = if (persistWorkBlock) data.workStart else null,
-            workEnd = if (persistWorkBlock) data.workEnd else null,
-            breakMinutes = if (persistWorkBlock) data.breakMinutes else 0,
-            dayLocationLabel = data.dayLocationLabel.orEmpty(),
-            note = data.note,
-            mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
-            mealBreakfastIncluded = mealAllowance.breakfastIncluded,
-            mealAllowanceBaseCents = mealAllowance.baseCents,
-            mealAllowanceAmountCents = mealAllowance.amountCents,
-            updatedAt = now
-        )
-    }
-
-    private fun buildTravelLegsToSave(
-        data: EditFormData,
-        date: LocalDate,
-        now: Long
-    ): List<TravelLeg> {
-        if (data.dayType == DayType.COMP_TIME) return emptyList()
-
-        val normalizedTravelLegs = data.normalizedTravelLegs()
-        return normalizedTravelLegs.mapIndexed { index, leg ->
-            val isOvernightLeg = leg.startTime != null &&
-                leg.arriveTime != null &&
-                requireNotNull(leg.arriveTime).isBefore(requireNotNull(leg.startTime))
-            TravelLeg(
-                workEntryDate = date,
-                sortOrder = index,
-                category = inferCategory(index, normalizedTravelLegs.size),
-                startAt = leg.startTime?.let { toEpochMillis(date, it) },
-                arriveAt = leg.arriveTime?.let {
-                    val arriveDate = if (isOvernightLeg) date.plusDays(1) else date
-                    toEpochMillis(arriveDate, it)
-                },
-                startLabel = leg.startLabel,
-                endLabel = leg.endLabel,
-                paidMinutesOverride = leg.paidMinutesOverride?.takeIf {
-                    leg.startTime == null && leg.arriveTime == null
-                },
-                source = TravelSource.MANUAL,
-                createdAt = now,
-                updatedAt = now
-            )
-        }
-    }
-
     private fun showErrorState(error: Throwable, @StringRes fallbackRes: Int) {
         _screenState.update {
             it.copy(
@@ -577,35 +415,15 @@ class EditEntryViewModel @Inject constructor(
 
     private inline fun updateFormData(update: (EditFormData) -> EditFormData) {
         _screenState.update { state ->
-            state.copy(formData = update(state.formData))
+            state.withFormData(update(state.formData), draftRules)
         }
     }
-
-    private fun toEpochMillis(date: LocalDate, time: LocalTime): Long {
-        return date.atTime(time)
-            .atZone(editTimeZone)
-            .toInstant()
-            .toEpochMilli()
-    }
-
-    private fun inferCategory(index: Int, totalSize: Int): TravelLegCategory {
-        return when {
-            totalSize == 1 -> TravelLegCategory.OTHER
-            index == 0 -> TravelLegCategory.OUTBOUND
-            index == totalSize - 1 -> TravelLegCategory.RETURN
-            else -> TravelLegCategory.INTERSITE
-        }
-    }
-
-    private data class PendingSave(
-        val entry: WorkEntry,
-        val legs: List<TravelLeg>
-    )
 }
 
 data class EditScreenState(
     val uiState: EditUiState = EditUiState.Loading,
     val formData: EditFormData = EditFormData(),
+    val mealAllowancePreviewCents: Int = 0,
     val isSaving: Boolean = false,
     val dailyTargetHours: Double = 8.0,
     val originalFormData: EditFormData? = null
@@ -644,138 +462,6 @@ data class EditFormData(
     val travelArriveTime: LocalTime? = null,
     val travelLegs: List<EditTravelLegForm> = emptyList()
 ) {
-    fun normalizedTravelLegs(): List<EditTravelLegForm> {
-        val explicitLegs = travelLegs.filterNot(EditTravelLegForm::isBlank)
-        if (explicitLegs.isNotEmpty()) return explicitLegs
-
-        val fallbackLeg = EditTravelLegForm(
-            startTime = travelStartTime,
-            arriveTime = travelArriveTime
-        )
-        return if (fallbackLeg.isBlank()) emptyList() else listOf(fallbackLeg)
-    }
-
-    fun mealAllowancePreviewCents(): Int {
-        return resolveMealAllowanceForSave(
-            dayType = dayType,
-            isArrivalDeparture = mealIsArrivalDeparture,
-            breakfastIncluded = mealBreakfastIncluded,
-            workMinutes = calculateEffectiveWorkMinutes(),
-            travelMinutes = calculateEffectiveTravelMinutes()
-        ).amountCents
-    }
-
-    fun calculateEffectiveWorkMinutes(): Int {
-        if (dayType != DayType.WORK || !hasWorkTimes) return 0
-
-        val startMinutes = workStart.hour * 60 + workStart.minute
-        val endMinutes = workEnd.hour * 60 + workEnd.minute
-        val rawMinutes = if (endMinutes < startMinutes) {
-            (24 * 60 - startMinutes) + endMinutes
-        } else {
-            endMinutes - startMinutes
-        }
-        return (rawMinutes - breakMinutes).coerceAtLeast(0)
-    }
-
-    fun calculateEffectiveTravelMinutes(): Int {
-        return normalizedTravelLegs().sumOf { leg ->
-            when {
-                leg.paidMinutesOverride != null -> leg.paidMinutesOverride
-                leg.startTime != null && leg.arriveTime != null -> {
-                    val startMinutes = requireNotNull(leg.startTime).hour * 60 + requireNotNull(leg.startTime).minute
-                    val arriveMinutes = requireNotNull(leg.arriveTime).hour * 60 + requireNotNull(leg.arriveTime).minute
-                    if (arriveMinutes < startMinutes) {
-                        (24 * 60 - startMinutes) + arriveMinutes
-                    } else {
-                        arriveMinutes - startMinutes
-                    }
-                }
-                else -> 0
-            }
-        }
-    }
-
-    fun validate(): List<ValidationError> {
-        val errors = mutableListOf<ValidationError>()
-        val relevantTravelLegs = normalizedTravelLegs()
-
-        if (dayType == DayType.COMP_TIME) {
-            if (relevantTravelLegs.isNotEmpty()) {
-                errors += ValidationError.TravelNotAllowedForCompTime
-            }
-            return errors
-        }
-
-        if (dayType == DayType.WORK) {
-            if (dayLocationLabel.isNullOrBlank()) {
-                errors += ValidationError.MissingDayLocation
-            }
-            if (!hasWorkTimes && relevantTravelLegs.isEmpty()) {
-                errors += ValidationError.MissingWorkOrTravel
-            }
-
-            if (hasWorkTimes) {
-                val workTimeValid = workEnd != workStart
-                if (!workTimeValid) {
-                    errors += ValidationError.WorkEndBeforeStart
-                }
-                if (breakMinutes < 0) {
-                    errors += ValidationError.NegativeBreakMinutes
-                }
-                if (workTimeValid) {
-                    // Nachtschicht-Unterstützung: wenn Ende < Start, über Mitternacht
-                    val startSec = workStart.toSecondOfDay()
-                    val endSec = workEnd.toSecondOfDay()
-                    val totalWorkMinutes = if (endSec < startSec) {
-                        (24 * 3600 - startSec + endSec) / 60
-                    } else {
-                        (endSec - startSec) / 60
-                    }
-                    if (totalWorkMinutes > 18 * 60) {
-                        errors += ValidationError.WorkDayTooLong
-                    }
-                    if (breakMinutes > totalWorkMinutes) {
-                        errors += ValidationError.BreakLongerThanWorkTime
-                    }
-                }
-            }
-        }
-
-        relevantTravelLegs.forEachIndexed { index, leg ->
-            val hasStart = leg.startTime != null
-            val hasArrive = leg.arriveTime != null
-            val hasOverride = leg.paidMinutesOverride != null
-
-            if (hasStart.xor(hasArrive)) {
-                errors += ValidationError.TravelLegIncomplete(index)
-                return@forEachIndexed
-            }
-            if (!hasStart && !hasArrive && !hasOverride) {
-                errors += ValidationError.TravelLegMissingTimeWindow(index)
-                return@forEachIndexed
-            }
-            if (hasStart && hasArrive) {
-                val startTime = leg.startTime
-                val arriveTime = leg.arriveTime
-                if (arriveTime == startTime) {
-                    errors += ValidationError.TravelArriveBeforeStart(index)
-                } else {
-                    var diffMinutes =
-                        (requireNotNull(arriveTime).toSecondOfDay() - requireNotNull(startTime).toSecondOfDay()) / 60
-                    if (diffMinutes < 0) diffMinutes += 24 * 60
-                    if (diffMinutes > 16 * 60) {
-                        errors += ValidationError.TravelTooLong(index)
-                    }
-                }
-            }
-        }
-
-        return errors.distinct()
-    }
-
-    fun isValid(): Boolean = validate().isEmpty()
-
     companion object {
         fun defaultFor(
             dayType: DayType,
@@ -896,7 +582,19 @@ private fun toUiText(message: String?, @StringRes fallbackRes: Int): UiText {
         ?: UiText.StringResource(fallbackRes)
 }
 
-private fun EditFormData.toSanitizedDiagnosticPayload(): Map<String, Any?> {
+private fun EditScreenState.withFormData(
+    formData: EditFormData,
+    draftRules: EditEntryDraftRules
+): EditScreenState {
+    return copy(
+        formData = formData,
+        mealAllowancePreviewCents = draftRules.mealAllowancePreviewCents(formData)
+    )
+}
+
+internal fun EditFormData.toSanitizedDiagnosticPayload(
+    draftRules: EditEntryDraftRules = EditEntryDraftRules.Default
+): Map<String, Any?> {
     return mapOf(
         "dayType" to dayType.name,
         "hasWorkTimes" to hasWorkTimes,
@@ -907,8 +605,8 @@ private fun EditFormData.toSanitizedDiagnosticPayload(): Map<String, Any?> {
         "mealIsArrivalDeparture" to mealIsArrivalDeparture,
         "mealBreakfastIncluded" to mealBreakfastIncluded,
         "note" to redactedTextSummary(note),
-        "travelLegCount" to normalizedTravelLegs().size,
-        "travelLegs" to normalizedTravelLegs().mapIndexed { index, leg ->
+        "travelLegCount" to draftRules.normalizedTravelLegs(this).size,
+        "travelLegs" to draftRules.normalizedTravelLegs(this).mapIndexed { index, leg ->
             mapOf(
                 "index" to index,
                 "startTime" to leg.startTime?.toString(),
@@ -921,7 +619,7 @@ private fun EditFormData.toSanitizedDiagnosticPayload(): Map<String, Any?> {
     )
 }
 
-private fun ValidationError.diagnosticCode(): String {
+internal fun ValidationError.diagnosticCode(): String {
     return when (this) {
         ValidationError.MissingWorkOrTravel -> "VALIDATION_MISSING_WORK_OR_TRAVEL"
         ValidationError.MissingDayLocation -> "VALIDATION_MISSING_DAY_LOCATION"

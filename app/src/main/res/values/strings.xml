@@ -423,10 +423,13 @@
     <string name="history_batch_offday">Frei</string>
     <string name="history_batch_comp_time">Ausgleich</string>
     <string name="history_batch_set_defaults">Standardzeiten setzen</string>
+    <string name="history_batch_set_location">Arbeitsort setzen</string>
     <string name="history_batch_set_note">Notiz setzen</string>
     <string name="history_batch_note_placeholder">Notiz (leer = loeschen)</string>
     <string name="history_batch_select_action">Bitte mindestens eine Aktion waehlen.</string>
     <string name="history_batch_no_changes">Keine Aenderungen zum Speichern gefunden.</string>
+    <string name="history_batch_missing_entries">Der Bereich enthält Tage ohne bestehenden Eintrag. Bereichsänderungen werden nur auf vollständig vorhandene Tage angewendet.</string>
+    <string name="history_batch_location_required">Bitte einen Arbeitsort für die Bereichsänderung eingeben.</string>
     <string name="history_batch_work_requires_location">Arbeitstage koennen im Bereich nur mit vorhandenem Arbeitsort gesetzt werden.</string>
     <string name="history_batch_apply">Anwenden</string>
 

@@ -7,9 +7,6 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.GetWorkEntriesByDateRange
-import de.montagezeit.app.domain.usecase.ObserveWorkEntriesWithTravelByDateRange
-import de.montagezeit.app.domain.usecase.UpsertWorkEntries
 import de.montagezeit.app.domain.usecase.testRepository
 import de.montagezeit.app.ui.util.UiText
 import io.mockk.coEvery
@@ -48,7 +45,7 @@ class HistoryViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
-        every { workEntryDao.getByDateRangeWithTravelFlow(any(), any()) } returns emptyFlow()
+        every { workEntryDao.getAllWithTravelFlow() } returns emptyFlow()
     }
 
     @After
@@ -64,6 +61,8 @@ class HistoryViewModelTest {
             endDate = LocalDate.of(2026, 3, 14),
             dayType = DayType.WORK,
             applyDefaultTimes = false,
+            dayLocationLabel = null,
+            applyDayLocation = false,
             note = null,
             applyNote = false
         )
@@ -88,6 +87,8 @@ class HistoryViewModelTest {
                 endDate = today,
                 dayType = null,
                 applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
                 note = null,
                 applyNote = false
             )
@@ -118,6 +119,8 @@ class HistoryViewModelTest {
                 endDate = date,
                 dayType = DayType.WORK,
                 applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
                 note = null,
                 applyNote = false
             )
@@ -128,7 +131,7 @@ class HistoryViewModelTest {
             BatchEditState.Failure(UiText.StringResource(R.string.history_batch_no_changes)),
             viewModel.batchEditState.value
         )
-        coVerify(exactly = 0) { workEntryDao.upsertAll(any()) }
+        coVerify(exactly = 0) { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) }
     }
 
     @Test
@@ -144,11 +147,14 @@ class HistoryViewModelTest {
             mealAllowanceAmountCents = 820
         )
         val savedEntries = mutableListOf<WorkEntry>()
+        val deletedTravelDates = mutableListOf<LocalDate>()
 
         coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
-        coEvery { workEntryDao.upsertAll(any()) } answers {
+        coEvery { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             savedEntries += args[0] as List<WorkEntry>
+            @Suppress("UNCHECKED_CAST")
+            deletedTravelDates += args[1] as List<LocalDate>
             Unit
         }
 
@@ -159,6 +165,8 @@ class HistoryViewModelTest {
                 endDate = date,
                 dayType = DayType.OFF,
                 applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
                 applyNote = false,
                 note = null
             )
@@ -174,8 +182,8 @@ class HistoryViewModelTest {
         assertEquals(false, saved.mealBreakfastIncluded)
         assertEquals(0, saved.mealAllowanceBaseCents)
         assertEquals(0, saved.mealAllowanceAmountCents)
-        coVerify(atLeast = 1) { workEntryDao.upsertAll(any()) }
-        coVerify(exactly = 0) { workEntryDao.deleteTravelLegsByDate(any()) }
+        assertTrue(deletedTravelDates.isEmpty())
+        coVerify(atLeast = 1) { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) }
     }
 
     @Test
@@ -195,6 +203,8 @@ class HistoryViewModelTest {
                 endDate = date,
                 dayType = DayType.WORK,
                 applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
                 note = null,
                 applyNote = false
             )
@@ -205,14 +215,16 @@ class HistoryViewModelTest {
             BatchEditState.Failure(UiText.StringResource(R.string.history_batch_work_requires_location)),
             viewModel.batchEditState.value
         )
-        coVerify(exactly = 0) { workEntryDao.upsertAll(any()) }
+        coVerify(exactly = 0) { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) }
     }
 
     @Test
-    fun `applyBatchEdit does not create entries for missing dates`() = runTest {
+    fun `applyBatchEdit rejects ranges with missing dates`() = runTest {
         val start = LocalDate.of(2026, 3, 12)
         val end = LocalDate.of(2026, 3, 14)
-        coEvery { workEntryDao.getByDateRange(start, end) } returns emptyList()
+        coEvery {
+            workEntryDao.getByDateRange(start, end)
+        } returns listOf(WorkEntry(date = start, dayType = DayType.OFF))
 
         val viewModel = createViewModel()
         viewModel.applyBatchEdit(
@@ -221,6 +233,8 @@ class HistoryViewModelTest {
                 endDate = end,
                 dayType = null,
                 applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
                 note = "Nur bestehende Einträge",
                 applyNote = true
             )
@@ -228,25 +242,85 @@ class HistoryViewModelTest {
         waitUntil { viewModel.batchEditState.value is BatchEditState.Failure }
 
         assertEquals(
-            BatchEditState.Failure(UiText.StringResource(R.string.history_batch_no_changes)),
+            BatchEditState.Failure(UiText.StringResource(R.string.history_batch_missing_entries)),
             viewModel.batchEditState.value
         )
-        coVerify(exactly = 0) { workEntryDao.upsertAll(any()) }
+        coVerify(exactly = 0) { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) }
     }
 
     @Test
-    fun `uiState observes exactly the last 365 days inclusive`() = runTest {
-        val endDate = LocalDate.now()
-        val startDate = endDate.minusDays(364)
-        every { workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate) } returns flowOf(emptyList())
+    fun `applyBatchEdit can set day location while switching to work`() = runTest {
+        val date = LocalDate.of(2026, 3, 12)
+        val existing = WorkEntry(date = date, dayType = DayType.OFF, dayLocationLabel = "")
+        val savedEntries = mutableListOf<WorkEntry>()
+
+        coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
+        coEvery { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            savedEntries += args[0] as List<WorkEntry>
+            Unit
+        }
+
+        val viewModel = createViewModel()
+        viewModel.applyBatchEdit(
+            BatchEditRequest(
+                startDate = date,
+                endDate = date,
+                dayType = DayType.WORK,
+                applyDefaultTimes = false,
+                dayLocationLabel = "Berlin",
+                applyDayLocation = true,
+                note = null,
+                applyNote = false
+            )
+        )
+        waitUntil { viewModel.batchEditState.value is BatchEditState.Success }
+
+        assertEquals(1, savedEntries.size)
+        assertEquals("Berlin", savedEntries.single().dayLocationLabel)
+        assertEquals(DayType.WORK, savedEntries.single().dayType)
+    }
+
+    @Test
+    fun `applyBatchEdit deletes travel legs when switching range to comp time`() = runTest {
+        val date = LocalDate.of(2026, 3, 12)
+        val existing = WorkEntry(date = date, dayType = DayType.WORK, dayLocationLabel = "Berlin")
+        val deletedTravelDates = mutableListOf<LocalDate>()
+
+        coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
+        coEvery { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            deletedTravelDates += args[1] as List<LocalDate>
+            Unit
+        }
+
+        val viewModel = createViewModel()
+        viewModel.applyBatchEdit(
+            BatchEditRequest(
+                startDate = date,
+                endDate = date,
+                dayType = DayType.COMP_TIME,
+                applyDefaultTimes = false,
+                dayLocationLabel = null,
+                applyDayLocation = false,
+                note = null,
+                applyNote = false
+            )
+        )
+        waitUntil { viewModel.batchEditState.value is BatchEditState.Success }
+
+        assertEquals(listOf(date), deletedTravelDates)
+    }
+
+    @Test
+    fun `uiState observes all entries without a rolling cutoff`() = runTest {
+        every { workEntryDao.getAllWithTravelFlow() } returns flowOf(emptyList())
 
         val viewModel = createViewModel()
         val collectJob = backgroundScope.launch { viewModel.uiState.collect { } }
         advanceUntilIdle()
 
-        io.mockk.verify(exactly = 1) {
-            workEntryDao.getByDateRangeWithTravelFlow(startDate, endDate)
-        }
+        io.mockk.verify(exactly = 1) { workEntryDao.getAllWithTravelFlow() }
         collectJob.cancel()
     }
 
@@ -261,9 +335,7 @@ class HistoryViewModelTest {
     private fun createViewModel(): HistoryViewModel {
         val repository = testRepository(workEntryDao)
         return HistoryViewModel(
-            observeWorkEntriesWithTravelByDateRange = ObserveWorkEntriesWithTravelByDateRange(repository),
-            getWorkEntriesByDateRange = GetWorkEntriesByDateRange(repository),
-            upsertWorkEntries = UpsertWorkEntries(repository),
+            workEntryRepository = repository,
             reminderSettingsManager = reminderSettingsManager
         )
     }

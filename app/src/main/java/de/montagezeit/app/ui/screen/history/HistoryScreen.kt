@@ -725,12 +725,15 @@ fun BatchEditDialog(
     var applyDayType by remember { mutableStateOf(false) }
     var selectedDayType by remember { mutableStateOf(DayType.WORK) }
     var applyDefaults by remember { mutableStateOf(false) }
+    var applyDayLocation by remember { mutableStateOf(false) }
+    var dayLocation by remember { mutableStateOf("") }
     var applyNote by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
 
     val validRange = !startDate.isAfter(endDate)
-    val hasSelection = applyDayType || applyDefaults || applyNote
-    val canApply = validRange && hasSelection && !isSubmitting
+    val hasSelection = applyDayType || applyDefaults || applyDayLocation || applyNote
+    val hasRequiredInputs = !applyDayLocation || dayLocation.isNotBlank()
+    val canApply = validRange && hasSelection && hasRequiredInputs && !isSubmitting
 
     MZAlertDialog(
         onDismissRequest = onDismiss,
@@ -810,6 +813,29 @@ fun BatchEditDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Checkbox(
+                        checked = applyDayLocation,
+                        onCheckedChange = { applyDayLocation = it }
+                    )
+                    Text(stringResource(R.string.history_batch_set_location))
+                }
+
+                if (applyDayLocation) {
+                    OutlinedTextField(
+                        value = dayLocation,
+                        onValueChange = { if (it.length <= 100) dayLocation = it },
+                        label = { Text(stringResource(R.string.day_location_label)) },
+                        placeholder = { Text(stringResource(R.string.edit_placeholder_work_location)) },
+                        colors = mzOutlinedTextFieldColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
                         checked = applyNote,
                         onCheckedChange = { applyNote = it }
                     )
@@ -833,6 +859,14 @@ fun BatchEditDialog(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+
+                if (applyDayLocation && dayLocation.isBlank()) {
+                    Text(
+                        text = stringResource(R.string.history_batch_location_required),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
@@ -844,6 +878,8 @@ fun BatchEditDialog(
                             endDate = endDate,
                             dayType = if (applyDayType) selectedDayType else null,
                             applyDefaultTimes = applyDefaults,
+                            dayLocationLabel = dayLocation,
+                            applyDayLocation = applyDayLocation,
                             note = note,
                             applyNote = applyNote
                         )

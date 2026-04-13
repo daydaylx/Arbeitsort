@@ -89,6 +89,16 @@ fun EditEntrySheet(
         }
     }
 
+    val guardedNavigateDate: (LocalDate) -> Unit = { newDate ->
+        onNavigateDate?.let { navigate ->
+            if (screenState.isDirty && !screenState.isSaving) {
+                activeDialog = EditSheetDialog.DiscardChangesForNavigation(newDate)
+            } else {
+                navigate(newDate)
+            }
+        }
+    }
+
     BackHandler(enabled = screenState.isDirty && !screenState.isSaving) {
         activeDialog = EditSheetDialog.DiscardChanges
     }
@@ -103,7 +113,7 @@ fun EditEntrySheet(
             date = date,
             screenState = screenState,
             swipeThresholdPx = swipeThresholdPx,
-            onNavigateDate = onNavigateDate,
+            onNavigateDate = if (onNavigateDate != null) guardedNavigateDate else null,
             onOpenNavigateDatePicker = { activeDialog = EditSheetDialog.NavigateDatePicker },
             onDismiss = onDismiss,
             onOpenCopyDatePicker = { activeDialog = EditSheetDialog.CopyDatePicker },
@@ -122,6 +132,7 @@ fun EditEntrySheet(
         onDismiss = onDismiss,
         onCopyToNewDate = onCopyToNewDate,
         onNavigateDate = onNavigateDate,
+        onRequestNavigateDate = guardedNavigateDate,
         onDialogChange = { activeDialog = it }
     )
 }
@@ -279,6 +290,7 @@ private fun ColumnScope.EditEntryStateContent(
                 formData = screenState.formData,
                 validationErrors = state.validationErrors,
                 dailyTargetHours = screenState.dailyTargetHours,
+                mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
                 isSaving = screenState.isSaving,
@@ -300,6 +312,7 @@ private fun ColumnScope.EditEntryStateContent(
                 formData = screenState.formData,
                 validationErrors = state.validationErrors,
                 dailyTargetHours = screenState.dailyTargetHours,
+                mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
                 isSaving = screenState.isSaving,
@@ -320,6 +333,7 @@ private fun EditEntryFormStateContent(
     formData: EditFormData,
     validationErrors: List<ValidationError>,
     dailyTargetHours: Double,
+    mealAllowancePreviewCents: Int,
     viewModel: EditEntryViewModel,
     context: Context,
     isSaving: Boolean,
@@ -331,6 +345,7 @@ private fun EditEntryFormStateContent(
         formData = formData,
         validationErrors = validationErrors,
         dailyTargetHours = dailyTargetHours,
+        mealAllowancePreviewCents = mealAllowancePreviewCents,
         onDayTypeChange = viewModel::updateDayType,
         onHasWorkTimesChange = viewModel::setHasWorkTimes,
         onWorkStartChange = viewModel::updateWorkStart,
@@ -379,6 +394,7 @@ private fun EditEntryDialogsHost(
     onDismiss: () -> Unit,
     onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)?,
     onNavigateDate: ((LocalDate) -> Unit)?,
+    onRequestNavigateDate: (LocalDate) -> Unit,
     onDialogChange: (EditSheetDialog) -> Unit
 ) {
     if (activeDialog is EditSheetDialog.DeleteDayConfirm) {
@@ -410,6 +426,17 @@ private fun EditEntryDialogsHost(
         )
     }
 
+    val navigateDiscardDialog = activeDialog as? EditSheetDialog.DiscardChangesForNavigation
+    if (navigateDiscardDialog != null) {
+        DiscardChangesDialog(
+            onDiscard = {
+                onDialogChange(EditSheetDialog.None)
+                onRequestNavigateDate(navigateDiscardDialog.newDate)
+            },
+            onKeepEditing = { onDialogChange(EditSheetDialog.None) }
+        )
+    }
+
     if (activeDialog is EditSheetDialog.CopyDatePicker && onCopyToNewDate != null) {
         DatePickerDialog(
             initialDate = date,
@@ -426,7 +453,7 @@ private fun EditEntryDialogsHost(
         DatePickerDialog(
             initialDate = date,
             onDateSelected = { newDate ->
-                onNavigateDate(newDate)
+                onRequestNavigateDate(newDate)
                 onDialogChange(EditSheetDialog.None)
             },
             onDismiss = { onDialogChange(EditSheetDialog.None) }
