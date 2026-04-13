@@ -9,7 +9,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
@@ -155,7 +155,7 @@ sealed class PreviewState {
 
 @HiltViewModel
 class ExportPreviewViewModel @Inject constructor(
-    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
+    private val workEntryRepository: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager,
     private val pdfExporter: PdfExporter
 ) : ViewModel() {
@@ -326,7 +326,7 @@ class ExportPreviewViewModel @Inject constructor(
     }
 
     private suspend fun loadEntries(range: DateRange): List<WorkEntryWithTravelLegs> {
-        val entries = getWorkEntriesWithTravelByDateRange(range.start, range.end)
+        val entries = workEntryRepository.getByDateRangeWithTravel(range.start, range.end)
             .filter(::isStatisticsEligible)
         cachedPreviewEntries = CachedPreviewEntries(range = range, entries = entries)
         return entries

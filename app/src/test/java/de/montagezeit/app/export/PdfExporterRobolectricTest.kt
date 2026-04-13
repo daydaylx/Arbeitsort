@@ -10,6 +10,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.io.File
 import java.time.LocalDate
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -31,7 +32,7 @@ class PdfExporterRobolectricTest {
     }
 
     @Test
-    fun `exportToPdf returns validation error when employee name is blank`() {
+    fun `exportToPdf returns validation error when employee name is blank`() = runTest {
         val result = exporter.exportToPdf(
             entries = listOf(workRecord(LocalDate.of(2026, 3, 3))),
             employeeName = "",
@@ -48,7 +49,7 @@ class PdfExporterRobolectricTest {
     }
 
     @Test
-    fun `exportToPdf returns validation error when entry limit is exceeded`() {
+    fun `exportToPdf returns validation error when entry limit is exceeded`() = runTest {
         val startDate = LocalDate.of(2026, 3, 1)
         val entries = List(PdfExporter.MAX_ENTRIES_PER_PDF + 1) { index ->
             workRecord(startDate.plusDays(index.toLong()))

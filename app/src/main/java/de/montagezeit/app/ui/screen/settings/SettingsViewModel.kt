@@ -8,7 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
@@ -30,7 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val reminderSettingsManager: ReminderSettingsManager,
-    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
+    private val workEntryRepository: WorkEntryRepository,
     private val pdfExporter: PdfExporter,
     private val csvExporter: CsvExporter,
     private val reminderScheduler: ReminderScheduler,
@@ -268,7 +268,7 @@ class SettingsViewModel @Inject constructor(
                     )
                     return@launch
                 }
-                val entries = getWorkEntriesWithTravelByDateRange(startDate, endDate)
+                val entries = workEntryRepository.getByDateRangeWithTravel(startDate, endDate)
                 if (entries.isEmpty()) {
                     _uiState.value = SettingsUiState.ExportError(
                         UiText.StringResource(emptyRangeRes)
@@ -308,7 +308,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun exportPdf(
+    private suspend fun exportPdf(
         entries: List<WorkEntryWithTravelLegs>,
         employeeName: String,
         company: String?,

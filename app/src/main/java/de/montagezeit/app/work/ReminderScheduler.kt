@@ -1,9 +1,5 @@
 package de.montagezeit.app.work
 
-import android.content.Context
-import androidx.work.*
-import androidx.work.workDataOf
-import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
@@ -27,18 +23,16 @@ import kotlinx.coroutines.flow.first
  */
 @Singleton
 class ReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val reminderSettingsManager: ReminderSettingsManager
+    private val reminderSettingsManager: ReminderSettingsManager,
+    private val reminderWorkEnqueuer: ReminderWorkEnqueuer
 ) {
 
-    private val workManager by lazy { WorkManager.getInstance(context) }
-
     companion object {
-        private const val MORNING_WORK_NAME = "morning_reminder_work"
-        private const val EVENING_WORK_NAME = "evening_reminder_work"
-        private const val FALLBACK_WORK_NAME = "fallback_reminder_work"
-        private const val DAILY_WORK_NAME = "daily_reminder_work"
-        private const val WINDOW_FLEX_MINUTES = 5L
+        internal const val MORNING_WORK_NAME = "morning_reminder_work"
+        internal const val EVENING_WORK_NAME = "evening_reminder_work"
+        internal const val FALLBACK_WORK_NAME = "fallback_reminder_work"
+        internal const val DAILY_WORK_NAME = "daily_reminder_work"
+        internal const val WINDOW_FLEX_MINUTES = 5L
     }
 
     /**
@@ -72,10 +66,10 @@ class ReminderScheduler @Inject constructor(
      * Cancel alle Reminder-Worker
      */
     fun cancelAll() {
-        workManager.cancelUniqueWork(MORNING_WORK_NAME)
-        workManager.cancelUniqueWork(EVENING_WORK_NAME)
-        workManager.cancelUniqueWork(FALLBACK_WORK_NAME)
-        workManager.cancelUniqueWork(DAILY_WORK_NAME)
+        reminderWorkEnqueuer.cancel(MORNING_WORK_NAME)
+        reminderWorkEnqueuer.cancel(EVENING_WORK_NAME)
+        reminderWorkEnqueuer.cancel(FALLBACK_WORK_NAME)
+        reminderWorkEnqueuer.cancel(DAILY_WORK_NAME)
     }
 
     /**
@@ -88,7 +82,7 @@ class ReminderScheduler @Inject constructor(
      */
     private suspend fun scheduleMorningWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.morningReminderEnabled) {
-            workManager.cancelUniqueWork(MORNING_WORK_NAME)
+            reminderWorkEnqueuer.cancel(MORNING_WORK_NAME)
             trace?.event(
                 name = "schedule_morning_cancelled",
                 payload = mapOf("reason" to "disabled")
@@ -96,44 +90,15 @@ class ReminderScheduler @Inject constructor(
             return
         }
 
-        // Berechne Verzögerung bis Start des Morning-Windows
-        val now = LocalTime.now()
-        val morningWindowStart = settings.morningWindowStart
-        val morningWindowEnd = settings.morningWindowEnd
-        val initialDelay = ReminderScheduleCalculator.delayToWindowStart(now, morningWindowStart, morningWindowEnd)
-        val repeatIntervalMinutes = ReminderScheduleCalculator.periodicIntervalMinutes(
-            settings.morningCheckIntervalMinutes
-        )
-
-        // Keine Constraints - Reminders müssen zuverlässig funktionieren
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = repeatIntervalMinutes,
-            repeatIntervalTimeUnit = TimeUnit.MINUTES,
-            flexTimeInterval = WINDOW_FLEX_MINUTES,
-            flexTimeIntervalUnit = TimeUnit.MINUTES
-        )
-            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
-            .setConstraints(constraints)
-            .addTag("morning_reminder")
-            .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.MORNING.name))
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            MORNING_WORK_NAME,
-            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
-            workRequest
-        )
+        val workSpec = buildMorningReminderWorkSpec(settings)
+        reminderWorkEnqueuer.enqueue(workSpec)
         trace?.event(
             name = "schedule_morning_enqueued",
             payload = mapOf(
-                "initialDelayMs" to initialDelay.toMillis(),
-                "repeatIntervalMinutes" to repeatIntervalMinutes,
-                "windowStart" to morningWindowStart.toString(),
-                "windowEnd" to morningWindowEnd.toString()
+                "initialDelayMs" to workSpec.initialDelayMillis,
+                "repeatIntervalMinutes" to workSpec.repeatInterval,
+                "windowStart" to settings.morningWindowStart.toString(),
+                "windowEnd" to settings.morningWindowEnd.toString()
             )
         )
     }
@@ -148,7 +113,7 @@ class ReminderScheduler @Inject constructor(
      */
     private suspend fun scheduleEveningWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.eveningReminderEnabled) {
-            workManager.cancelUniqueWork(EVENING_WORK_NAME)
+            reminderWorkEnqueuer.cancel(EVENING_WORK_NAME)
             trace?.event(
                 name = "schedule_evening_cancelled",
                 payload = mapOf("reason" to "disabled")
@@ -156,44 +121,15 @@ class ReminderScheduler @Inject constructor(
             return
         }
 
-        // Berechne Verzögerung bis Start des Evening-Windows
-        val now = LocalTime.now()
-        val eveningWindowStart = settings.eveningWindowStart
-        val eveningWindowEnd = settings.eveningWindowEnd
-        val initialDelay = ReminderScheduleCalculator.delayToWindowStart(now, eveningWindowStart, eveningWindowEnd)
-        val repeatIntervalMinutes = ReminderScheduleCalculator.periodicIntervalMinutes(
-            settings.eveningCheckIntervalMinutes
-        )
-
-        // Keine Constraints - Reminders müssen zuverlässig funktionieren
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = repeatIntervalMinutes,
-            repeatIntervalTimeUnit = TimeUnit.MINUTES,
-            flexTimeInterval = WINDOW_FLEX_MINUTES,
-            flexTimeIntervalUnit = TimeUnit.MINUTES
-        )
-            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
-            .setConstraints(constraints)
-            .addTag("evening_reminder")
-            .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.EVENING.name))
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            EVENING_WORK_NAME,
-            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
-            workRequest
-        )
+        val workSpec = buildEveningReminderWorkSpec(settings)
+        reminderWorkEnqueuer.enqueue(workSpec)
         trace?.event(
             name = "schedule_evening_enqueued",
             payload = mapOf(
-                "initialDelayMs" to initialDelay.toMillis(),
-                "repeatIntervalMinutes" to repeatIntervalMinutes,
-                "windowStart" to eveningWindowStart.toString(),
-                "windowEnd" to eveningWindowEnd.toString()
+                "initialDelayMs" to workSpec.initialDelayMillis,
+                "repeatIntervalMinutes" to workSpec.repeatInterval,
+                "windowStart" to settings.eveningWindowStart.toString(),
+                "windowEnd" to settings.eveningWindowEnd.toString()
             )
         )
     }
@@ -208,7 +144,7 @@ class ReminderScheduler @Inject constructor(
      */
     private suspend fun scheduleFallbackWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.fallbackEnabled) {
-            workManager.cancelUniqueWork(FALLBACK_WORK_NAME)
+            reminderWorkEnqueuer.cancel(FALLBACK_WORK_NAME)
             trace?.event(
                 name = "schedule_fallback_cancelled",
                 payload = mapOf("reason" to "disabled")
@@ -216,35 +152,13 @@ class ReminderScheduler @Inject constructor(
             return
         }
 
-        // Berechne Verzögerung bis Fallback-Zeit
-        val now = LocalTime.now()
-        val fallbackTime = settings.fallbackTime
-        val initialDelay = ReminderScheduleCalculator.delayToTime(now, fallbackTime)
-
-        // Keine Constraints - Reminders müssen zuverlässig funktionieren
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
-        )
-            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
-            .setConstraints(constraints)
-            .addTag("fallback_reminder")
-            .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.FALLBACK.name))
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            FALLBACK_WORK_NAME,
-            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
-            workRequest
-        )
+        val workSpec = buildFallbackReminderWorkSpec(settings)
+        reminderWorkEnqueuer.enqueue(workSpec)
         trace?.event(
             name = "schedule_fallback_enqueued",
             payload = mapOf(
-                "initialDelayMs" to initialDelay.toMillis(),
-                "fallbackTime" to fallbackTime.toString()
+                "initialDelayMs" to workSpec.initialDelayMillis,
+                "fallbackTime" to settings.fallbackTime.toString()
             )
         )
     }
@@ -259,7 +173,7 @@ class ReminderScheduler @Inject constructor(
      */
     private suspend fun scheduleDailyWorker(settings: ReminderSettings, trace: DiagnosticTrace? = null) {
         if (!settings.dailyReminderEnabled) {
-            workManager.cancelUniqueWork(DAILY_WORK_NAME)
+            reminderWorkEnqueuer.cancel(DAILY_WORK_NAME)
             trace?.event(
                 name = "schedule_daily_cancelled",
                 payload = mapOf("reason" to "disabled")
@@ -267,38 +181,81 @@ class ReminderScheduler @Inject constructor(
             return
         }
 
-        val now = LocalTime.now()
-        val dailyTime = settings.dailyReminderTime
-        val initialDelay = ReminderScheduleCalculator.delayToTime(now, dailyTime)
-
-        // Keine Constraints - Reminders müssen zuverlässig funktionieren
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .build()
-
-        val workRequest = PeriodicWorkRequestBuilder<WindowCheckWorker>(
-            repeatInterval = 1, TimeUnit.DAYS
-        )
-            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
-            .setConstraints(constraints)
-            .addTag("daily_reminder")
-            .setInputData(workDataOf(WindowCheckWorker.KEY_REMINDER_TYPE to ReminderType.DAILY.name))
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            DAILY_WORK_NAME,
-            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
-            workRequest
-        )
+        val workSpec = buildDailyReminderWorkSpec(settings)
+        reminderWorkEnqueuer.enqueue(workSpec)
         trace?.event(
             name = "schedule_daily_enqueued",
             payload = mapOf(
-                "initialDelayMs" to initialDelay.toMillis(),
-                "dailyTime" to dailyTime.toString()
+                "initialDelayMs" to workSpec.initialDelayMillis,
+                "dailyTime" to settings.dailyReminderTime.toString()
             )
         )
     }
 
+}
+
+internal fun buildMorningReminderWorkSpec(
+    settings: ReminderSettings,
+    now: LocalTime = LocalTime.now()
+): ReminderPeriodicWorkSpec {
+    return ReminderPeriodicWorkSpec(
+        uniqueWorkName = ReminderScheduler.MORNING_WORK_NAME,
+        tag = "morning_reminder",
+        reminderType = ReminderType.MORNING,
+        initialDelayMillis = ReminderScheduleCalculator
+            .delayToWindowStart(now, settings.morningWindowStart, settings.morningWindowEnd)
+            .toMillis(),
+        repeatInterval = ReminderScheduleCalculator.periodicIntervalMinutes(settings.morningCheckIntervalMinutes),
+        repeatIntervalTimeUnit = TimeUnit.MINUTES,
+        flexInterval = ReminderScheduler.WINDOW_FLEX_MINUTES,
+        flexIntervalTimeUnit = TimeUnit.MINUTES
+    )
+}
+
+internal fun buildEveningReminderWorkSpec(
+    settings: ReminderSettings,
+    now: LocalTime = LocalTime.now()
+): ReminderPeriodicWorkSpec {
+    return ReminderPeriodicWorkSpec(
+        uniqueWorkName = ReminderScheduler.EVENING_WORK_NAME,
+        tag = "evening_reminder",
+        reminderType = ReminderType.EVENING,
+        initialDelayMillis = ReminderScheduleCalculator
+            .delayToWindowStart(now, settings.eveningWindowStart, settings.eveningWindowEnd)
+            .toMillis(),
+        repeatInterval = ReminderScheduleCalculator.periodicIntervalMinutes(settings.eveningCheckIntervalMinutes),
+        repeatIntervalTimeUnit = TimeUnit.MINUTES,
+        flexInterval = ReminderScheduler.WINDOW_FLEX_MINUTES,
+        flexIntervalTimeUnit = TimeUnit.MINUTES
+    )
+}
+
+internal fun buildFallbackReminderWorkSpec(
+    settings: ReminderSettings,
+    now: LocalTime = LocalTime.now()
+): ReminderPeriodicWorkSpec {
+    return ReminderPeriodicWorkSpec(
+        uniqueWorkName = ReminderScheduler.FALLBACK_WORK_NAME,
+        tag = "fallback_reminder",
+        reminderType = ReminderType.FALLBACK,
+        initialDelayMillis = ReminderScheduleCalculator.delayToTime(now, settings.fallbackTime).toMillis(),
+        repeatInterval = 1,
+        repeatIntervalTimeUnit = TimeUnit.DAYS
+    )
+}
+
+internal fun buildDailyReminderWorkSpec(
+    settings: ReminderSettings,
+    now: LocalTime = LocalTime.now()
+): ReminderPeriodicWorkSpec {
+    return ReminderPeriodicWorkSpec(
+        uniqueWorkName = ReminderScheduler.DAILY_WORK_NAME,
+        tag = "daily_reminder",
+        reminderType = ReminderType.DAILY,
+        initialDelayMillis = ReminderScheduleCalculator.delayToTime(now, settings.dailyReminderTime).toMillis(),
+        repeatInterval = 1,
+        repeatIntervalTimeUnit = TimeUnit.DAYS
+    )
 }
 
 private fun ReminderSettings.toDiagnosticPayload(): Map<String, Any?> = mapOf(

@@ -6,7 +6,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.testRepository
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
@@ -141,7 +141,7 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(WorkEntryWithTravelLegs(workEntry = WorkEntry(date = today), travelLegs = emptyList()))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every {
+        coEvery {
             pdfExporter.exportToPdf(
                 entries = entries,
                 employeeName = "Max Mustermann",
@@ -273,10 +273,10 @@ class SettingsViewModelTest {
     }
 
     private fun createViewModel(): SettingsViewModel {
-        val repository = testRepository(workEntryDao)
+        val repository: WorkEntryRepository = testRepository(workEntryDao)
         return SettingsViewModel(
             reminderSettingsManager = reminderSettingsManager,
-            getWorkEntriesWithTravelByDateRange = GetWorkEntriesWithTravelByDateRange(repository),
+            workEntryRepository = repository,
             pdfExporter = pdfExporter,
             csvExporter = csvExporter,
             reminderScheduler = reminderScheduler,

@@ -7,7 +7,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
-import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.export.PdfExporter
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,7 +34,7 @@ class ExportPreviewViewModelTest {
     private val testScheduler = TestCoroutineScheduler()
     private val mainDispatcher = UnconfinedTestDispatcher(testScheduler)
 
-    private val getWorkEntriesWithTravelByDateRange = mockk<GetWorkEntriesWithTravelByDateRange>()
+    private val workEntryRepository = mockk<WorkEntryRepository>()
     private val reminderSettingsManager = mockk<ReminderSettingsManager>()
     private val pdfExporter = mockk<PdfExporter>()
 
@@ -48,7 +48,7 @@ class ExportPreviewViewModelTest {
         Dispatchers.setMain(mainDispatcher)
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
         viewModel = ExportPreviewViewModel(
-            getWorkEntriesWithTravelByDateRange,
+            workEntryRepository,
             reminderSettingsManager,
             pdfExporter
         )
@@ -63,7 +63,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `loadRange transitions to Empty Loading state immediately`() = runTest {
-        coEvery { getWorkEntriesWithTravelByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryRepository.getByDateRangeWithTravel(any(), any()) } returns emptyList()
 
         viewModel.loadRange(startDate, endDate)
 
@@ -77,7 +77,7 @@ class ExportPreviewViewModelTest {
     @Test
     fun `refresh transitions to List state when entries exist`() = runTest {
         val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
-        coEvery { getWorkEntriesWithTravelByDateRange(startDate, endDate) } returns listOf(
+        coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
 
@@ -89,7 +89,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `refresh transitions to Empty state when no entries exist`() = runTest {
-        coEvery { getWorkEntriesWithTravelByDateRange(startDate, endDate) } returns emptyList()
+        coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns emptyList()
 
         viewModel.loadRange(startDate, endDate)
 
@@ -104,7 +104,7 @@ class ExportPreviewViewModelTest {
             dayType = DayType.WORK,
             confirmedWorkDay = false
         )
-        coEvery { getWorkEntriesWithTravelByDateRange(startDate, endDate) } returns listOf(
+        coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
 
@@ -116,7 +116,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `refresh transitions to Error state when DAO throws`() = runTest {
-        coEvery { getWorkEntriesWithTravelByDateRange(any(), any()) } throws RuntimeException("DB failure")
+        coEvery { workEntryRepository.getByDateRangeWithTravel(any(), any()) } throws RuntimeException("DB failure")
 
         viewModel.loadRange(startDate, endDate)
 
@@ -130,11 +130,11 @@ class ExportPreviewViewModelTest {
             ReminderSettings(pdfEmployeeName = null)
         )
         val vm = ExportPreviewViewModel(
-            getWorkEntriesWithTravelByDateRange,
+            workEntryRepository,
             reminderSettingsManager,
             pdfExporter
         )
-        coEvery { getWorkEntriesWithTravelByDateRange(any(), any()) } returns emptyList()
+        coEvery { workEntryRepository.getByDateRangeWithTravel(any(), any()) } returns emptyList()
 
         vm.loadRange(startDate, endDate)
         vm.createPdf()
@@ -149,17 +149,17 @@ class ExportPreviewViewModelTest {
         val settings = ReminderSettings(pdfEmployeeName = "Max Mustermann")
         every { reminderSettingsManager.settings } returns flowOf(settings)
         val vm = ExportPreviewViewModel(
-            getWorkEntriesWithTravelByDateRange,
+            workEntryRepository,
             reminderSettingsManager,
             pdfExporter
         )
         val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
-        coEvery { getWorkEntriesWithTravelByDateRange(startDate, endDate) } returns listOf(
+        coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
         val fakeUri = mockk<Uri>()
         every { fakeUri.lastPathSegment } returns "export.pdf"
-        every {
+        coEvery {
             pdfExporter.exportToPdf(
                 entries = any(),
                 employeeName = any(),
@@ -176,14 +176,14 @@ class ExportPreviewViewModelTest {
 
         assertTrue("Expected PdfReady state but got: ${vm.uiState.value}",
             vm.uiState.value is PreviewState.PdfReady)
-        coVerify(exactly = 1) { getWorkEntriesWithTravelByDateRange(startDate, endDate) }
+        coVerify(exactly = 1) { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) }
         vm.viewModelScope.cancel()
     }
 
     @Test
     fun `returnToPreview restores cached List state without re-querying DAO`() = runTest {
         val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
-        coEvery { getWorkEntriesWithTravelByDateRange(startDate, endDate) } returns listOf(
+        coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
 
@@ -196,6 +196,6 @@ class ExportPreviewViewModelTest {
         assertTrue("Expected restored List state but got: ${viewModel.uiState.value}",
             viewModel.uiState.value is PreviewState.List)
         // Should not re-query DAO (only 1 call from loadRange)
-        coVerify(exactly = 1) { getWorkEntriesWithTravelByDateRange(startDate, endDate) }
+        coVerify(exactly = 1) { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) }
     }
 }

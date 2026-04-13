@@ -7,12 +7,11 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
 import de.montagezeit.app.diagnostics.DiagnosticCategory
 import de.montagezeit.app.diagnostics.DiagnosticDateRange
 import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
-import de.montagezeit.app.domain.usecase.GetWorkEntriesWithTravelByDateRange
-import de.montagezeit.app.domain.usecase.ObserveWorkEntryWithTravelByDate
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import java.time.LocalDate
@@ -40,8 +39,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class OverviewViewModel @Inject constructor(
-    private val observeWorkEntryWithTravelByDate: ObserveWorkEntryWithTravelByDate,
-    private val getWorkEntriesWithTravelByDateRange: GetWorkEntriesWithTravelByDateRange,
+    private val workEntryRepository: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -94,7 +92,7 @@ class OverviewViewModel @Inject constructor(
 
     private val selectedEntrySnapshot: StateFlow<SelectedEntrySnapshot> = _selectedDate
         .flatMapLatest { date ->
-            observeWorkEntryWithTravelByDate(date).map { entryWithTravel ->
+            workEntryRepository.getByDateWithTravelFlow(date).map { entryWithTravel ->
                 SelectedEntrySnapshot(
                     requestedDate = date,
                     entryWithTravel = entryWithTravel
@@ -268,9 +266,9 @@ class OverviewViewModel @Inject constructor(
             )
             try {
                 val settings = reminderSettingsManager.settings.first()
-                val entries = withContext(Dispatchers.IO) {
-                    getWorkEntriesWithTravelByDateRange(range.startDate, range.endDate)
-                }
+                    val entries = withContext(Dispatchers.IO) {
+                        workEntryRepository.getByDateRangeWithTravel(range.startDate, range.endDate)
+                    }
                 trace.event(
                     name = "overview_entries_loaded",
                     payload = mapOf("entryCount" to entries.size)
