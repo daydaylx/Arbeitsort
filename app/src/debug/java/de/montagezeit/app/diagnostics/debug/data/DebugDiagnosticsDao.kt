@@ -2,19 +2,19 @@ package de.montagezeit.app.diagnostics.debug.data
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DebugDiagnosticsDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertSession(session: DiagnosticSessionEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertTrace(trace: DiagnosticTraceEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insertEvent(event: DiagnosticEventEntity)
 
     @Query("SELECT * FROM diagnostic_traces ORDER BY startedAtEpochMs DESC")

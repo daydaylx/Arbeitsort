@@ -31,8 +31,25 @@ Diese Kommandos entsprechen dem empfohlenen lokalen Standard:
 
 Mit installierten Hooks laufen:
 
-- bei `git commit`: schnelle Staged-Diff-Checks
+- bei `git commit`: schnelle Staged-Diff- und Repo-Hygiene-Checks
 - bei `git push`: `lint`, `:app:testDebugUnitTest` und `assembleDebug`
+
+## Tracked vs lokale Tooling-Dateien
+
+Bewusst getrackt bleiben nur die gemeinsamen Repo-Integrationen:
+
+- `.agents/plugins/marketplace.json`
+- `.vscode/tasks.json`
+
+Lokal und ungetrackt bleiben:
+
+- `.claude/`
+- `.clinerules/`
+- `.kilo/`
+- persoenliche VS-Code-Dateien wie `.vscode/extensions.json`, `.vscode/settings.json` oder `.vscode/launch.json`
+- generierte Tool-Caches, Worktrees und lokale Debug-Artefakte
+
+Der `pre-commit`-Hook blockiert solche lokalen oder maschinenspezifischen Dateien im Staging und zeigt zusaetzlich staged, unstaged tracked und untracked Dateien an, damit gemischte Arbeitsbaeume vor dem Commit sichtbar bleiben.
 
 ## 1-Befehl Deployment
 

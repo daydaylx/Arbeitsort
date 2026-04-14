@@ -58,7 +58,7 @@ If exactly one device is connected, the serial argument is optional. For multipl
 
 The repository uses `lefthook` for fast local guardrails:
 
-- `pre-commit`: staged diff sanity checks via `git diff --cached --check`
+- `pre-commit`: fast staged diff and repo hygiene checks
 - `pre-push`: `lint`, `:app:testDebugUnitTest`, and `assembleDebug`
 
 Install once:
@@ -69,6 +69,15 @@ Install once:
 
 To bypass hooks for an exceptional case, use standard Git flags such as `--no-verify`. Do that rarely and only with a clear reason.
 
+## Tracked vs Local-Only Tooling Files
+
+Keep repo-tracked tooling intentionally small:
+
+- Tracked: `.agents/plugins/marketplace.json`, `.vscode/tasks.json`
+- Local-only: `.claude/`, `.clinerules/`, `.kilo/`, personal VS Code settings or extension recommendations, generated tool worktrees and caches
+
+The pre-commit hook blocks staged local-only or machine-specific files such as assistant workspaces, personal IDE config, local secrets, and debug/log artifacts. It also prints staged, unstaged tracked, and untracked files so mixed worktrees stay visible before commit.
+
 ## Change Expectations
 
 - Use the Gradle wrapper from the repo root.
@@ -76,6 +85,7 @@ To bypass hooks for an exceptional case, use standard Git flags such as `--no-ve
 - Keep package names under `de.montagezeit.app`.
 - Avoid machine-specific values in tracked files such as device serials, local paths, or personal IDE settings.
 - Treat `AndroidManifest.xml` permission changes as security-sensitive and document the rationale.
+- Expect the local workflow to stay split: fast hygiene checks at `git commit`, then `lint`, `:app:testDebugUnitTest`, and `assembleDebug` at `git push`.
 
 Change-specific validation:
 

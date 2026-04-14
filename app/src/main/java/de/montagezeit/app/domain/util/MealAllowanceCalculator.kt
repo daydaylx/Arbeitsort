@@ -18,7 +18,7 @@ object MealAllowanceCalculator {
 
     const val BASE_NORMAL_CENTS = 2800
     const val BASE_ARRIVAL_DEPARTURE_CENTS = 1400
-    const val BREAKFAST_DEDUCTION_CENTS = 580
+    const val BREAKFAST_DEDUCTION_CENTS = 560
 
     data class Result(val baseCents: Int, val amountCents: Int)
     data class Snapshot(

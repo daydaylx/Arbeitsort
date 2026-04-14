@@ -16,3 +16,6 @@ fi
 
 echo "Running staged diff checks..."
 git diff --cached --check
+
+echo "Running repo hygiene checks..."
+bash scripts/hooks/repo_hygiene_guard.sh

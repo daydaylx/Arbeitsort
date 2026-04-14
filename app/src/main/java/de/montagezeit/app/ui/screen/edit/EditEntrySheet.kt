@@ -65,6 +65,9 @@ fun EditEntrySheet(
     var activeDialog by remember { mutableStateOf<EditSheetDialog>(EditSheetDialog.None) }
     val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
+    // Stabilized dismiss callback to prevent LaunchedEffect re-triggering
+    val stableOnDismiss = remember(onDismiss) { onDismiss }
+
     LaunchedEffect(date) {
         viewModel.setDate(date)
     }
@@ -75,26 +78,30 @@ fun EditEntrySheet(
         }
     }
 
-    LaunchedEffect(screenState.uiState, onDismiss) {
+    LaunchedEffect(screenState.uiState) {
         if (screenState.uiState is EditUiState.Saved) {
-            onDismiss()
+            stableOnDismiss()
         }
     }
 
-    val handleDismiss: () -> Unit = {
-        if (screenState.isDirty && !screenState.isSaving) {
-            activeDialog = EditSheetDialog.DiscardChanges
-        } else {
-            onDismiss()
-        }
-    }
-
-    val guardedNavigateDate: (LocalDate) -> Unit = { newDate ->
-        onNavigateDate?.let { navigate ->
+    val handleDismiss: () -> Unit = remember(screenState.isDirty, screenState.isSaving, stableOnDismiss) {
+        {
             if (screenState.isDirty && !screenState.isSaving) {
-                activeDialog = EditSheetDialog.DiscardChangesForNavigation(newDate)
+                activeDialog = EditSheetDialog.DiscardChanges
             } else {
-                navigate(newDate)
+                stableOnDismiss()
+            }
+        }
+    }
+
+    val guardedNavigateDate: (LocalDate) -> Unit = remember(screenState.isDirty, screenState.isSaving, onNavigateDate) {
+        { newDate ->
+            onNavigateDate?.let { navigate ->
+                if (screenState.isDirty && !screenState.isSaving) {
+                    activeDialog = EditSheetDialog.DiscardChangesForNavigation(newDate)
+                } else {
+                    navigate(newDate)
+                }
             }
         }
     }

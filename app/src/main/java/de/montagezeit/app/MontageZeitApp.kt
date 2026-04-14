@@ -47,6 +47,7 @@ class MontageZeitApp : Application(), Configuration.Provider {
         }
 
     override fun onCreate() {
+        installStrictMode()
         super.onCreate()
         diagnosticsBootstrap.initialize(applicationScope)
         applicationScope.launch {

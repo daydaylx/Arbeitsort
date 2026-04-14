@@ -268,7 +268,11 @@ class DebugDiagnosticsController @Inject constructor(
 
     internal fun enqueueEvent(entity: DiagnosticEventEntity) {
         writeScope.launch {
-            diagnosticsDao.insertEvent(entity)
+            try {
+                diagnosticsDao.insertEvent(entity)
+            } catch (e: Exception) {
+                android.util.Log.e("Diagnostics", "Failed to insert event ${entity.eventId}: ${e.message}")
+            }
         }
     }
 

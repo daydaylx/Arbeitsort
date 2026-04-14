@@ -41,7 +41,9 @@ class AppDatabaseMigrationTest {
             "migration_10_11_test.db",
             "migration_11_12_test.db",
             "migration_12_13_test.db",
-            "migration_13_14_test.db"
+            "migration_13_14_test.db",
+            "migration_13_14_outbound_return_test.db",
+            "migration_13_14_edge_cases_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -381,6 +383,273 @@ class AppDatabaseMigrationTest {
         } finally {
             helper.close()
         }
+    }
+
+    @Test
+    fun `migration 13 to 14 creates travel_legs and removes legacy travel columns`() {
+        val dbName = "migration_13_14_test.db"
+        createVersion13Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 13)
+        try {
+            AppDatabase.MIGRATION_13_14.migrate(db)
+
+            assertTrue(tableExists(db, "travel_legs"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelStartAt"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelArriveAt"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelLabelStart"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelLabelEnd"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelPaidMinutes"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelSource"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelUpdatedAt"))
+            assertFalse(hasColumnSupport(db, "work_entries", "returnStartAt"))
+            assertFalse(hasColumnSupport(db, "work_entries", "returnArriveAt"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelFromLabel"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelToLabel"))
+            assertFalse(hasColumnSupport(db, "work_entries", "travelDistanceKm"))
+
+            db.query("SELECT COUNT(*) FROM travel_legs").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(
+                    "Should have 4 legs (2 outbound+return + 1 outbound-only + 1 paid-minutes)",
+                    4,
+                    c.getInt(0)
+                )
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 13 to 14 migrates outbound and return legs with data`() {
+        val dbName = "migration_13_14_outbound_return_test.db"
+        createVersion13Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 13)
+        try {
+            AppDatabase.MIGRATION_13_14.migrate(db)
+
+            db.query(
+                "SELECT id, workEntryDate, sortOrder, category, startAt, arriveAt, " +
+                    "startLabel, endLabel, createdAt " +
+                    "FROM travel_legs WHERE workEntryDate = ? ORDER BY sortOrder",
+                arrayOf("2026-01-13")
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertTrue("Auto-generated ID should be > 0", c.getLong(0) > 0)
+                assertEquals("2026-01-13", c.getString(1))
+                assertEquals(0, c.getInt(2))
+                assertEquals("OUTBOUND", c.getString(3))
+                assertEquals(1700000000L, c.getLong(4))
+                assertEquals(1700003600L, c.getLong(5))
+                assertEquals("Home", c.getString(6))
+                assertEquals("Site", c.getString(7))
+                assertTrue("createdAt should be non-zero", c.getLong(8) > 0L)
+
+                assertTrue(c.moveToNext())
+                assertEquals(1, c.getInt(2))
+                assertEquals("RETURN", c.getString(3))
+                assertEquals(1700010000L, c.getLong(4))
+                assertEquals(1700013600L, c.getLong(5))
+            }
+
+            db.query(
+                "SELECT workStart, workEnd, dayLocationLabel, note, " +
+                    "mealAllowanceAmountCents FROM work_entries WHERE date = ?",
+                arrayOf("2026-01-13")
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("07:00", c.getString(0))
+                assertEquals("16:00", c.getString(1))
+                assertEquals("Baustelle Süd", c.getString(2))
+                assertEquals("Mit Rückfahrt", c.getString(3))
+                assertEquals(820, c.getInt(4))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 13 to 14 handles outbound-only and paid-minutes-only entries`() {
+        val dbName = "migration_13_14_edge_cases_test.db"
+        createVersion13Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 13)
+        try {
+            AppDatabase.MIGRATION_13_14.migrate(db)
+
+            db.query(
+                "SELECT id, category, startAt FROM travel_legs " +
+                    "WHERE workEntryDate = ? ORDER BY sortOrder",
+                arrayOf("2026-01-14")
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("OUTBOUND", c.getString(1))
+                assertEquals(1700100000L, c.getLong(2))
+                assertTrue("Only outbound leg expected", !c.moveToNext())
+            }
+
+            db.query(
+                "SELECT category, paidMinutesOverride FROM travel_legs " +
+                    "WHERE workEntryDate = ? ORDER BY sortOrder",
+                arrayOf("2026-01-15")
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("OTHER", c.getString(0))
+                assertEquals(45, c.getInt(1))
+            }
+
+            db.query(
+                "SELECT COUNT(*) FROM travel_legs WHERE workEntryDate = ?",
+                arrayOf("2026-01-16")
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Entry with no travel should have no legs", 0, c.getInt(0))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    private fun createVersion13Database(dbName: String) {
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+
+        val db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        db.use {
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `workStart` TEXT NOT NULL,
+                    `workEnd` TEXT NOT NULL,
+                    `breakMinutes` INTEGER NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `dayLocationLabel` TEXT NOT NULL,
+                    `morningCapturedAt` INTEGER,
+                    `eveningCapturedAt` INTEGER,
+                    `confirmedWorkDay` INTEGER NOT NULL,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    `mealIsArrivalDeparture` INTEGER NOT NULL,
+                    `mealBreakfastIncluded` INTEGER NOT NULL,
+                    `mealAllowanceBaseCents` INTEGER NOT NULL,
+                    `mealAllowanceAmountCents` INTEGER NOT NULL,
+                    `travelStartAt` INTEGER,
+                    `travelArriveAt` INTEGER,
+                    `travelLabelStart` TEXT,
+                    `travelLabelEnd` TEXT,
+                    `travelFromLabel` TEXT,
+                    `travelToLabel` TEXT,
+                    `travelDistanceKm` REAL,
+                    `travelPaidMinutes` INTEGER,
+                    `travelSource` TEXT,
+                    `travelUpdatedAt` INTEGER,
+                    `returnStartAt` INTEGER,
+                    `returnArriveAt` INTEGER,
+                    `note` TEXT,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            it.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_work_entries_date ON work_entries(date)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_createdAt ON work_entries(createdAt)")
+            it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
+            seedVersion13Data(it)
+            it.version = 13
+        }
+    }
+
+    private fun seedVersion13Data(db: android.database.sqlite.SQLiteDatabase) {
+        db.execSQL(
+            """
+            INSERT INTO work_entries (
+                date, workStart, workEnd, breakMinutes, dayType,
+                dayLocationLabel, morningCapturedAt, eveningCapturedAt,
+                confirmedWorkDay, confirmationAt, confirmationSource,
+                mealIsArrivalDeparture, mealBreakfastIncluded,
+                mealAllowanceBaseCents, mealAllowanceAmountCents,
+                travelStartAt, travelArriveAt, travelLabelStart, travelLabelEnd,
+                travelSource, travelUpdatedAt,
+                returnStartAt, returnArriveAt,
+                note, createdAt, updatedAt
+            ) VALUES (
+                '2026-01-13', '07:00', '16:00', 45, 'WORK',
+                'Baustelle Süd', 1700000000, 1700013600,
+                1, 1700013700, 'UI',
+                1, 0, 1400, 820,
+                1700000000, 1700003600, 'Home', 'Site',
+                'MANUAL', 1700004000,
+                1700010000, 1700013600,
+                'Mit Rückfahrt', 1699990000, 1700013700
+            )
+            """.trimIndent()
+        )
+        seedVersion13EdgeCaseEntries(db)
+    }
+
+    private fun seedVersion13EdgeCaseEntries(db: android.database.sqlite.SQLiteDatabase) {
+
+        db.execSQL(
+            """
+            INSERT INTO work_entries (
+                date, workStart, workEnd, breakMinutes, dayType,
+                dayLocationLabel, confirmedWorkDay,
+                mealIsArrivalDeparture, mealBreakfastIncluded,
+                mealAllowanceBaseCents, mealAllowanceAmountCents,
+                travelStartAt, travelArriveAt, travelLabelStart, travelLabelEnd,
+                travelSource, travelUpdatedAt,
+                note, createdAt, updatedAt
+            ) VALUES (
+                '2026-01-14', '08:00', '17:00', 30, 'WORK',
+                'Nur Hin', 0,
+                0, 0, 0, 0,
+                1700100000, 1700103600, 'A', 'B',
+                'MANUAL', 1700104000,
+                'Nur Hinweg', 1700090000, 1700104000
+            )
+            """.trimIndent()
+        )
+
+        db.execSQL(
+            """
+            INSERT INTO work_entries (
+                date, workStart, workEnd, breakMinutes, dayType,
+                dayLocationLabel, confirmedWorkDay,
+                mealIsArrivalDeparture, mealBreakfastIncluded,
+                mealAllowanceBaseCents, mealAllowanceAmountCents,
+                travelPaidMinutes, travelSource, travelUpdatedAt,
+                note, createdAt, updatedAt
+            ) VALUES (
+                '2026-01-15', '09:00', '18:00', 30, 'WORK',
+                'Nur Paid', 0,
+                0, 0, 0, 0,
+                45, 'MANUAL', 1700204000,
+                'Nur bezahlte Minuten', 1700190000, 1700204000
+            )
+            """.trimIndent()
+        )
+
+        db.execSQL(
+            """
+            INSERT INTO work_entries (
+                date, workStart, workEnd, breakMinutes, dayType,
+                dayLocationLabel, confirmedWorkDay,
+                mealIsArrivalDeparture, mealBreakfastIncluded,
+                mealAllowanceBaseCents, mealAllowanceAmountCents,
+                note, createdAt, updatedAt
+            ) VALUES (
+                '2026-01-16', '09:00', '18:00', 30, 'WORK',
+                'Kein Travel', 0,
+                0, 0, 0, 0,
+                'Ohne Reise', 1700290000, 1700304000
+            )
+            """.trimIndent()
+        )
     }
 
     private fun createVersion10Database(dbName: String) {

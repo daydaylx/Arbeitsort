@@ -2,10 +2,10 @@ package de.montagezeit.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
@@ -62,16 +62,16 @@ abstract class WorkEntryDao {
     )
     abstract suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     abstract suspend fun insert(entry: WorkEntry): Long
 
     @Update
     abstract suspend fun update(entry: WorkEntry)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     abstract suspend fun upsert(entry: WorkEntry)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     abstract suspend fun upsertAll(entries: List<WorkEntry>)
 
     @Query("SELECT * FROM travel_legs WHERE workEntryDate = :date ORDER BY sortOrder ASC")
@@ -89,7 +89,7 @@ abstract class WorkEntryDao {
     )
     abstract suspend fun getTravelLegsByDateRange(startDate: LocalDate, endDate: LocalDate): List<TravelLeg>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     abstract suspend fun upsertTravelLegs(legs: List<TravelLeg>)
 
     @Query("DELETE FROM travel_legs WHERE workEntryDate = :date")
@@ -122,9 +122,11 @@ abstract class WorkEntryDao {
 
     @Transaction
     open suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>) {
-        upsert(entry)
         val existingLegs = getTravelLegsByDate(entry.date)
         val existingBySortOrder = existingLegs.associateBy(TravelLeg::sortOrder)
+
+        upsert(entry)
+
         val desiredLegs = legs.mapIndexed { index, leg ->
             val existing = existingBySortOrder[index]
             leg.copy(

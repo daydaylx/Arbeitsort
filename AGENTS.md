@@ -14,6 +14,7 @@ Keep compatibility files thin. Do not maintain separate architecture, version, o
 ## Agent Workflow
 
 - Repo-local Codex surfaces live under `plugins/montagezeit-android/` and `.agents/plugins/marketplace.json`.
+- Keep tracked editor/tooling surfaces minimal: `.agents/plugins/marketplace.json` and `.vscode/tasks.json` are intentional, while local assistant or IDE state such as `.claude/`, `.clinerules/`, `.kilo/`, and personal VS Code settings/extensions should remain untracked.
 - Prefer the repo-local skill `montagezeit-android-maintainer` for Android, Compose, Room, WorkManager, export, and verification work in this repo.
 - Prefer the official GitHub plugin or connector for pull requests, review threads, labels, comments, and CI triage. Fall back to local `git` and `gh` only when the connector path is insufficient.
 - Keep external tooling narrow. Do not reach for Drive, Notion, Cloudflare, or unrelated connectors unless the task explicitly needs them.
