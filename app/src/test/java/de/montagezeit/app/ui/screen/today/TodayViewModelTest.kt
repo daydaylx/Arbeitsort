@@ -213,6 +213,38 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun `selectDate clears fullscreen error and shows loading for the new date`() {
+        val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
+        val yesterdayEntry = WorkEntry(
+            date = yesterday,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Gestern"
+        )
+        val repository = mockk<WorkEntryRepository>(relaxed = true)
+        val yesterdayLoadStarted = CountDownLatch(1)
+        val releaseYesterdayLoad = CountDownLatch(1)
+
+        coEvery { repository.getByDate(today) } throws IllegalStateException("boom")
+        coEvery { repository.getByDate(yesterday) } coAnswers {
+            yesterdayLoadStarted.countDown()
+            assertTrue(releaseYesterdayLoad.await(2, TimeUnit.SECONDS))
+            yesterdayEntry
+        }
+
+        val viewModel = createViewModel(repository)
+        waitUntil { viewModel.uiState.value is TodayUiState.Error }
+
+        viewModel.selectDate(yesterday)
+
+        assertTrue(yesterdayLoadStarted.await(2, TimeUnit.SECONDS))
+        assertEquals(TodayUiState.Loading, viewModel.uiState.value)
+
+        releaseYesterdayLoad.countDown()
+        waitUntil { viewModel.uiState.value == TodayUiState.Success(yesterdayEntry) }
+    }
+
+    @Test
     fun `submitDailyManualCheckIn calls usecase and closes dialog`() {
         val today = LocalDate.now()
         val savedEntry = WorkEntry(
@@ -291,12 +323,8 @@ class TodayViewModelTest {
         val viewModel = createViewModel(repository)
         val successLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            var loadingSeen = false
             viewModel.uiState.collect { state ->
-                if (state is TodayUiState.Loading) {
-                    loadingSeen = true
-                }
-                if (loadingSeen && state is TodayUiState.Success) {
+                if (state is TodayUiState.Success) {
                     successLatch.countDown()
                 }
             }

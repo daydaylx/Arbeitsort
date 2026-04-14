@@ -21,10 +21,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -53,6 +55,7 @@ class OverviewViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<UiText?>(null)
 
     private var refreshJob: Job? = null
+    private var lastExplicitRefreshMs: Long = 0L
 
     private data class SelectedEntrySnapshot(
         val requestedDate: LocalDate? = null,
@@ -157,6 +160,7 @@ class OverviewViewModel @Inject constructor(
     fun selectDate(date: LocalDate) {
         if (_selectedDate.value == date) return
         _selectedDate.value = date
+        lastExplicitRefreshMs = System.currentTimeMillis()
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
@@ -167,6 +171,7 @@ class OverviewViewModel @Inject constructor(
     fun selectPeriod(period: OverviewPeriod) {
         if (_selectedPeriod.value == period) return
         _selectedPeriod.value = period
+        lastExplicitRefreshMs = System.currentTimeMillis()
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
@@ -176,6 +181,7 @@ class OverviewViewModel @Inject constructor(
 
     fun goToPreviousRange() {
         _selectedDate.value = _selectedPeriod.value.shiftReferenceDate(_selectedDate.value, -1)
+        lastExplicitRefreshMs = System.currentTimeMillis()
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
@@ -185,6 +191,7 @@ class OverviewViewModel @Inject constructor(
 
     fun goToNextRange() {
         _selectedDate.value = _selectedPeriod.value.shiftReferenceDate(_selectedDate.value, 1)
+        lastExplicitRefreshMs = System.currentTimeMillis()
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
@@ -216,7 +223,11 @@ class OverviewViewModel @Inject constructor(
             }
                 .debounce(ENTRY_UPDATE_DEBOUNCE_MS)
                 .distinctUntilChanged()
-                .collect {
+                .collectLatest {
+                    val remainingGuardMs = remainingExplicitRefreshGuardMs()
+                    if (remainingGuardMs > 0) {
+                        delay(remainingGuardMs)
+                    }
                     refreshOverview(
                         clearMetrics = false,
                         showLoading = _metrics.value == null,
@@ -307,4 +318,7 @@ class OverviewViewModel @Inject constructor(
     private companion object {
         private const val ENTRY_UPDATE_DEBOUNCE_MS = 250L
     }
+
+    private fun remainingExplicitRefreshGuardMs(now: Long = System.currentTimeMillis()): Long =
+        (lastExplicitRefreshMs + ENTRY_UPDATE_DEBOUNCE_MS * 2 - now).coerceAtLeast(0L)
 }

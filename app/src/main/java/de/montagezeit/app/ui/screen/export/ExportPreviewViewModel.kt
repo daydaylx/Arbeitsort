@@ -8,6 +8,10 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
+import de.montagezeit.app.diagnostics.DiagnosticCategory
+import de.montagezeit.app.diagnostics.DiagnosticStatus
+import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
@@ -16,6 +20,7 @@ import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.export.PdfUtilities
 import de.montagezeit.app.ui.util.UiText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -198,11 +203,29 @@ class ExportPreviewViewModel @Inject constructor(
             )
         )
         viewModelScope.launch {
+            val trace = AppDiagnosticsRuntime.startTrace(
+                DiagnosticTraceRequest(
+                    category = DiagnosticCategory.EXPORT_OPERATION,
+                    name = "export_preview_load",
+                    sourceClass = "ExportPreviewViewModel",
+                    screenOrWorker = "ExportPreviewScreen",
+                    dateRange = de.montagezeit.app.diagnostics.DiagnosticDateRange(range.start, range.end),
+                    payload = emptyMap()
+                )
+            )
             try {
+                val dbStart = System.currentTimeMillis()
                 val entries = loadEntries(range)
+                trace.event("entries_loaded", payload = mapOf("entryCount" to entries.size, "durationMs" to (System.currentTimeMillis() - dbStart)))
                 updateState(buildPreviewState(header, entries))
+                trace.finish(payload = mapOf("entryCount" to entries.size))
+            } catch (e: CancellationException) {
+                trace.finish(status = DiagnosticStatus.CANCELLED)
+                throw e
             } catch (e: Exception) {
                 cachedPreviewEntries = null
+                trace.error("preview_load_failed", e)
+                trace.finish(status = DiagnosticStatus.ERROR)
                 updateState(
                     PreviewState.Error(
                         message = toUiText(e.message, R.string.export_preview_error_export_failed),
@@ -226,20 +249,39 @@ class ExportPreviewViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val settings = reminderSettingsManager.settings.first()
-            if (settings.pdfEmployeeName.isNullOrBlank()) {
-                updateState(
-                    PreviewState.Error(
-                        message = UiText.StringResource(R.string.export_preview_error_name_missing_profile),
-                        canReturn = true
-                    )
+            val trace = AppDiagnosticsRuntime.startTrace(
+                DiagnosticTraceRequest(
+                    category = DiagnosticCategory.EXPORT_OPERATION,
+                    name = "export_create_pdf",
+                    sourceClass = "ExportPreviewViewModel",
+                    screenOrWorker = "ExportPreviewScreen",
+                    dateRange = de.montagezeit.app.diagnostics.DiagnosticDateRange(range.start, range.end),
+                    payload = emptyMap()
                 )
-                return@launch
-            }
-            updateState(PreviewState.CreatingPdf)
+            )
             try {
+                val settings = reminderSettingsManager.settings.first()
+                if (settings.pdfEmployeeName.isNullOrBlank()) {
+                    trace.finish(
+                        status = DiagnosticStatus.WARNING,
+                        payload = mapOf("reason" to "missing_employee_name")
+                    )
+                    updateState(
+                        PreviewState.Error(
+                            message = UiText.StringResource(R.string.export_preview_error_name_missing_profile),
+                            canReturn = true
+                        )
+                    )
+                    return@launch
+                }
+                updateState(PreviewState.CreatingPdf)
                 val entries = getEntriesForPdf(range)
+                trace.event("pdf_entries_loaded", payload = mapOf("entryCount" to entries.size))
                 if (entries.isEmpty()) {
+                    trace.finish(
+                        status = DiagnosticStatus.WARNING,
+                        payload = mapOf("reason" to "empty_entries")
+                    )
                     updateState(
                         PreviewState.Error(
                             message = UiText.StringResource(R.string.export_preview_empty_range),
@@ -259,9 +301,14 @@ class ExportPreviewViewModel @Inject constructor(
                 )) {
                     is PdfExporter.PdfExportResult.Success -> {
                         val fileName = exportResult.fileUri.lastPathSegment ?: "montagezeit_export.pdf"
+                        trace.finish(payload = mapOf("entryCount" to entries.size, "fileName" to fileName))
                         updateState(PreviewState.PdfReady(fileUri = exportResult.fileUri, fileName = fileName))
                     }
                     is PdfExporter.PdfExportResult.ValidationError -> {
+                        trace.finish(
+                            status = DiagnosticStatus.WARNING,
+                            payload = mapOf("result" to "validation_error")
+                        )
                         updateState(
                             PreviewState.Error(
                                 message = toUiText(exportResult.message, R.string.export_preview_error_export_failed),
@@ -270,6 +317,11 @@ class ExportPreviewViewModel @Inject constructor(
                         )
                     }
                     is PdfExporter.PdfExportResult.StorageError -> {
+                        trace.error(
+                            name = "pdf_storage_error",
+                            payload = mapOf("message" to exportResult.message)
+                        )
+                        trace.finish(status = DiagnosticStatus.ERROR)
                         updateState(
                             PreviewState.Error(
                                 message = toUiText(exportResult.message, R.string.export_preview_error_pdf_create_failed),
@@ -278,6 +330,11 @@ class ExportPreviewViewModel @Inject constructor(
                         )
                     }
                     is PdfExporter.PdfExportResult.FileWriteError -> {
+                        trace.error(
+                            name = "pdf_file_write_error",
+                            payload = mapOf("message" to exportResult.message)
+                        )
+                        trace.finish(status = DiagnosticStatus.ERROR)
                         updateState(
                             PreviewState.Error(
                                 message = toUiText(exportResult.message, R.string.export_preview_error_pdf_create_failed),
@@ -286,6 +343,11 @@ class ExportPreviewViewModel @Inject constructor(
                         )
                     }
                     is PdfExporter.PdfExportResult.UnknownError -> {
+                        trace.error(
+                            name = "pdf_unknown_error",
+                            payload = mapOf("message" to exportResult.message)
+                        )
+                        trace.finish(status = DiagnosticStatus.ERROR)
                         updateState(
                             PreviewState.Error(
                                 message = toUiText(exportResult.message, R.string.export_preview_error_export_failed),
@@ -294,7 +356,12 @@ class ExportPreviewViewModel @Inject constructor(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                trace.finish(status = DiagnosticStatus.CANCELLED)
+                throw e
             } catch (e: Exception) {
+                trace.error("pdf_create_failed", e)
+                trace.finish(status = DiagnosticStatus.ERROR)
                 updateState(
                     PreviewState.Error(
                         message = toUiText(e.message, R.string.export_preview_error_export_failed),

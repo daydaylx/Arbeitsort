@@ -11,20 +11,27 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
+import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
+import de.montagezeit.app.diagnostics.DiagnosticCategory
+import de.montagezeit.app.diagnostics.DiagnosticStatus
+import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.util.transitionToDayType
 import android.util.Log
 import androidx.compose.runtime.Stable
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -38,7 +45,7 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workEntryRepository: WorkEntryRepository,
@@ -55,6 +62,7 @@ class HistoryViewModel @Inject constructor(
     val uiState: StateFlow<HistoryUiState> = _refreshTrigger
         .flatMapLatest {
             workEntryRepository.getAllWithTravelFlow()
+                .debounce(HISTORY_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
                     withContext(Dispatchers.Default) {
@@ -77,16 +85,41 @@ class HistoryViewModel @Inject constructor(
     }
 
     private fun buildSuccessState(entries: List<WorkEntryWithTravelLegs>): HistoryUiState.Success {
-        val groupedWeeks = groupByWeek(entries)
-        val groupedMonths = groupByMonth(entries)
-        val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
-        val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
-        return HistoryUiState.Success(
-            weeks = groupedWeeks,
-            months = groupedMonths,
-            entriesByDate = entriesByDate,
-            travelLegsByDate = travelLegsByDate
+        val trace = AppDiagnosticsRuntime.startTrace(
+            DiagnosticTraceRequest(
+                category = DiagnosticCategory.CALCULATION_RUN,
+                name = "history_rebuild",
+                sourceClass = "HistoryViewModel",
+                screenOrWorker = "HistoryScreen",
+                payload = mapOf("entryCount" to entries.size)
+            )
         )
+        try {
+            val groupedWeeks = groupByWeek(entries)
+            trace.event("weeks_grouped", payload = mapOf("weekCount" to groupedWeeks.size))
+            val groupedMonths = groupByMonth(entries)
+            trace.event("months_grouped", payload = mapOf("monthCount" to groupedMonths.size))
+            val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
+            val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
+            trace.finish(payload = mapOf(
+                "entryCount" to entries.size,
+                "weekCount" to groupedWeeks.size,
+                "monthCount" to groupedMonths.size
+            ))
+            return HistoryUiState.Success(
+                weeks = groupedWeeks,
+                months = groupedMonths,
+                entriesByDate = entriesByDate,
+                travelLegsByDate = travelLegsByDate
+            )
+        } catch (e: CancellationException) {
+            trace.finish(status = DiagnosticStatus.CANCELLED)
+            throw e
+        } catch (e: Exception) {
+            trace.error("history_rebuild_failed", e)
+            trace.finish(status = DiagnosticStatus.ERROR)
+            throw e
+        }
     }
     
     fun applyBatchEdit(request: BatchEditRequest) {
@@ -263,6 +296,9 @@ class HistoryViewModel @Inject constructor(
         return null
     }
 
+    private companion object {
+        private const val HISTORY_DEBOUNCE_MS = 150L
+    }
 }
 
 @Stable
