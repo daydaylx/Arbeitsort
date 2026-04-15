@@ -21,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -149,11 +148,13 @@ class OverviewViewModel @Inject constructor(
     )
 
     init {
+        lastExplicitRefreshMs = System.currentTimeMillis()
         observeSelectedEntryUpdates()
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "init"
         )
     }
 
@@ -164,7 +165,8 @@ class OverviewViewModel @Inject constructor(
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "selectDate"
         )
     }
 
@@ -175,7 +177,8 @@ class OverviewViewModel @Inject constructor(
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "selectPeriod"
         )
     }
 
@@ -185,7 +188,8 @@ class OverviewViewModel @Inject constructor(
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "goToPreviousRange"
         )
     }
 
@@ -195,7 +199,8 @@ class OverviewViewModel @Inject constructor(
         refreshOverview(
             clearMetrics = true,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "goToNextRange"
         )
     }
 
@@ -203,7 +208,8 @@ class OverviewViewModel @Inject constructor(
         refreshOverview(
             clearMetrics = _metrics.value == null,
             showLoading = true,
-            resetError = true
+            resetError = true,
+            triggerSource = "onResetError"
         )
     }
 
@@ -224,14 +230,12 @@ class OverviewViewModel @Inject constructor(
                 .debounce(ENTRY_UPDATE_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .collectLatest {
-                    val remainingGuardMs = remainingExplicitRefreshGuardMs()
-                    if (remainingGuardMs > 0) {
-                        delay(remainingGuardMs)
-                    }
+                    if (remainingExplicitRefreshGuardMs() > 0) return@collectLatest
                     refreshOverview(
                         clearMetrics = false,
                         showLoading = _metrics.value == null,
-                        resetError = false
+                        resetError = false,
+                        triggerSource = "entryUpdate"
                     )
                 }
         }
@@ -240,7 +244,8 @@ class OverviewViewModel @Inject constructor(
     private fun refreshOverview(
         clearMetrics: Boolean,
         showLoading: Boolean,
-        resetError: Boolean
+        resetError: Boolean,
+        triggerSource: String = "unknown"
     ) {
         refreshJob?.cancel()
 
@@ -269,6 +274,7 @@ class OverviewViewModel @Inject constructor(
                     dateRange = DiagnosticDateRange(range.startDate, range.endDate),
                     payload = mapOf(
                         "period" to selectedPeriod.name,
+                        "triggerSource" to triggerSource,
                         "clearMetrics" to clearMetrics,
                         "showLoading" to showLoading,
                         "resetError" to resetError

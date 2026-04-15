@@ -457,6 +457,11 @@ class TodayViewModel @Inject constructor(
         targetDate: LocalDate,
         preferCachedSelection: Boolean
     ) {
+        val hasCachedSelection = preferCachedSelection &&
+            selectedEntry.value?.date == targetDate
+        if (!hasCachedSelection) {
+            _uiState.value = TodayUiState.Loading
+        }
         entryLoadRequests.tryEmit(EntryLoadRequest(targetDate, preferCachedSelection))
     }
 

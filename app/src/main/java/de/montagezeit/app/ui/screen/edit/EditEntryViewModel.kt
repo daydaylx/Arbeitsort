@@ -24,8 +24,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -51,6 +54,9 @@ class EditEntryViewModel @Inject constructor(
 
     private val _screenState = MutableStateFlow(EditScreenState())
     val screenState: StateFlow<EditScreenState> = _screenState.asStateFlow()
+
+    private val _snackbarMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val snackbarMessage: SharedFlow<UiText> = _snackbarMessage.asSharedFlow()
 
     private var loadEntryJob: Job? = null
 
@@ -93,11 +99,17 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun updateDayType(dayType: DayType) {
+        val previousType = _screenState.value.formData.dayType
         updateFormData {
             when (dayType) {
                 DayType.WORK -> it.copy(dayType = dayType)
                 DayType.OFF -> it.copy(dayType = dayType, hasWorkTimes = false)
                 DayType.COMP_TIME -> it.copy(dayType = dayType, hasWorkTimes = false, travelLegs = emptyList())
+            }
+        }
+        if (previousType == DayType.WORK && dayType != DayType.WORK) {
+            viewModelScope.launch {
+                _snackbarMessage.emit(UiText.StringResource(R.string.edit_day_type_cleared_times))
             }
         }
     }
@@ -279,6 +291,48 @@ class EditEntryViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 trace.saveFailed(e)
+                showErrorState(e, R.string.edit_error_save_failed)
+            }
+        }
+    }
+
+    fun saveAndNavigate(newDate: LocalDate, onNavigate: (LocalDate) -> Unit) {
+        viewModelScope.launch {
+            val stateSnapshot = _screenState.value
+            if (stateSnapshot.isSaving) return@launch
+            if (!stateSnapshot.isDirty) {
+                onNavigate(newDate)
+                return@launch
+            }
+            val data = stateSnapshot.formData
+            val currentState = stateSnapshot.uiState
+            val validationErrors = draftRules.validate(data)
+            if (validationErrors.isNotEmpty()) {
+                showValidationErrors(currentState, validationErrors)
+                return@launch
+            }
+            try {
+                val latestState = resolveLatestSaveState(currentState) ?: run {
+                    onNavigate(newDate); return@launch
+                }
+                val pendingSave = saveBuilder.build(
+                    currentState = latestState,
+                    data = data,
+                    zoneId = editTimeZone
+                ) ?: run {
+                    onNavigate(newDate); return@launch
+                }
+                _screenState.update { it.copy(isSaving = true) }
+                workEntryRepository.replaceEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
+                _screenState.update {
+                    it.copy(
+                        isSaving = false,
+                        originalFormData = data,
+                        mealAllowancePreviewCents = draftRules.mealAllowancePreviewCents(data)
+                    )
+                }
+                onNavigate(newDate)
+            } catch (e: Exception) {
                 showErrorState(e, R.string.edit_error_save_failed)
             }
         }

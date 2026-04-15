@@ -43,7 +43,8 @@ class AppDatabaseMigrationTest {
             "migration_12_13_test.db",
             "migration_13_14_test.db",
             "migration_13_14_outbound_return_test.db",
-            "migration_13_14_edge_cases_test.db"
+            "migration_13_14_edge_cases_test.db",
+            "migration_14_15_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -64,7 +65,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_10_11,
                 AppDatabase.MIGRATION_11_12,
                 AppDatabase.MIGRATION_12_13,
-                AppDatabase.MIGRATION_13_14
+                AppDatabase.MIGRATION_13_14,
+                AppDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -513,6 +515,51 @@ class AppDatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun `migration 14 to 15 confirms restored entries only when data is sufficient`() {
+        val dbName = "migration_14_15_test.db"
+        createVersion14Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 14)
+        try {
+            AppDatabase.MIGRATION_14_15.migrate(db)
+
+            db.query(
+                """
+                SELECT date, confirmedWorkDay, confirmationAt, confirmationSource
+                FROM work_entries
+                ORDER BY date
+                """.trimIndent()
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("2026-01-20", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_FROM_RESTORE", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-01-21", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_FROM_RESTORE", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-01-22", c.getString(0))
+                assertEquals(0, c.getInt(1))
+                assertTrue(c.isNull(2))
+                assertEquals("RESTORED_FROM_EXPORT", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-01-23", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertEquals(123456789L, c.getLong(2))
+                assertEquals("UI", c.getString(3))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
     private fun createVersion13Database(dbName: String) {
         val dbFile = context.getDatabasePath(dbName)
         dbFile.parentFile?.mkdirs()
@@ -561,6 +608,44 @@ class AppDatabaseMigrationTest {
             it.execSQL("CREATE INDEX IF NOT EXISTS index_work_entries_dayType_date ON work_entries(dayType, date)")
             seedVersion13Data(it)
             it.version = 13
+        }
+    }
+
+    private fun createVersion14Database(dbName: String) {
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+
+        val db = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        db.use {
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `workStart` TEXT,
+                    `workEnd` TEXT,
+                    `confirmedWorkDay` INTEGER NOT NULL DEFAULT 0,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+
+            it.execSQL(
+                """
+                INSERT INTO work_entries (
+                    date, dayType, workStart, workEnd,
+                    confirmedWorkDay, confirmationAt, confirmationSource
+                ) VALUES
+                    ('2026-01-20', 'WORK', '07:00', '16:00', 0, NULL, 'RESTORED_FROM_EXPORT'),
+                    ('2026-01-21', 'OFF', NULL, NULL, 0, NULL, 'RESTORED_FROM_EXPORT'),
+                    ('2026-01-22', 'WORK', NULL, NULL, 0, NULL, 'RESTORED_FROM_EXPORT'),
+                    ('2026-01-23', 'WORK', '08:00', '17:00', 1, 123456789, 'UI')
+                """.trimIndent()
+            )
+
+            it.version = 14
         }
     }
 

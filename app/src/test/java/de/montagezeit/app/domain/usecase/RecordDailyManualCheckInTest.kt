@@ -168,7 +168,14 @@ class RecordDailyManualCheckInTest {
         assertEquals(true, result.mealIsArrivalDeparture)
         assertEquals(true, result.mealBreakfastIncluded)
         assertEquals(MealAllowanceCalculator.BASE_ARRIVAL_DEPARTURE_CENTS, result.mealAllowanceBaseCents)
-        assertEquals(820, result.mealAllowanceAmountCents)
+        assertEquals(
+            MealAllowanceCalculator.calculate(
+                dayType = DayType.WORK,
+                isArrivalDeparture = true,
+                breakfastIncluded = true
+            ).amountCents,
+            result.mealAllowanceAmountCents
+        )
     }
 
     @Test
@@ -196,7 +203,14 @@ class RecordDailyManualCheckInTest {
 
         assertFalse(result.mealIsArrivalDeparture)
         assertEquals(true, result.mealBreakfastIncluded)
-        assertEquals(2220, result.mealAllowanceAmountCents)
+        assertEquals(
+            MealAllowanceCalculator.calculate(
+                dayType = DayType.WORK,
+                isArrivalDeparture = false,
+                breakfastIncluded = true
+            ).amountCents,
+            result.mealAllowanceAmountCents
+        )
     }
 
     @Test

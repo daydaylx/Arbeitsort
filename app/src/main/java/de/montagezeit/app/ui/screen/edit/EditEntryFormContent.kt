@@ -2,21 +2,23 @@
 
 package de.montagezeit.app.ui.screen.edit
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,9 +28,11 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,14 +42,12 @@ import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.ui.components.DestructiveActionButton
 import de.montagezeit.app.ui.components.MZContentCard
 import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.MZSegmentedControl
 import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZStatusBadge
-import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
@@ -89,13 +91,29 @@ internal fun EditFormContent(
     onApplyDefaultTimes: (() -> Unit)? = null,
     onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
-    onDeleteDay: (() -> Unit)? = null,
-    isSaving: Boolean = false,
-    isNewEntry: Boolean = false,
-    onCopy: (() -> Unit)? = null,
-    showPrimarySaveButton: Boolean = true
+    isSaving: Boolean = false
 ) {
     val isCompTime = formData.dayType == DayType.COMP_TIME
+
+    val travelHasErrors = validationErrors.any {
+        it is ValidationError.TravelArriveBeforeStart ||
+            it is ValidationError.TravelTooLong ||
+            it is ValidationError.TravelLegIncomplete ||
+            it is ValidationError.TravelLegMissingTimeWindow ||
+            it is ValidationError.TravelNotAllowedForCompTime ||
+            it is ValidationError.MissingWorkOrTravel
+    }
+    val locationHasErrors = validationErrors.any { it is ValidationError.MissingDayLocation }
+
+    var travelExpanded by rememberSaveable { mutableStateOf(formData.travelLegs.isNotEmpty()) }
+    var locationExpanded by rememberSaveable { mutableStateOf(!formData.dayLocationLabel.isNullOrBlank()) }
+    var mealExpanded by rememberSaveable {
+        mutableStateOf(formData.mealIsArrivalDeparture || formData.mealBreakfastIncluded)
+    }
+    var noteExpanded by rememberSaveable { mutableStateOf(!formData.note.isNullOrBlank()) }
+
+    LaunchedEffect(travelHasErrors) { if (travelHasErrors) travelExpanded = true }
+    LaunchedEffect(locationHasErrors) { if (locationHasErrors) locationExpanded = true }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         EditFormSectionCard {
@@ -134,116 +152,148 @@ internal fun EditFormContent(
         }
 
         if (!isCompTime) {
-            EditFormSectionCard {
-                TravelLegsSection(
-                    travelLegs = formData.travelLegs,
-                    validationErrors = validationErrors,
-                    onAddTravelLeg = onAddTravelLeg,
-                    onTravelLegStartChange = onTravelLegStartChange,
-                    onTravelLegArriveChange = onTravelLegArriveChange,
-                    onTravelLegStartLabelChange = onTravelLegStartLabelChange,
-                    onTravelLegEndLabelChange = onTravelLegEndLabelChange,
-                    onRemoveTravelLeg = onRemoveTravelLeg,
-                    onClearTravel = onTravelClear
-                )
+            val travelSummary = when {
+                travelHasErrors -> stringResource(R.string.edit_validation_title)
+                formData.travelLegs.isNotEmpty() -> "${formData.travelLegs.size} Fahrt(en)"
+                else -> null
+            }
+            CollapsibleSectionHeader(
+                title = stringResource(R.string.edit_section_travel),
+                expanded = travelExpanded,
+                onToggle = { travelExpanded = !travelExpanded },
+                summary = travelSummary,
+                hasError = travelHasErrors
+            )
+            AnimatedVisibility(visible = travelExpanded) {
+                EditFormSectionCard {
+                    TravelLegsSection(
+                        travelLegs = formData.travelLegs,
+                        validationErrors = validationErrors,
+                        onAddTravelLeg = onAddTravelLeg,
+                        onTravelLegStartChange = onTravelLegStartChange,
+                        onTravelLegArriveChange = onTravelLegArriveChange,
+                        onTravelLegStartLabelChange = onTravelLegStartLabelChange,
+                        onTravelLegEndLabelChange = onTravelLegEndLabelChange,
+                        onRemoveTravelLeg = onRemoveTravelLeg,
+                        onClearTravel = onTravelClear
+                    )
+                }
             }
 
-            EditFormSectionCard {
-                LocationLabelsSection(
-                    dayLocationLabel = formData.dayLocationLabel,
-                    validationErrors = validationErrors,
-                    onDayLocationChange = onDayLocationChange
-                )
+            val locationSummary = formData.dayLocationLabel?.takeIf { it.isNotBlank() }
+            CollapsibleSectionHeader(
+                title = stringResource(R.string.edit_section_location),
+                expanded = locationExpanded,
+                onToggle = { locationExpanded = !locationExpanded },
+                summary = locationSummary,
+                hasError = locationHasErrors
+            )
+            AnimatedVisibility(visible = locationExpanded) {
+                EditFormSectionCard {
+                    LocationLabelsSection(
+                        dayLocationLabel = formData.dayLocationLabel,
+                        validationErrors = validationErrors,
+                        onDayLocationChange = onDayLocationChange
+                    )
+                }
             }
         }
 
         if (formData.dayType == DayType.WORK) {
+            val mealSummary = if (mealAllowancePreviewCents > 0) {
+                MealAllowanceCalculator.formatEuro(mealAllowancePreviewCents)
+            } else null
+            CollapsibleSectionHeader(
+                title = stringResource(R.string.edit_section_meal_allowance),
+                expanded = mealExpanded,
+                onToggle = { mealExpanded = !mealExpanded },
+                summary = mealSummary
+            )
+            AnimatedVisibility(visible = mealExpanded) {
+                EditFormSectionCard {
+                    MealAllowanceSection(
+                        isArrivalDeparture = formData.mealIsArrivalDeparture,
+                        breakfastIncluded = formData.mealBreakfastIncluded,
+                        allowancePreviewCents = mealAllowancePreviewCents,
+                        onArrivalDepartureChange = onMealArrivalDepartureChange,
+                        onBreakfastIncludedChange = onMealBreakfastIncludedChange
+                    )
+                }
+            }
+        }
+
+        val noteSummary = if (!formData.note.isNullOrBlank()) "Notiz vorhanden" else null
+        CollapsibleSectionHeader(
+            title = stringResource(R.string.edit_section_note_optional),
+            expanded = noteExpanded,
+            onToggle = { noteExpanded = !noteExpanded },
+            summary = noteSummary
+        )
+        AnimatedVisibility(visible = noteExpanded) {
             EditFormSectionCard {
-                MealAllowanceSection(
-                    isArrivalDeparture = formData.mealIsArrivalDeparture,
-                    breakfastIncluded = formData.mealBreakfastIncluded,
-                    allowancePreviewCents = mealAllowancePreviewCents,
-                    onArrivalDepartureChange = onMealArrivalDepartureChange,
-                    onBreakfastIncludedChange = onMealBreakfastIncludedChange
+                NoteSection(
+                    note = formData.note,
+                    onNoteChange = onNoteChange
                 )
             }
         }
 
-        EditFormSectionCard {
-            NoteSection(
-                note = formData.note,
-                onNoteChange = onNoteChange
+        if (onCopyPrevious != null) {
+            SecondaryActionButton(
+                onClick = onCopyPrevious,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(stringResource(R.string.edit_action_copy_previous))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollapsibleSectionHeader(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    summary: String? = null,
+    hasError: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (hasError) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurface
             )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (onCopyPrevious != null) {
-                SecondaryActionButton(
-                    onClick = onCopyPrevious,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(stringResource(R.string.edit_action_copy_previous))
-                }
-            }
-
-            if (onCopy != null && !isNewEntry) {
-                TertiaryActionButton(
-                    onClick = onCopy,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-                    Text(stringResource(R.string.edit_action_copy_entry))
-                }
-            }
-
-            if (onDeleteDay != null && !isNewEntry) {
-                DestructiveActionButton(
-                    onClick = onDeleteDay,
-                    enabled = !isSaving,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(stringResource(R.string.action_delete_day))
-                }
-            }
-
-            if (showPrimarySaveButton) {
-                PrimaryActionButton(
-                    onClick = onSave,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSaving
-                ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .padding(end = 8.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                    }
-                    Text(stringResource(R.string.action_save_entry))
-                }
+            if (!expanded && summary != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (hasError) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
+                )
             }
         }
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+            tint = if (hasError) MaterialTheme.colorScheme.error
+                   else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 

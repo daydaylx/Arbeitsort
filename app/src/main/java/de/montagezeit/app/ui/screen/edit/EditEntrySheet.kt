@@ -15,9 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -32,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,7 +69,6 @@ fun EditEntrySheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     var activeDialog by remember { mutableStateOf<EditSheetDialog>(EditSheetDialog.None) }
-    val swipeThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
 
     // Stabilized dismiss callback to prevent LaunchedEffect re-triggering
     val stableOnDismiss = remember(onDismiss) { onDismiss }
@@ -84,6 +89,12 @@ fun EditEntrySheet(
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarMessage.collect { message ->
+            Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val handleDismiss: () -> Unit = remember(screenState.isDirty, screenState.isSaving, stableOnDismiss) {
         {
             if (screenState.isDirty && !screenState.isSaving) {
@@ -94,14 +105,10 @@ fun EditEntrySheet(
         }
     }
 
-    val guardedNavigateDate: (LocalDate) -> Unit = remember(screenState.isDirty, screenState.isSaving, onNavigateDate) {
+    val guardedNavigateDate: (LocalDate) -> Unit = remember(onNavigateDate) {
         { newDate ->
             onNavigateDate?.let { navigate ->
-                if (screenState.isDirty && !screenState.isSaving) {
-                    activeDialog = EditSheetDialog.DiscardChangesForNavigation(newDate)
-                } else {
-                    navigate(newDate)
-                }
+                viewModel.saveAndNavigate(newDate, navigate)
             }
         }
     }
@@ -119,7 +126,6 @@ fun EditEntrySheet(
         EditEntrySheetScaffold(
             date = date,
             screenState = screenState,
-            swipeThresholdPx = swipeThresholdPx,
             onNavigateDate = if (onNavigateDate != null) guardedNavigateDate else null,
             onOpenNavigateDatePicker = { activeDialog = EditSheetDialog.NavigateDatePicker },
             onDismiss = onDismiss,
@@ -148,7 +154,6 @@ fun EditEntrySheet(
 private fun EditEntrySheetScaffold(
     date: LocalDate,
     screenState: EditScreenState,
-    swipeThresholdPx: Float,
     onNavigateDate: ((LocalDate) -> Unit)?,
     onOpenNavigateDatePicker: () -> Unit,
     onDismiss: () -> Unit,
@@ -158,6 +163,7 @@ private fun EditEntrySheetScaffold(
     context: Context
 ) {
     val uiState = screenState.uiState
+    val isNewEntry = uiState is EditUiState.NewEntry
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -182,7 +188,10 @@ private fun EditEntrySheetScaffold(
                 date = date,
                 isSaving = screenState.isSaving,
                 isDirty = screenState.isDirty,
-                uiState = uiState
+                uiState = uiState,
+                isNewEntry = isNewEntry,
+                onDeleteDay = if (!isNewEntry) onOpenDeleteDialog else null,
+                onCopy = if (!isNewEntry) onOpenCopyDatePicker else null
             )
 
             if (onNavigateDate != null) {
@@ -194,12 +203,6 @@ private fun EditEntrySheetScaffold(
                         onToday = { onNavigateDate(LocalDate.now()) },
                         onPickDate = onOpenNavigateDatePicker
                     )
-                    DateNavigationSwipeZone(
-                        swipeThresholdPx = swipeThresholdPx,
-                        onSwipePrevious = { onNavigateDate(date.minusDays(1)) },
-                        onSwipeNext = { onNavigateDate(date.plusDays(1)) },
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
                 }
             }
 
@@ -207,9 +210,7 @@ private fun EditEntrySheetScaffold(
                 screenState = screenState,
                 viewModel = viewModel,
                 context = context,
-                onDismiss = onDismiss,
-                onOpenDeleteDialog = onOpenDeleteDialog,
-                onOpenCopyDatePicker = onOpenCopyDatePicker
+                onDismiss = onDismiss
             )
         }
     }
@@ -220,20 +221,69 @@ private fun EditSheetHero(
     date: LocalDate,
     isSaving: Boolean,
     isDirty: Boolean,
-    uiState: EditUiState
+    uiState: EditUiState,
+    isNewEntry: Boolean,
+    onDeleteDay: (() -> Unit)?,
+    onCopy: (() -> Unit)?
 ) {
     MZHeroPanel {
-        MZSectionIntro(
-            eyebrow = date.toString(),
-            title = stringResource(
-                if (uiState is EditUiState.NewEntry) {
-                    R.string.edit_sheet_title_new
-                } else {
-                    R.string.edit_sheet_title_existing
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            MZSectionIntro(
+                eyebrow = date.toString(),
+                title = stringResource(
+                    if (isNewEntry) R.string.edit_sheet_title_new else R.string.edit_sheet_title_existing
+                ),
+                modifier = Modifier.weight(1f)
+            )
+            if (!isNewEntry && (onDeleteDay != null || onCopy != null)) {
+                var showMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        if (onCopy != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit_action_copy_entry)) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null)
+                                },
+                                onClick = { showMenu = false; onCopy() }
+                            )
+                        }
+                        if (onDeleteDay != null) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.action_delete_day),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = { showMenu = false; onDeleteDay() }
+                            )
+                        }
+                    }
                 }
-            ),
-            supportingText = stringResource(R.string.edit_sheet_support)
-        )
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -249,7 +299,7 @@ private fun EditSheetHero(
             )
             MZMetricChip(
                 label = stringResource(R.string.edit_sheet_metric_mode),
-                value = if (uiState is EditUiState.NewEntry) {
+                value = if (isNewEntry) {
                     stringResource(R.string.action_add)
                 } else {
                     stringResource(R.string.action_edit_entry_manual)
@@ -272,9 +322,7 @@ private fun ColumnScope.EditEntryStateContent(
     screenState: EditScreenState,
     viewModel: EditEntryViewModel,
     context: Context,
-    onDismiss: () -> Unit,
-    onOpenDeleteDialog: () -> Unit,
-    onOpenCopyDatePicker: () -> Unit
+    onDismiss: () -> Unit
 ) {
     when (val state = screenState.uiState) {
         is EditUiState.Loading -> {
@@ -300,10 +348,7 @@ private fun ColumnScope.EditEntryStateContent(
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
-                isSaving = screenState.isSaving,
-                isNewEntry = true,
-                onDeleteDay = null,
-                onCopy = null
+                isSaving = screenState.isSaving
             )
         }
 
@@ -322,10 +367,7 @@ private fun ColumnScope.EditEntryStateContent(
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
-                isSaving = screenState.isSaving,
-                isNewEntry = false,
-                onDeleteDay = onOpenDeleteDialog,
-                onCopy = onOpenCopyDatePicker
+                isSaving = screenState.isSaving
             )
         }
 
@@ -343,11 +385,13 @@ private fun EditEntryFormStateContent(
     mealAllowancePreviewCents: Int,
     viewModel: EditEntryViewModel,
     context: Context,
-    isSaving: Boolean,
-    isNewEntry: Boolean,
-    onDeleteDay: (() -> Unit)?,
-    onCopy: (() -> Unit)?
+    isSaving: Boolean
 ) {
+    EditValidationCard(
+        validationErrors = validationErrors,
+        onDismiss = { viewModel.clearValidationErrors() }
+    )
+
     EditFormContent(
         formData = formData,
         validationErrors = validationErrors,
@@ -378,16 +422,7 @@ private fun EditEntryFormStateContent(
             }
         },
         onSave = viewModel::save,
-        onDeleteDay = onDeleteDay,
-        isSaving = isSaving,
-        isNewEntry = isNewEntry,
-        onCopy = onCopy,
-        showPrimarySaveButton = false
-    )
-
-    EditValidationCard(
-        validationErrors = validationErrors,
-        onDismiss = { viewModel.clearValidationErrors() }
+        isSaving = isSaving
     )
 }
 
@@ -428,17 +463,6 @@ private fun EditEntryDialogsHost(
             onDiscard = {
                 onDialogChange(EditSheetDialog.None)
                 onDismiss()
-            },
-            onKeepEditing = { onDialogChange(EditSheetDialog.None) }
-        )
-    }
-
-    val navigateDiscardDialog = activeDialog as? EditSheetDialog.DiscardChangesForNavigation
-    if (navigateDiscardDialog != null) {
-        DiscardChangesDialog(
-            onDiscard = {
-                onDialogChange(EditSheetDialog.None)
-                onRequestNavigateDate(navigateDiscardDialog.newDate)
             },
             onKeepEditing = { onDialogChange(EditSheetDialog.None) }
         )

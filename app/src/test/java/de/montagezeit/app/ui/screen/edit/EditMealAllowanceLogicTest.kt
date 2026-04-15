@@ -23,7 +23,7 @@ class EditMealAllowanceLogicTest {
         assertTrue(result.isArrivalDeparture)
         assertTrue(result.breakfastIncluded)
         assertEquals(1400, result.baseCents)
-        assertEquals(820, result.amountCents)
+        assertEquals(840, result.amountCents)
     }
 
     @Test
@@ -67,13 +67,13 @@ class EditMealAllowanceLogicTest {
             mealIsArrivalDeparture = true,
             mealBreakfastIncluded = true,
             mealAllowanceBaseCents = 1400,
-            mealAllowanceAmountCents = 820
+            mealAllowanceAmountCents = 840
         )
 
         val formData = EditFormData.fromEntry(entry)
 
         assertTrue(formData.mealIsArrivalDeparture)
         assertTrue(formData.mealBreakfastIncluded)
-        assertEquals(820, formData.mealAllowancePreviewCents())
+        assertEquals(840, formData.mealAllowancePreviewCents())
     }
 }

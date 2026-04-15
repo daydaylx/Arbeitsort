@@ -78,7 +78,7 @@ class CalculateOvertimeForRange {
                     }
                 }
                 DayClassification.FREI_MIT_REISE -> {
-                    val travelHours = TimeCalculator.calculateTravelMinutes(entry.orderedTravelLegs) / 60.0
+                    val travelHours = travelMinutes / 60.0
                     if (travelHours > 0.0) {
                         // Fahrzeit an freien Tagen wird nun ebenfalls als Ist-Zeit erfasst
                         totalActualHours += travelHours

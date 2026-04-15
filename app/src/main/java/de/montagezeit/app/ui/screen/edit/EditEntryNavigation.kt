@@ -1,23 +1,18 @@
 package de.montagezeit.app.ui.screen.edit
 
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
@@ -77,42 +71,6 @@ internal fun DateNavigationRow(
                 contentDescription = stringResource(R.string.edit_cd_next_day)
             )
         }
-    }
-}
-
-@Composable
-internal fun DateNavigationSwipeZone(
-    swipeThresholdPx: Float,
-    onSwipePrevious: () -> Unit,
-    onSwipeNext: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(30.dp)
-            .pointerInput(swipeThresholdPx, onSwipePrevious, onSwipeNext) {
-                var dragAccum = 0f
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                    onDragEnd = {
-                        if (dragAccum > swipeThresholdPx) {
-                            onSwipePrevious()
-                        } else if (dragAccum < -swipeThresholdPx) {
-                            onSwipeNext()
-                        }
-                        dragAccum = 0f
-                    },
-                    onDragCancel = { dragAccum = 0f }
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        HorizontalDivider(
-            modifier = Modifier.width(56.dp),
-            thickness = 2.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
     }
 }
 

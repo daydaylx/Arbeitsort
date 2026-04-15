@@ -126,5 +126,4 @@ internal sealed interface EditSheetDialog {
     data object NavigateDatePicker : EditSheetDialog
     data object DeleteDayConfirm : EditSheetDialog
     data object DiscardChanges : EditSheetDialog
-    data class DiscardChangesForNavigation(val newDate: java.time.LocalDate) : EditSheetDialog
 }

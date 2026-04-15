@@ -13,7 +13,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 @Database(
     entities = [WorkEntry::class, TravelLeg::class],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(
@@ -603,6 +603,30 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 14→15: Restore-Einträge (confirmationSource = 'RESTORED_FROM_EXPORT')
+        // werden als bestätigt markiert, sofern ausreichende Daten vorhanden sind:
+        // - Alle OFF- und COMP_TIME-Tage werden direkt bestätigt.
+        // - WORK-Tage nur, wenn workStart und workEnd gesetzt sind.
+        // Unvollständige WORK-Einträge ohne Arbeitszeiten bleiben unbestätigt.
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    UPDATE work_entries
+                    SET confirmedWorkDay = 1,
+                        confirmationAt = CAST((strftime('%s', 'now')) * 1000 AS INTEGER),
+                        confirmationSource = 'MIGRATION_FROM_RESTORE'
+                    WHERE confirmationSource = 'RESTORED_FROM_EXPORT'
+                      AND confirmedWorkDay = 0
+                      AND (
+                        dayType != 'WORK'
+                        OR (dayType = 'WORK' AND workStart IS NOT NULL AND workEnd IS NOT NULL)
+                      )
+                    """.trimIndent()
+                )
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -616,7 +640,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_10_11,
             MIGRATION_11_12,
             MIGRATION_12_13,
-            MIGRATION_13_14
+            MIGRATION_13_14,
+            MIGRATION_14_15
         )
     }
 }

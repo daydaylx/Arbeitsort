@@ -10,7 +10,7 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
  * - Gilt nur für DayType.WORK; bei OFF und COMP_TIME immer 0.
  * - Standardbasis: 28,00 € (2800 Cent)
  * - Bei Anreise/Abreise: Basis 14,00 € (1400 Cent)
- * - Frühstück erhalten: Abzug 5,80 € (580 Cent)
+ * - Frühstück erhalten: Abzug 5,60 € (560 Cent)
  * - Ergebnis nie negativ (Minimum 0)
  * - Kein Einfluss auf Arbeitszeit oder Überstunden.
  */

@@ -19,14 +19,14 @@ class MealAllowanceCalculatorTest {
     }
 
     @Test
-    fun `WORK normal with breakfast returns 2220`() {
+    fun `WORK normal with breakfast returns 2240`() {
         val result = MealAllowanceCalculator.calculate(
             dayType = DayType.WORK,
             isArrivalDeparture = false,
             breakfastIncluded = true
         )
         assertEquals(2800, result.baseCents)
-        assertEquals(2220, result.amountCents)
+        assertEquals(2240, result.amountCents)
     }
 
     @Test
@@ -41,14 +41,14 @@ class MealAllowanceCalculatorTest {
     }
 
     @Test
-    fun `WORK arrival with breakfast returns 820`() {
+    fun `WORK arrival with breakfast returns 840`() {
         val result = MealAllowanceCalculator.calculate(
             dayType = DayType.WORK,
             isArrivalDeparture = true,
             breakfastIncluded = true
         )
         assertEquals(1400, result.baseCents)
-        assertEquals(820, result.amountCents)
+        assertEquals(840, result.amountCents)
     }
 
     @Test
@@ -81,7 +81,7 @@ class MealAllowanceCalculatorTest {
             isArrivalDeparture = true,
             breakfastIncluded = true
         )
-        assertEquals(820, result.amountCents)
+        assertEquals(840, result.amountCents)
         assert(result.amountCents >= 0)
     }
 

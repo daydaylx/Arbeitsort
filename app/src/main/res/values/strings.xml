@@ -94,7 +94,7 @@
     <string name="daily_check_in_dialog_placeholder">z.B. Baustelle XY</string>
     <string name="daily_check_in_dialog_support">Wird für heute gespeichert</string>
     <string name="meal_allowance_arrival_departure_label">Anreise/Abreise (14,00 € statt 28,00 €)</string>
-    <string name="meal_allowance_breakfast_label">Frühstück erhalten (−5,80 €)</string>
+    <string name="meal_allowance_breakfast_label">Frühstück erhalten (−5,60 €)</string>
     <string name="meal_allowance_preview_label">Verpflegungspauschale: %1$s</string>
     <string name="today_paid_hours_summary">Bezahlt: %1$s</string>
     <string name="action_retry">Erneut versuchen</string>
@@ -439,6 +439,7 @@
     <string name="edit_error_save_failed">Eintrag konnte nicht gespeichert werden</string>
     <string name="error_validation_failed">Bitte überprüfen Sie Ihre Eingaben</string>
     <string name="edit_toast_no_previous_entry">Kein Eintrag am Vortag</string>
+    <string name="edit_day_type_cleared_times">Arbeitszeiten zurückgesetzt</string>
     <string name="edit_validation_title">Eingabefehler</string>
     <string name="edit_action_ok">OK</string>
     <string name="edit_saved">Gespeichert!</string>
@@ -489,7 +490,7 @@
     <string name="meal_allowance_arrival_departure_short_label">An- oder Abreise</string>
     <string name="meal_allowance_arrival_departure_amount">14,00 €</string>
     <string name="meal_allowance_breakfast_short_label">Frühstück enthalten</string>
-    <string name="meal_allowance_breakfast_amount">−5,80 €</string>
+    <string name="meal_allowance_breakfast_amount">−5,60 €</string>
     <string name="edit_meal_total_label">Gesamtsumme</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen…</string>
