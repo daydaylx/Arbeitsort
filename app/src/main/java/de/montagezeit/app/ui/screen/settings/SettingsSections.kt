@@ -465,15 +465,7 @@ internal fun ExportSection(
         title = stringResource(R.string.settings_export),
         summary = exportSummary,
         expanded = expanded,
-        onExpandedChange = onExpandedChange,
-        action = {
-            IconButton(onClick = { showPdfSettingsDialog = true }) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.cd_pdf_settings)
-                )
-            }
-        }
+        onExpandedChange = onExpandedChange
     ) {
         if (employeeName.isBlank()) {
             MZStatusBadge(
@@ -483,6 +475,23 @@ internal fun ExportSection(
             )
         }
 
+        MZDividerWithLabel(label = stringResource(R.string.settings_export_profile_section))
+        MZKeyValueRow(
+            label = stringResource(R.string.settings_metric_profile),
+            value = if (employeeName.isBlank()) {
+                stringResource(R.string.settings_export_name_missing)
+            } else {
+                employeeName
+            }
+        )
+        SecondaryActionButton(
+            onClick = { showPdfSettingsDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.settings_export_edit_profile))
+        }
+
+        MZDividerWithLabel(label = stringResource(R.string.settings_export_actions_section))
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -629,7 +638,7 @@ private fun ExportSuccessCard(
                 fontWeight = FontWeight.SemiBold
             )
             MZStatusChip(
-                text = stringResource(R.string.today_confirmed),
+                text = stringResource(R.string.export_success_status),
                 color = MaterialTheme.colorScheme.primary
             )
         }

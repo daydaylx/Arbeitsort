@@ -3,7 +3,8 @@
 package de.montagezeit.app.ui.screen.overview
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -82,6 +82,7 @@ import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZSnackbarHost
 import de.montagezeit.app.ui.components.AnimatedCounter
 import de.montagezeit.app.ui.components.MZStatusBadge
+import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.staggeredAppear
@@ -101,7 +102,7 @@ private val overviewWeekFields = WeekFields.ISO
 fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel(),
     onOpenToday: () -> Unit,
-    onOpenHistory: () -> Unit,
+    onOpenHistory: (LocalDate, OverviewPeriod) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenEditSheet: (LocalDate) -> Unit
 ) {
@@ -120,6 +121,15 @@ fun OverviewScreen(
 
     val errorMessage = screenState.errorMessage
     val metrics = screenState.metrics
+    val openHistoryForSelection = remember(
+        screenState.selectedDate,
+        screenState.selectedPeriod,
+        onOpenHistory
+    ) {
+        {
+            onOpenHistory(screenState.selectedDate, screenState.selectedPeriod)
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -149,7 +159,10 @@ fun OverviewScreen(
                     onNextRange = viewModel::goToNextRange,
                     onSelectPeriod = viewModel::selectPeriod,
                     onOpenPeriodPicker = { showPeriodPicker = true },
-                    onActionNeededClick = onOpenHistory
+                    onActionNeededClick = openHistoryForSelection,
+                    onOpenToday = onOpenToday,
+                    onOpenHistory = openHistoryForSelection,
+                    onOpenSettings = onOpenSettings
                 )
             }
         }
@@ -175,6 +188,7 @@ fun OverviewScreen(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun OverviewContent(
     selectedDate: LocalDate,
     selectedPeriod: OverviewPeriod,
@@ -183,7 +197,10 @@ private fun OverviewContent(
     onNextRange: () -> Unit,
     onSelectPeriod: (OverviewPeriod) -> Unit,
     onOpenPeriodPicker: () -> Unit,
-    onActionNeededClick: () -> Unit
+    onActionNeededClick: () -> Unit,
+    onOpenToday: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -234,10 +251,32 @@ private fun OverviewContent(
                 type = StatusType.WARNING,
                 action = {
                     TertiaryActionButton(onClick = onActionNeededClick) {
-                        Text(stringResource(R.string.history_title))
+                        Text(stringResource(R.string.action_review_open_days))
                     }
                 }
             )
+        }
+
+        MZAppPanel {
+            MZSectionHeader(
+                title = stringResource(R.string.overview_quick_actions_title),
+                supportingText = stringResource(R.string.overview_quick_actions_support)
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SecondaryActionButton(onClick = onOpenToday) {
+                    Text(stringResource(R.string.today_title))
+                }
+                SecondaryActionButton(onClick = onOpenHistory) {
+                    Text(stringResource(R.string.history_title))
+                }
+                TertiaryActionButton(onClick = onOpenSettings) {
+                    Text(stringResource(R.string.settings_title))
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -266,24 +305,9 @@ private fun OverviewTopRangeBar(
     onNextRange: () -> Unit,
     onOpenPicker: () -> Unit
 ) {
-    var dragAccum by remember { mutableStateOf(0f) }
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selectedDate, selectedPeriod) {
-                val swipeThresholdPx = 56.dp.toPx()
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                    onDragEnd = {
-                        when {
-                            dragAccum > swipeThresholdPx -> onPreviousRange()
-                            dragAccum < -swipeThresholdPx -> onNextRange()
-                        }
-                        dragAccum = 0f
-                    },
-                    onDragCancel = { dragAccum = 0f }
-                )
-            },
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

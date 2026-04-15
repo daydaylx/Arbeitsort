@@ -18,22 +18,15 @@ fun SettingsDeveloperSection(
     onNavigateToRoute: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    CollapsibleSettingsCard(
-        title = stringResource(R.string.developer_diagnostics_title),
-        summary = stringResource(R.string.developer_diagnostics_settings_summary),
-        expanded = true,
-        onExpandedChange = {}
+    Text(
+        text = stringResource(R.string.developer_diagnostics_settings_body),
+        style = MaterialTheme.typography.bodySmall
+    )
+    SecondaryActionButton(
+        onClick = { onNavigateToRoute(DEVELOPER_DIAGNOSTICS_ROUTE) },
+        modifier = modifier.fillMaxWidth()
     ) {
-        Text(
-            text = stringResource(R.string.developer_diagnostics_settings_body),
-            style = MaterialTheme.typography.bodySmall
-        )
-        SecondaryActionButton(
-            onClick = { onNavigateToRoute(DEVELOPER_DIAGNOSTICS_ROUTE) },
-            modifier = modifier.fillMaxWidth()
-        ) {
-            Icon(imageVector = Icons.Default.BugReport, contentDescription = null)
-            Text(text = stringResource(R.string.developer_diagnostics_open))
-        }
+        Icon(imageVector = Icons.Default.BugReport, contentDescription = null)
+        Text(text = stringResource(R.string.developer_diagnostics_open))
     }
 }

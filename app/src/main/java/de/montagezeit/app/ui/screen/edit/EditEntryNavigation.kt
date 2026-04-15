@@ -2,6 +2,7 @@ package de.montagezeit.app.ui.screen.edit
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -24,9 +25,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.MZAppPanel
+import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.theme.MZTokens
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -77,38 +80,52 @@ internal fun DateNavigationRow(
 @Composable
 internal fun EditStickySaveBar(
     isSaving: Boolean,
+    enabled: Boolean,
+    blockingMessage: String?,
     onSave: () -> Unit
 ) {
     MZAppPanel(
         emphasized = true
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .imePadding()
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            PrimaryActionButton(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSaving
+            blockingMessage?.let {
+                MZStatusBadge(
+                    text = it,
+                    type = StatusType.ERROR,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .padding(end = 8.dp),
-                        strokeWidth = 2.dp
+                PrimaryActionButton(
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled && !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(end = 8.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        stringResource(R.string.action_save_entry)
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.Save,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    stringResource(R.string.action_save_entry)
-                )
             }
         }
     }

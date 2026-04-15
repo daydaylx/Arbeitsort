@@ -36,7 +36,10 @@ import de.montagezeit.app.ui.components.MZScreenScaffold
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.screen.edit.EditEntrySheet
 import de.montagezeit.app.ui.screen.edit.EditFormData
+import de.montagezeit.app.ui.screen.history.HistoryOpenRequest
 import de.montagezeit.app.ui.screen.history.HistoryScreen
+import de.montagezeit.app.ui.screen.history.createHistoryOpenRequest
+import de.montagezeit.app.ui.screen.overview.OverviewPeriod
 import de.montagezeit.app.ui.screen.overview.OverviewScreen
 import de.montagezeit.app.ui.screen.settings.SettingsScreen
 import de.montagezeit.app.ui.screen.today.TodayScreen
@@ -74,6 +77,8 @@ fun MontageZeitNavGraph(
     var editDate by rememberSaveable { mutableStateOf<String?>(null) }
     var copiedFormData by remember { mutableStateOf<EditFormData?>(null) }
     var onEditSheetDismissed by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var historyOpenRequest by remember { mutableStateOf<HistoryOpenRequest?>(null) }
+    var nextHistoryRequestId by rememberSaveable { mutableStateOf(0L) }
     val currentOnEditSheetDismissed by rememberUpdatedState(onEditSheetDismissed)
 
     fun openEditSheet(date: LocalDate, onDismissed: (() -> Unit)? = null) {
@@ -98,6 +103,18 @@ fun MontageZeitNavGraph(
             val pagerState = rememberPagerState(pageCount = { homePages.size })
             val coroutineScope = rememberCoroutineScope()
             val currentPage = homePages[pagerState.currentPage]
+
+            fun openHistory(date: LocalDate, period: OverviewPeriod) {
+                nextHistoryRequestId += 1
+                historyOpenRequest = createHistoryOpenRequest(
+                    requestId = nextHistoryRequestId,
+                    anchorDate = date,
+                    overviewPeriod = period
+                )
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(2)
+                }
+            }
 
             MZHomeShellScaffold(
                 title = stringResource(currentPage.titleRes),
@@ -124,7 +141,8 @@ fun MontageZeitNavGraph(
                     modifier = Modifier
                         .fillMaxSize(),
                     beyondViewportPageCount = 1,
-                    contentPadding = paddingValues
+                    contentPadding = paddingValues,
+                    userScrollEnabled = false
                 ) { page ->
                     when (page) {
                         0 -> TodayScreen(
@@ -138,15 +156,17 @@ fun MontageZeitNavGraph(
                             onOpenToday = {
                                 coroutineScope.launch { pagerState.animateScrollToPage(0) }
                             },
-                            onOpenHistory = {
-                                coroutineScope.launch { pagerState.animateScrollToPage(2) }
+                            onOpenHistory = { date, period ->
+                                openHistory(date, period)
                             },
                             onOpenSettings = { navController.navigate("settings") },
                             onOpenEditSheet = { date -> openEditSheet(date) }
                         )
 
                         else -> HistoryScreen(
-                            onOpenEditSheet = { date -> openEditSheet(date) }
+                            onOpenEditSheet = { date -> openEditSheet(date) },
+                            openRequest = historyOpenRequest,
+                            onOpenRequestConsumed = { historyOpenRequest = null }
                         )
                     }
                 }

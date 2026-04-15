@@ -12,6 +12,10 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +45,7 @@ import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.Duration
+import kotlinx.coroutines.launch
 
 /**
  * Verbesserter SettingsScreen mit besserer Accessibility und neuen Komponenten
@@ -175,6 +180,7 @@ fun SettingsScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsContent(
     settings: de.montagezeit.app.data.preferences.ReminderSettings,
@@ -218,6 +224,11 @@ private fun SettingsContent(
     var remindersExpanded by rememberSaveable { mutableStateOf(true) }
     var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
     var exportExpanded by rememberSaveable { mutableStateOf(false) }
+    var advancedExpanded by rememberSaveable { mutableStateOf(false) }
+    val generalSectionRequester = remember { BringIntoViewRequester() }
+    val automationSectionRequester = remember { BringIntoViewRequester() }
+    val dataSectionRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     val enabledReminderCount = listOf(
         settings.morningReminderEnabled,
         settings.eveningReminderEnabled,
@@ -273,7 +284,47 @@ private fun SettingsContent(
             }
         }
 
-        MZSectionHeader(title = stringResource(R.string.settings_group_general))
+        MZAppPanel {
+            MZSectionHeader(
+                title = stringResource(R.string.settings_quick_links_title),
+                supportingText = stringResource(R.string.settings_quick_links_support)
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SecondaryActionButton(
+                    onClick = {
+                        workTimesExpanded = true
+                        scope.launch { generalSectionRequester.bringIntoView() }
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_group_general))
+                }
+                SecondaryActionButton(
+                    onClick = {
+                        remindersExpanded = true
+                        scope.launch { automationSectionRequester.bringIntoView() }
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_group_automation))
+                }
+                TertiaryActionButton(
+                    onClick = {
+                        exportExpanded = true
+                        scope.launch { dataSectionRequester.bringIntoView() }
+                    }
+                ) {
+                    Text(stringResource(R.string.settings_group_data))
+                }
+            }
+        }
+
+        MZSectionHeader(
+            title = stringResource(R.string.settings_group_general),
+            modifier = Modifier.bringIntoViewRequester(generalSectionRequester)
+        )
 
         SetupSection(
             hasNotificationPermission = hasNotificationPermission,
@@ -305,7 +356,10 @@ private fun SettingsContent(
             onUpdateDailyTarget = onUpdateDailyTargetHours
         )
 
-        MZSectionHeader(title = stringResource(R.string.settings_group_automation))
+        MZSectionHeader(
+            title = stringResource(R.string.settings_group_automation),
+            modifier = Modifier.bringIntoViewRequester(automationSectionRequester)
+        )
 
         ReminderSettingsSection(
             morningReminderEnabled = settings.morningReminderEnabled,
@@ -343,7 +397,10 @@ private fun SettingsContent(
             onExpandedChange = { nonWorkingExpanded = it }
         )
 
-        MZSectionHeader(title = stringResource(R.string.settings_group_data))
+        MZSectionHeader(
+            title = stringResource(R.string.settings_group_data),
+            modifier = Modifier.bringIntoViewRequester(dataSectionRequester)
+        )
 
         ExportSection(
             uiState = uiState,
@@ -364,10 +421,17 @@ private fun SettingsContent(
             onExpandedChange = { exportExpanded = it }
         )
 
-        SettingsDeveloperSection(
-            onNavigateToRoute = onNavigateToRoute,
-            modifier = Modifier.fillMaxWidth()
-        )
+        CollapsibleSettingsCard(
+            title = stringResource(R.string.settings_section_advanced),
+            summary = stringResource(R.string.settings_section_advanced_summary),
+            expanded = advancedExpanded,
+            onExpandedChange = { advancedExpanded = it }
+        ) {
+            SettingsDeveloperSection(
+                onNavigateToRoute = onNavigateToRoute,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
     }

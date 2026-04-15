@@ -3,7 +3,6 @@
 package de.montagezeit.app.ui.screen.edit
 
 import android.content.Context
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,10 +51,12 @@ import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZHeroPanel
 import de.montagezeit.app.ui.components.MZMetricChip
 import de.montagezeit.app.ui.components.MZSectionIntro
+import de.montagezeit.app.ui.components.MZSnackbarHost
 import de.montagezeit.app.ui.components.MZStatusChip
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +71,7 @@ fun EditEntrySheet(
     val screenState by viewModel.screenState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     var activeDialog by remember { mutableStateOf<EditSheetDialog>(EditSheetDialog.None) }
 
     // Stabilized dismiss callback to prevent LaunchedEffect re-triggering
@@ -91,7 +95,7 @@ fun EditEntrySheet(
 
     LaunchedEffect(viewModel) {
         viewModel.snackbarMessage.collect { message ->
-            Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
+            snackbarHostState.showSnackbar(message.asString(context))
         }
     }
 
@@ -132,7 +136,8 @@ fun EditEntrySheet(
             onOpenCopyDatePicker = { activeDialog = EditSheetDialog.CopyDatePicker },
             onOpenDeleteDialog = { activeDialog = EditSheetDialog.DeleteDayConfirm },
             viewModel = viewModel,
-            context = context
+            context = context,
+            snackbarHostState = snackbarHostState
         )
     }
 
@@ -141,7 +146,6 @@ fun EditEntrySheet(
         date = date,
         isSaving = screenState.isSaving,
         viewModel = viewModel,
-        context = context,
         onDismiss = onDismiss,
         onCopyToNewDate = onCopyToNewDate,
         onNavigateDate = onNavigateDate,
@@ -160,17 +164,29 @@ private fun EditEntrySheetScaffold(
     onOpenCopyDatePicker: () -> Unit,
     onOpenDeleteDialog: () -> Unit,
     viewModel: EditEntryViewModel,
-    context: Context
+    context: Context,
+    snackbarHostState: SnackbarHostState
 ) {
     val uiState = screenState.uiState
     val isNewEntry = uiState is EditUiState.NewEntry
+    val liveValidationErrors = remember(screenState.formData, uiState) {
+        if (uiState is EditUiState.NewEntry || uiState is EditUiState.Success) {
+            screenState.formData.validate()
+        } else {
+            emptyList()
+        }
+    }
+    val saveBlockerMessage = liveValidationErrors.firstOrNull()?.let { stringResource(it.messageRes) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { MZSnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             if (uiState is EditUiState.NewEntry || uiState is EditUiState.Success) {
                 EditStickySaveBar(
                     isSaving = screenState.isSaving,
+                    enabled = liveValidationErrors.isEmpty(),
+                    blockingMessage = saveBlockerMessage,
                     onSave = viewModel::save
                 )
             }
@@ -210,6 +226,7 @@ private fun EditEntrySheetScaffold(
                 screenState = screenState,
                 viewModel = viewModel,
                 context = context,
+                snackbarHostState = snackbarHostState,
                 onDismiss = onDismiss
             )
         }
@@ -245,7 +262,7 @@ private fun EditSheetHero(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_edit_sheet_more_actions),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -322,6 +339,7 @@ private fun ColumnScope.EditEntryStateContent(
     screenState: EditScreenState,
     viewModel: EditEntryViewModel,
     context: Context,
+    snackbarHostState: SnackbarHostState,
     onDismiss: () -> Unit
 ) {
     when (val state = screenState.uiState) {
@@ -348,6 +366,7 @@ private fun ColumnScope.EditEntryStateContent(
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
+                snackbarHostState = snackbarHostState,
                 isSaving = screenState.isSaving
             )
         }
@@ -367,6 +386,7 @@ private fun ColumnScope.EditEntryStateContent(
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
                 context = context,
+                snackbarHostState = snackbarHostState,
                 isSaving = screenState.isSaving
             )
         }
@@ -385,8 +405,11 @@ private fun EditEntryFormStateContent(
     mealAllowancePreviewCents: Int,
     viewModel: EditEntryViewModel,
     context: Context,
+    snackbarHostState: SnackbarHostState,
     isSaving: Boolean
 ) {
+    val scope = rememberCoroutineScope()
+
     EditValidationCard(
         validationErrors = validationErrors,
         onDismiss = { viewModel.clearValidationErrors() }
@@ -417,7 +440,11 @@ private fun EditEntryFormStateContent(
         onCopyPrevious = {
             viewModel.copyFromPreviousDay { success ->
                 if (!success) {
-                    showMissingPreviousEntryToast(context)
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(R.string.edit_toast_no_previous_entry)
+                        )
+                    }
                 }
             }
         },
@@ -432,7 +459,6 @@ private fun EditEntryDialogsHost(
     date: LocalDate,
     isSaving: Boolean,
     viewModel: EditEntryViewModel,
-    context: Context,
     onDismiss: () -> Unit,
     onCopyToNewDate: ((LocalDate, EditFormData) -> Unit)?,
     onNavigateDate: ((LocalDate) -> Unit)?,
@@ -445,15 +471,7 @@ private fun EditEntryDialogsHost(
             onDismiss = { onDialogChange(EditSheetDialog.None) },
             onConfirm = {
                 onDialogChange(EditSheetDialog.None)
-                viewModel.deleteCurrentEntry { deleted ->
-                    if (deleted) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.today_delete_success),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
+                viewModel.deleteCurrentEntry { }
             }
         )
     }
@@ -508,12 +526,4 @@ private fun RowSavingState() {
             Text(text = stringResource(R.string.edit_saved))
         }
     }
-}
-
-private fun showMissingPreviousEntryToast(context: Context) {
-    Toast.makeText(
-        context,
-        context.getString(R.string.edit_toast_no_previous_entry),
-        Toast.LENGTH_SHORT
-    ).show()
 }

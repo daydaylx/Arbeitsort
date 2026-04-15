@@ -7,12 +7,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -80,7 +78,9 @@ private val calendarModeSaver = Saver<CalendarMode, String>(
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel(),
-    onOpenEditSheet: (java.time.LocalDate) -> Unit
+    onOpenEditSheet: (java.time.LocalDate) -> Unit,
+    openRequest: HistoryOpenRequest? = null,
+    onOpenRequestConsumed: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val batchEditState by viewModel.batchEditState.collectAsStateWithLifecycle()
@@ -123,6 +123,8 @@ fun HistoryScreen(
                     travelLegsByDate = successState.travelLegsByDate,
                     onEntryClick = onOpenEditSheet,
                     onOpenBatchEdit = { showBatchEditDialog = true },
+                    openRequest = openRequest,
+                    onOpenRequestConsumed = onOpenRequestConsumed,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -164,6 +166,8 @@ fun HistoryContent(
     travelLegsByDate: Map<LocalDate, List<TravelLeg>>,
     onEntryClick: (java.time.LocalDate) -> Unit,
     onOpenBatchEdit: () -> Unit = {},
+    openRequest: HistoryOpenRequest? = null,
+    onOpenRequestConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
@@ -172,6 +176,8 @@ fun HistoryContent(
     var calendarMode by rememberSaveable(stateSaver = calendarModeSaver) { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by rememberSaveable(stateSaver = yearMonthSaver) { mutableStateOf(YearMonth.now()) }
     var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
+    var pendingScrollRequest by remember { mutableStateOf<HistoryOpenRequest?>(null) }
+    val listState = rememberLazyListState()
     val entries = remember(entriesByDate) { entriesByDate.values.sortedByDescending(WorkEntry::date) }
     val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
     val unconfirmedCount = remember(entries) {
@@ -184,7 +190,35 @@ fun HistoryContent(
         onEntryClick(date)
     }
 
+    LaunchedEffect(openRequest?.requestId) {
+        val request = openRequest ?: return@LaunchedEffect
+        val selectionSeed = historySelectionSeedForRequest(request)
+        showCalendar = selectionSeed.showCalendar
+        showMonths = selectionSeed.showMonths
+        calendarMode = selectionSeed.calendarMode
+        selectedDate = selectionSeed.selectedDate
+        selectedMonth = selectionSeed.selectedMonth
+        pendingScrollRequest = request
+    }
+
+    LaunchedEffect(pendingScrollRequest?.requestId, showCalendar, showMonths, weeks, months) {
+        val request = pendingScrollRequest ?: return@LaunchedEffect
+        if (showCalendar) return@LaunchedEffect
+
+        historyGroupedScrollTargetIndex(
+            request = request,
+            weeks = weeks,
+            months = months
+        )?.let { targetIndex ->
+            listState.scrollToItem(targetIndex)
+        }
+
+        pendingScrollRequest = null
+        onOpenRequestConsumed()
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = MZTokens.ScreenPadding, vertical = 8.dp),
@@ -366,64 +400,71 @@ private fun HistoryMiniFilterBar(
     onOpenBatchEdit: () -> Unit = {}
 ) {
     MZAppPanel {
-        Row(
-            modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(modifier = Modifier.width(190.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 MZSegmentedControl(
                     options = listOf(
                         MZSegmentedOption(false, stringResource(R.string.history_summary_list)),
                         MZSegmentedOption(true, stringResource(R.string.history_summary_calendar))
                     ),
                     selectedValue = showCalendar,
-                    onValueSelected = onShowCalendarChange
+                    onValueSelected = onShowCalendarChange,
+                    modifier = Modifier.weight(1f)
                 )
+                SecondaryActionButton(onClick = onPickDate) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(stringResource(R.string.history_action_pick_date))
+                }
             }
 
-            if (showCalendar) {
-                Box(modifier = Modifier.width(190.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (showCalendar) {
                     MZSegmentedControl(
                         options = listOf(
                             MZSegmentedOption(CalendarMode.WEEK, stringResource(R.string.history_summary_week)),
                             MZSegmentedOption(CalendarMode.MONTH, stringResource(R.string.history_summary_month))
                         ),
                         selectedValue = calendarMode,
-                        onValueSelected = onCalendarModeChange
+                        onValueSelected = onCalendarModeChange,
+                        modifier = Modifier.weight(1f)
                     )
-                }
-            } else if (canToggleMonths) {
-                Box(modifier = Modifier.width(210.dp)) {
+                } else if (canToggleMonths) {
                     MZSegmentedControl(
                         options = listOf(
                             MZSegmentedOption(false, stringResource(R.string.history_summary_weeks)),
                             MZSegmentedOption(true, stringResource(R.string.history_summary_months))
                         ),
                         selectedValue = showMonths,
-                        onValueSelected = onShowMonthsChange
+                        onValueSelected = onShowMonthsChange,
+                        modifier = Modifier.weight(1f)
                     )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
-            }
 
-            SecondaryActionButton(onClick = onPickDate) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
-                )
-                Text(stringResource(R.string.history_action_pick_date))
-            }
-
-            TertiaryActionButton(onClick = onOpenBatchEdit) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp)
-                )
-                Text(stringResource(R.string.cd_batch_edit))
+                TertiaryActionButton(onClick = onOpenBatchEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(stringResource(R.string.cd_batch_edit))
+                }
             }
         }
     }
@@ -1052,7 +1093,6 @@ fun HistoryEntryItem(
     val locationLabel = entry.dayLocationLabel.ifBlank {
         stringResource(R.string.today_day_location_unset)
     }
-    var dragAccum by remember(entry.date) { mutableStateOf(0f) }
     
     val statusChipInfo: Pair<String, Color>? = when {
         !entry.confirmedWorkDay && entry.dayType == DayType.WORK -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
@@ -1077,19 +1117,6 @@ fun HistoryEntryItem(
     MZAppPanel(
         modifier = Modifier
             .clickable { onEntryClick(entry.date) }
-            .pointerInput(entry.date) {
-                val swipeThresholdPx = 52.dp.toPx()
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount -> dragAccum += dragAmount },
-                    onDragEnd = {
-                        if (kotlin.math.abs(dragAccum) > swipeThresholdPx) {
-                            onEntryClick(entry.date)
-                        }
-                        dragAccum = 0f
-                    },
-                    onDragCancel = { dragAccum = 0f }
-                )
-            }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

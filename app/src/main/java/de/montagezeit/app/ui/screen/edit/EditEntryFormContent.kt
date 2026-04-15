@@ -106,7 +106,12 @@ internal fun EditFormContent(
     val locationHasErrors = validationErrors.any { it is ValidationError.MissingDayLocation }
 
     var travelExpanded by rememberSaveable { mutableStateOf(formData.travelLegs.isNotEmpty()) }
-    var locationExpanded by rememberSaveable { mutableStateOf(!formData.dayLocationLabel.isNullOrBlank()) }
+    var locationExpanded by rememberSaveable {
+        mutableStateOf(
+            formData.dayType == DayType.WORK &&
+                formData.dayLocationLabel.isNullOrBlank()
+        )
+    }
     var mealExpanded by rememberSaveable {
         mutableStateOf(formData.mealIsArrivalDeparture || formData.mealBreakfastIncluded)
     }
@@ -222,7 +227,11 @@ internal fun EditFormContent(
             }
         }
 
-        val noteSummary = if (!formData.note.isNullOrBlank()) "Notiz vorhanden" else null
+        val noteSummary = if (!formData.note.isNullOrBlank()) {
+            stringResource(R.string.edit_note_present_summary)
+        } else {
+            null
+        }
         CollapsibleSectionHeader(
             title = stringResource(R.string.edit_section_note_optional),
             expanded = noteExpanded,

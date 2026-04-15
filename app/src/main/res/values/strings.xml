@@ -64,11 +64,11 @@
     <string name="cd_edit_today">Heutigen Eintrag bearbeiten</string>
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
-    <string name="today_confirmed">Heute bestätigt</string>
-    <string name="today_unconfirmed">Unbestätigt</string>
+    <string name="today_confirmed">Erfasst</string>
+    <string name="today_unconfirmed">Offen</string>
     <string name="today_no_check_in">Noch kein Check-in</string>
     <string name="today_dashboard_subtitle_done">Alles für heute ist erfasst.</string>
-    <string name="today_dashboard_subtitle_open">Eintrag vorhanden, aber noch nicht vollständig bestätigt.</string>
+    <string name="today_dashboard_subtitle_open">Eintrag vorhanden, aber noch nicht vollständig erfasst.</string>
     <string name="today_dashboard_subtitle_empty">Starte mit dem nächsten sinnvollen Schritt für diesen Tag.</string>
     <string name="today_dashboard_empty_hint">Noch kein Eintrag für diesen Tag.</string>
     <string name="today_empty_notice_title">Tag noch offen</string>
@@ -78,7 +78,7 @@
     <string name="today_detail_type_label">Tagesart</string>
     <string name="today_work_panel_support">Arbeits- und Reisezeit im selben System</string>
     <string name="today_error_unknown">Daten konnten nicht geladen werden</string>
-    <string name="today_error_confirm_day_failed">Konnte Tag nicht bestätigen</string>
+    <string name="today_error_confirm_day_failed">Konnte Tag nicht erfassen</string>
     <string name="today_error_day_location_save_failed">Ort konnte nicht gespeichert werden</string>
     <string name="today_error_delete_failed">Löschen fehlgeschlagen</string>
     <string name="today_delete_success">Eintrag gelöscht</string>
@@ -111,6 +111,7 @@
     <string name="day_location_dialog_label">Arbeitsort</string>
     <string name="day_location_dialog_placeholder">z.B. Baustelle Nord</string>
     <string name="day_location_dialog_support">Wird für diesen Tag gespeichert</string>
+    <string name="cd_today_more_actions">Weitere Aktionen für diesen Tag</string>
     <string name="travel_label_from_to">Von %1$s nach %2$s</string>
     <string name="travel_label_from">Von %1$s</string>
     <string name="travel_label_to">Nach %1$s</string>
@@ -136,7 +137,10 @@
     <string name="overview_balance_even">Im Soll</string>
     <string name="overview_section_metrics_title">Kennzahlen</string>
     <string name="overview_section_metrics_support">Fahrzeit, Verpflegung und offene Tage im gleichen Panel-System</string>
-    <string name="overview_action_required_title">Prüfung offen</string>
+    <string name="overview_action_required_title">Erfassung offen</string>
+    <string name="overview_quick_actions_title">Schnellzugriff</string>
+    <string name="overview_quick_actions_support">Springe direkt in den nächsten sinnvollen Bereich.</string>
+    <string name="action_review_open_days">Offene Tage prüfen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
     
@@ -155,12 +159,20 @@
     <string name="settings_metric_schedule">Tag</string>
     <string name="settings_metric_profile">Profil</string>
     <string name="settings_setup_title">Einrichtung</string>
+    <string name="settings_quick_links_title">Schnellzugriff</string>
+    <string name="settings_quick_links_support">Springe direkt zu häufig genutzten Aufgabenbereichen.</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_battery_optimization">Akku-Optimierung</string>
     <string name="settings_work_times">Arbeitszeiten</string>
     <string name="settings_reminders">Erinnerungen</string>
     <string name="settings_non_working_days">Freie Tage</string>
     <string name="settings_export">Export</string>
+    <string name="settings_export_profile_section">Exportprofil</string>
+    <string name="settings_export_actions_section">Exportaktionen</string>
+    <string name="settings_export_edit_profile">Exportprofil bearbeiten</string>
+    <string name="settings_section_advanced">Erweitert</string>
+    <string name="settings_section_advanced_summary">Diagnose und Entwicklerfunktionen</string>
+    <string name="settings_section_advanced_release_hint">In dieser Build-Variante sind keine erweiterten Diagnosefunktionen verfügbar.</string>
     <string name="cd_expand_section">%s ausklappen</string>
     <string name="cd_collapse_section">%s einklappen</string>
     <string name="settings_section_content_desc">%1$s. %2$s</string>
@@ -218,6 +230,7 @@
     <string name="action_preview">Vorschau</string>
     <string name="edit_sheet_title_new">Neuen Tag anlegen</string>
     <string name="edit_sheet_title_existing">Tag bearbeiten</string>
+    <string name="cd_edit_sheet_more_actions">Weitere Aktionen für diesen Eintrag</string>
     <string name="edit_sheet_support">Formular, Validierung und Aktionen folgen derselben Panel-Grammatik wie die Hauptscreens.</string>
     <string name="edit_sheet_metric_state">Status</string>
     <string name="edit_sheet_metric_mode">Modus</string>
@@ -493,6 +506,7 @@
     <string name="meal_allowance_breakfast_amount">−5,60 €</string>
     <string name="edit_meal_total_label">Gesamtsumme</string>
     <string name="edit_section_note_optional">Notiz (Optional)</string>
+    <string name="edit_note_present_summary">Notiz vorhanden</string>
     <string name="edit_placeholder_note">Zusätzliche Informationen…</string>
     <string name="edit_validation_missing_day_location">Arbeitsort ist erforderlich</string>
     <string name="edit_validation_work_end_before_start">Arbeitsende muss nach Arbeitsbeginn liegen</string>
@@ -523,12 +537,13 @@
     <!-- Overview Redesign -->
     <string name="overview_kpi_action_needed">Aktion nötig</string>
     <plurals name="overview_kpi_unconfirmed_count">
-        <item quantity="one">%1$d unbestätigt</item>
-        <item quantity="other">%1$d unbestätigt</item>
+        <item quantity="one">%1$d offen</item>
+        <item quantity="other">%1$d offen</item>
     </plurals>
     <string name="overview_kpi_none_unconfirmed">Alles erledigt</string>
     <string name="overview_range_selector_hint">Zeitraum wählen</string>
     <string name="today_action_required">Aktion erforderlich</string>
+    <string name="export_success_status">Erfolgreich</string>
     <string name="overview_actual_label">IST</string>
     <string name="overview_target_label">SOLL</string>
     <string name="overview_difference_label">Differenz</string>
