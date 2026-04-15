@@ -58,3 +58,6 @@ lefthook-local.yml
 *.db
 *.sqlite
 app/exports/
+
+Arbeitsort-debug-artifacts/
+Arbeitsort-origin-main-c399444-20260414-231652/
