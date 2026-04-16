@@ -169,13 +169,7 @@ private fun EditEntrySheetScaffold(
 ) {
     val uiState = screenState.uiState
     val isNewEntry = uiState is EditUiState.NewEntry
-    val liveValidationErrors = remember(screenState.formData, uiState) {
-        if (uiState is EditUiState.NewEntry || uiState is EditUiState.Success) {
-            screenState.formData.validate()
-        } else {
-            emptyList()
-        }
-    }
+    val liveValidationErrors by viewModel.validationErrors.collectAsStateWithLifecycle()
     val saveBlockerMessage = liveValidationErrors.firstOrNull()?.let { stringResource(it.messageRes) }
 
     Scaffold(

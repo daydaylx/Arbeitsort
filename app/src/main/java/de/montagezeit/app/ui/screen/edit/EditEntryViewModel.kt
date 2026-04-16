@@ -23,14 +23,23 @@ import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,6 +68,25 @@ class EditEntryViewModel @Inject constructor(
     val snackbarMessage: SharedFlow<UiText> = _snackbarMessage.asSharedFlow()
 
     private var loadEntryJob: Job? = null
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val validationErrors: StateFlow<List<ValidationError>> = _screenState
+        .map { state -> ValidationInput(state.formData, state.uiState) }
+        .distinctUntilChanged()
+        .debounce(VALIDATION_DEBOUNCE_MS)
+        .mapLatest { input ->
+            if (input.uiState is EditUiState.NewEntry || input.uiState is EditUiState.Success) {
+                draftRules.validate(input.formData)
+            } else {
+                emptyList()
+            }
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(VALIDATION_SUBSCRIPTION_TIMEOUT_MS),
+            initialValue = emptyList()
+        )
 
     init {
         loadEntry(currentDate)
@@ -472,6 +500,16 @@ class EditEntryViewModel @Inject constructor(
             state.withFormData(update(state.formData), draftRules)
         }
     }
+
+    private data class ValidationInput(
+        val formData: EditFormData,
+        val uiState: EditUiState
+    )
+
+    companion object {
+        private const val VALIDATION_DEBOUNCE_MS = 80L
+        private const val VALIDATION_SUBSCRIPTION_TIMEOUT_MS = 5_000L
+    }
 }
 
 data class EditScreenState(
@@ -640,10 +678,46 @@ private fun EditScreenState.withFormData(
     formData: EditFormData,
     draftRules: EditEntryDraftRules
 ): EditScreenState {
+    val mealAllowance = if (affectsMealAllowance(this.formData, formData)) {
+        draftRules.mealAllowancePreviewCents(formData)
+    } else {
+        mealAllowancePreviewCents
+    }
     return copy(
         formData = formData,
-        mealAllowancePreviewCents = draftRules.mealAllowancePreviewCents(formData)
+        mealAllowancePreviewCents = mealAllowance
     )
+}
+
+private fun affectsMealAllowance(old: EditFormData, new: EditFormData): Boolean {
+    return old.dayType != new.dayType ||
+        old.hasWorkTimes != new.hasWorkTimes ||
+        old.workStart != new.workStart ||
+        old.workEnd != new.workEnd ||
+        old.breakMinutes != new.breakMinutes ||
+        old.mealIsArrivalDeparture != new.mealIsArrivalDeparture ||
+        old.mealBreakfastIncluded != new.mealBreakfastIncluded ||
+        !travelLegsEquivalentForMeal(old.travelLegs, new.travelLegs) ||
+        old.travelStartTime != new.travelStartTime ||
+        old.travelArriveTime != new.travelArriveTime
+}
+
+private fun travelLegsEquivalentForMeal(
+    old: List<EditTravelLegForm>,
+    new: List<EditTravelLegForm>
+): Boolean {
+    if (old.size != new.size) return false
+    for (index in old.indices) {
+        val a = old[index]
+        val b = new[index]
+        if (a.startTime != b.startTime ||
+            a.arriveTime != b.arriveTime ||
+            a.paidMinutesOverride != b.paidMinutesOverride
+        ) {
+            return false
+        }
+    }
+    return true
 }
 
 internal fun EditFormData.toSanitizedDiagnosticPayload(
