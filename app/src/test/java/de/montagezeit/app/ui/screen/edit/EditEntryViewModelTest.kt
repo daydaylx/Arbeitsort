@@ -17,6 +17,7 @@ import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -131,6 +132,86 @@ class EditEntryViewModelTest {
             savedLeg.arriveAt
         )
         coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(any(), any()) }
+    }
+
+    @Test
+    fun `validationErrors emits MissingDayLocation after debounce for WORK entry without location`() = runTest {
+        val date = LocalDate.of(2026, 4, 3)
+        val settings = ReminderSettings(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+
+        val collector = launch { viewModel.validationErrors.collect {} }
+        advanceUntilIdle()
+
+        viewModel.setFormData(
+            viewModel.copyEntryData().copy(dayLocationLabel = null)
+        )
+        advanceUntilIdle()
+
+        assertTrue(
+            viewModel.validationErrors.value.any { it is ValidationError.MissingDayLocation }
+        )
+        collector.cancel()
+    }
+
+    @Test
+    fun `mealAllowancePreviewCents stays stable when only leg labels change`() = runTest {
+        val date = LocalDate.of(2026, 4, 4)
+        val settings = ReminderSettings(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60
+        )
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+
+        advanceUntilIdle()
+
+        viewModel.setFormData(
+            viewModel.copyEntryData().copy(
+                dayLocationLabel = "Baustelle",
+                travelLegs = listOf(
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(6, 0),
+                        arriveTime = LocalTime.of(7, 30)
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+        val baselineMealCents = viewModel.screenState.value.mealAllowancePreviewCents
+
+        viewModel.updateTravelLegStartLabel(0, "Depot")
+        viewModel.updateTravelLegEndLabel(0, "Kunde")
+        viewModel.updateNote("Nachtrag")
+        advanceUntilIdle()
+
+        assertEquals(baselineMealCents, viewModel.screenState.value.mealAllowancePreviewCents)
     }
 
     @Test

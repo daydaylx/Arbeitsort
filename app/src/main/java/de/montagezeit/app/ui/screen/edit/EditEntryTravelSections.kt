@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -121,16 +122,18 @@ internal fun TravelLegsSection(
             }
         } else {
             travelLegs.forEachIndexed { index, leg ->
-                TravelLegCard(
-                    index = index,
-                    leg = leg,
-                    validationErrors = validationErrors,
-                    onStartChange = { onTravelLegStartChange(index, it) },
-                    onArriveChange = { onTravelLegArriveChange(index, it) },
-                    onStartLabelChange = { onTravelLegStartLabelChange(index, it) },
-                    onEndLabelChange = { onTravelLegEndLabelChange(index, it) },
-                    onRemove = { onRemoveTravelLeg(index) }
-                )
+                key(index) {
+                    TravelLegCard(
+                        index = index,
+                        leg = leg,
+                        validationErrors = validationErrors,
+                        onStartChange = { onTravelLegStartChange(index, it) },
+                        onArriveChange = { onTravelLegArriveChange(index, it) },
+                        onStartLabelChange = { onTravelLegStartLabelChange(index, it) },
+                        onEndLabelChange = { onTravelLegEndLabelChange(index, it) },
+                        onRemove = { onRemoveTravelLeg(index) }
+                    )
+                }
             }
 
             SecondaryActionButton(
@@ -161,9 +164,7 @@ private fun TravelLegCard(
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showArrivePicker by remember { mutableStateOf(false) }
-    val legErrors = remember(validationErrors, index) {
-        validationErrors.filter { error -> error.matchesTravelLeg(index) }
-    }
+    val legErrors = validationErrors.filter { error -> error.matchesTravelLeg(index) }
     val hasTravelError = legErrors.isNotEmpty()
     val duration = remember(leg.startTime, leg.arriveTime) {
         DateTimeUtils.calculateTravelDuration(leg.startTime, leg.arriveTime)
