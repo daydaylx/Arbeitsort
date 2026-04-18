@@ -57,6 +57,25 @@ class CalculateOvertimeForRangeTest {
     }
 
     @Test
+    fun `WORK Tag ohne Daten wird ignoriert`() {
+        val result = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 4),
+                    dayType = DayType.WORK,
+                    confirmedWorkDay = false
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(0.0, result.totalActualHours, 0.0001)
+        assertEquals(0.0, result.totalTargetHours, 0.0001)
+        assertEquals(0, result.countedDays)
+    }
+
+    @Test
     fun `Arbeit und Fahrzeit kombiniert`() {
         // (12h IST, 8h SOLL, Saldo +4)
         val result = useCase(
@@ -127,8 +146,7 @@ class CalculateOvertimeForRangeTest {
     }
     
     @Test
-    fun `leerer Arbeitstag wird nur gezaehlt wenn explizit bestaetigt`() {
-        // Unbestätigt -> Ignoriert
+    fun `leerer Arbeitstag wird nie gezaehlt`() {
         val result1 = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -140,8 +158,7 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
         assertEquals(0, result1.countedDays)
-        
-        // Bestätigt -> 0h IST, 8h SOLL, Saldo -8
+
         val result2 = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -152,8 +169,8 @@ class CalculateOvertimeForRangeTest {
             ),
             dailyTargetHours = 8.0
         )
-        assertEquals(1, result2.countedDays)
-        assertEquals(-8.0, result2.totalOvertimeHours, 0.0001)
+        assertEquals(0, result2.countedDays)
+        assertEquals(0.0, result2.totalOvertimeHours, 0.0001)
     }
 
     private fun overtimeEntry(

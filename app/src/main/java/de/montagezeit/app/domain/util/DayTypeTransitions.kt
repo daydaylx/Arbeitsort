@@ -54,7 +54,7 @@ fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeC
             }
         }
         DayType.WORK -> {
-            if (this.dayType == DayType.COMP_TIME) {
+            if (this.dayType != DayType.WORK) {
                 DayTypeConfirmationState(
                     confirmedWorkDay = false,
                     confirmationAt = null,

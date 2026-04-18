@@ -52,6 +52,10 @@ Strategie:
     - `dayLocationLabel` aus manueller Eingabe (mit Prefill/Fallback über `ResolveDayLocationPrefill`)
     - `confirmedWorkDay = true` + `confirmation*`
     - bestehende Arbeitszeiten bleiben bei vorhandenem Eintrag erhalten; sonst gelten Settings-Defaults
+- Der Edit-Save-Pfad verwendet dieselbe Abschlusssemantik:
+    - `WORK` wird nur dann bestätigt, wenn positive Arbeits- oder Reisezeit vorliegt
+    - `OFF` und `COMP_TIME` bleiben terminale Zustände
+    - leere oder Zero-Net-`WORK`-Tage bleiben offen und sind für Reminder, Statistik und Export nicht eligible
 - Optionale Nebenaktion: `ConfirmOffDay`
 - Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
 

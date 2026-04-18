@@ -27,6 +27,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExportPreviewViewModelTest {
@@ -42,6 +43,17 @@ class ExportPreviewViewModelTest {
 
     private val startDate = LocalDate.of(2024, 6, 1)
     private val endDate = LocalDate.of(2024, 6, 30)
+
+    private fun eligibleWorkEntry(date: LocalDate = startDate): WorkEntry {
+        return WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            confirmedWorkDay = true
+        )
+    }
 
     @Before
     fun setup() {
@@ -76,7 +88,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `refresh transitions to List state when entries exist`() = runTest {
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
+        val entry = eligibleWorkEntry()
         coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
@@ -153,7 +165,7 @@ class ExportPreviewViewModelTest {
             reminderSettingsManager,
             pdfExporter
         )
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
+        val entry = eligibleWorkEntry()
         coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )
@@ -182,7 +194,7 @@ class ExportPreviewViewModelTest {
 
     @Test
     fun `returnToPreview restores cached List state without re-querying DAO`() = runTest {
-        val entry = WorkEntry(date = startDate, dayType = DayType.WORK, confirmedWorkDay = true)
+        val entry = eligibleWorkEntry()
         coEvery { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) } returns listOf(
             WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
         )

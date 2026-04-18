@@ -87,7 +87,7 @@ class ExportPreviewViewModelTest {
     }
 
     @Test
-    fun `calculatePreviewSummary ignores unconfirmed entries`() {
+    fun `calculatePreviewSummary excludes unconfirmed work entries despite work block`() {
         val entries = listOf(
             record(
                 WorkEntry(
@@ -112,6 +112,43 @@ class ExportPreviewViewModelTest {
                     confirmedWorkDay = false
                 ),
                 travelMinutes = 30
+            )
+        )
+
+        val summary = calculatePreviewSummary(entries)
+
+        assertEquals(540, summary.workMinutes)
+        assertEquals(60, summary.travelMinutes)
+        assertEquals(600, summary.paidMinutes)
+        assertEquals(820, summary.mealAllowanceCents)
+    }
+
+    @Test
+    fun `calculatePreviewSummary excludes WORK entries without data`() {
+        val entries = listOf(
+            record(
+                WorkEntry(
+                    date = LocalDate.of(2026, 1, 10),
+                    dayType = DayType.WORK,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(18, 0),
+                    breakMinutes = 60,
+                    mealAllowanceAmountCents = 820,
+                    confirmedWorkDay = true
+                ),
+                travelMinutes = 60
+            ),
+            record(
+                WorkEntry(
+                    date = LocalDate.of(2026, 1, 11),
+                    dayType = DayType.WORK,
+                    workStart = null,
+                    workEnd = null,
+                    breakMinutes = 0,
+                    mealAllowanceAmountCents = 0,
+                    confirmedWorkDay = false
+                ),
+                travelMinutes = 0
             )
         )
 

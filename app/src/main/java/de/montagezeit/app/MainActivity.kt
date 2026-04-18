@@ -52,10 +52,6 @@ class MainActivity : ComponentActivity() {
         if (dateStr == null) {
             return
         }
-        editRequestDate.value = try {
-            LocalDate.parse(dateStr).toString()
-        } catch (e: Exception) {
-            LocalDate.now().toString()
-        }
+        editRequestDate.value = runCatching { LocalDate.parse(dateStr).toString() }.getOrNull()
     }
 }

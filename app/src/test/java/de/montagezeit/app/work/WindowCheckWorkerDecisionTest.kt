@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * Unit-Tests für die statischen Entscheidungsmethoden von WindowCheckWorker.
@@ -35,6 +36,9 @@ class WindowCheckWorkerDecisionTest {
     ) = WorkEntry(
         date = LocalDate.of(2026, 2, 17),
         dayType = dayType,
+        workStart = if (dayType == DayType.WORK) LocalTime.of(8, 0) else null,
+        workEnd = if (dayType == DayType.WORK) LocalTime.of(17, 0) else null,
+        breakMinutes = if (dayType == DayType.WORK) 60 else 0,
         morningCapturedAt = morningCapturedAt,
         eveningCapturedAt = eveningCapturedAt,
         confirmedWorkDay = confirmedWorkDay

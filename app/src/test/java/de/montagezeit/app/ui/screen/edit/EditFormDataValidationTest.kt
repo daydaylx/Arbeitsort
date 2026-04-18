@@ -101,7 +101,7 @@ class EditFormDataValidationTest {
     }
 
     @Test
-    fun `validate should allow breakMinutes equal to work duration`() {
+    fun `validate should reject breakMinutes equal to work duration`() {
         val formData = validFormData(
             workStart = LocalTime.of(8, 0),
             workEnd = LocalTime.of(17, 0),
@@ -110,7 +110,7 @@ class EditFormDataValidationTest {
 
         val errors = formData.validate()
 
-        assertFalse(errors.any { it is ValidationError.BreakLongerThanWorkTime })
+        assertTrue(errors.any { it is ValidationError.BreakLongerThanWorkTime })
     }
 
     @Test
@@ -295,8 +295,8 @@ class EditFormDataValidationTest {
     @Test
     fun `validate should work with edge case times`() {
         val formData = validFormData(
-            workStart = LocalTime.of(23, 59),
-            workEnd = LocalTime.of(23, 59, 59),
+            workStart = LocalTime.of(23, 58),
+            workEnd = LocalTime.of(23, 59),
             breakMinutes = 0
         )
 

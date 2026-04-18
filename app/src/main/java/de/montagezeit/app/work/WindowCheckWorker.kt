@@ -19,14 +19,16 @@ import de.montagezeit.app.diagnostics.DiagnosticTrace
 import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
 import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
+import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.notification.ReminderNotificationManager
 import java.io.IOException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.ZonedDateTime
 
 /**
  * WorkManager Worker für Window-Check
@@ -44,15 +46,17 @@ class WindowCheckWorker @AssistedInject constructor(
     private val workEntryDao: WorkEntryDao,
     private val reminderSettingsManager: ReminderSettingsManager,
     private val notificationManager: ReminderNotificationManager,
-    private val reminderFlagsStore: ReminderFlagsStore
+    private val reminderFlagsStore: ReminderFlagsStore,
+    private val clock: Clock
 ) : CoroutineWorker(context, workerParams) {
 
     // Mutex für atomare Operations (SharedPreferences + DB + Notification)
     private val operationMutex = Mutex()
 
     override suspend fun doWork(): Result {
-        val today = LocalDate.now()
-        val currentTime = LocalTime.now()
+        val now = ZonedDateTime.now(clock)
+        val today = now.toLocalDate()
+        val currentTime = now.toLocalTime()
         val settings = reminderSettingsManager.settings.first()
         val reminderType = reminderTypeOrNull()
         val trace = AppDiagnosticsRuntime.startTrace(
@@ -298,7 +302,7 @@ class WindowCheckWorker @AssistedInject constructor(
                 )
                 return
             }
-            val entry = workEntryDao.getByDate(date)
+            val entry = workEntryDao.getByDateWithTravel(date)
             val isAutoNonWorkingDay = entry == null && ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)
             if (isAutoNonWorkingDay) {
                 reminderFlagsStore.setDailyReminded(date)
@@ -308,7 +312,7 @@ class WindowCheckWorker @AssistedInject constructor(
                 )
                 return
             }
-            if (shouldShowDailyReminder(entry)) {
+            if (shouldShowDailyReminderWithTravel(entry)) {
                 notificationManager.showDailyConfirmationNotification(date)
                 reminderFlagsStore.setDailyReminded(date)
                 trace?.event(
@@ -317,7 +321,7 @@ class WindowCheckWorker @AssistedInject constructor(
                 )
                 return
             }
-            if (isDailyReminderTerminal(entry)) {
+            if (isDailyReminderTerminalWithTravel(entry)) {
                 reminderFlagsStore.setDailyReminded(date)
                 trace?.event(
                     name = "daily_reminder_marked_terminal",
@@ -359,15 +363,37 @@ class WindowCheckWorker @AssistedInject constructor(
         }
 
         internal fun shouldShowDailyReminder(entry: WorkEntry?): Boolean {
-            // COMP_TIME und OFF gelten als abgeschlossen – kein Daily Reminder nötig.
-            if (entry?.dayType == DayType.COMP_TIME) return false
-            if (entry?.dayType == DayType.OFF) return false
-            return entry?.confirmedWorkDay != true
+            if (entry == null) return true
+            return shouldShowDailyReminderWithTravel(
+                de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs(
+                    workEntry = entry,
+                    travelLegs = emptyList()
+                )
+            )
+        }
+
+        internal fun shouldShowDailyReminderWithTravel(
+            entry: de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs?
+        ): Boolean {
+            if (entry == null) return true
+            return !EntryStatusResolver.resolve(entry).isReminderTerminal
         }
 
         internal fun isDailyReminderTerminal(entry: WorkEntry?): Boolean {
             if (entry == null) return false
-            return entry.confirmedWorkDay || entry.dayType == DayType.COMP_TIME || entry.dayType == DayType.OFF
+            return isDailyReminderTerminalWithTravel(
+                de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs(
+                    workEntry = entry,
+                    travelLegs = emptyList()
+                )
+            )
+        }
+
+        internal fun isDailyReminderTerminalWithTravel(
+            entry: de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs?
+        ): Boolean {
+            if (entry == null) return false
+            return EntryStatusResolver.resolve(entry).isReminderTerminal
         }
 
         internal fun shouldRetryOn(throwable: Throwable): Boolean {

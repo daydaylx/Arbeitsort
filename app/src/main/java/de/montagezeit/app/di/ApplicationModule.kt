@@ -19,10 +19,13 @@ import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.usecase.SetTravelEvent
 import de.montagezeit.app.domain.util.NonWorkingDayChecker
 import de.montagezeit.app.work.DefaultNonWorkingDayChecker
+import java.time.Clock
 
 @Module
 @InstallIn(SingletonComponent::class)
 object ApplicationModule {
+    @Provides
+    fun provideClock(): Clock = Clock.systemDefaultZone()
 
     @Provides
     fun provideRecordMorningCheckIn(repository: WorkEntryRepository): RecordMorningCheckIn {

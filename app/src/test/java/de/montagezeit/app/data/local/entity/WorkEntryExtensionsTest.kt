@@ -156,7 +156,7 @@ class WorkEntryExtensionsTest {
     }
 
     @Test
-    fun `transitionToDayType preserves confirmation when toggling OFF back to WORK`() {
+    fun `transitionToDayType clears confirmation when toggling OFF back to WORK`() {
         val originalConfirmationAt = 3_000L
         val entry = WorkEntry(
             date = LocalDate.of(2026, 3, 12),
@@ -170,9 +170,9 @@ class WorkEntryExtensionsTest {
         val result = offEntry.transitionToDayType(dayType = DayType.WORK, now = 7_000L)
 
         assertEquals(DayType.WORK, result.dayType)
-        assertTrue(result.confirmedWorkDay)
-        assertEquals(5_000L, result.confirmationAt)
-        assertEquals(DayType.OFF.name, result.confirmationSource)
+        assertFalse(result.confirmedWorkDay)
+        assertNull(result.confirmationAt)
+        assertNull(result.confirmationSource)
         assertEquals(7_000L, result.updatedAt)
     }
 }

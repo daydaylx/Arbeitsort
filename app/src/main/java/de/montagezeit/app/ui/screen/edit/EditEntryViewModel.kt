@@ -12,6 +12,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.diagnostics.redactedTextSummary
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
+import de.montagezeit.app.domain.usecase.SaveEditedEntryWithTravel
 import de.montagezeit.app.domain.usecase.WorkEntryFactory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
@@ -22,6 +23,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -50,6 +52,7 @@ class EditEntryViewModel @Inject constructor(
     private val reminderSettingsManager: ReminderSettingsManager,
     private val draftRules: EditEntryDraftRules,
     private val saveBuilder: EditEntrySaveBuilder,
+    private val saveEditedEntryWithTravel: SaveEditedEntryWithTravel,
     private val editEntryDiagnostics: EditEntryDiagnostics,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -68,6 +71,7 @@ class EditEntryViewModel @Inject constructor(
     val snackbarMessage: SharedFlow<UiText> = _snackbarMessage.asSharedFlow()
 
     private var loadEntryJob: Job? = null
+    private var mealPreviewJob: Job? = null
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val validationErrors: StateFlow<List<ValidationError>> = _screenState
@@ -100,7 +104,8 @@ class EditEntryViewModel @Inject constructor(
     }
 
     fun setFormData(data: EditFormData) {
-        _screenState.update { state -> state.withFormData(data, draftRules) }
+        _screenState.update { state -> state.withFormData(data) }
+        scheduleMealPreviewUpdate(data)
     }
 
     private fun loadEntry(date: LocalDate) {
@@ -238,7 +243,8 @@ class EditEntryViewModel @Inject constructor(
                         entry = record.workEntry,
                         travelLegs = record.orderedTravelLegs
                     )
-                    _screenState.update { state -> state.withFormData(copied, draftRules) }
+                    _screenState.update { state -> state.withFormData(copied) }
+                    scheduleMealPreviewUpdate(copied)
                     onResult(true)
                 } else {
                     onResult(false)
@@ -307,7 +313,7 @@ class EditEntryViewModel @Inject constructor(
                 ) ?: return@launch
                 trace.pendingSaveBuilt(pendingSave)
                 _screenState.update { it.copy(isSaving = true) }
-                workEntryRepository.replaceEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
+                saveEditedEntryWithTravel(pendingSave)
                 trace.saveSucceeded(pendingSave)
                 _screenState.update {
                     it.copy(
@@ -351,7 +357,7 @@ class EditEntryViewModel @Inject constructor(
                     onNavigate(newDate); return@launch
                 }
                 _screenState.update { it.copy(isSaving = true) }
-                workEntryRepository.replaceEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
+                saveEditedEntryWithTravel(pendingSave)
                 _screenState.update {
                     it.copy(
                         isSaving = false,
@@ -417,13 +423,14 @@ class EditEntryViewModel @Inject constructor(
             zoneId = editTimeZone
         )
         _screenState.update {
-            it.withFormData(formData, draftRules).copy(
+            it.withFormData(formData).copy(
                 originalFormData = formData,
                 uiState = EditUiState.Success(record.workEntry),
                 isSaving = false,
                 dailyTargetHours = dailyTargetHours
             )
         }
+        scheduleMealPreviewUpdate(formData)
     }
 
     private fun showNewEntry(
@@ -448,13 +455,14 @@ class EditEntryViewModel @Inject constructor(
             dayLocationLabel = defaultEntry.dayLocationLabel.ifBlank { null }
         )
         _screenState.update {
-            it.withFormData(finalFormData, draftRules).copy(
+            it.withFormData(finalFormData).copy(
                 originalFormData = finalFormData,
                 uiState = EditUiState.NewEntry(date),
                 isSaving = false,
                 dailyTargetHours = dailyTargetHours
             )
         }
+        scheduleMealPreviewUpdate(finalFormData)
     }
 
     private fun showValidationErrors(
@@ -496,8 +504,17 @@ class EditEntryViewModel @Inject constructor(
     }
 
     private inline fun updateFormData(update: (EditFormData) -> EditFormData) {
-        _screenState.update { state ->
-            state.withFormData(update(state.formData), draftRules)
+        val newFormData = update(_screenState.value.formData)
+        _screenState.update { state -> state.withFormData(newFormData) }
+        scheduleMealPreviewUpdate(newFormData)
+    }
+
+    private fun scheduleMealPreviewUpdate(formData: EditFormData) {
+        mealPreviewJob?.cancel()
+        mealPreviewJob = viewModelScope.launch {
+            delay(MEAL_PREVIEW_DEBOUNCE_MS)
+            val cents = draftRules.mealAllowancePreviewCents(formData)
+            _screenState.update { it.copy(mealAllowancePreviewCents = cents) }
         }
     }
 
@@ -509,6 +526,7 @@ class EditEntryViewModel @Inject constructor(
     companion object {
         private const val VALIDATION_DEBOUNCE_MS = 80L
         private const val VALIDATION_SUBSCRIPTION_TIMEOUT_MS = 5_000L
+        private const val MEAL_PREVIEW_DEBOUNCE_MS = 150L
     }
 }
 
@@ -674,50 +692,8 @@ private fun toUiText(message: String?, @StringRes fallbackRes: Int): UiText {
         ?: UiText.StringResource(fallbackRes)
 }
 
-private fun EditScreenState.withFormData(
-    formData: EditFormData,
-    draftRules: EditEntryDraftRules
-): EditScreenState {
-    val mealAllowance = if (affectsMealAllowance(this.formData, formData)) {
-        draftRules.mealAllowancePreviewCents(formData)
-    } else {
-        mealAllowancePreviewCents
-    }
-    return copy(
-        formData = formData,
-        mealAllowancePreviewCents = mealAllowance
-    )
-}
-
-private fun affectsMealAllowance(old: EditFormData, new: EditFormData): Boolean {
-    return old.dayType != new.dayType ||
-        old.hasWorkTimes != new.hasWorkTimes ||
-        old.workStart != new.workStart ||
-        old.workEnd != new.workEnd ||
-        old.breakMinutes != new.breakMinutes ||
-        old.mealIsArrivalDeparture != new.mealIsArrivalDeparture ||
-        old.mealBreakfastIncluded != new.mealBreakfastIncluded ||
-        !travelLegsEquivalentForMeal(old.travelLegs, new.travelLegs) ||
-        old.travelStartTime != new.travelStartTime ||
-        old.travelArriveTime != new.travelArriveTime
-}
-
-private fun travelLegsEquivalentForMeal(
-    old: List<EditTravelLegForm>,
-    new: List<EditTravelLegForm>
-): Boolean {
-    if (old.size != new.size) return false
-    for (index in old.indices) {
-        val a = old[index]
-        val b = new[index]
-        if (a.startTime != b.startTime ||
-            a.arriveTime != b.arriveTime ||
-            a.paidMinutesOverride != b.paidMinutesOverride
-        ) {
-            return false
-        }
-    }
-    return true
+private fun EditScreenState.withFormData(formData: EditFormData): EditScreenState {
+    return copy(formData = formData)
 }
 
 internal fun EditFormData.toSanitizedDiagnosticPayload(

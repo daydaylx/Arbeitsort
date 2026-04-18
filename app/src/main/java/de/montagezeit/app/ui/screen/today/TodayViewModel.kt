@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -71,8 +72,12 @@ class TodayViewModel @Inject constructor(
     private val dateCoordinator: TodayDateCoordinator,
     private val weekOverviewUseCase: TodayWeekOverviewUseCase,
     private val dialogsStateHolder: TodayDialogsStateHolder,
-    private val actionsHandler: TodayActionsHandler
+    private val actionsHandler: TodayActionsHandler,
+    private val clock: Clock
 ) : ViewModel() {
+
+    private val currentSystemDate: LocalDate
+        get() = LocalDate.now(clock)
 
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
@@ -228,7 +233,7 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    internal fun syncTodayDate(systemToday: LocalDate = LocalDate.now()): Boolean {
+    internal fun syncTodayDate(systemToday: LocalDate = currentSystemDate): Boolean {
         if (!dateCoordinator.syncWithSystemDate(systemToday)) return false
 
         val selectedDateSnapshot = selectedDate.value
@@ -245,6 +250,8 @@ class TodayViewModel @Inject constructor(
         requestWeekOverviewRefresh(selectedDateSnapshot)
         return true
     }
+
+    fun syncWithSystemDate(): Boolean = syncTodayDate()
 
     private fun observeEntryUpdates() {
         viewModelScope.launch {

@@ -54,7 +54,7 @@ class OverviewCalculationsTest {
     }
 
     @Test
-    fun `buildOverviewMetrics excludes unconfirmed travel-bearing days from selected period totals`() {
+    fun `buildOverviewMetrics excludes unconfirmed work activity`() {
         val date = LocalDate.of(2026, 3, 18)
         val confirmedEntry = WorkEntryWithTravelLegs(
             workEntry = WorkEntry(
@@ -68,7 +68,8 @@ class OverviewCalculationsTest {
             ),
             travelLegs = listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = 120))
         )
-        val unconfirmedEntry = WorkEntryWithTravelLegs(
+        // Hat Arbeitszeiten aber kein confirmedWorkDay → bleibt ausgeschlossen
+        val unconfirmedWithData = WorkEntryWithTravelLegs(
             workEntry = confirmedEntry.workEntry.copy(
                 date = date.plusDays(1),
                 confirmedWorkDay = false,
@@ -79,7 +80,46 @@ class OverviewCalculationsTest {
 
         val metrics = buildOverviewMetrics(
             period = OverviewPeriod.DAY,
-            entries = listOf(confirmedEntry, unconfirmedEntry),
+            entries = listOf(confirmedEntry, unconfirmedWithData),
+            settings = settings
+        )
+
+        assertEquals(2.0, metrics.overtimeHours, 0.001)
+        assertEquals(8.0, metrics.targetHours, 0.001)
+        assertEquals(10.0, metrics.actualHours, 0.001)
+        assertEquals(2.0, metrics.travelHours, 0.001)
+        assertEquals(2800, metrics.mealAllowanceCents)
+        assertEquals(1, metrics.countedDays)
+        assertEquals(1, metrics.unconfirmedDaysCount)
+    }
+
+    @Test
+    fun `buildOverviewMetrics excludes WORK days without data`() {
+        val date = LocalDate.of(2026, 3, 18)
+        val confirmedEntry = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
+                dayType = DayType.WORK,
+                confirmedWorkDay = true,
+                mealAllowanceAmountCents = 2800
+            ),
+            travelLegs = listOf(TravelLeg(workEntryDate = date, sortOrder = 0, paidMinutesOverride = 120))
+        )
+        val emptyEntry = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date.plusDays(1),
+                dayType = DayType.WORK,
+                confirmedWorkDay = false
+            ),
+            travelLegs = emptyList()
+        )
+
+        val metrics = buildOverviewMetrics(
+            period = OverviewPeriod.DAY,
+            entries = listOf(confirmedEntry, emptyEntry),
             settings = settings
         )
 

@@ -242,7 +242,7 @@ class CsvExporterLogicTest {
     }
 
     @Test
-    fun `filterCsvExportEntries keeps only confirmed entries`() {
+    fun `filterCsvExportEntries excludes unconfirmed work entries even with work block`() {
         val entries = listOf(
             WorkEntryWithTravelLegs(
                 workEntry = entry().copy(confirmedWorkDay = true),
@@ -251,6 +251,32 @@ class CsvExporterLogicTest {
             WorkEntryWithTravelLegs(
                 workEntry = entry(location = "Leipzig").copy(
                     date = LocalDate.of(2024, 6, 11),
+                    confirmedWorkDay = false
+                ),
+                travelLegs = emptyList()
+            )
+        )
+
+        val filtered = filterCsvExportEntries(entries)
+
+        assertEquals(1, filtered.size)
+        assertEquals(LocalDate.of(2024, 6, 10), filtered.single().workEntry.date)
+    }
+
+    @Test
+    fun `filterCsvExportEntries excludes WORK entries without data`() {
+        val entries = listOf(
+            WorkEntryWithTravelLegs(
+                workEntry = entry().copy(confirmedWorkDay = true),
+                travelLegs = emptyList()
+            ),
+            WorkEntryWithTravelLegs(
+                workEntry = WorkEntry(
+                    date = LocalDate.of(2024, 6, 11),
+                    dayType = DayType.WORK,
+                    dayLocationLabel = "Leipzig",
+                    workStart = null,
+                    workEnd = null,
                     confirmedWorkDay = false
                 ),
                 travelLegs = emptyList()

@@ -3,9 +3,8 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 
 /**
- * Eintrag geht nur dann in Statistik- und Überstundenlogik ein,
- * wenn der Tag fachlich bestätigt wurde.
+ * Statistik-Eligibility folgt denselben Regeln wie UI-Status und Reminder-Terminalzustand.
  */
 fun isStatisticsEligible(entry: WorkEntryWithTravelLegs): Boolean {
-    return entry.workEntry.confirmedWorkDay
+    return EntryStatusResolver.resolve(entry).isStatisticsEligible
 }

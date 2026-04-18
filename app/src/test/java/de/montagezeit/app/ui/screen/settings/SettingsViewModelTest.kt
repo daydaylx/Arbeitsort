@@ -44,6 +44,19 @@ class SettingsViewModelTest {
     private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
     private val notificationManager = mockk<ReminderNotificationManager>(relaxed = true)
 
+    private fun eligibleWorkRecord(date: LocalDate): WorkEntryWithTravelLegs {
+        return WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
+                confirmedWorkDay = true
+            ),
+            travelLegs = emptyList()
+        )
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -166,15 +179,7 @@ class SettingsViewModelTest {
     @Test
     fun `exportCsvCurrentMonth exposes csv success state`() = runTest {
         val today = LocalDate.now()
-        val entries = listOf(
-            WorkEntryWithTravelLegs(
-                workEntry = WorkEntry(
-                    date = today,
-                    confirmedWorkDay = true
-                ),
-                travelLegs = emptyList()
-            )
-        )
+        val entries = listOf(eligibleWorkRecord(today))
         val exportUri = mockk<android.net.Uri>()
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
         every { csvExporter.exportToCsv(entries) } returns exportUri
@@ -195,15 +200,7 @@ class SettingsViewModelTest {
     @Test
     fun `exportCsvCurrentMonth maps exporter null to csv error`() = runTest {
         val today = LocalDate.now()
-        val entries = listOf(
-            WorkEntryWithTravelLegs(
-                workEntry = WorkEntry(
-                    date = today,
-                    confirmedWorkDay = true
-                ),
-                travelLegs = emptyList()
-            )
-        )
+        val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
         every { csvExporter.exportToCsv(entries) } returns null
 
@@ -220,15 +217,7 @@ class SettingsViewModelTest {
     @Test
     fun `exportCsvCurrentMonth does not require employee name`() = runTest {
         val today = LocalDate.now()
-        val entries = listOf(
-            WorkEntryWithTravelLegs(
-                workEntry = WorkEntry(
-                    date = today,
-                    confirmedWorkDay = true
-                ),
-                travelLegs = emptyList()
-            )
-        )
+        val entries = listOf(eligibleWorkRecord(today))
         val exportUri = mockk<android.net.Uri>()
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings(pdfEmployeeName = null))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries

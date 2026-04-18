@@ -57,7 +57,7 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `unbestaetigte Eintraege werden ignoriert`() {
+    fun `WORK Tag mit Zeiten ohne Bestaetigung wird ignoriert`() {
         val result = useCase(
             listOf(
                 entry(LocalDate.of(2026, 1, 5), DayType.WORK, confirmed = false,
@@ -70,7 +70,7 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `unbestaetigte Reisetage werden ebenfalls ignoriert`() {
+    fun `WORK Tag mit Reise ohne Bestaetigung wird ignoriert`() {
         val result = useCase(
             listOf(
                 entry(
@@ -91,6 +91,19 @@ class AggregateWorkStatsTest {
         assertEquals(0, result.totalTravelMinutes)
         assertEquals(0, result.totalPaidMinutes)
         assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
+    fun `WORK Tag ohne Daten wird ignoriert`() {
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 1, 5), DayType.WORK, confirmed = false,
+                    workStart = null, workEnd = null, breakMinutes = 0, travelMinutes = 0)
+            )
+        )
+        assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
+        assertEquals(0, result.totalWorkMinutes)
     }
 
     @Test
@@ -198,7 +211,7 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `Mix aus WORK OFF und unbestaetigt korrekt aggregiert`() {
+    fun `Mix aus WORK OFF und unbestaetigt aggregiert nur bestaetigte Aktivitaet`() {
         val result = useCase(
             listOf(
                 // WORK, confirmed, 480 min work + 30 min travel
@@ -207,7 +220,7 @@ class AggregateWorkStatsTest {
                     breakMinutes = 60, travelMinutes = 30, mealAllowanceCents = 820),
                 // OFF, confirmed, 90 min travel (no work)
                 entry(LocalDate.of(2026, 1, 16), DayType.OFF, travelMinutes = 90),
-                // WORK, NOT confirmed → ignored
+                // WORK, NOT confirmed but has work block → ignored
                 entry(LocalDate.of(2026, 1, 17), DayType.WORK, confirmed = false,
                     workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(20, 0), breakMinutes = 0)
             )
@@ -288,10 +301,9 @@ class AggregateWorkStatsTest {
         )
         assertEquals(0, result.workDaysWithWork)
         assertEquals(0, result.workDaysTravelOnly)
-        assertEquals(1, result.workDaysEmpty)
-        // Sollte als workDay zählen
-        assertEquals(1, result.workDays)
-        assertEquals(1, result.targetCountedDays)
+        assertEquals(0, result.workDaysEmpty)
+        assertEquals(0, result.workDays)
+        assertEquals(0, result.targetCountedDays)
         // Keine Verpflegungspauschale bei leerem Tag
         assertEquals(0, result.mealAllowanceCents)
     }
@@ -342,7 +354,7 @@ class AggregateWorkStatsTest {
                 entry(LocalDate.of(2026, 3, 9), DayType.WORK,
                     workStart = null, workEnd = null,
                     breakMinutes = 0, travelMinutes = 180, mealAllowanceCents = 820),
-                // ARBEITSTAG_LEER
+                // Leerer WORK-Tag bleibt ausgeschlossen
                 entry(LocalDate.of(2026, 3, 10), DayType.WORK,
                     workStart = null, workEnd = null,
                     breakMinutes = 0, travelMinutes = 0),
@@ -360,13 +372,13 @@ class AggregateWorkStatsTest {
         // Klassifikationen
         assertEquals(2, result.workDaysWithWork)
         assertEquals(1, result.workDaysTravelOnly)
-        assertEquals(1, result.workDaysEmpty)
+        assertEquals(0, result.workDaysEmpty)
         assertEquals(1, result.freeDaysWithTravel)
         assertEquals(1, result.freeDaysWithoutTravel)
-        
+
         // Klassische Metriken
-        assertEquals(4, result.workDays) // 2 + 1 + 1
-        assertEquals(4, result.targetCountedDays)
+        assertEquals(3, result.workDays) // 2 + 1
+        assertEquals(3, result.targetCountedDays)
         assertEquals(2, result.offDays)  // 1 + 1
         
         // Zeitwerte
@@ -469,7 +481,7 @@ class AggregateWorkStatsTest {
             )
         )
 
-        assertEquals(1, result.workDays)
+        assertEquals(0, result.workDays)
         assertEquals(0, result.mealAllowanceCents)
     }
 

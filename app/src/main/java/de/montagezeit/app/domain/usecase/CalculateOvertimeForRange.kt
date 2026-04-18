@@ -5,7 +5,6 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.diagnostics.DiagnosticTrace
 import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
 import de.montagezeit.app.domain.model.DayClassification
-import de.montagezeit.app.domain.util.TimeCalculator
 
 data class OvertimeResult(
     val totalOvertimeHours: Double,
@@ -17,9 +16,6 @@ data class OvertimeResult(
 )
 
 class CalculateOvertimeForRange {
-
-    private val classifyDay = ClassifyDay()
-
     operator fun invoke(
         entries: List<WorkEntryWithTravelLegs>,
         dailyTargetHours: Double,
@@ -45,40 +41,30 @@ class CalculateOvertimeForRange {
         var offDayTravelDays = 0
 
         entries.forEach { entry ->
-            if (!isStatisticsEligible(entry)) {
+            val status = EntryStatusResolver.resolve(entry)
+            if (!status.isStatisticsEligible) {
                 return@forEach
             }
-            
-            val classification = classifyDay(entry)
-            val workMinutes = TimeCalculator.calculateWorkMinutes(entry.workEntry)
-            val travelMinutes = TimeCalculator.calculateTravelMinutes(entry.orderedTravelLegs)
             trace?.event(
                 name = "overtime_entry",
                 payload = mapOf(
-                    "classification" to classification.name,
+                    "classification" to status.classification.name,
                     "dailyTargetHours" to dailyTargetHours,
-                    "workMinutes" to workMinutes,
-                    "travelMinutes" to travelMinutes,
+                    "workMinutes" to status.workMinutes,
+                    "travelMinutes" to status.travelMinutes,
                     "entry" to entry.toSanitizedDiagnosticPayload()
                 )
             )
 
-            when (classification) {
+            when (status.classification) {
                 DayClassification.ARBEITSTAG_MIT_ARBEIT,
                 DayClassification.ARBEITSTAG_NUR_REISE -> {
                     countedDays += 1
                     totalTargetHours += dailyTargetHours
-                    totalActualHours += TimeCalculator.calculatePaidTotalHours(entry.workEntry, entry.orderedTravelLegs)
-                }
-                DayClassification.ARBEITSTAG_LEER -> {
-                    // Leere Arbeitstage zählen nur, wenn sie explizit bestätigt wurden
-                    if (entry.workEntry.confirmedWorkDay) {
-                        countedDays += 1
-                        totalTargetHours += dailyTargetHours
-                    }
+                    totalActualHours += (status.workMinutes + status.travelMinutes) / 60.0
                 }
                 DayClassification.FREI_MIT_REISE -> {
-                    val travelHours = travelMinutes / 60.0
+                    val travelHours = status.travelMinutes / 60.0
                     if (travelHours > 0.0) {
                         // Fahrzeit an freien Tagen wird nun ebenfalls als Ist-Zeit erfasst
                         totalActualHours += travelHours
@@ -89,9 +75,9 @@ class CalculateOvertimeForRange {
                 DayClassification.FREI -> {
                     // Keine Stunden, kein Ziel
                 }
+                DayClassification.ARBEITSTAG_LEER -> Unit
                 DayClassification.UEBERSTUNDEN_ABBAU -> {
-                    // Wenn es ein COMP_TIME (Überstundenabbau) Tag ist, reduzieren wir das Saldo
-                    if (entry.workEntry.dayType == DayType.COMP_TIME && entry.workEntry.confirmedWorkDay) {
+                    if (entry.workEntry.dayType == DayType.COMP_TIME) {
                         countedDays += 1
                         totalTargetHours += dailyTargetHours
                     }

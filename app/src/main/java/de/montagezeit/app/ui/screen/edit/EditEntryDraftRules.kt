@@ -85,7 +85,7 @@ class EditEntryDraftRules @Inject constructor() {
                     if (totalWorkMinutes > MAX_WORKDAY_MINUTES) {
                         errors += ValidationError.WorkDayTooLong
                     }
-                    if (formData.breakMinutes > totalWorkMinutes) {
+                    if (formData.breakMinutes >= totalWorkMinutes) {
                         errors += ValidationError.BreakLongerThanWorkTime
                     }
                 }

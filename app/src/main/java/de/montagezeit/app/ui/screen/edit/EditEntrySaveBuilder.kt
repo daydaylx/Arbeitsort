@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.util.transitionToDayType
 import java.time.LocalDate
 import java.time.LocalTime
@@ -19,6 +20,10 @@ data class EditEntryPendingSave(
 class EditEntrySaveBuilder @Inject constructor(
     private val draftRules: EditEntryDraftRules
 ) {
+    companion object {
+        private const val CONFIRMATION_SOURCE_EDIT_SAVE = "EDIT_SAVE"
+    }
+
     fun build(
         currentState: EditUiState,
         data: EditFormData,
@@ -37,9 +42,10 @@ class EditEntrySaveBuilder @Inject constructor(
             workMinutes = draftRules.calculateEffectiveWorkMinutes(data),
             travelMinutes = draftRules.calculateEffectiveTravelMinutes(data)
         )
+        val travelLegs = buildTravelLegsToSave(data, date, zoneId, now)
         return EditEntryPendingSave(
-            entry = buildEntryToSave(currentState, data, now, mealAllowance),
-            legs = buildTravelLegsToSave(data, date, zoneId, now)
+            entry = buildEntryToSave(currentState, data, now, mealAllowance, travelLegs),
+            legs = travelLegs
         )
     }
 
@@ -47,7 +53,8 @@ class EditEntrySaveBuilder @Inject constructor(
         currentState: EditUiState,
         data: EditFormData,
         now: Long,
-        mealAllowance: ResolvedMealAllowanceForSave
+        mealAllowance: ResolvedMealAllowanceForSave,
+        travelLegs: List<TravelLeg>
     ): WorkEntry {
         val date = when (currentState) {
             is EditUiState.Success -> currentState.entry.date
@@ -63,7 +70,7 @@ class EditEntrySaveBuilder @Inject constructor(
             ).transitionToDayType(dayType = data.dayType, now = now)
 
         val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
-        return baseEntry.copy(
+        val draftEntry = baseEntry.copy(
             dayType = data.dayType,
             workStart = if (persistWorkBlock) data.workStart else null,
             workEnd = if (persistWorkBlock) data.workEnd else null,
@@ -76,6 +83,24 @@ class EditEntrySaveBuilder @Inject constructor(
             mealAllowanceAmountCents = mealAllowance.amountCents,
             updatedAt = now
         )
+        return when (draftEntry.dayType) {
+            DayType.WORK -> {
+                if (EntryStatusResolver.shouldAutoConfirmWorkDay(draftEntry, travelLegs)) {
+                    draftEntry.copy(
+                        confirmedWorkDay = true,
+                        confirmationAt = draftEntry.confirmationAt ?: now,
+                        confirmationSource = draftEntry.confirmationSource ?: CONFIRMATION_SOURCE_EDIT_SAVE
+                    )
+                } else {
+                    draftEntry.copy(
+                        confirmedWorkDay = false,
+                        confirmationAt = null,
+                        confirmationSource = null
+                    )
+                }
+            }
+            DayType.OFF, DayType.COMP_TIME -> draftEntry
+        }
     }
 
     private fun buildTravelLegsToSave(

@@ -40,6 +40,7 @@ import de.montagezeit.app.ui.theme.NumberStyles
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.util.DateTimeUtils
@@ -180,8 +181,13 @@ fun HistoryContent(
     val listState = rememberLazyListState()
     val entries = remember(entriesByDate) { entriesByDate.values.sortedByDescending(WorkEntry::date) }
     val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
-    val unconfirmedCount = remember(entries) {
-        entries.count { it.dayType == DayType.WORK && !it.confirmedWorkDay }
+    val unconfirmedCount = remember(entries, travelLegsByDate) {
+        entries.count { entry ->
+            EntryStatusResolver.isPendingWorkDay(
+                entry = entry,
+                travelLegs = travelLegsByDate[entry.date].orEmpty()
+            )
+        }
     }
     val hasGroupedContent = weeks.isNotEmpty() || months.isNotEmpty()
     val openEntryForDate: (LocalDate) -> Unit = { date ->
@@ -1095,7 +1101,7 @@ fun HistoryEntryItem(
     }
     
     val statusChipInfo: Pair<String, Color>? = when {
-        !entry.confirmedWorkDay && entry.dayType == DayType.WORK -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
+        EntryStatusResolver.isPendingWorkDay(entry, travelLegs) -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
         entry.dayType == DayType.OFF -> stringResource(R.string.history_day_type_off) to MaterialTheme.colorScheme.outline
         entry.dayType == DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time) to MaterialTheme.colorScheme.secondary
         else -> null

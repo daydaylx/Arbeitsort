@@ -10,10 +10,11 @@ import de.montagezeit.app.data.local.converters.LocalTimeConverter
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import java.time.LocalTime
 
 @Database(
     entities = [WorkEntry::class, TravelLeg::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(
@@ -627,6 +628,126 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 15→16: Vereinheitlicht den Bestätigungszustand:
+        // - gültige WORK-Tage mit positiver Arbeits- oder Reisezeit werden bestätigt
+        // - leere/bereits inkonsistente WORK-Bestätigungen werden zurückgesetzt
+        // - OFF und COMP_TIME werden immer terminal bestätigt
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val now = System.currentTimeMillis()
+                db.query(
+                    """
+                    SELECT date, dayType, workStart, workEnd, breakMinutes,
+                           confirmedWorkDay, confirmationAt, confirmationSource
+                    FROM work_entries
+                    """.trimIndent()
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val date = cursor.getString(0)
+                        val dayType = cursor.getString(1)
+                        val workStart = cursor.getString(2)
+                        val workEnd = cursor.getString(3)
+                        val breakMinutes = cursor.getInt(4)
+                        val confirmedWorkDay = cursor.getInt(5) == 1
+                        val confirmationAt = if (cursor.isNull(6)) null else cursor.getLong(6)
+                        val confirmationSource = if (cursor.isNull(7)) null else cursor.getString(7)
+
+                        val shouldConfirm = when (dayType) {
+                            "OFF", "COMP_TIME" -> true
+                            "WORK" -> {
+                                hasPositiveWorkActivity(
+                                    workStart = workStart,
+                                    workEnd = workEnd,
+                                    breakMinutes = breakMinutes
+                                ) || hasPositiveTravelActivity(db, date)
+                            }
+                            else -> confirmedWorkDay
+                        }
+
+                        when {
+                            shouldConfirm && (!confirmedWorkDay || confirmationAt == null || confirmationSource.isNullOrBlank()) -> {
+                                db.execSQL(
+                                    """
+                                    UPDATE work_entries
+                                    SET confirmedWorkDay = 1,
+                                        confirmationAt = ?,
+                                        confirmationSource = ?
+                                    WHERE date = ?
+                                    """.trimIndent(),
+                                    arrayOf(
+                                        confirmationAt ?: now,
+                                        confirmationSource ?: "MIGRATION_AUTO_CONFIRM",
+                                        date
+                                    )
+                                )
+                            }
+                            !shouldConfirm && dayType == "WORK" && confirmedWorkDay -> {
+                                db.execSQL(
+                                    """
+                                    UPDATE work_entries
+                                    SET confirmedWorkDay = 0,
+                                        confirmationAt = NULL,
+                                        confirmationSource = NULL
+                                    WHERE date = ?
+                                    """.trimIndent(),
+                                    arrayOf(date)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            private fun hasPositiveWorkActivity(
+                workStart: String?,
+                workEnd: String?,
+                breakMinutes: Int
+            ): Boolean {
+                if (workStart.isNullOrBlank() || workEnd.isNullOrBlank()) return false
+
+                val start = LocalTime.parse(workStart)
+                val end = LocalTime.parse(workEnd)
+                if (start == end) return false
+
+                val startMinutes = start.hour * 60 + start.minute
+                val endMinutes = end.hour * 60 + end.minute
+                val rawDurationMinutes = if (endMinutes < startMinutes) {
+                    (24 * 60 - startMinutes) + endMinutes
+                } else {
+                    endMinutes - startMinutes
+                }
+                return breakMinutes in 0 until rawDurationMinutes
+            }
+
+            private fun hasPositiveTravelActivity(
+                db: SupportSQLiteDatabase,
+                date: String
+            ): Boolean {
+                db.query(
+                    """
+                    SELECT startAt, arriveAt, paidMinutesOverride
+                    FROM travel_legs
+                    WHERE workEntryDate = ?
+                    """.trimIndent(),
+                    arrayOf(date)
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val startAt = if (cursor.isNull(0)) null else cursor.getLong(0)
+                        val arriveAt = if (cursor.isNull(1)) null else cursor.getLong(1)
+                        val paidMinutesOverride = if (cursor.isNull(2)) null else cursor.getInt(2)
+
+                        if (paidMinutesOverride != null && paidMinutesOverride > 0) {
+                            return true
+                        }
+                        if (startAt != null && arriveAt != null && startAt != arriveAt) {
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -641,7 +762,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_11_12,
             MIGRATION_12_13,
             MIGRATION_13_14,
-            MIGRATION_14_15
+            MIGRATION_14_15,
+            MIGRATION_15_16
         )
     }
 }

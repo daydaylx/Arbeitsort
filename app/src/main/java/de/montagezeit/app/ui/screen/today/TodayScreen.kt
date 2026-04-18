@@ -36,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,11 +55,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.DatePickerDialog
@@ -104,6 +109,7 @@ fun TodayScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val screenState by viewModel.screenState.collectAsStateWithLifecycle()
     val dialogState by viewModel.dialogState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -122,7 +128,7 @@ fun TodayScreen(
         }
     }
     val onDeleteDay = remember { { viewModel.openDeleteDayDialog() } }
-    val onBackToToday = remember { { viewModel.selectDate(LocalDate.now()) } }
+    val onBackToToday = remember(screenState.todayDate) { { viewModel.selectDate(screenState.todayDate) } }
     val onSelectDay = remember { { date: LocalDate -> viewModel.selectDate(date) } }
     val onEditDayLocation = remember { { viewModel.openDayLocationDialog() } }
     val onEditToday = remember(screenState.selectedDate) {
@@ -135,6 +141,18 @@ fun TodayScreen(
         viewModel = viewModel,
         snackbarHostState = snackbarHostState
     )
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.syncWithSystemDate()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val errorState = screenState.errorState
@@ -293,7 +311,12 @@ private fun TodayContent(
     val totalMinutes = remember(entry, travelLegs) {
         entry?.let { TimeCalculator.calculatePaidTotalMinutes(it, travelLegs) } ?: 0
     }
-    val statusUi = remember(entry) { resolveTodayStatusUi(entry) }
+    val entryStatus = remember(entry, travelLegs) {
+        entry?.let { EntryStatusResolver.resolve(it, travelLegs) }
+    }
+    val statusUi = remember(entry, entryStatus) {
+        resolveTodayStatusUi(entry, entryStatus?.isConfirmed == true)
+    }
 
     Column(
         modifier = Modifier
@@ -406,10 +429,14 @@ private fun StatusCard(
     onDeleteDay: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val statusUi = remember(entry) { resolveTodayStatusUi(entry) }
-    val isCompleted = entry?.confirmedWorkDay == true
+    val entryStatus = remember(entry, travelLegs) {
+        entry?.let { EntryStatusResolver.resolve(it, travelLegs) }
+    }
+    val statusUi = remember(entry, entryStatus) {
+        resolveTodayStatusUi(entry, entryStatus?.isConfirmed == true)
+    }
     val hasEntry = entry != null
-    val showOffdayAction = entry?.dayType != DayType.COMP_TIME && !isCompleted
+    val showOffdayAction = entryStatus?.isConfirmed != true && entry?.dayType != DayType.COMP_TIME
     var showMenu by remember(hasEntry) { mutableStateOf(false) }
 
     MZContentCard(modifier = modifier) {
@@ -498,8 +525,8 @@ private fun StatusCard(
     }
 }
 
-private fun resolveTodayStatusUi(entry: WorkEntry?): TodayStatusUi = when {
-    entry?.confirmedWorkDay == true -> TodayStatusUi(
+private fun resolveTodayStatusUi(entry: WorkEntry?, isConfirmed: Boolean): TodayStatusUi = when {
+    entry != null && isConfirmed -> TodayStatusUi(
         type = StatusType.SUCCESS,
         subtitleRes = R.string.today_dashboard_subtitle_done,
         badgeTextRes = R.string.today_confirmed

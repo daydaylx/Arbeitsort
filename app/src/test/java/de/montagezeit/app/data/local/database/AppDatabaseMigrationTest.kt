@@ -44,7 +44,8 @@ class AppDatabaseMigrationTest {
             "migration_13_14_test.db",
             "migration_13_14_outbound_return_test.db",
             "migration_13_14_edge_cases_test.db",
-            "migration_14_15_test.db"
+            "migration_14_15_test.db",
+            "migration_15_16_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -66,7 +67,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_11_12,
                 AppDatabase.MIGRATION_12_13,
                 AppDatabase.MIGRATION_13_14,
-                AppDatabase.MIGRATION_14_15
+                AppDatabase.MIGRATION_14_15,
+                AppDatabase.MIGRATION_15_16
             )
             .build()
 
@@ -560,6 +562,57 @@ class AppDatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun `migration 15 to 16 normalizes confirmation state for valid and invalid work days`() {
+        val dbName = "migration_15_16_test.db"
+        createVersion15Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 15)
+        try {
+            AppDatabase.MIGRATION_15_16.migrate(db)
+
+            db.query(
+                """
+                SELECT date, confirmedWorkDay, confirmationAt, confirmationSource
+                FROM work_entries
+                ORDER BY date
+                """.trimIndent()
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("2026-02-01", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_AUTO_CONFIRM", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-02", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_AUTO_CONFIRM", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-03", c.getString(0))
+                assertEquals(0, c.getInt(1))
+                assertTrue(c.isNull(2))
+                assertTrue(c.isNull(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-04", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertEquals(2222L, c.getLong(2))
+                assertEquals("UI", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-05", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_AUTO_CONFIRM", c.getString(3))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
     private fun createVersion13Database(dbName: String) {
         val dbFile = context.getDatabasePath(dbName)
         dbFile.parentFile?.mkdirs()
@@ -646,6 +699,67 @@ class AppDatabaseMigrationTest {
             )
 
             it.version = 14
+        }
+    }
+
+    private fun createVersion15Database(dbName: String) {
+        val dbFile = context.getDatabasePath(dbName)
+        dbFile.parentFile?.mkdirs()
+
+        val db = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        db.use {
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `workStart` TEXT,
+                    `workEnd` TEXT,
+                    `breakMinutes` INTEGER NOT NULL DEFAULT 0,
+                    `confirmedWorkDay` INTEGER NOT NULL DEFAULT 0,
+                    `confirmationAt` INTEGER,
+                    `confirmationSource` TEXT,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            it.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `travel_legs` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `workEntryDate` TEXT NOT NULL,
+                    `sortOrder` INTEGER NOT NULL,
+                    `category` TEXT NOT NULL,
+                    `startAt` INTEGER,
+                    `arriveAt` INTEGER,
+                    `paidMinutesOverride` INTEGER
+                )
+                """.trimIndent()
+            )
+
+            it.execSQL(
+                """
+                INSERT INTO work_entries (
+                    date, dayType, workStart, workEnd, breakMinutes,
+                    confirmedWorkDay, confirmationAt, confirmationSource
+                ) VALUES
+                    ('2026-02-01', 'WORK', '08:00', '17:00', 60, 0, NULL, NULL),
+                    ('2026-02-02', 'WORK', NULL, NULL, 0, 0, NULL, NULL),
+                    ('2026-02-03', 'WORK', NULL, NULL, 0, 1, 1111, 'UI'),
+                    ('2026-02-04', 'WORK', '08:00', '17:00', 60, 1, 2222, 'UI'),
+                    ('2026-02-05', 'OFF', NULL, NULL, 0, 0, NULL, NULL)
+                """.trimIndent()
+            )
+            it.execSQL(
+                """
+                INSERT INTO travel_legs (
+                    workEntryDate, sortOrder, category, startAt, arriveAt, paidMinutesOverride
+                ) VALUES
+                    ('2026-02-02', 0, 'OTHER', NULL, NULL, 90)
+                """.trimIndent()
+            )
+
+            it.version = 15
         }
     }
 

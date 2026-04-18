@@ -10,6 +10,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.io.File
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -91,6 +92,9 @@ class PdfExporterRobolectricTest {
             workEntry = WorkEntry(
                 date = date,
                 dayType = DayType.WORK,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
                 confirmedWorkDay = true
             ),
             travelLegs = emptyList()

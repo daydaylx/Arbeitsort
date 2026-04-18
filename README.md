@@ -14,7 +14,7 @@ Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. W
 
 - Single-Module-Android-Projekt (`:app`)
 - App-Version: `1.1.1` (`versionCode 5`)
-- Room-Datenbank: Schema `14`, Migrationen `1 -> 14`
+- Room-Datenbank: Schema `16`, Migrationen `1 -> 16`
 
 ## Tech Stack
 
@@ -50,6 +50,8 @@ Build-Umgebung:
 - Wochen-, Monats- und Kalenderansichten
 - Batch-Edit für Datumsbereiche auf bestehenden Einträgen
 - Edit-Sheet für DayType, Zeiten, Travel-Daten, Tagesort und Notiz
+- Gültig gespeicherte `WORK`-Tage werden beim Bearbeiten automatisch bestätigt, wenn positive Arbeits- oder Reisezeit vorliegt
+- `WORK`-Tage ohne positive Netto-Arbeitszeit und ohne Reise gelten nicht als abgeschlossen und zählen weder in Statistik noch Export
 
 ### Reminder
 
@@ -105,7 +107,7 @@ Build-Umgebung:
 
 - `MORNING` und `EVENING` laufen fensterbasiert in konfigurierbaren Intervallen. Wegen WorkManager gilt ein Mindestintervall von 15 Minuten.
 - `FALLBACK` und `DAILY` laufen jeweils einmal pro Tag.
-- `DAILY` erinnert an noch nicht bestätigte Tage und bietet in der Notification `Arbeit`, `Frei` und `Später`.
+- `DAILY` erinnert an offene `WORK`-Tage ohne terminalen Abschlussstatus und bietet in der Notification `Arbeit`, `Frei` und `Später`.
 - Für Morning/Evening/Fallback gibt es zusätzlich `10 Min`, `+1 h` und `+2 h` als Später-Aktionen.
 - Reminder werden für automatisch arbeitsfreie Tage (Wochenenden/Feiertage) unterdrückt, sofern kein manueller Eintrag den Tag überschreibt.
 - Legacy-Worker ohne `reminder_type` führen bewusst keinen Reminder mehr aus.

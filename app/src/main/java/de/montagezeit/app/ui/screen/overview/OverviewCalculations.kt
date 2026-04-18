@@ -8,6 +8,7 @@ import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
 import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.CalculateOvertimeForRange
+import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import java.time.LocalDate
 import java.time.temporal.WeekFields
@@ -59,17 +60,12 @@ internal fun buildOverviewMetrics(
 
     val stats = AggregateWorkStats()(entries, trace)
     val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours, trace)
-    val unconfirmedCount = entries.count { 
-        val entry = it.workEntry
-        val hasTravel = it.orderedTravelLegs.isNotEmpty()
-        !isStatisticsEligible(it) && (entry.dayType == DayType.WORK || hasTravel)
+    val unconfirmedCount = entries.count {
+        it.workEntry.dayType == DayType.WORK && !EntryStatusResolver.resolve(it).isConfirmed
     }
     entries
+        .filter { it.workEntry.dayType == DayType.WORK }
         .filterNot(::isStatisticsEligible)
-        .filter {
-            val entry = it.workEntry
-            entry.dayType == DayType.WORK || it.orderedTravelLegs.isNotEmpty()
-        }
         .forEach { excluded ->
             trace?.warning(
                 DiagnosticWarningCodes.UNCONFIRMED_DAY_EXCLUDED,

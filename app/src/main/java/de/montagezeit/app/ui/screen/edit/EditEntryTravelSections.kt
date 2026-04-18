@@ -127,11 +127,11 @@ internal fun TravelLegsSection(
                         index = index,
                         leg = leg,
                         validationErrors = validationErrors,
-                        onStartChange = { onTravelLegStartChange(index, it) },
-                        onArriveChange = { onTravelLegArriveChange(index, it) },
-                        onStartLabelChange = { onTravelLegStartLabelChange(index, it) },
-                        onEndLabelChange = { onTravelLegEndLabelChange(index, it) },
-                        onRemove = { onRemoveTravelLeg(index) }
+                        onStartChange = onTravelLegStartChange,
+                        onArriveChange = onTravelLegArriveChange,
+                        onStartLabelChange = onTravelLegStartLabelChange,
+                        onEndLabelChange = onTravelLegEndLabelChange,
+                        onRemove = onRemoveTravelLeg
                     )
                 }
             }
@@ -156,11 +156,11 @@ private fun TravelLegCard(
     index: Int,
     leg: EditTravelLegForm,
     validationErrors: List<ValidationError>,
-    onStartChange: (LocalTime?) -> Unit,
-    onArriveChange: (LocalTime?) -> Unit,
-    onStartLabelChange: (String) -> Unit,
-    onEndLabelChange: (String) -> Unit,
-    onRemove: () -> Unit
+    onStartChange: (Int, LocalTime?) -> Unit,
+    onArriveChange: (Int, LocalTime?) -> Unit,
+    onStartLabelChange: (Int, String) -> Unit,
+    onEndLabelChange: (Int, String) -> Unit,
+    onRemove: (Int) -> Unit
 ) {
     var showStartPicker by remember { mutableStateOf(false) }
     var showArrivePicker by remember { mutableStateOf(false) }
@@ -191,7 +191,7 @@ private fun TravelLegCard(
                     text = stringResource(R.string.edit_travel_leg_title, index + 1),
                     style = MaterialTheme.typography.titleSmall
                 )
-                IconButton(onClick = onRemove) {
+                IconButton(onClick = { onRemove(index) }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.cd_remove_travel_leg)
@@ -248,7 +248,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.startLabel ?: "",
-                onValueChange = { if (it.length <= 100) onStartLabelChange(it) },
+                onValueChange = { if (it.length <= 100) onStartLabelChange(index, it) },
                 label = { Text(stringResource(R.string.edit_label_from_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_start_location)) },
                 colors = mzOutlinedTextFieldColors(),
@@ -258,7 +258,7 @@ private fun TravelLegCard(
 
             OutlinedTextField(
                 value = leg.endLabel ?: "",
-                onValueChange = { if (it.length <= 100) onEndLabelChange(it) },
+                onValueChange = { if (it.length <= 100) onEndLabelChange(index, it) },
                 label = { Text(stringResource(R.string.edit_label_to_optional)) },
                 placeholder = { Text(stringResource(R.string.edit_placeholder_destination)) },
                 colors = mzOutlinedTextFieldColors(),
@@ -271,7 +271,7 @@ private fun TravelLegCard(
     if (showStartPicker) {
         TimePickerDialog(
             initialTime = leg.startTime ?: LocalTime.of(8, 0),
-            onTimeSelected = { onStartChange(it); showStartPicker = false },
+            onTimeSelected = { onStartChange(index, it); showStartPicker = false },
             onDismiss = { showStartPicker = false }
         )
     }
@@ -279,7 +279,7 @@ private fun TravelLegCard(
     if (showArrivePicker) {
         TimePickerDialog(
             initialTime = leg.arriveTime ?: LocalTime.of(9, 0),
-            onTimeSelected = { onArriveChange(it); showArrivePicker = false },
+            onTimeSelected = { onArriveChange(index, it); showArrivePicker = false },
             onDismiss = { showArrivePicker = false }
         )
     }

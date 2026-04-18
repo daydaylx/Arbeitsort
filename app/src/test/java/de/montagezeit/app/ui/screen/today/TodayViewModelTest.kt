@@ -31,6 +31,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
 import java.time.LocalDate
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -662,10 +663,11 @@ class TodayViewModelTest {
         )
         return TodayViewModel(
             workEntryRepository = repository,
-            dateCoordinator = TodayDateCoordinator(),
+            dateCoordinator = TodayDateCoordinator(Clock.systemDefaultZone()),
             weekOverviewUseCase = TodayWeekOverviewUseCase(),
             dialogsStateHolder = TodayDialogsStateHolder(),
-            actionsHandler = actionsHandler
+            actionsHandler = actionsHandler,
+            clock = Clock.systemDefaultZone()
         ).also {
             createdViewModels.add(it)
             it.viewModelScope.launch { it.screenState.collect {} }

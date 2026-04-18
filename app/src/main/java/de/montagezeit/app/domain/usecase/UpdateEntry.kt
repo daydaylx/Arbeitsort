@@ -26,10 +26,23 @@ class UpdateEntry(
         val normalizedLocation = entry.dayLocationLabel.trim()
 
         val now = System.currentTimeMillis()
-        val hasWorkBlock = entry.workStart != null && entry.workEnd != null
+        val shouldConfirmWorkDay = EntryStatusResolver.shouldAutoConfirmWorkDay(
+            entry = entry.copy(dayLocationLabel = normalizedLocation)
+        )
         val entryToSave = entry.copy(
             dayLocationLabel = normalizedLocation,
-            breakMinutes = if (hasWorkBlock) entry.breakMinutes else 0,
+            breakMinutes = if (entry.workStart != null && entry.workEnd != null) entry.breakMinutes else 0,
+            confirmedWorkDay = if (entry.dayType == DayType.WORK) shouldConfirmWorkDay else entry.confirmedWorkDay,
+            confirmationAt = when {
+                entry.dayType != DayType.WORK -> entry.confirmationAt
+                shouldConfirmWorkDay -> entry.confirmationAt ?: now
+                else -> null
+            },
+            confirmationSource = when {
+                entry.dayType != DayType.WORK -> entry.confirmationSource
+                shouldConfirmWorkDay -> entry.confirmationSource ?: "WORK_BLOCK"
+                else -> null
+            },
             updatedAt = now
         )
 
@@ -79,8 +92,8 @@ class UpdateEntry(
             if (workDurationMinutes > 18 * 60) {
                 throw IllegalArgumentException("Arbeitszeit ($workDurationMinutes min) darf nicht mehr als 18 Stunden betragen")
             }
-            if (entry.breakMinutes > workDurationMinutes) {
-                throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")
+            if (entry.breakMinutes >= workDurationMinutes) {
+                throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) muss kleiner als Arbeitszeit ($workDurationMinutes min) sein")
             }
         }
     }

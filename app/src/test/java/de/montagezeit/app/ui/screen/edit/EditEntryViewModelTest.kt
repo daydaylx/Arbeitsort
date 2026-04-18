@@ -8,6 +8,7 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
+import de.montagezeit.app.domain.usecase.SaveEditedEntryWithTravel
 import de.montagezeit.app.domain.usecase.testRepository
 import io.mockk.coVerify
 import io.mockk.coEvery
@@ -70,6 +71,7 @@ class EditEntryViewModelTest {
             reminderSettingsManager = reminderSettingsManager,
             draftRules = draftRules,
             saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
@@ -99,6 +101,7 @@ class EditEntryViewModelTest {
             reminderSettingsManager = reminderSettingsManager,
             draftRules = draftRules,
             saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
@@ -255,6 +258,7 @@ class EditEntryViewModelTest {
             reminderSettingsManager = reminderSettingsManager,
             draftRules = draftRules,
             saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
@@ -270,5 +274,83 @@ class EditEntryViewModelTest {
         assertEquals(1234L, capturedEntry.captured.confirmationAt)
         assertEquals("SYNC", capturedEntry.captured.confirmationSource)
         assertEquals("Nachtrag", capturedEntry.captured.note)
+    }
+
+    @Test
+    fun `mealAllowancePreview is not updated synchronously during rapid travel leg edits`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        val settings = ReminderSettings(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 0
+        )
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+        advanceUntilIdle()
+
+        val previewBeforeEdits = viewModel.screenState.value.mealAllowancePreviewCents
+
+        // Rapid edits: each cancels the previous debounce job
+        viewModel.addTravelLeg()
+        viewModel.updateTravelLegStart(0, LocalTime.of(7, 0))
+        viewModel.updateTravelLegArrive(0, LocalTime.of(9, 0))
+
+        // Directly after edits (debounce not yet fired) — preview unchanged
+        assertEquals(previewBeforeEdits, viewModel.screenState.value.mealAllowancePreviewCents)
+
+        // After debounce fires — preview is recomputed without error
+        advanceUntilIdle()
+        assertTrue(viewModel.screenState.value.mealAllowancePreviewCents >= 0)
+    }
+
+    @Test
+    fun `save succeeds and persists entry correctly while meal preview debounce is pending`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        val settings = ReminderSettings(
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 0
+        )
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+        coEvery { workEntryDao.getByDate(date) } returns null
+        coEvery { workEntryDao.replaceEntryWithTravelLegs(any(), any()) } returns Unit
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+        advanceUntilIdle()
+
+        // Edit travel leg (schedules debounce, does NOT fire yet)
+        viewModel.updateDayLocationLabel("Baustelle")
+        viewModel.addTravelLeg()
+        viewModel.updateTravelLegStart(0, LocalTime.of(7, 0))
+        viewModel.updateTravelLegArrive(0, LocalTime.of(9, 0))
+
+        // Save before the 150 ms debounce elapses
+        viewModel.save()
+        advanceUntilIdle()
+
+        // Save must complete — entry persisted and state transitions to Saved
+        coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(any(), any()) }
+        assertEquals(EditUiState.Saved, viewModel.screenState.value.uiState)
     }
 }
