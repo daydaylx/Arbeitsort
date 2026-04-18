@@ -59,7 +59,6 @@ class ClassifyDay {
                 if (hasTravel) DayClassification.FREI_MIT_REISE else DayClassification.FREI
             }
             DayType.COMP_TIME -> {
-                // COMP_TIME ist ein expliziter Überstundenabbau-Tag
                 DayClassification.UEBERSTUNDEN_ABBAU
             }
             DayType.WORK -> {
@@ -69,6 +68,8 @@ class ClassifyDay {
                     else -> DayClassification.ARBEITSTAG_LEER
                 }
             }
+            DayType.SCHULUNG -> DayClassification.SCHULUNG
+            DayType.LEHRGANG -> DayClassification.LEHRGANG
         }
     }
 }

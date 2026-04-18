@@ -20,55 +20,23 @@ fun WorkEntry.withMealAllowanceCleared(): WorkEntry {
 }
 
 fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeConfirmationState {
-    return when (dayType) {
-        DayType.COMP_TIME -> {
-            val source = DayType.COMP_TIME.name
-            if (this.dayType == DayType.COMP_TIME && confirmedWorkDay) {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = true,
-                    confirmationAt = confirmationAt ?: now,
-                    confirmationSource = confirmationSource ?: source
-                )
-            } else {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = true,
-                    confirmationAt = now,
-                    confirmationSource = source
-                )
-            }
-        }
-        DayType.OFF -> {
-            val source = DayType.OFF.name
-            if (this.dayType == DayType.OFF && confirmedWorkDay) {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = true,
-                    confirmationAt = confirmationAt ?: now,
-                    confirmationSource = confirmationSource ?: source
-                )
-            } else {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = true,
-                    confirmationAt = now,
-                    confirmationSource = source
-                )
-            }
-        }
-        DayType.WORK -> {
-            if (this.dayType != DayType.WORK) {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = false,
-                    confirmationAt = null,
-                    confirmationSource = null
-                )
-            } else {
-                DayTypeConfirmationState(
-                    confirmedWorkDay = confirmedWorkDay,
-                    confirmationAt = confirmationAt,
-                    confirmationSource = confirmationSource
-                )
-            }
-        }
+    // OFF/COMP_TIME auto-confirm on transition; WORK-like types start pending unless
+    // we're staying on the same type and it was already confirmed.
+    if (!dayType.isWorkLike) {
+        val source = dayType.name
+        val keepTimestamp = this.dayType == dayType && confirmedWorkDay
+        return DayTypeConfirmationState(
+            confirmedWorkDay = true,
+            confirmationAt = if (keepTimestamp) confirmationAt ?: now else now,
+            confirmationSource = if (keepTimestamp) confirmationSource ?: source else source
+        )
     }
+    val keepConfirmation = this.dayType == dayType && confirmedWorkDay
+    return DayTypeConfirmationState(
+        confirmedWorkDay = keepConfirmation,
+        confirmationAt = if (keepConfirmation) confirmationAt else null,
+        confirmationSource = if (keepConfirmation) confirmationSource else null
+    )
 }
 
 fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
@@ -111,6 +79,16 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
             )
             val shouldClearMealAllowance = this.dayType != DayType.WORK
             if (shouldClearMealAllowance) transitioned.withMealAllowanceCleared() else transitioned
+        }
+
+        DayType.SCHULUNG, DayType.LEHRGANG -> {
+            val confirmationState = confirmationStateForDayType(dayType = dayType, now = now)
+            copy(
+                dayType = dayType,
+                confirmedWorkDay = confirmationState.confirmedWorkDay,
+                confirmationAt = confirmationState.confirmationAt,
+                confirmationSource = confirmationState.confirmationSource
+            ).withMealAllowanceCleared()
         }
     }
     return if (transitioned == this) this else transitioned.copy(updatedAt = now)

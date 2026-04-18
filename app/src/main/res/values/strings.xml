@@ -101,6 +101,8 @@
     <string name="day_type_work">Arbeitstag</string>
     <string name="day_type_off">Freier Tag</string>
     <string name="day_type_comp_time">Ausgleich</string>
+    <string name="day_type_schulung">Schulung</string>
+    <string name="day_type_lehrgang">Lehrgang</string>
     <string name="today_location_morning">Morgens</string>
     <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
@@ -471,6 +473,8 @@
     <string name="edit_day_type_workday">Arbeitstag</string>
     <string name="edit_day_type_off">Frei</string>
     <string name="edit_day_type_comp_time">Ausgleich</string>
+    <string name="edit_day_type_schulung">Schulung</string>
+    <string name="edit_day_type_lehrgang">Lehrgang</string>
     <string name="edit_comp_time_info">Ausgleich: −%1$d Std.</string>
     <string name="edit_section_work_times">Arbeitszeiten</string>
     <string name="edit_toggle_work_times">Erfassen</string>

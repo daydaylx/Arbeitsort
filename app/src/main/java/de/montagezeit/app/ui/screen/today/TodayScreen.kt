@@ -842,4 +842,6 @@ private fun dayTypeLabel(dayType: DayType): String = when (dayType) {
     DayType.WORK -> stringResource(R.string.day_type_work)
     DayType.OFF -> stringResource(R.string.day_type_off)
     DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
+    DayType.SCHULUNG -> stringResource(R.string.day_type_schulung)
+    DayType.LEHRGANG -> stringResource(R.string.day_type_lehrgang)
 }

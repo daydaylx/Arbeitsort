@@ -38,6 +38,21 @@ class AggregateWorkStatsTest {
         ) else emptyList()
     )
 
+    private fun workEntryAt(date: LocalDate, location: String, mealCents: Int): WorkEntryWithTravelLegs =
+        WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                dayType = DayType.WORK,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                breakMinutes = 60,
+                confirmedWorkDay = true,
+                mealAllowanceAmountCents = mealCents,
+                dayLocationLabel = location
+            ),
+            travelLegs = emptyList()
+        )
+
     @Test
     fun `leere Liste ergibt Nullwerte`() {
         val result = useCase(emptyList())
@@ -482,6 +497,47 @@ class AggregateWorkStatsTest {
         )
 
         assertEquals(0, result.workDays)
+        assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
+    fun `SCHULUNG Tag zaehlt als Arbeitstag ohne Verpflegungspauschale`() {
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 4, 20), DayType.SCHULUNG,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0),
+                    breakMinutes = 60, mealAllowanceCents = 1400)
+            )
+        )
+        assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
+        assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
+    fun `LEHRGANG Tag zaehlt als Arbeitstag ohne Verpflegungspauschale`() {
+        val result = useCase(
+            listOf(
+                entry(LocalDate.of(2026, 4, 21), DayType.LEHRGANG,
+                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0),
+                    breakMinutes = 60, mealAllowanceCents = 820)
+            )
+        )
+        assertEquals(1, result.workDays)
+        assertEquals(1, result.targetCountedDays)
+        assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
+    fun `WORK Tag in Leipzig zaehlt ohne Verpflegungspauschale`() {
+        val result = useCase(listOf(workEntryAt(LocalDate.of(2026, 4, 22), "Leipzig", 1400)))
+        assertEquals(1, result.workDays)
+        assertEquals(0, result.mealAllowanceCents)
+    }
+
+    @Test
+    fun `WORK Tag in Leipzig gross geschrieben bleibt ohne Verpflegungspauschale`() {
+        val result = useCase(listOf(workEntryAt(LocalDate.of(2026, 4, 23), "  LEIPZIG  ", 1400)))
         assertEquals(0, result.mealAllowanceCents)
     }
 

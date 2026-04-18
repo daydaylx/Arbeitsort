@@ -4,79 +4,67 @@
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>CyclomaticComplexMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
-    <ID>CyclomaticComplexMethod:EditEntryFormContent.kt$@Composable internal fun EditFormContent( entry: WorkEntry, formData: EditFormData, validationErrors: List&lt;ValidationError&gt; = emptyList(), dailyTargetHours: Double = 8.0, onDayTypeChange: (DayType) -&gt; Unit, onHasWorkTimesChange: (Boolean) -&gt; Unit, onWorkStartChange: (Int, Int) -&gt; Unit, onWorkEndChange: (Int, Int) -&gt; Unit, onBreakMinutesChange: (Int) -&gt; Unit, onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onTravelClear: () -&gt; Unit, onDayLocationChange: (String) -&gt; Unit, onMealArrivalDepartureChange: (Boolean) -&gt; Unit, onMealBreakfastIncludedChange: (Boolean) -&gt; Unit, onNoteChange: (String) -&gt; Unit, onApplyDefaultTimes: (() -&gt; Unit)? = null, onCopyPrevious: (() -&gt; Unit)? = null, onSave: () -&gt; Unit, onDeleteDay: (() -&gt; Unit)? = null, isSaving: Boolean = false, isNewEntry: Boolean = false, onCopy: (() -&gt; Unit)? = null, showPrimarySaveButton: Boolean = true )</ID>
-    <ID>CyclomaticComplexMethod:EditEntryFormContent.kt$@Composable internal fun EditWorkTimesSection( enabled: Boolean, workStart: java.time.LocalTime, workEnd: java.time.LocalTime, breakMinutes: Int, validationErrors: List&lt;ValidationError&gt; = emptyList(), onEnabledChange: (Boolean) -&gt; Unit, onStartChange: (Int, Int) -&gt; Unit, onEndChange: (Int, Int) -&gt; Unit, onBreakChange: (Int) -&gt; Unit, onApplyDefaults: (() -&gt; Unit)? = null )</ID>
+    <ID>CyclomaticComplexMethod:EditEntryDraftRules.kt$EditEntryDraftRules$fun validate(formData: EditFormData): List&lt;ValidationError&gt;</ID>
+    <ID>CyclomaticComplexMethod:EditEntryFormContent.kt$@Composable internal fun EditFormContent( formData: EditFormData, validationErrors: List&lt;ValidationError&gt; = emptyList(), dailyTargetHours: Double = 8.0, mealAllowancePreviewCents: Int = 0, onDayTypeChange: (DayType) -&gt; Unit, onHasWorkTimesChange: (Boolean) -&gt; Unit, onWorkStartChange: (Int, Int) -&gt; Unit, onWorkEndChange: (Int, Int) -&gt; Unit, onBreakMinutesChange: (Int) -&gt; Unit, onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onTravelClear: () -&gt; Unit, onDayLocationChange: (String) -&gt; Unit, onMealArrivalDepartureChange: (Boolean) -&gt; Unit, onMealBreakfastIncludedChange: (Boolean) -&gt; Unit, onNoteChange: (String) -&gt; Unit, onApplyDefaultTimes: (() -&gt; Unit)? = null, onCopyPrevious: (() -&gt; Unit)? = null, onSave: () -&gt; Unit, isSaving: Boolean = false )</ID>
     <ID>CyclomaticComplexMethod:EditEntryTravelSections.kt$@Composable private fun TravelLegCard( index: Int, leg: EditTravelLegForm, validationErrors: List&lt;ValidationError&gt;, onStartChange: (Int, LocalTime?) -&gt; Unit, onArriveChange: (Int, LocalTime?) -&gt; Unit, onStartLabelChange: (Int, String) -&gt; Unit, onEndLabelChange: (Int, String) -&gt; Unit, onRemove: (Int) -&gt; Unit )</ID>
-    <ID>CyclomaticComplexMethod:EditEntryViewModel.kt$EditFormData$fun validate(): List&lt;ValidationError&gt;</ID>
-    <ID>CyclomaticComplexMethod:HistoryScreen.kt$@Composable fun TravelSummaryRow(travelLegs: List&lt;TravelLeg&gt;)</ID>
-    <ID>CyclomaticComplexMethod:HistoryScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BatchEditDialog( isSubmitting: Boolean, onDismiss: () -&gt; Unit, onApply: (BatchEditRequest) -&gt; Unit )</ID>
     <ID>CyclomaticComplexMethod:HistoryViewModel.kt$HistoryViewModel$fun applyBatchEdit(request: BatchEditRequest)</ID>
-    <ID>CyclomaticComplexMethod:PdfExporter.kt$PdfExporter$fun exportToPdf( entries: List&lt;WorkEntryWithTravelLegs&gt;, employeeName: String, company: String? = null, project: String? = null, personnelNumber: String? = null, startDate: java.time.LocalDate, endDate: java.time.LocalDate ): PdfExportResult</ID>
-    <ID>CyclomaticComplexMethod:PdfExporter.kt$PdfExporter$private fun drawTable( canvas: Canvas, pdfDocument: PdfDocument, currentPage: PdfDocument.Page, entries: List&lt;WorkEntryWithTravelLegs&gt;, startY: Float ): TableDrawResult</ID>
+    <ID>CyclomaticComplexMethod:PdfExporter.kt$PdfExporter$private fun buildTableCellTexts(record: WorkEntryWithTravelLegs, dash: String): List&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:PdfExporter.kt$PdfExporter$suspend fun exportToPdf( entries: List&lt;WorkEntryWithTravelLegs&gt;, employeeName: String, company: String? = null, project: String? = null, personnelNumber: String? = null, startDate: java.time.LocalDate, endDate: java.time.LocalDate ): PdfExportResult</ID>
     <ID>CyclomaticComplexMethod:ReminderFlagsStore.kt$ReminderFlagsStore$private suspend fun ensureMigrated()</ID>
     <ID>CyclomaticComplexMethod:ReminderSettingsManager.kt$ReminderSettingsManager$suspend fun updateSettings( workStart: LocalTime? = null, workEnd: LocalTime? = null, breakMinutes: Int? = null, morningReminderEnabled: Boolean? = null, morningWindowStart: LocalTime? = null, morningWindowEnd: LocalTime? = null, morningCheckIntervalMinutes: Int? = null, eveningReminderEnabled: Boolean? = null, eveningWindowStart: LocalTime? = null, eveningWindowEnd: LocalTime? = null, eveningCheckIntervalMinutes: Int? = null, fallbackEnabled: Boolean? = null, fallbackTime: LocalTime? = null, dailyReminderEnabled: Boolean? = null, dailyReminderTime: LocalTime? = null, autoOffWeekends: Boolean? = null, autoOffHolidays: Boolean? = null, holidayDates: Set&lt;LocalDate&gt;? = null, pdfEmployeeName: String? = null, pdfCompany: String? = null, pdfProject: String? = null, pdfPersonnelNumber: String? = null, dailyTargetHours: Double? = null )</ID>
     <ID>CyclomaticComplexMethod:WeekOverviewRow.kt$@Composable private fun WeekDayChip( day: WeekDayUi, onClick: () -&gt; Unit )</ID>
     <ID>CyclomaticComplexMethod:WindowCheckWorker.kt$WindowCheckWorker$override suspend fun doWork(): Result</ID>
     <ID>LargeClass:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest</ID>
+    <ID>LongMethod:AggregateWorkStats.kt$AggregateWorkStats$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, trace: DiagnosticTrace? = null ): WorkStatsResult</ID>
     <ID>LongMethod:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$override fun migrate(db: SupportSQLiteDatabase)</ID>
     <ID>LongMethod:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$private fun createVersion11Database(dbName: String)</ID>
+    <ID>LongMethod:CalculateOvertimeForRange.kt$CalculateOvertimeForRange$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, dailyTargetHours: Double, trace: DiagnosticTrace? = null ): OvertimeResult</ID>
     <ID>LongMethod:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>LongMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
-    <ID>LongMethod:EditEntryFormContent.kt$@Composable internal fun EditFormContent( entry: WorkEntry, formData: EditFormData, validationErrors: List&lt;ValidationError&gt; = emptyList(), dailyTargetHours: Double = 8.0, onDayTypeChange: (DayType) -&gt; Unit, onHasWorkTimesChange: (Boolean) -&gt; Unit, onWorkStartChange: (Int, Int) -&gt; Unit, onWorkEndChange: (Int, Int) -&gt; Unit, onBreakMinutesChange: (Int) -&gt; Unit, onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onTravelClear: () -&gt; Unit, onDayLocationChange: (String) -&gt; Unit, onMealArrivalDepartureChange: (Boolean) -&gt; Unit, onMealBreakfastIncludedChange: (Boolean) -&gt; Unit, onNoteChange: (String) -&gt; Unit, onApplyDefaultTimes: (() -&gt; Unit)? = null, onCopyPrevious: (() -&gt; Unit)? = null, onSave: () -&gt; Unit, onDeleteDay: (() -&gt; Unit)? = null, isSaving: Boolean = false, isNewEntry: Boolean = false, onCopy: (() -&gt; Unit)? = null, showPrimarySaveButton: Boolean = true )</ID>
-    <ID>LongMethod:EditEntryFormContent.kt$@Composable internal fun EditWorkTimesSection( enabled: Boolean, workStart: java.time.LocalTime, workEnd: java.time.LocalTime, breakMinutes: Int, validationErrors: List&lt;ValidationError&gt; = emptyList(), onEnabledChange: (Boolean) -&gt; Unit, onStartChange: (Int, Int) -&gt; Unit, onEndChange: (Int, Int) -&gt; Unit, onBreakChange: (Int) -&gt; Unit, onApplyDefaults: (() -&gt; Unit)? = null )</ID>
-    <ID>LongMethod:EditEntryTravelSections.kt$@Composable private fun TravelLegCard( index: Int, leg: EditTravelLegForm, validationErrors: List&lt;ValidationError&gt;, onStartChange: (Int, LocalTime?) -&gt; Unit, onArriveChange: (Int, LocalTime?) -&gt; Unit, onStartLabelChange: (Int, String) -&gt; Unit, onEndLabelChange: (Int, String) -&gt; Unit, onRemove: (Int) -&gt; Unit )</ID>
+    <ID>LongMethod:EditEntrySheet.kt$@Composable private fun EditSheetHero( date: LocalDate, isSaving: Boolean, isDirty: Boolean, uiState: EditUiState, isNewEntry: Boolean, onDeleteDay: (() -&gt; Unit)?, onCopy: (() -&gt; Unit)? )</ID>
     <ID>LongMethod:ExportPreviewScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ExportPreviewBottomSheet( range: Pair&lt;LocalDate, LocalDate&gt;, onDismiss: () -&gt; Unit, onOpenEditSheet: (LocalDate, () -&gt; Unit) -&gt; Unit, viewModel: ExportPreviewViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:ExportPreviewViewModel.kt$ExportPreviewViewModel$fun createPdf()</ID>
-    <ID>LongMethod:HistoryScreen.kt$@Composable fun CalendarDayCell( day: CalendarDay, entry: WorkEntry?, isToday: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:HistoryScreen.kt$@Composable fun TravelSummaryRow(travelLegs: List&lt;TravelLeg&gt;)</ID>
-    <ID>LongMethod:HistoryScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable fun HistoryContent( weeks: List&lt;WeekGroup&gt;, months: List&lt;MonthGroup&gt;, entriesByDate: Map&lt;LocalDate, WorkEntry&gt;, travelLegsByDate: Map&lt;LocalDate, List&lt;TravelLeg&gt;&gt;, onEntryClick: (java.time.LocalDate) -&gt; Unit, onOpenBatchEdit: () -&gt; Unit = {}, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:HistoryScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BatchEditDialog( isSubmitting: Boolean, onDismiss: () -&gt; Unit, onApply: (BatchEditRequest) -&gt; Unit )</ID>
-    <ID>LongMethod:MontageZeitNavGraph.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MontageZeitNavGraph( editRequestDate: String? = null, onEditRequestConsumed: (() -&gt; Unit)? = null )</ID>
-    <ID>LongMethod:PdfExporter.kt$PdfExporter$private fun drawTable( canvas: Canvas, pdfDocument: PdfDocument, currentPage: PdfDocument.Page, entries: List&lt;WorkEntryWithTravelLegs&gt;, startY: Float ): TableDrawResult</ID>
+    <ID>LongMethod:RecordDailyManualCheckIn.kt$RecordDailyManualCheckIn$suspend operator fun invoke(input: DailyManualCheckInInput): WorkEntry</ID>
     <ID>LongMethod:SettingsDialogs.kt$@Composable fun ExportRangeDialog( onPdfRangeSelected: (LocalDate, LocalDate) -&gt; Unit, onCsvRangeSelected: (LocalDate, LocalDate) -&gt; Unit, onPreviewRangeSelected: (LocalDate, LocalDate) -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
-    <ID>LongMethod:SettingsScreen.kt$@Composable private fun SettingsContent( settings: de.montagezeit.app.data.preferences.ReminderSettings, uiState: SettingsUiState, onUpdateMorningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateEveningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateWorkStart: (LocalTime) -&gt; Unit, onUpdateWorkEnd: (LocalTime) -&gt; Unit, onUpdateBreakMinutes: (Int) -&gt; Unit, onUpdateMorningEnabled: (Boolean) -&gt; Unit, onUpdateEveningEnabled: (Boolean) -&gt; Unit, onUpdateFallbackEnabled: (Boolean) -&gt; Unit, onUpdateFallbackTime: (LocalTime) -&gt; Unit, onUpdateDailyEnabled: (Boolean) -&gt; Unit, onUpdateDailyTime: (LocalTime) -&gt; Unit, onUpdateAutoOffWeekends: (Boolean) -&gt; Unit, onUpdateAutoOffHolidays: (Boolean) -&gt; Unit, onAddHolidayDate: (LocalDate) -&gt; Unit, onRemoveHolidayDate: (LocalDate) -&gt; Unit, onExportPdfCurrentMonth: () -&gt; Unit, onExportCsvCurrentMonth: () -&gt; Unit, onExportPdfLast30Days: () -&gt; Unit, onExportCsvLast30Days: () -&gt; Unit, onExportPdfCustomRange: (LocalDate, LocalDate) -&gt; Unit, onExportCsvCustomRange: (LocalDate, LocalDate) -&gt; Unit, onOpenExportPreview: (LocalDate, LocalDate) -&gt; Unit, onUpdatePdfSettings: (String?, String?, String?, String?) -&gt; Unit, onUpdateDailyTargetHours: (Double) -&gt; Unit, onResetExportState: () -&gt; Unit, hasNotificationPermission: Boolean, isIgnoringBatteryOptimizations: Boolean, onRequestNotificationPermission: () -&gt; Unit, onOpenNotificationSettings: () -&gt; Unit, onOpenBatterySettings: () -&gt; Unit, onSendTestReminder: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:SettingsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen( viewModel: SettingsViewModel = hiltViewModel(), onOpenEditSheet: (LocalDate, () -&gt; Unit) -&gt; Unit )</ID>
     <ID>LongMethod:SettingsSections.kt$@Composable internal fun ExportSection( uiState: SettingsUiState, onExportPdfCurrentMonth: () -&gt; Unit, onExportCsvCurrentMonth: () -&gt; Unit, onExportPdfLast30Days: () -&gt; Unit, onExportCsvLast30Days: () -&gt; Unit, onExportPdfCustomRange: (LocalDate, LocalDate) -&gt; Unit, onExportCsvCustomRange: (LocalDate, LocalDate) -&gt; Unit, onOpenExportPreview: (LocalDate, LocalDate) -&gt; Unit, pdfEmployeeName: String?, pdfCompany: String?, pdfProject: String?, pdfPersonnelNumber: String?, onUpdatePdfSettings: (String?, String?, String?, String?) -&gt; Unit, onResetState: () -&gt; Unit, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongMethod:SettingsSections.kt$@Composable internal fun NonWorkingDaysSection( autoOffWeekends: Boolean, autoOffHolidays: Boolean, holidayDates: Set&lt;LocalDate&gt;, onUpdateAutoOffWeekends: (Boolean) -&gt; Unit, onUpdateAutoOffHolidays: (Boolean) -&gt; Unit, onAddHolidayDate: (LocalDate) -&gt; Unit, onRemoveHolidayDate: (LocalDate) -&gt; Unit, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongMethod:SettingsSections.kt$@Composable internal fun ReminderSettingsSection( morningReminderEnabled: Boolean, morningWindowStart: LocalTime, morningWindowEnd: LocalTime, eveningReminderEnabled: Boolean, eveningWindowStart: LocalTime, eveningWindowEnd: LocalTime, fallbackEnabled: Boolean, fallbackTime: LocalTime, dailyReminderEnabled: Boolean, dailyReminderTime: LocalTime, onUpdateMorningEnabled: (Boolean) -&gt; Unit, onUpdateMorningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateEveningEnabled: (Boolean) -&gt; Unit, onUpdateEveningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateFallbackEnabled: (Boolean) -&gt; Unit, onUpdateFallbackTime: (LocalTime) -&gt; Unit, onUpdateDailyEnabled: (Boolean) -&gt; Unit, onUpdateDailyTime: (LocalTime) -&gt; Unit, reminderError: de.montagezeit.app.ui.util.UiText?, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongMethod:SettingsSections.kt$@Composable internal fun WorkTimesSection( workStart: LocalTime, workEnd: LocalTime, breakMinutes: Int, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit, onUpdateWorkStart: (LocalTime) -&gt; Unit, onUpdateWorkEnd: (LocalTime) -&gt; Unit, onUpdateBreakMinutes: (Int) -&gt; Unit )</ID>
     <ID>LongMethod:TimePickerDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun TimePickerDialog( title: String? = null, initialTime: LocalTime, onTimeSelected: (LocalTime) -&gt; Unit, onDismiss: () -&gt; Unit, validator: ((LocalTime) -&gt; String?)? = null )</ID>
-    <ID>LongMethod:TodayScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun TodayScreen( viewModel: TodayViewModel = hiltViewModel(), onOpenEditSheet: (LocalDate) -&gt; Unit, onOpenWeekView: () -&gt; Unit = {} )</ID>
     <ID>LongMethod:WeekOverviewRow.kt$@Composable private fun WeekDayChip( day: WeekDayUi, onClick: () -&gt; Unit )</ID>
+    <ID>LongMethod:WindowCheckWorker.kt$WindowCheckWorker$override suspend fun doWork(): Result</ID>
     <ID>LongParameterList:AggregateWorkStatsTest.kt$AggregateWorkStatsTest$( date: LocalDate, dayType: DayType, confirmed: Boolean = true, workStart: LocalTime? = LocalTime.of(8, 0), workEnd: LocalTime? = LocalTime.of(17, 0), breakMinutes: Int = 60, travelMinutes: Int = 0, mealAllowanceCents: Int = 0 )</ID>
     <ID>LongParameterList:ClassifyDayTest.kt$ClassifyDayTest$( date: LocalDate, dayType: DayType, workStart: LocalTime?, workEnd: LocalTime?, breakMinutes: Int, travelMinutes: Int, mealAllowanceCents: Int = 0, confirmed: Boolean = true )</ID>
-    <ID>LongParameterList:EditEntryFormContent.kt$( enabled: Boolean, workStart: java.time.LocalTime, workEnd: java.time.LocalTime, breakMinutes: Int, validationErrors: List&lt;ValidationError&gt; = emptyList(), onEnabledChange: (Boolean) -&gt; Unit, onStartChange: (Int, Int) -&gt; Unit, onEndChange: (Int, Int) -&gt; Unit, onBreakChange: (Int) -&gt; Unit, onApplyDefaults: (() -&gt; Unit)? = null )</ID>
-    <ID>LongParameterList:EditEntryFormContent.kt$( entry: WorkEntry, formData: EditFormData, validationErrors: List&lt;ValidationError&gt; = emptyList(), dailyTargetHours: Double = 8.0, onDayTypeChange: (DayType) -&gt; Unit, onHasWorkTimesChange: (Boolean) -&gt; Unit, onWorkStartChange: (Int, Int) -&gt; Unit, onWorkEndChange: (Int, Int) -&gt; Unit, onBreakMinutesChange: (Int) -&gt; Unit, onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onTravelClear: () -&gt; Unit, onDayLocationChange: (String) -&gt; Unit, onMealArrivalDepartureChange: (Boolean) -&gt; Unit, onMealBreakfastIncludedChange: (Boolean) -&gt; Unit, onNoteChange: (String) -&gt; Unit, onApplyDefaultTimes: (() -&gt; Unit)? = null, onCopyPrevious: (() -&gt; Unit)? = null, onSave: () -&gt; Unit, onDeleteDay: (() -&gt; Unit)? = null, isSaving: Boolean = false, isNewEntry: Boolean = false, onCopy: (() -&gt; Unit)? = null, showPrimarySaveButton: Boolean = true )</ID>
-    <ID>LongParameterList:EditEntrySheet.kt$( activeDialog: EditSheetDialog, date: LocalDate, isSaving: Boolean, viewModel: EditEntryViewModel, context: Context, onDismiss: () -&gt; Unit, onCopyToNewDate: ((LocalDate, EditFormData) -&gt; Unit)?, onNavigateDate: ((LocalDate) -&gt; Unit)?, onDialogChange: (EditSheetDialog) -&gt; Unit )</ID>
-    <ID>LongParameterList:EditEntrySheet.kt$( date: LocalDate, screenState: EditScreenState, swipeThresholdPx: Float, onNavigateDate: ((LocalDate) -&gt; Unit)?, onOpenNavigateDatePicker: () -&gt; Unit, onDismiss: () -&gt; Unit, onOpenCopyDatePicker: () -&gt; Unit, onOpenDeleteDialog: () -&gt; Unit, viewModel: EditEntryViewModel, context: Context )</ID>
-    <ID>LongParameterList:EditEntrySheet.kt$( entry: WorkEntry, formData: EditFormData, validationErrors: List&lt;ValidationError&gt;, dailyTargetHours: Double, viewModel: EditEntryViewModel, context: Context, isSaving: Boolean, isNewEntry: Boolean, onDeleteDay: (() -&gt; Unit)?, onCopy: (() -&gt; Unit)? )</ID>
     <ID>LongParameterList:EditEntryTravelSections.kt$( index: Int, leg: EditTravelLegForm, validationErrors: List&lt;ValidationError&gt;, onStartChange: (Int, LocalTime?) -&gt; Unit, onArriveChange: (Int, LocalTime?) -&gt; Unit, onStartLabelChange: (Int, String) -&gt; Unit, onEndLabelChange: (Int, String) -&gt; Unit, onRemove: (Int) -&gt; Unit )</ID>
     <ID>LongParameterList:EditEntryTravelSections.kt$( travelLegs: List&lt;EditTravelLegForm&gt;, validationErrors: List&lt;ValidationError&gt; = emptyList(), onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onClearTravel: () -&gt; Unit )</ID>
     <ID>LongParameterList:EditFormDataValidationTest.kt$EditFormDataValidationTest$( dayType: DayType = DayType.WORK, workStart: LocalTime = LocalTime.of(8, 0), workEnd: LocalTime = LocalTime.of(17, 0), breakMinutes: Int = 60, dayLocationLabel: String = "Baustelle A", travelLegs: List&lt;EditTravelLegForm&gt; = emptyList(), travelStartTime: LocalTime? = null, travelArriveTime: LocalTime? = null )</ID>
     <ID>LongParameterList:HistoryScreen.kt$( showCalendar: Boolean, calendarMode: CalendarMode, showMonths: Boolean, canToggleMonths: Boolean, onShowCalendarChange: (Boolean) -&gt; Unit, onCalendarModeChange: (CalendarMode) -&gt; Unit, onShowMonthsChange: (Boolean) -&gt; Unit, onPickDate: () -&gt; Unit, onOpenBatchEdit: () -&gt; Unit = {} )</ID>
+    <ID>LongParameterList:HistoryScreen.kt$( weeks: List&lt;WeekGroup&gt;, months: List&lt;MonthGroup&gt;, entriesByDate: Map&lt;LocalDate, WorkEntry&gt;, travelLegsByDate: Map&lt;LocalDate, List&lt;TravelLeg&gt;&gt;, onEntryClick: (java.time.LocalDate) -&gt; Unit, onOpenBatchEdit: () -&gt; Unit = {}, openRequest: HistoryOpenRequest? = null, onOpenRequestConsumed: () -&gt; Unit = {}, modifier: Modifier = Modifier )</ID>
     <ID>LongParameterList:MZActionButtons.kt$( onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, isLoading: Boolean = false, icon: ImageVector? = null, contentDescription: String? = null, minHeight: Dp = AccessibilityDefaults.PrimaryButtonHeight, shape: Shape? = null, colors: ButtonColors? = null, content: @Composable RowScope.() -&gt; Unit )</ID>
     <ID>LongParameterList:MZActionButtons.kt$( onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, isLoading: Boolean = false, icon: ImageVector? = null, contentDescription: String? = null, minHeight: Dp = AccessibilityDefaults.SecondaryButtonHeight, shape: Shape? = null, colors: ButtonColors? = null, content: @Composable RowScope.() -&gt; Unit )</ID>
     <ID>LongParameterList:MZActionButtons.kt$( onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, isLoading: Boolean = false, icon: ImageVector? = null, contentDescription: String? = null, minHeight: Dp = AccessibilityDefaults.TertiaryButtonHeight, shape: Shape? = null, colors: ButtonColors? = null, content: @Composable RowScope.() -&gt; Unit )</ID>
-    <ID>LongParameterList:OverviewScreen.kt$( selectedDate: LocalDate, selectedPeriod: OverviewPeriod, metrics: OverviewMetrics, onPreviousRange: () -&gt; Unit, onNextRange: () -&gt; Unit, onSelectPeriod: (OverviewPeriod) -&gt; Unit, onOpenPeriodPicker: () -&gt; Unit, onActionNeededClick: () -&gt; Unit )</ID>
-    <ID>LongParameterList:PdfExporter.kt$PdfExporter$( canvas: Canvas, employeeName: String, company: String?, project: String?, personnelNumber: String?, startDate: java.time.LocalDate, endDate: java.time.LocalDate, actualEndDate: java.time.LocalDate? = null )</ID>
+    <ID>LongParameterList:OverviewScreen.kt$( selectedDate: LocalDate, selectedPeriod: OverviewPeriod, metrics: OverviewMetrics, onPreviousRange: () -&gt; Unit, onNextRange: () -&gt; Unit, onSelectPeriod: (OverviewPeriod) -&gt; Unit, onOpenPeriodPicker: () -&gt; Unit, onActionNeededClick: () -&gt; Unit, onOpenToday: () -&gt; Unit, onOpenHistory: () -&gt; Unit, onOpenSettings: () -&gt; Unit )</ID>
+    <ID>LongParameterList:PdfExporter.kt$PdfExporter$( canvas: Canvas, employeeName: String, company: String?, project: String?, personnelNumber: String?, startDate: LocalDate, endDate: LocalDate, actualEndDate: LocalDate? = null )</ID>
     <ID>LongParameterList:ReminderSettingsManager.kt$ReminderSettingsManager$( workStart: LocalTime? = null, workEnd: LocalTime? = null, breakMinutes: Int? = null, morningReminderEnabled: Boolean? = null, morningWindowStart: LocalTime? = null, morningWindowEnd: LocalTime? = null, morningCheckIntervalMinutes: Int? = null, eveningReminderEnabled: Boolean? = null, eveningWindowStart: LocalTime? = null, eveningWindowEnd: LocalTime? = null, eveningCheckIntervalMinutes: Int? = null, fallbackEnabled: Boolean? = null, fallbackTime: LocalTime? = null, dailyReminderEnabled: Boolean? = null, dailyReminderTime: LocalTime? = null, autoOffWeekends: Boolean? = null, autoOffHolidays: Boolean? = null, holidayDates: Set&lt;LocalDate&gt;? = null, pdfEmployeeName: String? = null, pdfCompany: String? = null, pdfProject: String? = null, pdfPersonnelNumber: String? = null, dailyTargetHours: Double? = null )</ID>
-    <ID>LongParameterList:SettingsScreen.kt$( settings: de.montagezeit.app.data.preferences.ReminderSettings, uiState: SettingsUiState, onUpdateMorningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateEveningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateWorkStart: (LocalTime) -&gt; Unit, onUpdateWorkEnd: (LocalTime) -&gt; Unit, onUpdateBreakMinutes: (Int) -&gt; Unit, onUpdateMorningEnabled: (Boolean) -&gt; Unit, onUpdateEveningEnabled: (Boolean) -&gt; Unit, onUpdateFallbackEnabled: (Boolean) -&gt; Unit, onUpdateFallbackTime: (LocalTime) -&gt; Unit, onUpdateDailyEnabled: (Boolean) -&gt; Unit, onUpdateDailyTime: (LocalTime) -&gt; Unit, onUpdateAutoOffWeekends: (Boolean) -&gt; Unit, onUpdateAutoOffHolidays: (Boolean) -&gt; Unit, onAddHolidayDate: (LocalDate) -&gt; Unit, onRemoveHolidayDate: (LocalDate) -&gt; Unit, onExportPdfCurrentMonth: () -&gt; Unit, onExportCsvCurrentMonth: () -&gt; Unit, onExportPdfLast30Days: () -&gt; Unit, onExportCsvLast30Days: () -&gt; Unit, onExportPdfCustomRange: (LocalDate, LocalDate) -&gt; Unit, onExportCsvCustomRange: (LocalDate, LocalDate) -&gt; Unit, onOpenExportPreview: (LocalDate, LocalDate) -&gt; Unit, onUpdatePdfSettings: (String?, String?, String?, String?) -&gt; Unit, onUpdateDailyTargetHours: (Double) -&gt; Unit, onResetExportState: () -&gt; Unit, hasNotificationPermission: Boolean, isIgnoringBatteryOptimizations: Boolean, onRequestNotificationPermission: () -&gt; Unit, onOpenNotificationSettings: () -&gt; Unit, onOpenBatterySettings: () -&gt; Unit, onSendTestReminder: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:SettingsScreen.kt$( settings: de.montagezeit.app.data.preferences.ReminderSettings, uiState: SettingsUiState, onUpdateMorningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateEveningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateWorkStart: (LocalTime) -&gt; Unit, onUpdateWorkEnd: (LocalTime) -&gt; Unit, onUpdateBreakMinutes: (Int) -&gt; Unit, onUpdateMorningEnabled: (Boolean) -&gt; Unit, onUpdateEveningEnabled: (Boolean) -&gt; Unit, onUpdateFallbackEnabled: (Boolean) -&gt; Unit, onUpdateFallbackTime: (LocalTime) -&gt; Unit, onUpdateDailyEnabled: (Boolean) -&gt; Unit, onUpdateDailyTime: (LocalTime) -&gt; Unit, onUpdateAutoOffWeekends: (Boolean) -&gt; Unit, onUpdateAutoOffHolidays: (Boolean) -&gt; Unit, onAddHolidayDate: (LocalDate) -&gt; Unit, onRemoveHolidayDate: (LocalDate) -&gt; Unit, onExportPdfCurrentMonth: () -&gt; Unit, onExportCsvCurrentMonth: () -&gt; Unit, onExportPdfLast30Days: () -&gt; Unit, onExportCsvLast30Days: () -&gt; Unit, onExportPdfCustomRange: (LocalDate, LocalDate) -&gt; Unit, onExportCsvCustomRange: (LocalDate, LocalDate) -&gt; Unit, onOpenExportPreview: (LocalDate, LocalDate) -&gt; Unit, onUpdatePdfSettings: (String?, String?, String?, String?) -&gt; Unit, onUpdateDailyTargetHours: (Double) -&gt; Unit, onResetExportState: () -&gt; Unit, hasNotificationPermission: Boolean, isIgnoringBatteryOptimizations: Boolean, onRequestNotificationPermission: () -&gt; Unit, onOpenNotificationSettings: () -&gt; Unit, onOpenBatterySettings: () -&gt; Unit, onSendTestReminder: () -&gt; Unit, onNavigateToRoute: (String) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongParameterList:SettingsSections.kt$( autoOffWeekends: Boolean, autoOffHolidays: Boolean, holidayDates: Set&lt;LocalDate&gt;, onUpdateAutoOffWeekends: (Boolean) -&gt; Unit, onUpdateAutoOffHolidays: (Boolean) -&gt; Unit, onAddHolidayDate: (LocalDate) -&gt; Unit, onRemoveHolidayDate: (LocalDate) -&gt; Unit, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongParameterList:SettingsSections.kt$( morningReminderEnabled: Boolean, morningWindowStart: LocalTime, morningWindowEnd: LocalTime, eveningReminderEnabled: Boolean, eveningWindowStart: LocalTime, eveningWindowEnd: LocalTime, fallbackEnabled: Boolean, fallbackTime: LocalTime, dailyReminderEnabled: Boolean, dailyReminderTime: LocalTime, onUpdateMorningEnabled: (Boolean) -&gt; Unit, onUpdateMorningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateEveningEnabled: (Boolean) -&gt; Unit, onUpdateEveningWindow: (Int, Int, Int, Int) -&gt; Unit, onUpdateFallbackEnabled: (Boolean) -&gt; Unit, onUpdateFallbackTime: (LocalTime) -&gt; Unit, onUpdateDailyEnabled: (Boolean) -&gt; Unit, onUpdateDailyTime: (LocalTime) -&gt; Unit, reminderError: de.montagezeit.app.ui.util.UiText?, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongParameterList:SettingsSections.kt$( uiState: SettingsUiState, onExportPdfCurrentMonth: () -&gt; Unit, onExportCsvCurrentMonth: () -&gt; Unit, onExportPdfLast30Days: () -&gt; Unit, onExportCsvLast30Days: () -&gt; Unit, onExportPdfCustomRange: (LocalDate, LocalDate) -&gt; Unit, onExportCsvCustomRange: (LocalDate, LocalDate) -&gt; Unit, onOpenExportPreview: (LocalDate, LocalDate) -&gt; Unit, pdfEmployeeName: String?, pdfCompany: String?, pdfProject: String?, pdfPersonnelNumber: String?, onUpdatePdfSettings: (String?, String?, String?, String?) -&gt; Unit, onResetState: () -&gt; Unit, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongParameterList:SettingsSections.kt$( workStart: LocalTime, workEnd: LocalTime, breakMinutes: Int, expanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit, onUpdateWorkStart: (LocalTime) -&gt; Unit, onUpdateWorkEnd: (LocalTime) -&gt; Unit, onUpdateBreakMinutes: (Int) -&gt; Unit )</ID>
-    <ID>LongParameterList:TodayScreen.kt$( entry: WorkEntry?, travelLegs: List&lt;TravelLeg&gt;, selectedDate: LocalDate, weekDaysUi: List&lt;WeekDayUi&gt;, isDailyCheckInLoading: Boolean, isConfirmOffdayLoading: Boolean, onSelectDay: (LocalDate) -&gt; Unit, onEditDayLocation: () -&gt; Unit, onEditToday: () -&gt; Unit, onOpenDailyCheckInDialog: () -&gt; Unit, onConfirmOffDay: () -&gt; Unit )</ID>
-    <ID>LongParameterList:TodayScreen.kt$( input: String, isLoading: Boolean, isArrivalDeparture: Boolean, breakfastIncluded: Boolean, allowancePreviewCents: Int, onInputChange: (String) -&gt; Unit, onArrivalDepartureChanged: (Boolean) -&gt; Unit, onBreakfastIncludedChanged: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, onConfirm: () -&gt; Unit )</ID>
     <ID>MagicNumber:AggregateWorkStats.kt$WorkStatsResult$60.0</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$10</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$11</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$12</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$13</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$14</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$15</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$16</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$24</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$3</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$4</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$5</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$6</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$60</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$7</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$8</ID>
     <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$9</ID>
@@ -84,35 +72,16 @@
     <ID>MagicNumber:AppDefaults.kt$AppDefaults$8</ID>
     <ID>MagicNumber:CalculateOvertimeForRange.kt$CalculateOvertimeForRange$60.0</ID>
     <ID>MagicNumber:CheckInActionService.kt$CheckInActionService$60L</ID>
-    <ID>MagicNumber:Color.kt$0xFF003645</ID>
-    <ID>MagicNumber:Color.kt$0xFF00B4CC</ID>
-    <ID>MagicNumber:Color.kt$0xFF04080F</ID>
-    <ID>MagicNumber:Color.kt$0xFF070D1A</ID>
-    <ID>MagicNumber:Color.kt$0xFF0B1525</ID>
-    <ID>MagicNumber:Color.kt$0xFF2B4D73</ID>
-    <ID>MagicNumber:Color.kt$0xFF32D74B</ID>
-    <ID>MagicNumber:Color.kt$0xFF4D000E</ID>
-    <ID>MagicNumber:Color.kt$0xFF4FD8EB</ID>
-    <ID>MagicNumber:Color.kt$0xFF64D2FF</ID>
-    <ID>MagicNumber:Color.kt$0xFF7B2C00</ID>
-    <ID>MagicNumber:Color.kt$0xFFA9C7F5</ID>
-    <ID>MagicNumber:Color.kt$0xFFAECDD0</ID>
-    <ID>MagicNumber:Color.kt$0xFFE1E3E4</ID>
-    <ID>MagicNumber:Color.kt$0xFFFF453A</ID>
-    <ID>MagicNumber:Color.kt$0xFFFF9F0A</ID>
-    <ID>MagicNumber:Color.kt$0xFFFFB786</ID>
     <ID>MagicNumber:CsvExporter.kt$CsvExporter$0xBB</ID>
     <ID>MagicNumber:CsvExporter.kt$CsvExporter$0xBF</ID>
     <ID>MagicNumber:CsvExporter.kt$CsvExporter$0xEF</ID>
     <ID>MagicNumber:DateTimeUtils.kt$DateTimeUtils$24</ID>
+    <ID>MagicNumber:DiagnosticRedaction.kt$16</ID>
+    <ID>MagicNumber:DiagnosticRedaction.kt$4</ID>
+    <ID>MagicNumber:EditEntryDraftRules.kt$EditEntryDraftRules.Companion$60</ID>
     <ID>MagicNumber:EditEntryTravelSections.kt$8</ID>
     <ID>MagicNumber:EditEntryTravelSections.kt$9</ID>
-    <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$16</ID>
-    <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$18</ID>
     <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$19</ID>
-    <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$24</ID>
-    <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$3600</ID>
-    <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$60</ID>
     <ID>MagicNumber:EditEntryViewModel.kt$EditFormData$8</ID>
     <ID>MagicNumber:EditEntryViewModel.kt$EditFormData.Companion$19</ID>
     <ID>MagicNumber:EditEntryViewModel.kt$EditFormData.Companion$8</ID>
@@ -125,31 +94,25 @@
     <ID>MagicNumber:HistoryScreen.kt$60</ID>
     <ID>MagicNumber:HistoryScreen.kt$7</ID>
     <ID>MagicNumber:HistoryViewModel.kt$HistoryViewModel$100</ID>
-    <ID>MagicNumber:HistoryViewModel.kt$HistoryViewModel$364</ID>
     <ID>MagicNumber:HistoryViewModel.kt$HistoryViewModel$5_000</ID>
-    <ID>MagicNumber:MZLayoutComponents.kt$0.80f</ID>
-    <ID>MagicNumber:MZLayoutComponents.kt$0.85f</ID>
     <ID>MagicNumber:MealAllowanceCalculator.kt$MealAllowanceCalculator$100</ID>
     <ID>MagicNumber:OverviewCalculations.kt$6</ID>
     <ID>MagicNumber:OverviewScreen.kt$0.05</ID>
-    <ID>MagicNumber:OverviewScreen.kt$240f</ID>
     <ID>MagicNumber:OverviewViewModel.kt$OverviewViewModel$5000</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$10</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$1024</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$1024L</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$10f</ID>
-    <ID>MagicNumber:PdfExporter.kt$PdfExporter$11</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$11f</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$12f</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$15</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$20</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$200</ID>
-    <ID>MagicNumber:PdfExporter.kt$PdfExporter$22</ID>
-    <ID>MagicNumber:PdfExporter.kt$PdfExporter$23</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$24f</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$25</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$3</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$30</ID>
+    <ID>MagicNumber:PdfExporter.kt$PdfExporter$4f</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$5</ID>
     <ID>MagicNumber:PdfExporter.kt$PdfExporter$60.0</ID>
     <ID>MagicNumber:PdfUtilities.kt$PdfUtilities$60.0</ID>
@@ -189,14 +152,6 @@
     <ID>MagicNumber:TimePickerDialog.kt$0.92f</ID>
     <ID>MagicNumber:TodayScreen.kt$60</ID>
     <ID>MagicNumber:TodayViewModel.kt$TodayViewModel$5000</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.07f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.12f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.14f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.15f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.20f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.40f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.82f</ID>
-    <ID>MagicNumber:Tokens.kt$MZTokens$0.88f</ID>
     <ID>MagicNumber:UpdateEntry.kt$UpdateEntry$18</ID>
     <ID>MagicNumber:UpdateEntry.kt$UpdateEntry$24</ID>
     <ID>MagicNumber:UpdateEntry.kt$UpdateEntry$60</ID>
@@ -207,72 +162,60 @@
     <ID>MatchingDeclarationName:DayTypeTransitions.kt$DayTypeConfirmationState</ID>
     <ID>MatchingDeclarationName:OverviewCalculations.kt$OverviewDateRange</ID>
     <ID>MatchingDeclarationName:Tokens.kt$MZTokens</ID>
+    <ID>MaxLineLength:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$shouldConfirm &amp;&amp; (!confirmedWorkDay || confirmationAt == null || confirmationSource.isNullOrBlank())</ID>
     <ID>MaxLineLength:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$"SELECT mealIsArrivalDeparture, mealBreakfastIncluded, mealAllowanceBaseCents, mealAllowanceAmountCents FROM work_entries WHERE date = ?"</ID>
     <ID>MaxLineLength:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$db.execSQL("INSERT INTO work_entries (date, dayType, dayLocationLabel, dayLocationSource, needsReview, createdAt) VALUES ('2026-01-01', 'WORK', 'Leipzig', 'FALLBACK', 0, 1000)")</ID>
     <ID>MaxLineLength:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$db.execSQL("INSERT INTO work_entries (date, dayType, dayLocationLabel, dayLocationSource, needsReview, createdAt) VALUES ('2026-01-02', 'WORK', 'München', 'MANUAL', 0, 1001)")</ID>
-    <ID>MaxLineLength:ApplicationModule.kt$ApplicationModule$fun</ID>
     <ID>MaxLineLength:CheckInActionService.kt$CheckInActionService$startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))</ID>
     <ID>MaxLineLength:CheckInActionService.kt$CheckInActionService$startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))</ID>
     <ID>MaxLineLength:CheckInActionService.kt$CheckInActionService$startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_mark_day_off)))</ID>
     <ID>MaxLineLength:CheckInActionService.kt$CheckInActionService$startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))</ID>
     <ID>MaxLineLength:CsvExporter.kt$CsvCellEncoder$return</ID>
     <ID>MaxLineLength:CsvExporter.kt$CsvExporter$val header = "date;dayType;confirmedWorkDay;dayLocation;workStart;workEnd;breakMinutes;workMinutes;travelMinutes;travelLegCount;travelRouteSummary;paidTotalMinutes;mealIsArrivalDeparture;mealBreakfastIncluded;mealAllowanceBaseCents;mealAllowanceAmountCents;mealAllowanceEuro;note\n"</ID>
-    <ID>MaxLineLength:EditEntryFormContent.kt$color = if (hasBreakError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface</ID>
+    <ID>MaxLineLength:EditEntryDraftRules.kt$EditEntryDraftRules$}</ID>
+    <ID>MaxLineLength:EditEntryDraftRules.kt$fun</ID>
     <ID>MaxLineLength:EditEntryViewModel.kt$ValidationError$TravelArriveBeforeStart : ValidationError</ID>
     <ID>MaxLineLength:EditEntryViewModel.kt$ValidationError$TravelLegMissingTimeWindow : ValidationError</ID>
     <ID>MaxLineLength:ExportPreviewViewModel.kt$ExportPreviewViewModel$message = toUiText(exportResult.message, R.string.export_preview_error_pdf_create_failed)</ID>
+    <ID>MaxLineLength:ExportPreviewViewModel.kt$ExportPreviewViewModel$trace.event("entries_loaded", payload = mapOf("entryCount" to entries.size, "durationMs" to (System.currentTimeMillis() - dbStart)))</ID>
     <ID>MaxLineLength:ExportPreviewViewModel.kt$endLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workEnd).ifBlank { PREVIEW_DASH } else PREVIEW_DASH</ID>
     <ID>MaxLineLength:ExportPreviewViewModel.kt$startLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workStart).ifBlank { PREVIEW_DASH } else PREVIEW_DASH</ID>
     <ID>MaxLineLength:ExportPreviewViewModel.kt$val paidMinutes = eligibleEntries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }</ID>
     <ID>MaxLineLength:ExportPreviewViewModel.kt$val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK &amp;&amp; entry.workStart != null &amp;&amp; entry.workEnd != null</ID>
-    <ID>MaxLineLength:HistoryScreen.kt$DateTimeUtils.calculateTravelDuration(leg.startAt, leg.arriveAt)?.let(Formatters::formatDuration)</ID>
-    <ID>MaxLineLength:HistoryScreen.kt$private</ID>
-    <ID>MaxLineLength:PdfExporter.kt$PdfExporter$"${dateFormat.format(java.sql.Date.valueOf(startDate.toString()))} - ${dateFormat.format(java.sql.Date.valueOf(endDate.toString()))}"</ID>
-    <ID>MaxLineLength:PdfExporter.kt$PdfExporter$if (isWorkDay &amp;&amp; entry.workStart != null) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash</ID>
+    <ID>MaxLineLength:PdfExporter.kt$PdfExporter$if (workHours &gt; 0) string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours)) else dash</ID>
     <ID>MaxLineLength:PdfExporter.kt$PdfExporter$string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents))</ID>
     <ID>MaxLineLength:PdfExporter.kt$PdfExporter$string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelMinutes / 60.0))</ID>
     <ID>MaxLineLength:PdfExporter.kt$PdfExporter$var currentPage = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create())</ID>
     <ID>MaxLineLength:PdfExporter.kt$PdfExporter$var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate, actualEndDate)</ID>
+    <ID>MaxLineLength:RecordDailyManualCheckIn.kt$RecordDailyManualCheckIn$breakMinutes = if (hasExistingWorkSchedule) existingEntry.breakMinutes else defaults.breakMinutes</ID>
     <ID>MaxLineLength:ReminderLaterWorker.kt$ReminderLaterWorker.Companion$val isAutoNonWorkingDay = entry == null &amp;&amp; ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)</ID>
     <ID>MaxLineLength:ReminderWindowEvaluator.kt$ReminderWindowEvaluator$suspend</ID>
-    <ID>MaxLineLength:SettingsComponents.kt$onAction = if (hasNotificationPermission) onOpenNotificationSettings else onRequestNotificationPermission</ID>
-    <ID>MaxLineLength:TodayViewModel.kt$TodayViewModel$combine</ID>
+    <ID>MaxLineLength:ReminderWorkEnqueuerTest.kt$ReminderWorkEnqueuerTest$assertEquals(spec.reminderType.name, requestSlot.captured.workSpec.input.getString(WindowCheckWorker.KEY_REMINDER_TYPE))</ID>
     <ID>MaxLineLength:TodayViewModel.kt$TodayViewModel$fun onDailyCheckInArrivalDepartureChanged(value: Boolean)</ID>
     <ID>MaxLineLength:TodayViewModel.kt$TodayViewModel$fun onDailyCheckInBreakfastIncludedChanged(value: Boolean)</ID>
+    <ID>MaxLineLength:TodayViewModel.kt$TodayViewModel$trace.event("db_query_done", payload = mapOf("durationMs" to (System.currentTimeMillis() - dbStart)))</ID>
     <ID>MaxLineLength:TodayViewModelTest.kt$TodayViewModelTest$coEvery { repository.getByDate(today) } returns WorkEntry(date = today, dayType = DayType.WORK, dayLocationLabel = "Heute")</ID>
     <ID>MaxLineLength:TodayViewModelTest.kt$TodayViewModelTest$coVerify(exactly = 1) { recordDailyManualCheckIn(match { it.date == today &amp;&amp; it.dayLocationLabel == "Baustelle A" }) }</ID>
     <ID>MaxLineLength:TodayViewModelTest.kt$TodayViewModelTest$coVerify(exactly = 1) { recordDailyManualCheckIn(match { it.date == today &amp;&amp; it.dayLocationLabel == "Baustelle B" }) }</ID>
     <ID>MaxLineLength:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("Arbeitszeit ($workDurationMinutes min) darf nicht mehr als 18 Stunden betragen")</ID>
-    <ID>MaxLineLength:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")</ID>
+    <ID>MaxLineLength:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) muss kleiner als Arbeitszeit ($workDurationMinutes min) sein")</ID>
     <ID>MaxLineLength:WeekGroupTest.kt$WeekGroupTest$?:</ID>
     <ID>MaxLineLength:WindowCheckWorker.kt$WindowCheckWorker$val isAutoNonWorkingDay = entry == null &amp;&amp; ReminderWindowEvaluator.isNonWorkingDay(date, settings, workEntryDao)</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$// Background Orbs val OrbAlphaPrimary = 0.14f</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$// Glass — Border-Transparenzen (semantic hierarchy) val BorderAlphaSubtle = 0.12f // Divider, passive Elemente</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val BorderAlphaEmphasis = 0.40f // Hero-Karte, aktive Elemente</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val BorderAlphaNormal = 0.20f // Karten, NavBar</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val CardSurfaceAlpha = 0.12f // Karten-Hintergrund-Alpha</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val OrbAlphaSecondary = 0.07f</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val OrbPrimaryXFraction = 0.15f</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val OrbPrimaryYFraction = 0.12f</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val OrbSecondaryXFraction = 0.88f</ID>
-    <ID>MayBeConst:Tokens.kt$MZTokens$val OrbSecondaryYFraction = 0.82f</ID>
     <ID>NewLineAtEndOfFile:ClassifyDayTest.kt$de.montagezeit.app.domain.usecase.ClassifyDayTest.kt</ID>
     <ID>NewLineAtEndOfFile:DayClassification.kt$de.montagezeit.app.domain.model.DayClassification.kt</ID>
     <ID>NewLineAtEndOfFile:PdfSettings.kt$de.montagezeit.app.data.preferences.PdfSettings.kt</ID>
+    <ID>ReturnCount:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$private fun hasPositiveTravelActivity( db: SupportSQLiteDatabase, date: String ): Boolean</ID>
+    <ID>ReturnCount:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$private fun hasPositiveWorkActivity( workStart: String?, workEnd: String?, breakMinutes: Int ): Boolean</ID>
     <ID>ReturnCount:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
-    <ID>ReturnCount:EditEntryViewModel.kt$EditEntryViewModel$private suspend fun resolveLatestSaveState(currentState: EditUiState): EditUiState?</ID>
     <ID>ReturnCount:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
+    <ID>ReturnCount:EditEntryViewModel.kt$EditEntryViewModel$private suspend fun resolveLatestSaveState(currentState: EditUiState): EditUiState?</ID>
     <ID>ReturnCount:HistoryViewModel.kt$HistoryViewModel$private fun validateBatchEditRequest(request: BatchEditRequest): UiText?</ID>
-    <ID>ReturnCount:PdfExporter.kt$PdfExporter$fun exportToPdf( entries: List&lt;WorkEntryWithTravelLegs&gt;, employeeName: String, company: String? = null, project: String? = null, personnelNumber: String? = null, startDate: java.time.LocalDate, endDate: java.time.LocalDate ): PdfExportResult</ID>
     <ID>ReturnCount:ReminderLaterWorker.kt$ReminderLaterWorker$override suspend fun doWork(): Result</ID>
-    <ID>ReturnCount:ResolveDayLocationPrefill.kt$ResolveDayLocationPrefill$suspend operator fun invoke(existingEntry: WorkEntry?): String</ID>
     <ID>ReturnCount:TimeCalculator.kt$TimeCalculator$fun calculateWorkMinutes(entry: WorkEntry): Int</ID>
-    <ID>ReturnCount:WindowCheckWorker.kt$WindowCheckWorker$override suspend fun doWork(): Result</ID>
-    <ID>ReturnCount:WindowCheckWorker.kt$WindowCheckWorker$private suspend fun checkAndShowDailyReminder(date: LocalDate, settings: ReminderSettings)</ID>
-    <ID>ReturnCount:WindowCheckWorker.kt$WindowCheckWorker.Companion$internal fun shouldShowDailyReminder(entry: WorkEntry?): Boolean</ID>
+    <ID>ReturnCount:WindowCheckWorker.kt$WindowCheckWorker$private suspend fun checkAndShowDailyReminder( date: LocalDate, settings: ReminderSettings, trace: DiagnosticTrace? = null )</ID>
     <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule$(*AppDatabase.MIGRATIONS)</ID>
     <ID>SpreadOperator:UiText.kt$(resId, *args.toTypedArray())</ID>
-    <ID>ThrowsCount:PdfExporter.kt$PdfExporter$private fun writePdfFile( pdfDocument: PdfDocument, startDate: java.time.LocalDate, endDate: java.time.LocalDate ): PdfExportResult</ID>
+    <ID>ThrowsCount:PdfExporter.kt$PdfExporter$private fun writePdfFile( pdfDocument: PdfDocument, startDate: LocalDate, endDate: LocalDate ): PdfExportResult</ID>
     <ID>ThrowsCount:UpdateEntry.kt$UpdateEntry$private fun validateEntry(entry: WorkEntry)</ID>
     <ID>TooManyFunctions:ApplicationModule.kt$ApplicationModule</ID>
     <ID>TooManyFunctions:CheckInActionService.kt$CheckInActionService : Service</ID>
@@ -280,7 +223,6 @@
     <ID>TooManyFunctions:ExportPreviewScreen.kt$de.montagezeit.app.ui.screen.export.ExportPreviewScreen.kt</ID>
     <ID>TooManyFunctions:ExportPreviewViewModel.kt$ExportPreviewViewModel : ViewModel</ID>
     <ID>TooManyFunctions:HistoryScreen.kt$de.montagezeit.app.ui.screen.history.HistoryScreen.kt</ID>
-    <ID>TooManyFunctions:MZLayoutComponents.kt$de.montagezeit.app.ui.components.MZLayoutComponents.kt</ID>
     <ID>TooManyFunctions:OverviewScreen.kt$de.montagezeit.app.ui.screen.overview.OverviewScreen.kt</ID>
     <ID>TooManyFunctions:PdfExporter.kt$PdfExporter</ID>
     <ID>TooManyFunctions:PdfUtilities.kt$PdfUtilities</ID>
@@ -288,38 +230,31 @@
     <ID>TooManyFunctions:ReminderNotificationManager.kt$ReminderNotificationManager</ID>
     <ID>TooManyFunctions:RoomWorkEntryRepository.kt$RoomWorkEntryRepository : WorkEntryRepository</ID>
     <ID>TooManyFunctions:SettingsViewModel.kt$SettingsViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:TodayActionsHandler.kt$TodayActionsHandler</ID>
     <ID>TooManyFunctions:TodayScreen.kt$de.montagezeit.app.ui.screen.today.TodayScreen.kt</ID>
     <ID>TooManyFunctions:TodayViewModel.kt$TodayViewModel : ViewModel</ID>
     <ID>TooManyFunctions:WorkEntryDao.kt$WorkEntryDao</ID>
     <ID>TooManyFunctions:WorkEntryRepository.kt$WorkEntryRepository</ID>
+    <ID>UnusedParameter:EditEntryFormContent.kt$isSaving: Boolean = false</ID>
+    <ID>UnusedParameter:EditEntryFormContent.kt$onSave: () -&gt; Unit</ID>
     <ID>UnusedParameter:EditEntrySheet.kt$onDismiss: () -&gt; Unit</ID>
-    <ID>UnusedParameter:OverviewCalculations.kt$period: OverviewPeriod</ID>
+    <ID>UnusedParameter:EditEntrySheet.kt$uiState: EditUiState</ID>
     <ID>UnusedParameter:OverviewScreen.kt$onOpenEditSheet: (LocalDate) -&gt; Unit</ID>
-    <ID>UnusedParameter:OverviewScreen.kt$onOpenSettings: () -&gt; Unit</ID>
-    <ID>UnusedParameter:OverviewScreen.kt$onOpenToday: () -&gt; Unit</ID>
-    <ID>UnusedParameter:TodayScreen.kt$onOpenWeekView: () -&gt; Unit = {}</ID>
     <ID>UnusedPrivateMember:HistoryScreen.kt$@Composable private fun formatMinutesAsHoursMinutes(totalMinutes: Int): String</ID>
     <ID>UnusedPrivateMember:HistoryScreen.kt$@Composable private fun formatWorkHours(hours: Double): String</ID>
     <ID>UnusedPrivateMember:HistoryScreen.kt$private fun formatMinutesAsHoursMinutesPlain(totalMinutes: Int, hoursOnlyFormat: String, hoursMinutesFormat: String): String</ID>
     <ID>UnusedPrivateMember:HistoryScreen.kt$private fun formatOverviewDate(date: java.time.LocalDate): String</ID>
     <ID>UnusedPrivateProperty:HistoryScreen.kt$private const val MONTH_PREVIEW_COUNT = 5</ID>
-    <ID>UnusedPrivateProperty:HistoryScreen.kt$val selectedEntry = remember(entriesByDate, selectedDate) { entriesByDate[selectedDate] }</ID>
-    <ID>UnusedPrivateProperty:HistoryScreen.kt$val selectedTravelLegs = remember(travelLegsByDate, selectedDate) { travelLegsByDate[selectedDate].orEmpty() }</ID>
     <ID>UnusedPrivateProperty:PdfExporter.kt$PdfExporter.Companion$// Zeilenhöhen und Abstände private const val HEADER_HEIGHT = 100</ID>
-    <ID>UnusedPrivateProperty:PdfExporter.kt$PdfExporter.Companion$private const val COL_BREAKFAST = 40 // war COL_MEAL_ALLOWANCE=30; Frühstück ✓/–</ID>
-    <ID>UnusedPrivateProperty:PdfExporter.kt$PdfExporter.Companion$private const val CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN</ID>
-    <ID>UnusedPrivateProperty:PdfExporter.kt$PdfExporter.Companion$private const val SIGNATURE_HEIGHT = 120 // je Block: Label(15) + Linie(20) + Ort/Datum(25) + Abstand(20)</ID>
-    <ID>UnusedPrivateProperty:PdfExporter.kt$PdfExporter.Companion$private const val SUMMARY_HEIGHT = 125 // bis zu 5 Zeilen × 25 pt</ID>
     <ID>UnusedPrivateProperty:ReminderNotificationManager.kt$ReminderNotificationManager.Companion$private const val REQUEST_CODE_DAILY_EDIT = 2012</ID>
     <ID>UnusedPrivateProperty:ReminderNotificationManager.kt$ReminderNotificationManager.Companion$private const val REQUEST_CODE_MARK_DAY_OFF_DAILY = 2011</ID>
     <ID>UnusedPrivateProperty:ReminderNotificationManager.kt$ReminderNotificationManager.Companion$private const val REQUEST_CODE_REMIND_LATER_DAILY_1H = 2013</ID>
     <ID>UnusedPrivateProperty:ReminderNotificationManager.kt$ReminderNotificationManager.Companion$private const val REQUEST_CODE_REMIND_LATER_DAILY_2H = 2014</ID>
     <ID>UseCheckOrError:CheckInEntryBuilder.kt$CheckInEntryBuilder$throw IllegalStateException("Check-in nicht erlaubt für dayType=${existingEntry.dayType}")</ID>
     <ID>UseCheckOrError:TodayViewModelTest.kt$TodayViewModelTest$throw IllegalStateException("boom")</ID>
-    <ID>UseRequire:RecordDailyManualCheckIn.kt$RecordDailyManualCheckIn$throw IllegalArgumentException("dayLocationLabel darf nicht leer sein")</ID>
     <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("Arbeitszeit ($workDurationMinutes min) darf nicht mehr als 18 Stunden betragen")</ID>
-    <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht länger als Arbeitszeit ($workDurationMinutes min) sein")</ID>
     <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) darf nicht negativ sein")</ID>
+    <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("breakMinutes (${entry.breakMinutes}) muss kleiner als Arbeitszeit ($workDurationMinutes min) sein")</ID>
     <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("dayLocationLabel darf bei WORK nicht leer sein")</ID>
     <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("workEnd ($workEnd) muss sich von workStart ($workStart) unterscheiden")</ID>
     <ID>UseRequire:UpdateEntry.kt$UpdateEntry$throw IllegalArgumentException("workStart und workEnd muessen zusammen gesetzt werden")</ID>

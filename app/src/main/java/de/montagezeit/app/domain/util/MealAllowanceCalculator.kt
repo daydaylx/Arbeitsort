@@ -7,7 +7,8 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
  * Berechnet die Verpflegungspauschale nach fachlichen Regeln.
  *
  * Regeln:
- * - Gilt nur für DayType.WORK; bei OFF und COMP_TIME immer 0.
+ * - Gilt nur für DayType.WORK; bei OFF, COMP_TIME, SCHULUNG, LEHRGANG immer 0.
+ * - Kein Anspruch wenn Arbeitsort = Leipzig.
  * - Standardbasis: 28,00 € (2800 Cent)
  * - Bei Anreise/Abreise: Basis 14,00 € (1400 Cent)
  * - Frühstück erhalten: Abzug 5,60 € (560 Cent)
@@ -20,6 +21,10 @@ object MealAllowanceCalculator {
     const val BASE_ARRIVAL_DEPARTURE_CENTS = 1400
     const val BREAKFAST_DEDUCTION_CENTS = 560
 
+    private const val EXCLUDED_LOCATION = "leipzig"
+    private fun isExcludedLocation(locationLabel: String) =
+        locationLabel.trim().lowercase() == EXCLUDED_LOCATION
+
     data class Result(val baseCents: Int, val amountCents: Int)
     data class Snapshot(
         val isArrivalDeparture: Boolean,
@@ -31,10 +36,12 @@ object MealAllowanceCalculator {
     fun isEligible(
         dayType: DayType,
         workMinutes: Int,
-        travelMinutes: Int
-    ): Boolean {
-        return dayType == DayType.WORK && (workMinutes > 0 || travelMinutes > 0)
-    }
+        travelMinutes: Int,
+        locationLabel: String = ""
+    ): Boolean =
+        dayType == DayType.WORK &&
+            !isExcludedLocation(locationLabel) &&
+            (workMinutes > 0 || travelMinutes > 0)
 
     fun calculate(
         dayType: DayType,
@@ -53,9 +60,11 @@ object MealAllowanceCalculator {
         isArrivalDeparture: Boolean,
         breakfastIncluded: Boolean,
         workMinutes: Int,
-        travelMinutes: Int
+        travelMinutes: Int,
+        locationLabel: String = ""
     ): Snapshot {
-        if (!isEligible(dayType = dayType, workMinutes = workMinutes, travelMinutes = travelMinutes)) {
+        val eligible = isEligible(dayType, workMinutes, travelMinutes, locationLabel)
+        if (!eligible) {
             return Snapshot(
                 isArrivalDeparture = false,
                 breakfastIncluded = false,
@@ -80,7 +89,7 @@ object MealAllowanceCalculator {
     fun resolveEffectiveStoredSnapshot(record: WorkEntryWithTravelLegs): Snapshot {
         val workMinutes = TimeCalculator.calculateWorkMinutes(record.workEntry)
         val travelMinutes = TimeCalculator.calculateTravelMinutes(record.orderedTravelLegs)
-        if (!isEligible(record.workEntry.dayType, workMinutes, travelMinutes)) {
+        if (!isEligible(record.workEntry.dayType, workMinutes, travelMinutes, record.workEntry.dayLocationLabel)) {
             return Snapshot(
                 isArrivalDeparture = false,
                 breakfastIncluded = false,

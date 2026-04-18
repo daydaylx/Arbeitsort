@@ -32,11 +32,11 @@ object EntryStatusResolver {
             travelMinutes = travelMinutes
         )
         val hasActivity = when (entry.dayType) {
-            DayType.WORK -> workMinutes > 0 || travelMinutes > 0
+            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> workMinutes > 0 || travelMinutes > 0
             DayType.OFF, DayType.COMP_TIME -> true
         }
         val isConfirmed = when (entry.dayType) {
-            DayType.WORK -> entry.confirmedWorkDay && hasActivity
+            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> entry.confirmedWorkDay && hasActivity
             DayType.OFF, DayType.COMP_TIME -> true
         }
 
@@ -55,7 +55,7 @@ object EntryStatusResolver {
         entry: WorkEntry,
         travelLegs: List<TravelLeg> = emptyList()
     ): Boolean {
-        if (entry.dayType != DayType.WORK) return false
+        if (!entry.dayType.isWorkLike) return false
         val status = resolve(entry, travelLegs)
         return status.hasActivity
     }
@@ -64,6 +64,6 @@ object EntryStatusResolver {
         entry: WorkEntry,
         travelLegs: List<TravelLeg> = emptyList()
     ): Boolean {
-        return entry.dayType == DayType.WORK && !resolve(entry, travelLegs).isConfirmed
+        return entry.dayType.isWorkLike && !resolve(entry, travelLegs).isConfirmed
     }
 }

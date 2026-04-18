@@ -124,8 +124,7 @@ class CsvExporter @Inject constructor(
                         DayType.COMP_TIME -> "Ausgleich"
                         else -> entry.dayType.name
                     }
-                    // Zeitfelder nur für WORK-Tage befüllen – bei OFF/COMP_TIME sind sie fachlich irrelevant
-                    val isWorkDay = entry.dayType == DayType.WORK
+                    val isWorkDay = entry.dayType.isWorkLike
                     val line = buildString {
                         append(entry.date.format(dateFormatter))
                         append(";")

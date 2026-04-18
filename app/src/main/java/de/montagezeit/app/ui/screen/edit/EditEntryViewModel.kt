@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -85,7 +84,6 @@ class EditEntryViewModel @Inject constructor(
                 emptyList()
             }
         }
-        .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(VALIDATION_SUBSCRIPTION_TIMEOUT_MS),
@@ -135,12 +133,12 @@ class EditEntryViewModel @Inject constructor(
         val previousType = _screenState.value.formData.dayType
         updateFormData {
             when (dayType) {
-                DayType.WORK -> it.copy(dayType = dayType)
+                DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> it.copy(dayType = dayType)
                 DayType.OFF -> it.copy(dayType = dayType, hasWorkTimes = false)
                 DayType.COMP_TIME -> it.copy(dayType = dayType, hasWorkTimes = false, travelLegs = emptyList())
             }
         }
-        if (previousType == DayType.WORK && dayType != DayType.WORK) {
+        if (previousType.isWorkLike && !dayType.isWorkLike) {
             viewModelScope.launch {
                 _snackbarMessage.emit(UiText.StringResource(R.string.edit_day_type_cleared_times))
             }
@@ -579,7 +577,7 @@ data class EditFormData(
             workEnd: LocalTime,
             breakMinutes: Int
         ): EditFormData {
-            val hasWorkTimes = dayType == DayType.WORK
+            val hasWorkTimes = dayType.isWorkLike
             return EditFormData(
                 dayType = dayType,
                 hasWorkTimes = hasWorkTimes,
@@ -597,7 +595,7 @@ data class EditFormData(
             val hasWorkTimes = entry.workStart != null && entry.workEnd != null
             return EditFormData(
                 dayType = entry.dayType,
-                hasWorkTimes = hasWorkTimes && entry.dayType == DayType.WORK,
+                hasWorkTimes = hasWorkTimes && entry.dayType.isWorkLike,
                 workStart = entry.workStart ?: LocalTime.of(8, 0),
                 workEnd = entry.workEnd ?: LocalTime.of(19, 0),
                 breakMinutes = if (hasWorkTimes) entry.breakMinutes else 0,
@@ -639,14 +637,16 @@ fun resolveMealAllowanceForSave(
     isArrivalDeparture: Boolean,
     breakfastIncluded: Boolean,
     workMinutes: Int = 0,
-    travelMinutes: Int = 0
+    travelMinutes: Int = 0,
+    locationLabel: String = ""
 ): ResolvedMealAllowanceForSave {
     val snapshot = MealAllowanceCalculator.resolveForActivity(
         dayType = dayType,
         isArrivalDeparture = isArrivalDeparture,
         breakfastIncluded = breakfastIncluded,
         workMinutes = workMinutes,
-        travelMinutes = travelMinutes
+        travelMinutes = travelMinutes,
+        locationLabel = locationLabel
     )
     return ResolvedMealAllowanceForSave(
         isArrivalDeparture = snapshot.isArrivalDeparture,

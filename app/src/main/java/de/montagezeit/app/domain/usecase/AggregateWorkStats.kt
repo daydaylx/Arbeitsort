@@ -1,5 +1,6 @@
 package de.montagezeit.app.domain.usecase
 
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.diagnostics.DiagnosticTrace
 import de.montagezeit.app.diagnostics.DiagnosticWarningCodes
@@ -59,7 +60,7 @@ class AggregateWorkStats {
         resolvedEntries
             .filter {
                 it.entry.workEntry.confirmedWorkDay &&
-                    it.entry.workEntry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK &&
+                    it.entry.workEntry.dayType.isWorkLike &&
                     !it.status.hasActivity
             }
             .forEach { resolved ->
@@ -96,7 +97,8 @@ class AggregateWorkStats {
             if (!MealAllowanceCalculator.isEligible(
                     dayType = entry.workEntry.dayType,
                     workMinutes = status.workMinutes,
-                    travelMinutes = status.travelMinutes
+                    travelMinutes = status.travelMinutes,
+                    locationLabel = entry.workEntry.dayLocationLabel
                 ) &&
                 entry.workEntry.mealAllowanceAmountCents > 0
             ) {
@@ -115,10 +117,12 @@ class AggregateWorkStats {
             )
         }
         
-        // Sichtbare Arbeitstage ohne UEBERSTUNDEN_ABBAU; Soll-/Overtime-Zähler separat
+        // Sichtbare Arbeitstage (inkl. Schulung/Lehrgang) ohne UEBERSTUNDEN_ABBAU
         val visibleWorkDays = classifiedDays.count {
             it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT ||
-                it.classification == DayClassification.ARBEITSTAG_NUR_REISE
+                it.classification == DayClassification.ARBEITSTAG_NUR_REISE ||
+                it.classification == DayClassification.SCHULUNG ||
+                it.classification == DayClassification.LEHRGANG
         }
         val targetCountedDays = classifiedDays.count { it.classification.isCountedWorkDay }
         val offDays = eligibleEntries.size - visibleWorkDays

@@ -94,6 +94,8 @@ internal fun EditFormContent(
     isSaving: Boolean = false
 ) {
     val isCompTime = formData.dayType == DayType.COMP_TIME
+    val isMealEligibleType = formData.dayType == DayType.WORK &&
+        formData.dayLocationLabel?.trim()?.lowercase() != "leipzig"
 
     val travelHasErrors = validationErrors.any {
         it is ValidationError.TravelArriveBeforeStart ||
@@ -108,7 +110,7 @@ internal fun EditFormContent(
     var travelExpanded by rememberSaveable { mutableStateOf(formData.travelLegs.isNotEmpty()) }
     var locationExpanded by rememberSaveable {
         mutableStateOf(
-            formData.dayType == DayType.WORK &&
+            formData.dayType.isWorkLike &&
                 formData.dayLocationLabel.isNullOrBlank()
         )
     }
@@ -139,7 +141,7 @@ internal fun EditFormContent(
             }
         }
 
-        if (!isCompTime && formData.dayType == DayType.WORK) {
+        if (!isCompTime && formData.dayType.isWorkLike) {
             EditFormSectionCard {
                 EditWorkTimesSection(
                     enabled = formData.hasWorkTimes,
@@ -204,7 +206,7 @@ internal fun EditFormContent(
             }
         }
 
-        if (formData.dayType == DayType.WORK) {
+        if (isMealEligibleType) {
             val mealSummary = if (mealAllowancePreviewCents > 0) {
                 MealAllowanceCalculator.formatEuro(mealAllowancePreviewCents)
             } else null
@@ -318,6 +320,14 @@ internal fun DayTypeSelector(
                 MZSegmentedOption(DayType.WORK, stringResource(R.string.edit_day_type_workday)),
                 MZSegmentedOption(DayType.OFF, stringResource(R.string.edit_day_type_off)),
                 MZSegmentedOption(DayType.COMP_TIME, stringResource(R.string.edit_day_type_comp_time))
+            ),
+            selectedValue = selectedType,
+            onValueSelected = onTypeChange
+        )
+        MZSegmentedControl(
+            options = listOf(
+                MZSegmentedOption(DayType.SCHULUNG, stringResource(R.string.edit_day_type_schulung)),
+                MZSegmentedOption(DayType.LEHRGANG, stringResource(R.string.edit_day_type_lehrgang))
             ),
             selectedValue = selectedType,
             onValueSelected = onTypeChange

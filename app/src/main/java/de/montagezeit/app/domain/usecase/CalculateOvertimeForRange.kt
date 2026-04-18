@@ -76,6 +76,11 @@ class CalculateOvertimeForRange {
                     // Keine Stunden, kein Ziel
                 }
                 DayClassification.ARBEITSTAG_LEER -> Unit
+                DayClassification.SCHULUNG, DayClassification.LEHRGANG -> {
+                    countedDays += 1
+                    totalTargetHours += dailyTargetHours
+                    totalActualHours += (status.workMinutes + status.travelMinutes) / 60.0
+                }
                 DayClassification.UEBERSTUNDEN_ABBAU -> {
                     if (entry.workEntry.dayType == DayType.COMP_TIME) {
                         countedDays += 1

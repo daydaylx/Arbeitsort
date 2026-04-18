@@ -57,6 +57,74 @@ class EditMealAllowanceLogicTest {
     }
 
     @Test
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer SCHULUNG`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.SCHULUNG,
+            isArrivalDeparture = true,
+            breakfastIncluded = true,
+            workMinutes = 480,
+            travelMinutes = 0
+        )
+
+        assertEquals(0, result.amountCents)
+    }
+
+    @Test
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer LEHRGANG`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.LEHRGANG,
+            isArrivalDeparture = false,
+            breakfastIncluded = false,
+            workMinutes = 480,
+            travelMinutes = 60
+        )
+
+        assertEquals(0, result.amountCents)
+    }
+
+    @Test
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer WORK in Leipzig`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.WORK,
+            isArrivalDeparture = true,
+            breakfastIncluded = false,
+            workMinutes = 480,
+            travelMinutes = 0,
+            locationLabel = "Leipzig"
+        )
+
+        assertEquals(0, result.amountCents)
+    }
+
+    @Test
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer WORK in Leipzig kleingeschrieben`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.WORK,
+            isArrivalDeparture = true,
+            breakfastIncluded = false,
+            workMinutes = 480,
+            travelMinutes = 0,
+            locationLabel = "leipzig"
+        )
+
+        assertEquals(0, result.amountCents)
+    }
+
+    @Test
+    fun `resolveMealAllowanceForSave berechnet normal fuer WORK in Berlin`() {
+        val result = resolveMealAllowanceForSave(
+            dayType = DayType.WORK,
+            isArrivalDeparture = false,
+            breakfastIncluded = false,
+            workMinutes = 480,
+            travelMinutes = 0,
+            locationLabel = "Berlin"
+        )
+
+        assertEquals(2800, result.amountCents)
+    }
+
+    @Test
     fun `fromEntry keeps meal allowance flags in edit form`() {
         val entry = WorkEntry(
             date = LocalDate.of(2026, 3, 12),

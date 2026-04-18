@@ -119,6 +119,42 @@ class ClassifyDayTest {
     }
 
     // -------------------------------------------------------------------------
+    // SCHULUNG-Tage
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `SCHULUNG mit Arbeitszeit ergibt SCHULUNG`() {
+        val result = classifier(
+            dayType = DayType.SCHULUNG,
+            workMinutes = 480,
+            travelMinutes = 0
+        )
+        assertEquals(DayClassification.SCHULUNG, result)
+    }
+
+    @Test
+    fun `LEHRGANG mit Arbeitszeit ergibt LEHRGANG`() {
+        val result = classifier(
+            dayType = DayType.LEHRGANG,
+            workMinutes = 480,
+            travelMinutes = 0
+        )
+        assertEquals(DayClassification.LEHRGANG, result)
+    }
+
+    @Test
+    fun `SCHULUNG und LEHRGANG sind nicht berechtigt fuer Verpflegungspauschale`() {
+        assert(!DayClassification.SCHULUNG.isMealAllowanceEligible)
+        assert(!DayClassification.LEHRGANG.isMealAllowanceEligible)
+    }
+
+    @Test
+    fun `SCHULUNG und LEHRGANG sind gezaehlte Arbeitstage`() {
+        assert(DayClassification.SCHULUNG.isCountedWorkDay)
+        assert(DayClassification.LEHRGANG.isCountedWorkDay)
+    }
+
+    // -------------------------------------------------------------------------
     // DayClassification Properties
     // -------------------------------------------------------------------------
 

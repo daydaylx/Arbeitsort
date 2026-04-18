@@ -53,7 +53,11 @@ data class WorkEntry(
 enum class DayType {
     WORK,
     OFF,
-    COMP_TIME // Überstundenabbau (ganzer Tag) – reduziert Überstundenkonto um targetMinutes
+    COMP_TIME, // Überstundenabbau (ganzer Tag) – reduziert Überstundenkonto um targetMinutes
+    SCHULUNG,
+    LEHRGANG;
+
+    val isWorkLike: Boolean get() = this == WORK || this == SCHULUNG || this == LEHRGANG
 }
 
 enum class TravelSource {

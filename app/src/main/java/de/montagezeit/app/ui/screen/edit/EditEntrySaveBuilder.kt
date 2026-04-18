@@ -40,7 +40,8 @@ class EditEntrySaveBuilder @Inject constructor(
             isArrivalDeparture = data.mealIsArrivalDeparture,
             breakfastIncluded = data.mealBreakfastIncluded,
             workMinutes = draftRules.calculateEffectiveWorkMinutes(data),
-            travelMinutes = draftRules.calculateEffectiveTravelMinutes(data)
+            travelMinutes = draftRules.calculateEffectiveTravelMinutes(data),
+            locationLabel = data.dayLocationLabel.orEmpty()
         )
         val travelLegs = buildTravelLegsToSave(data, date, zoneId, now)
         return EditEntryPendingSave(
@@ -69,7 +70,7 @@ class EditEntrySaveBuilder @Inject constructor(
                 updatedAt = now
             ).transitionToDayType(dayType = data.dayType, now = now)
 
-        val persistWorkBlock = data.dayType == DayType.WORK && data.hasWorkTimes
+        val persistWorkBlock = data.dayType.isWorkLike && data.hasWorkTimes
         val draftEntry = baseEntry.copy(
             dayType = data.dayType,
             workStart = if (persistWorkBlock) data.workStart else null,
@@ -84,7 +85,7 @@ class EditEntrySaveBuilder @Inject constructor(
             updatedAt = now
         )
         return when (draftEntry.dayType) {
-            DayType.WORK -> {
+            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> {
                 if (EntryStatusResolver.shouldAutoConfirmWorkDay(draftEntry, travelLegs)) {
                     draftEntry.copy(
                         confirmedWorkDay = true,

@@ -500,11 +500,11 @@ class PdfExporter @Inject constructor(
         val travelLegs = record.orderedTravelLegs
         val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
         val workHours = TimeCalculator.calculateWorkHours(entry)
-        val isWorkDay = entry.dayType == DayType.WORK
+        val isWorkDay = entry.dayType.isWorkLike
         val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
 
         val startText = when (entry.dayType) {
-            DayType.WORK -> when {
+            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> when {
                 entry.workStart != null -> PdfUtilities.formatTime(entry.workStart)
                 travelMinutes > 0 -> string(R.string.pdf_export_row_label_travel_only)
                 else -> dash

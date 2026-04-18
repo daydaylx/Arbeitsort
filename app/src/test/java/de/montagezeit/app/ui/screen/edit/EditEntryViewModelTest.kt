@@ -42,6 +42,7 @@ class EditEntryViewModelTest {
     private val draftRules = EditEntryDraftRules()
     private val saveBuilder = EditEntrySaveBuilder(draftRules)
     private val diagnostics = EditEntryDiagnostics(draftRules)
+    private val saveEditedEntryWithTravel = mockk<SaveEditedEntryWithTravel>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -154,6 +155,7 @@ class EditEntryViewModelTest {
             reminderSettingsManager = reminderSettingsManager,
             draftRules = draftRules,
             saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )
@@ -189,6 +191,7 @@ class EditEntryViewModelTest {
             reminderSettingsManager = reminderSettingsManager,
             draftRules = draftRules,
             saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
         )

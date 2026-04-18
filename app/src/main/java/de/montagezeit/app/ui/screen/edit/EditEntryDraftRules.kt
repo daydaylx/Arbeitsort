@@ -23,12 +23,13 @@ class EditEntryDraftRules @Inject constructor() {
             isArrivalDeparture = formData.mealIsArrivalDeparture,
             breakfastIncluded = formData.mealBreakfastIncluded,
             workMinutes = calculateEffectiveWorkMinutes(formData),
-            travelMinutes = calculateEffectiveTravelMinutes(formData)
+            travelMinutes = calculateEffectiveTravelMinutes(formData),
+            locationLabel = formData.dayLocationLabel.orEmpty()
         ).amountCents
     }
 
     fun calculateEffectiveWorkMinutes(formData: EditFormData): Int {
-        if (formData.dayType != DayType.WORK || !formData.hasWorkTimes) return 0
+        if (!formData.dayType.isWorkLike || !formData.hasWorkTimes) return 0
 
         val rawMinutes = durationMinutes(
             start = formData.workStart.toSecondOfDay(),
@@ -61,7 +62,7 @@ class EditEntryDraftRules @Inject constructor() {
             return errors
         }
 
-        if (formData.dayType == DayType.WORK) {
+        if (formData.dayType.isWorkLike) {
             if (formData.dayLocationLabel.isNullOrBlank()) {
                 errors += ValidationError.MissingDayLocation
             }

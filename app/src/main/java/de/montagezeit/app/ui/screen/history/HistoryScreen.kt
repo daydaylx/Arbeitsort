@@ -836,6 +836,8 @@ fun BatchEditDialog(
                                             DayType.WORK -> stringResource(R.string.history_batch_workday)
                                             DayType.OFF -> stringResource(R.string.history_batch_offday)
                                             DayType.COMP_TIME -> stringResource(R.string.history_batch_comp_time)
+                                            DayType.SCHULUNG -> stringResource(R.string.day_type_schulung)
+                                            DayType.LEHRGANG -> stringResource(R.string.day_type_lehrgang)
                                         }
                                     )
                                 }
@@ -1210,6 +1212,7 @@ fun DayTypeIndicator(dayType: DayType) {
         DayType.WORK -> Icons.Default.Work to MaterialTheme.colorScheme.primary
         DayType.OFF -> Icons.Default.FreeBreakfast to MaterialTheme.colorScheme.secondary
         DayType.COMP_TIME -> Icons.Default.Bedtime to MaterialTheme.colorScheme.tertiary
+        DayType.SCHULUNG, DayType.LEHRGANG -> Icons.Default.Work to MaterialTheme.colorScheme.primary
     }
     
     Icon(
