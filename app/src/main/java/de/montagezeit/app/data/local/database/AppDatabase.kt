@@ -15,7 +15,7 @@ import java.time.LocalTime
 @Database(
     entities = [WorkEntry::class, TravelLeg::class],
     version = 16,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(
     LocalDateConverter::class,
@@ -629,8 +629,8 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         // Migration 15→16: Vereinheitlicht den Bestätigungszustand:
-        // - gültige WORK-Tage mit positiver Arbeits- oder Reisezeit werden bestätigt
-        // - leere/bereits inkonsistente WORK-Bestätigungen werden zurückgesetzt
+        // - gültige WORK-/SCHULUNG-/LEHRGANG-Tage mit positiver Arbeits- oder Reisezeit werden bestätigt
+        // - leere/bereits inkonsistente work-like Bestätigungen werden zurückgesetzt
         // - OFF und COMP_TIME werden immer terminal bestätigt
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -654,7 +654,7 @@ abstract class AppDatabase : RoomDatabase() {
 
                         val shouldConfirm = when (dayType) {
                             "OFF", "COMP_TIME" -> true
-                            "WORK" -> {
+                            "WORK", "SCHULUNG", "LEHRGANG" -> {
                                 hasPositiveWorkActivity(
                                     workStart = workStart,
                                     workEnd = workEnd,
@@ -663,6 +663,7 @@ abstract class AppDatabase : RoomDatabase() {
                             }
                             else -> confirmedWorkDay
                         }
+                        val isWorkLike = dayType == "WORK" || dayType == "SCHULUNG" || dayType == "LEHRGANG"
 
                         when {
                             shouldConfirm && (!confirmedWorkDay || confirmationAt == null || confirmationSource.isNullOrBlank()) -> {
@@ -681,7 +682,7 @@ abstract class AppDatabase : RoomDatabase() {
                                     )
                                 )
                             }
-                            !shouldConfirm && dayType == "WORK" && confirmedWorkDay -> {
+                            !shouldConfirm && isWorkLike && confirmedWorkDay -> {
                                 db.execSQL(
                                     """
                                     UPDATE work_entries

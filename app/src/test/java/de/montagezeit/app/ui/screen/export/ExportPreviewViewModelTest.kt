@@ -210,4 +210,25 @@ class ExportPreviewViewModelTest {
         // Should not re-query DAO (only 1 call from loadRange)
         coVerify(exactly = 1) { workEntryRepository.getByDateRangeWithTravel(startDate, endDate) }
     }
+
+    @Test
+    fun `createPdf zeigt Fehler wenn mehr als 180 Eintraege vorhanden`() = runTest {
+        val settings = ReminderSettings(pdfEmployeeName = "Max Mustermann")
+        every { reminderSettingsManager.settings } returns flowOf(settings)
+        val vm = ExportPreviewViewModel(workEntryRepository, reminderSettingsManager, pdfExporter)
+        val manyEntries = (0..PdfExporter.MAX_ENTRIES_PER_PDF).map { i ->
+            WorkEntryWithTravelLegs(
+                workEntry = eligibleWorkEntry(date = startDate.plusDays(i.toLong())),
+                travelLegs = emptyList()
+            )
+        }
+        coEvery { workEntryRepository.getByDateRangeWithTravel(any(), any()) } returns manyEntries
+
+        vm.loadRange(startDate, startDate.plusDays(181))
+        vm.createPdf()
+
+        assertTrue("Expected Error state but got: ${vm.uiState.value}", vm.uiState.value is PreviewState.Error)
+        coVerify(exactly = 0) { pdfExporter.exportToPdf(any(), any(), any(), any(), any(), any(), any()) }
+        vm.viewModelScope.cancel()
+    }
 }

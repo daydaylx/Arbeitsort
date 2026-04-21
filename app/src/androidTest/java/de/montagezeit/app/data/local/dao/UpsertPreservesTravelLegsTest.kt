@@ -30,7 +30,6 @@ class UpsertPreservesTravelLegsTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java
         )
-            .setForeignKeyConstraintsEnabled(true)
             .allowMainThreadQueries()
             .build()
         dao = db.workEntryDao()

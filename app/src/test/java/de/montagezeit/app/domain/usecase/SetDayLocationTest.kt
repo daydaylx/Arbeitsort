@@ -58,6 +58,33 @@ class SetDayLocationTest {
         coVerify(exactly = 0) { workEntryDao.readModifyWrite(any(), any()) }
     }
 
+    @Test
+    fun `invoke normalisiert Verpflegungspauschale bei Standortwechsel nach Leipzig`() = runTest {
+        val date = LocalDate.of(2026, 3, 12)
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Dresden",
+            workStart = java.time.LocalTime.of(8, 0),
+            workEnd = java.time.LocalTime.of(17, 0),
+            breakMinutes = 60,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+        mockReadModifyWrite(date, existing)
+
+        val result = useCase(date, "Leipzig")
+
+        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
+        assertEquals(false, result.mealIsArrivalDeparture)
+        assertEquals(false, result.mealBreakfastIncluded)
+        assertEquals(true, result.confirmedWorkDay)
+    }
+
     private fun mockReadModifyWrite(date: LocalDate, existingEntry: WorkEntry?) {
         coEvery { workEntryDao.readModifyWrite(date, any()) } coAnswers {
             val modify = secondArg<(WorkEntry?) -> WorkEntry>()

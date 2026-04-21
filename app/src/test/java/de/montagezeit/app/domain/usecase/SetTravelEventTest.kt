@@ -154,6 +154,33 @@ class SetTravelEventTest {
     }
 
     @Test
+    fun `invoke - Travel-only work day becomes confirmed and recalculates meal allowance`() = runTest {
+        val date = LocalDate.now()
+        val existingLeg = TravelLeg(
+            workEntryDate = date,
+            sortOrder = 0,
+            category = TravelLegCategory.OUTBOUND,
+            startAt = 1_000_000L,
+            source = TravelSource.MANUAL
+        )
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Dresden",
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = false
+        )
+        coEvery { workEntryDao.getByDate(date) } returns existingEntry
+        coEvery { workEntryDao.getTravelLegsByDate(date) } returns listOf(existingLeg)
+
+        val result = setTravelEvent.invoke(date, SetTravelEvent.TravelType.ARRIVE, 1_060_000L, null)
+
+        assertEquals(true, result.confirmedWorkDay)
+        assertEquals(1400, result.mealAllowanceBaseCents)
+        assertEquals(1400, result.mealAllowanceAmountCents)
+    }
+
+    @Test
     fun `clearTravelEvents - Loescht alle TravelLegs`() = runTest {
         val date = LocalDate.now()
         val existingEntry = WorkEntry(date = date, dayType = DayType.WORK, createdAt = 1000000L, updatedAt = 1000000L)

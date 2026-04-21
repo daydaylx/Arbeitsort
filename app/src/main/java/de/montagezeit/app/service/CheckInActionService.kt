@@ -93,6 +93,17 @@ class CheckInActionService : Service() {
                 null
             }
         }
+
+        internal fun processingNotificationTextRes(action: String?): Int? = when (action) {
+            ReminderActions.ACTION_MORNING_CHECK_IN -> R.string.notification_processing_morning
+            ReminderActions.ACTION_EVENING_CHECK_IN -> R.string.notification_processing_evening
+            ReminderActions.ACTION_REMIND_LATER,
+            ReminderActions.ACTION_REMIND_LATER_CONFIRMATION -> R.string.notification_processing_remind_later
+            ReminderActions.ACTION_CONFIRM_WORK_DAY,
+            ReminderActions.ACTION_CONFIRM_OFF_DAY -> R.string.notification_processing_confirm_day
+            ReminderActions.ACTION_MARK_DAY_OFF -> R.string.notification_processing_mark_day_off
+            else -> null
+        }
     }
 
     override fun onCreate() {
@@ -105,7 +116,7 @@ class CheckInActionService : Service() {
             ReminderActions.ACTION_MORNING_CHECK_IN -> {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_morning)))
+                startForegroundForAction(intent.action)
 
                 serviceScope.launch {
                     operationMutex.withLock {
@@ -128,7 +139,7 @@ class CheckInActionService : Service() {
             ReminderActions.ACTION_EVENING_CHECK_IN -> {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_evening)))
+                startForegroundForAction(intent.action)
 
                 serviceScope.launch {
                     operationMutex.withLock {
@@ -154,6 +165,8 @@ class CheckInActionService : Service() {
                 val hoursLater = intent.getIntExtra(ReminderActions.EXTRA_HOURS_LATER, 1)
                 val delayMinutes = if (minutesLater > 0) minutesLater.toLong() else hoursLater * 60L
                 val reminderTypeRaw = intent.getStringExtra(ReminderActions.EXTRA_REMINDER_TYPE)
+
+                startForegroundForAction(intent.action)
 
                 // Entferne nur den spezifischen Reminder-Typ der gesnoozed wird
                 when (reminderTypeRaw) {
@@ -188,7 +201,7 @@ class CheckInActionService : Service() {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
+                startForegroundForAction(intent.action)
 
                 serviceScope.launch {
                     operationMutex.withLock {
@@ -210,7 +223,7 @@ class CheckInActionService : Service() {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
                 val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_confirm_day)))
+                startForegroundForAction(intent.action)
 
                 serviceScope.launch {
                     operationMutex.withLock {
@@ -247,6 +260,7 @@ class CheckInActionService : Service() {
                 limiter.increment(date)
 
                 // Plane neue Notification in +60 Minuten
+                startForegroundForAction(intent.action)
                 serviceScope.launch {
                     operationMutex.withLock {
                         try {
@@ -262,7 +276,7 @@ class CheckInActionService : Service() {
             ReminderActions.ACTION_MARK_DAY_OFF -> {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
 
-                startForeground(NOTIFICATION_ID, createProcessingNotification(getString(R.string.notification_processing_mark_day_off)))
+                startForegroundForAction(intent.action)
 
                 serviceScope.launch {
                     operationMutex.withLock {
@@ -332,6 +346,11 @@ class CheckInActionService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+
+    private fun startForegroundForAction(action: String?) {
+        val textRes = processingNotificationTextRes(action) ?: return
+        startForeground(NOTIFICATION_ID, createProcessingNotification(getString(textRes)))
     }
 
     /**

@@ -61,6 +61,17 @@ class TimeCalculatorMidnightTest {
     }
 
     @Test
+    fun `reversed same day timestamps are treated as invalid and return zero`() {
+        val leg = legWithTimestamps(
+            startDay = date,
+            start = LocalTime.of(23, 0),
+            arriveDay = date,
+            arrive = LocalTime.of(1, 0)
+        )
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(listOf(leg)))
+    }
+
+    @Test
     fun `timestamp leg takes priority over paidMinutesOverride`() {
         val leg = TravelLeg(
             workEntryDate = date,

@@ -43,6 +43,7 @@ test_output.log
 tmp/
 
 # Tooling caches
+.serena/
 node_modules/
 dist/
 npm-debug.log

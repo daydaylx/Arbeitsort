@@ -22,6 +22,8 @@ class RecordMorningCheckIn(
             result = updatedEntry
             updatedEntry
         }
-        return requireNotNull(result) { "readModifyWrite must return an entry for date $date" }
+        return workEntryDao.normalizeForPersistence(
+            requireNotNull(result) { "readModifyWrite must return an entry for date $date" }
+        )
     }
 }

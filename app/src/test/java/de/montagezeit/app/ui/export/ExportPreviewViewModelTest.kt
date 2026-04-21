@@ -195,6 +195,21 @@ class ExportPreviewViewModelTest {
     }
 
     @Test
+    fun `buildExportPreviewRow hides stored meal allowance for Leipzig work day`() {
+        val leipzigEntry = WorkEntry(
+            date = LocalDate.of(2026, 1, 14),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Leipzig",
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            mealAllowanceAmountCents = 820
+        )
+
+        assertNull(buildExportPreviewRow(record(leipzigEntry)).mealAllowanceLabel)
+    }
+
+    @Test
     fun `buildExportPreviewRow hides work schedule for off day`() {
         val offEntry = WorkEntry(
             date = LocalDate.of(2026, 1, 12),

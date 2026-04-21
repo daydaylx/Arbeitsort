@@ -5,15 +5,21 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.util.WorkEntryDerivedStateNormalizer
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Singleton
 class RoomWorkEntryRepository @Inject constructor(
     private val workEntryDao: WorkEntryDao
 ) : WorkEntryRepository {
+    private val writeMutexes = ConcurrentHashMap<LocalDate, Mutex>()
+
     override suspend fun getByDate(date: LocalDate): WorkEntry? = workEntryDao.getByDate(date)
 
     override fun getByDateFlow(date: LocalDate): Flow<WorkEntry?> = workEntryDao.getByDateFlow(date)
@@ -43,25 +49,96 @@ class RoomWorkEntryRepository @Inject constructor(
     override suspend fun getLatestDayLocationLabelByDayType(dayType: DayType): String? =
         workEntryDao.getLatestDayLocationLabelByDayType(dayType)
 
-    override suspend fun upsert(entry: WorkEntry) = workEntryDao.upsert(entry)
+    override suspend fun upsert(entry: WorkEntry) = withDateLock(entry.date) {
+        workEntryDao.upsert(normalizeWithStoredTravel(entry))
+    }
 
-    override suspend fun upsertAll(entries: List<WorkEntry>) = workEntryDao.upsertAll(entries)
+    override suspend fun upsertAll(entries: List<WorkEntry>) = withDateLocks(entries.map(WorkEntry::date)) {
+        val normalizedEntries = mutableListOf<WorkEntry>()
+        for (entry in entries) {
+            normalizedEntries += normalizeWithStoredTravel(entry)
+        }
+        workEntryDao.upsertAll(normalizedEntries)
+    }
 
     override suspend fun upsertAllAndDeleteTravelLegs(
         entries: List<WorkEntry>,
         travelLegDatesToDelete: List<LocalDate>
-    ) = workEntryDao.upsertAllAndDeleteTravelLegs(entries, travelLegDatesToDelete)
+    ) = withDateLocks(entries.map(WorkEntry::date) + travelLegDatesToDelete) {
+        val deletedDates = travelLegDatesToDelete.toSet()
+        val normalizedEntries = entries.map { entry ->
+            val travelLegs = if (entry.date in deletedDates) {
+                emptyList()
+            } else {
+                workEntryDao.getTravelLegsByDate(entry.date)
+            }
+            WorkEntryDerivedStateNormalizer.normalize(entry, travelLegs)
+        }
+        workEntryDao.upsertAllAndDeleteTravelLegs(normalizedEntries, travelLegDatesToDelete)
+    }
 
     override suspend fun getTravelLegsByDate(date: LocalDate): List<TravelLeg> =
         workEntryDao.getTravelLegsByDate(date)
 
-    override suspend fun deleteTravelLegsByDate(date: LocalDate) = workEntryDao.deleteTravelLegsByDate(date)
+    override suspend fun deleteTravelLegsByDate(date: LocalDate) = withDateLock(date) {
+        val existingEntry = workEntryDao.getByDate(date)
+        workEntryDao.deleteTravelLegsByDate(date)
+        if (existingEntry != null) {
+            workEntryDao.upsert(
+                WorkEntryDerivedStateNormalizer.normalize(
+                    entry = existingEntry.copy(updatedAt = System.currentTimeMillis()),
+                    travelLegs = emptyList()
+                )
+            )
+        }
+    }
 
-    override suspend fun deleteByDate(date: LocalDate) = workEntryDao.deleteByDate(date)
+    override suspend fun deleteByDate(date: LocalDate) = withDateLock(date) {
+        workEntryDao.deleteByDate(date)
+    }
 
-    override suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>) =
-        workEntryDao.replaceEntryWithTravelLegs(entry, legs)
+    override suspend fun replaceEntryWithTravelLegs(
+        entry: WorkEntry,
+        legs: List<TravelLeg>,
+    ) = withDateLock(entry.date) {
+        workEntryDao.replaceEntryWithTravelLegs(
+            WorkEntryDerivedStateNormalizer.normalize(entry, legs),
+            legs
+        )
+    }
 
-    override suspend fun readModifyWrite(date: LocalDate, modify: (WorkEntry?) -> WorkEntry) =
-        workEntryDao.readModifyWrite(date, modify)
+    override suspend fun readModifyWrite(date: LocalDate, modify: (WorkEntry?) -> WorkEntry) = withDateLock(date) {
+        val travelLegs = workEntryDao.getTravelLegsByDate(date)
+        workEntryDao.readModifyWrite(date) { existing ->
+            WorkEntryDerivedStateNormalizer.normalize(modify(existing), travelLegs)
+        }
+    }
+
+    private suspend fun normalizeWithStoredTravel(entry: WorkEntry): WorkEntry {
+        return WorkEntryDerivedStateNormalizer.normalize(
+            entry = entry,
+            travelLegs = workEntryDao.getTravelLegsByDate(entry.date)
+        )
+    }
+
+    private suspend fun <T> withDateLock(date: LocalDate, block: suspend () -> T): T {
+        val mutex = writeMutexes.computeIfAbsent(date) { Mutex() }
+        return mutex.withLock { block() }
+    }
+
+    private suspend fun <T> withDateLocks(dates: List<LocalDate>, block: suspend () -> T): T {
+        val sortedDates = dates.distinct().sorted()
+        return withDateLocks(sortedDates, index = 0, block = block)
+    }
+
+    private suspend fun <T> withDateLocks(
+        dates: List<LocalDate>,
+        index: Int,
+        block: suspend () -> T
+    ): T {
+        if (index >= dates.size) return block()
+        return withDateLock(dates[index]) {
+            withDateLocks(dates, index + 1, block)
+        }
+    }
 }

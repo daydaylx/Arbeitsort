@@ -282,6 +282,53 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `applyBatchEdit recalculates meal allowance when day location changes`() = runTest {
+        val date = LocalDate.of(2026, 3, 12)
+        val existing = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Dresden",
+            workStart = java.time.LocalTime.of(8, 0),
+            workEnd = java.time.LocalTime.of(17, 0),
+            breakMinutes = 60,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+        val savedEntries = mutableListOf<WorkEntry>()
+
+        coEvery { workEntryDao.getByDateRange(date, date) } returns listOf(existing)
+        coEvery { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            savedEntries += args[0] as List<WorkEntry>
+            Unit
+        }
+
+        val viewModel = createViewModel()
+        viewModel.applyBatchEdit(
+            BatchEditRequest(
+                startDate = date,
+                endDate = date,
+                dayType = null,
+                applyDefaultTimes = false,
+                dayLocationLabel = "Leipzig",
+                applyDayLocation = true,
+                note = null,
+                applyNote = false
+            )
+        )
+        waitUntil { viewModel.batchEditState.value is BatchEditState.Success }
+
+        val saved = savedEntries.single()
+        assertEquals("Leipzig", saved.dayLocationLabel)
+        assertEquals(0, saved.mealAllowanceBaseCents)
+        assertEquals(0, saved.mealAllowanceAmountCents)
+        assertEquals(false, saved.mealIsArrivalDeparture)
+        assertEquals(false, saved.mealBreakfastIncluded)
+    }
+
+    @Test
     fun `applyBatchEdit deletes travel legs when switching range to comp time`() = runTest {
         val date = LocalDate.of(2026, 3, 12)
         val existing = WorkEntry(date = date, dayType = DayType.WORK, dayLocationLabel = "Berlin")

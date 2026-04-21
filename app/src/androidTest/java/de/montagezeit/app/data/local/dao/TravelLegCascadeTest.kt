@@ -19,9 +19,7 @@ import java.time.LocalDate
 /**
  * Verifies that deleting a WorkEntry cascades to its TravelLeg rows.
  *
- * SQLite foreign key enforcement is disabled by default; Room must call
- * setForeignKeyConstraintsEnabled(true) on the builder or the CASCADE declaration
- * on TravelLeg.workEntryDate is silently ignored.
+ * Verifies the Room-backed cascade behaviour for TravelLeg rows.
  */
 @RunWith(AndroidJUnit4::class)
 class TravelLegCascadeTest {
@@ -35,7 +33,6 @@ class TravelLegCascadeTest {
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java
         )
-            .setForeignKeyConstraintsEnabled(true)
             .allowMainThreadQueries()
             .build()
         dao = db.workEntryDao()

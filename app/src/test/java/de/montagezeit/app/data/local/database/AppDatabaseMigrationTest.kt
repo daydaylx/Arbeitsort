@@ -39,6 +39,7 @@ class AppDatabaseMigrationTest {
             "migration_8_9_test.db",
             "migration_9_10_test.db",
             "migration_10_11_test.db",
+            "migration_2_3_test_existing_route_cache.db",
             "migration_11_12_test.db",
             "migration_12_13_test.db",
             "migration_13_14_test.db",
@@ -289,6 +290,47 @@ class AppDatabaseMigrationTest {
                     `needsReview` INTEGER NOT NULL,
                     `createdAt` INTEGER NOT NULL,
                     PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+
+            AppDatabase.MIGRATION_2_3.migrate(db)
+
+            assertTrue(tableExists(db, "route_cache"))
+            assertTrue(indexExists(db, "index_work_entries_needsReview"))
+            assertTrue(indexExists(db, "index_work_entries_createdAt"))
+            assertTrue(indexExists(db, "index_work_entries_date"))
+            assertTrue(indexExists(db, "index_work_entries_dayType_date"))
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 2 to 3 is idempotent when route_cache already exists`() {
+        val dbName = "migration_2_3_test_existing_route_cache.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 2)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    `needsReview` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `route_cache` (
+                    `fromLabel` TEXT NOT NULL,
+                    `toLabel` TEXT NOT NULL,
+                    `distanceKm` REAL NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`fromLabel`, `toLabel`)
                 )
                 """.trimIndent()
             )
@@ -607,6 +649,18 @@ class AppDatabaseMigrationTest {
                 assertEquals(1, c.getInt(1))
                 assertFalse(c.isNull(2))
                 assertEquals("MIGRATION_AUTO_CONFIRM", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-06", c.getString(0))
+                assertEquals(1, c.getInt(1))
+                assertFalse(c.isNull(2))
+                assertEquals("MIGRATION_AUTO_CONFIRM", c.getString(3))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-07", c.getString(0))
+                assertEquals(0, c.getInt(1))
+                assertTrue(c.isNull(2))
+                assertTrue(c.isNull(3))
             }
         } finally {
             helper.close()
@@ -747,7 +801,9 @@ class AppDatabaseMigrationTest {
                     ('2026-02-02', 'WORK', NULL, NULL, 0, 0, NULL, NULL),
                     ('2026-02-03', 'WORK', NULL, NULL, 0, 1, 1111, 'UI'),
                     ('2026-02-04', 'WORK', '08:00', '17:00', 60, 1, 2222, 'UI'),
-                    ('2026-02-05', 'OFF', NULL, NULL, 0, 0, NULL, NULL)
+                    ('2026-02-05', 'OFF', NULL, NULL, 0, 0, NULL, NULL),
+                    ('2026-02-06', 'SCHULUNG', '08:00', '16:00', 30, 0, NULL, NULL),
+                    ('2026-02-07', 'LEHRGANG', NULL, NULL, 0, 1, 3333, 'UI')
                 """.trimIndent()
             )
             it.execSQL(

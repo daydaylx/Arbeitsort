@@ -290,6 +290,19 @@ class ExportPreviewViewModel @Inject constructor(
                     )
                     return@launch
                 }
+                if (entries.size > PdfExporter.MAX_ENTRIES_PER_PDF) {
+                    trace.finish(
+                        status = DiagnosticStatus.WARNING,
+                        payload = mapOf("reason" to "too_many_entries", "count" to entries.size)
+                    )
+                    updateState(
+                        PreviewState.Error(
+                            message = UiText.StringResource(R.string.pdf_export_error_too_many_entries),
+                            canReturn = true
+                        )
+                    )
+                    return@launch
+                }
                 when (val exportResult = pdfExporter.exportToPdf(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,

@@ -162,7 +162,7 @@ class TimeCalculatorTest {
     }
 
     @Test
-    fun `calculate - Travel from same day overnight timestamp diff uses overnight calculation`() {
+    fun `calculate - Travel from reversed same day timestamps clamps to zero`() {
         val legs = listOf(
             travelLegWithTimestamps(
                 startDate = date,
@@ -172,7 +172,7 @@ class TimeCalculatorTest {
             )
         )
 
-        assertEquals(120, TimeCalculator.calculateTravelMinutes(legs))
+        assertEquals(0, TimeCalculator.calculateTravelMinutes(legs))
     }
 
     @Test

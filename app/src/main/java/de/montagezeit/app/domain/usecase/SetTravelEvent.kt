@@ -65,8 +65,10 @@ class SetTravelEvent(
             )
         }
         val remainingLegs = existingLegs.drop(1)
-        workEntryDao.replaceEntryWithTravelLegs(baseEntry, listOf(updatedLeg) + remainingLegs)
-        return baseEntry
+        val updatedLegs = listOf(updatedLeg) + remainingLegs
+        val normalizedEntry = normalizeForPersistence(baseEntry, updatedLegs)
+        workEntryDao.replaceEntryWithTravelLegs(normalizedEntry, updatedLegs)
+        return normalizedEntry
     }
     
     /**
@@ -79,7 +81,7 @@ class SetTravelEvent(
         val now = System.currentTimeMillis()
         val existing = workEntryDao.getByDate(date)
             ?: throw IllegalArgumentException("Kein WorkEntry für Datum $date gefunden")
-        val cleared = existing.copy(updatedAt = now)
+        val cleared = normalizeForPersistence(existing.copy(updatedAt = now), emptyList())
         workEntryDao.replaceEntryWithTravelLegs(cleared, emptyList())
         return cleared
     }

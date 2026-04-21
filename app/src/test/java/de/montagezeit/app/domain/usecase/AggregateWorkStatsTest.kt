@@ -212,7 +212,7 @@ class AggregateWorkStatsTest {
         )
         assertEquals(0, result.workDays)
         assertEquals(1, result.targetCountedDays)
-        assertEquals(1, result.offDays)
+        assertEquals(0, result.offDays)
         assertEquals(0, result.totalWorkMinutes)
         assertEquals(1, result.compTimeDays)
     }

@@ -51,6 +51,8 @@ class ConfirmOffDay(
             updatedEntry
         }
 
-        return requireNotNull(result) { "readModifyWrite hat kein Ergebnis geliefert" }
+        return workEntryDao.normalizeForPersistence(
+            requireNotNull(result) { "readModifyWrite hat kein Ergebnis geliefert" }
+        )
     }
 }

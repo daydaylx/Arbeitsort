@@ -200,6 +200,30 @@ class CsvExporterLogicTest {
     }
 
     @Test
+    fun `Leipzig work day exports stored meal allowance as zero values`() {
+        val entryInLeipzig = WorkEntry(
+            date = LocalDate.of(2024, 6, 10),
+            dayType = DayType.WORK,
+            dayLocationLabel = "Leipzig",
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(16, 0),
+            breakMinutes = 60,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+
+        val cols = buildCsvLine(entryInLeipzig).trimEnd('\n').split(";")
+
+        assertEquals("0", cols[12])
+        assertEquals("0", cols[13])
+        assertEquals("0", cols[14])
+        assertEquals("0", cols[15])
+        assertEquals("0,00 €", cols[16])
+    }
+
+    @Test
     fun `OFF Tag hat leere workStart workEnd breakMinutes Felder`() {
         val line = buildCsvLine(entry(dayType = DayType.OFF))
         val cols = line.trimEnd('\n').split(";")

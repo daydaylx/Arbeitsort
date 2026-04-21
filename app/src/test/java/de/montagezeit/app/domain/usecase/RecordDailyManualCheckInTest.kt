@@ -271,6 +271,30 @@ class RecordDailyManualCheckInTest {
     }
 
     @Test
+    fun `invoke returns confirmed entry unchanged without overwriting location or confirmation`() = runTest {
+        val date = LocalDate.now()
+        val confirmedEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            dayLocationLabel = "Bestätigter Ort",
+            workStart = LocalTime.of(7, 0),
+            workEnd = LocalTime.of(15, 30),
+            breakMinutes = 30,
+            confirmedWorkDay = true,
+            confirmationAt = 1_000L,
+            confirmationSource = "UI"
+        )
+        mockReadModifyWrite(date, confirmedEntry)
+
+        val result = useCase(DailyManualCheckInInput(date, "Anderer Ort"))
+
+        assertEquals("Bestätigter Ort", result.dayLocationLabel)
+        assertEquals(true, result.confirmedWorkDay)
+        assertEquals(1_000L, result.confirmationAt)
+        assertEquals("UI", result.confirmationSource)
+    }
+
+    @Test
     fun `invoke preserves explicit zero break on existing work schedule`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(

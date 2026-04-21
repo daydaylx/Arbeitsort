@@ -101,6 +101,13 @@ abstract class WorkEntryDao {
     @Query("DELETE FROM work_entries WHERE date = :date")
     abstract suspend fun deleteByDate(date: LocalDate)
 
+    /**
+     * Atomarer Read-Modify-Write-Helfer für einen einzelnen Tag.
+     *
+     * `@Transaction` schützt nur die DB-Operationen innerhalb dieser Methode.
+     * Konkurrierende Aufrufer können sich ohne externe Serialisierung dennoch
+     * gegenseitig überschreiben. Das Repository serialisiert diese Writes pro Datum.
+     */
     @Transaction
     open suspend fun readModifyWrite(date: LocalDate, modify: (WorkEntry?) -> WorkEntry) {
         val existing = getByDate(date)

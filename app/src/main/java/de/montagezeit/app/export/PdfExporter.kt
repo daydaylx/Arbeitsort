@@ -359,7 +359,7 @@ class PdfExporter @Inject constructor(
         TableColumn(COL_TRAVEL_ROUTE, string(R.string.pdf_export_column_travel_route)),
         TableColumn(COL_TRAVEL_TYPE, string(R.string.pdf_export_column_travel_type)),
         TableColumn(COL_LOCATION, string(R.string.pdf_export_column_location)),
-        TableColumn(COL_BREAKFAST, string(R.string.pdf_export_column_breakfast))
+        TableColumn(COL_BREAKFAST, string(R.string.pdf_export_column_meal_allowance))
     )
 
     /**
@@ -531,11 +531,7 @@ class PdfExporter @Inject constructor(
             PdfUtilities.buildTravelRouteSummary(travelLegs).ifBlank { dash },
             travelTypeText,
             PdfUtilities.getLocation(entry, travelLegs).ifBlank { dash },
-            if (mealSnapshot.breakfastIncluded && mealSnapshot.baseCents > 0) {
-                string(R.string.pdf_export_breakfast_yes)
-            } else {
-                dash
-            }
+            if (mealSnapshot.amountCents > 0) MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents) else dash
         )
     }
 

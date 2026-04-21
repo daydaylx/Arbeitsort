@@ -356,4 +356,95 @@ class EditEntryViewModelTest {
         coVerify(exactly = 1) { workEntryDao.replaceEntryWithTravelLegs(any(), any()) }
         assertEquals(EditUiState.Saved, viewModel.screenState.value.uiState)
     }
+
+    @Test
+    fun `updateDayType auf OFF setzt hasWorkTimes auf false`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                dayType = DayType.WORK,
+                workStart = LocalTime.of(8, 0),
+                workEnd = LocalTime.of(17, 0),
+                dayLocationLabel = "Baustelle"
+            ),
+            travelLegs = emptyList()
+        )
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+        advanceUntilIdle()
+
+        viewModel.updateDayType(DayType.OFF)
+
+        assertEquals(DayType.OFF, viewModel.screenState.value.formData.dayType)
+        assertTrue(!viewModel.screenState.value.formData.hasWorkTimes)
+    }
+
+    @Test
+    fun `clearTravel entfernt alle TravelLegs aus dem FormState`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+        advanceUntilIdle()
+        viewModel.addTravelLeg()
+        viewModel.addTravelLeg()
+        assertEquals(2, viewModel.screenState.value.formData.travelLegs.size)
+
+        viewModel.clearTravel()
+
+        assertTrue(viewModel.screenState.value.formData.travelLegs.isEmpty())
+    }
+
+    @Test
+    fun `deleteCurrentEntry loescht Eintrag und liefert true zurueck`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(date = date, dayType = DayType.WORK),
+            travelLegs = emptyList()
+        )
+        coEvery { workEntryDao.getByDate(date) } returns WorkEntry(date = date, dayType = DayType.WORK)
+        coEvery { workEntryDao.deleteByDate(date) } returns Unit
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        )
+        advanceUntilIdle()
+
+        var callbackResult = false
+        viewModel.deleteCurrentEntry { callbackResult = it }
+        advanceUntilIdle()
+
+        assertTrue(callbackResult)
+        coVerify(exactly = 1) { workEntryDao.deleteByDate(date) }
+        assertEquals(EditUiState.Saved, viewModel.screenState.value.uiState)
+    }
 }

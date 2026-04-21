@@ -5,7 +5,10 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.repository.RoomWorkEntryRepository
 import io.mockk.coEvery
 
-internal fun testRepository(workEntryDao: WorkEntryDao) = RoomWorkEntryRepository(workEntryDao)
+internal fun testRepository(workEntryDao: WorkEntryDao): RoomWorkEntryRepository {
+    coEvery { workEntryDao.getTravelLegsByDate(any()) } returns emptyList()
+    return RoomWorkEntryRepository(workEntryDao)
+}
 
 internal fun stubReadModifyWrite(
     workEntryDao: WorkEntryDao,

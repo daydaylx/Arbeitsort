@@ -11,7 +11,7 @@ import de.montagezeit.app.domain.util.MealAllowanceCalculator
 /**
  * Ergebnis der Arbeitsstatistik-Aggregation.
  * 
- * Enthält sowohl die klassischen Metriken (workDays, offDays) als auch
+ * Enthält sowohl die klassischen Metriken (workDays, offDays = reine freie Tage) als auch
  * die neue differenzierte Tageszählung basierend auf DayClassification.
  */
 data class WorkStatsResult(
@@ -125,13 +125,7 @@ class AggregateWorkStats {
                 it.classification == DayClassification.LEHRGANG
         }
         val targetCountedDays = classifiedDays.count { it.classification.isCountedWorkDay }
-        val offDays = eligibleEntries.size - visibleWorkDays
-        val totalWorkMinutes = eligibleEntries.sumOf { it.status.workMinutes }
-        val totalTravelMinutes = eligibleEntries.sumOf { it.status.travelMinutes }
 
-        val mealAllowanceCents = classifiedDays
-            .sumOf { MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it.entry).amountCents }
-        
         // Neue differenzierte Metriken
         val workDaysWithWork = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT }
         val workDaysTravelOnly = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_NUR_REISE }
@@ -139,6 +133,12 @@ class AggregateWorkStats {
         val compTimeDays = classifiedDays.count { it.classification == DayClassification.UEBERSTUNDEN_ABBAU }
         val freeDaysWithTravel = classifiedDays.count { it.classification == DayClassification.FREI_MIT_REISE }
         val freeDaysWithoutTravel = classifiedDays.count { it.classification == DayClassification.FREI }
+        val offDays = freeDaysWithTravel + freeDaysWithoutTravel
+        val totalWorkMinutes = eligibleEntries.sumOf { it.status.workMinutes }
+        val totalTravelMinutes = eligibleEntries.sumOf { it.status.travelMinutes }
+
+        val mealAllowanceCents = classifiedDays
+            .sumOf { MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it.entry).amountCents }
         
         return WorkStatsResult(
             workDays = visibleWorkDays,

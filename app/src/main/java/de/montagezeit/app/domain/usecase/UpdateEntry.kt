@@ -46,8 +46,9 @@ class UpdateEntry(
             updatedAt = now
         )
 
-        workEntryDao.upsert(entryToSave)
-        return entryToSave
+        val normalizedEntry = workEntryDao.normalizeForPersistence(entryToSave)
+        workEntryDao.upsert(normalizedEntry)
+        return normalizedEntry
     }
 
     /**

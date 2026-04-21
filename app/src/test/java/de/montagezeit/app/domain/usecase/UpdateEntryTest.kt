@@ -198,6 +198,27 @@ class UpdateEntryTest {
         coVerify(exactly = 0) { workEntryDao.upsert(any()) }
     }
 
+    @Test
+    fun `invoke normalisiert gespeicherte meal allowance fuer Leipzig`() = runTest {
+        val entry = validEntry().copy(
+            dayLocationLabel = " Leipzig ",
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820
+        )
+        coEvery { workEntryDao.upsert(any()) } just runs
+
+        val result = updateEntry.invoke(entry)
+
+        assertEquals("Leipzig", result.dayLocationLabel)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
+        assertEquals(false, result.mealIsArrivalDeparture)
+        assertEquals(false, result.mealBreakfastIncluded)
+        assertEquals(true, result.confirmedWorkDay)
+    }
+
     private fun validEntry(
         date: LocalDate = LocalDate.now(),
         note: String? = null,

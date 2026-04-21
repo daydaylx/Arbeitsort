@@ -90,6 +90,11 @@ class RecordDailyManualCheckIn(
                         "existingEntry" to existingEntry?.toSanitizedDiagnosticPayload()
                     )
                 )
+                if (existingEntry?.confirmedWorkDay == true) {
+                    trace.event(name = "manual_check_in_skipped_already_confirmed")
+                    result = existingEntry
+                    return@readModifyWrite existingEntry
+                }
                 val updatedEntry = if (existingEntry != null) {
                     val hasExistingWorkSchedule = existingEntry.workStart != null && existingEntry.workEnd != null
                     existingEntry.copy(
@@ -139,7 +144,9 @@ class RecordDailyManualCheckIn(
             trace.finish(status = de.montagezeit.app.diagnostics.DiagnosticStatus.ERROR)
             throw e
         }
-        return requireNotNull(result) { "readModifyWrite hat kein Ergebnis geliefert" }.also { updated ->
+        return workEntryDao.normalizeForPersistence(
+            requireNotNull(result) { "readModifyWrite hat kein Ergebnis geliefert" }
+        ).also { updated ->
             trace.finish(
                 payload = mapOf(
                     "resultEntry" to updated.toSanitizedDiagnosticPayload()

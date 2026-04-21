@@ -8,7 +8,8 @@ class SaveEditedEntryWithTravel @Inject constructor(
     private val workEntryRepository: WorkEntryRepository
 ) {
     suspend operator fun invoke(pendingSave: EditEntryPendingSave): EditEntryPendingSave {
-        workEntryRepository.replaceEntryWithTravelLegs(pendingSave.entry, pendingSave.legs)
-        return pendingSave
+        val normalizedEntry = normalizeForPersistence(pendingSave.entry, pendingSave.legs)
+        workEntryRepository.replaceEntryWithTravelLegs(normalizedEntry, pendingSave.legs)
+        return pendingSave.copy(entry = normalizedEntry)
     }
 }

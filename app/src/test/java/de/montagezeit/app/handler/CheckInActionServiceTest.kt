@@ -1,5 +1,7 @@
 package de.montagezeit.app.handler
 
+import de.montagezeit.app.R
+import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.service.CheckInActionService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -60,5 +62,17 @@ class CheckInActionServiceTest {
     fun `parseDateFromExtra returns null for empty string`() {
         val result = CheckInActionService.parseDateFromExtra("", now = today)
         assertNull(result)
+    }
+
+    @Test
+    fun `processingNotificationTextRes maps remind later actions to remind later foreground text`() {
+        assertEquals(
+            R.string.notification_processing_remind_later,
+            CheckInActionService.processingNotificationTextRes(ReminderActions.ACTION_REMIND_LATER)
+        )
+        assertEquals(
+            R.string.notification_processing_remind_later,
+            CheckInActionService.processingNotificationTextRes(ReminderActions.ACTION_REMIND_LATER_CONFIRMATION)
+        )
     }
 }
