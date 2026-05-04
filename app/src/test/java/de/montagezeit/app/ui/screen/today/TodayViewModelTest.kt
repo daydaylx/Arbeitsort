@@ -99,8 +99,8 @@ class TodayViewModelTest {
         val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) {
+            viewModel.dialogState.collect { state ->
+                if (state.showDailyCheckInDialog) {
                     shownLatch.countDown()
                 }
             }
@@ -109,7 +109,7 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("Baustelle Heute", viewModel.dailyCheckInLocationInput.value)
+        assertEquals("Baustelle Heute", viewModel.dialogState.value.dailyCheckInLocationInput)
         coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
@@ -130,8 +130,8 @@ class TodayViewModelTest {
         val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) {
+            viewModel.dialogState.collect { state ->
+                if (state.showDailyCheckInDialog) {
                     shownLatch.countDown()
                 }
             }
@@ -140,7 +140,7 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("", viewModel.dailyCheckInLocationInput.value)
+        assertEquals("", viewModel.dialogState.value.dailyCheckInLocationInput)
         coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
@@ -155,8 +155,8 @@ class TodayViewModelTest {
         val viewModel = createViewModel(repository)
         val shownLatch = CountDownLatch(1)
         val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.showDailyCheckInDialog.collect { shown ->
-                if (shown) {
+            viewModel.dialogState.collect { state ->
+                if (state.showDailyCheckInDialog) {
                     shownLatch.countDown()
                 }
             }
@@ -165,7 +165,7 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("", viewModel.dailyCheckInLocationInput.value)
+        assertEquals("", viewModel.dialogState.value.dailyCheckInLocationInput)
         coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
@@ -181,8 +181,8 @@ class TodayViewModelTest {
 
         viewModel.openDayLocationDialog()
 
-        assertTrue(viewModel.showDayLocationDialog.value)
-        assertEquals("", viewModel.dayLocationInput.value)
+        assertTrue(viewModel.dialogState.value.showDayLocationDialog)
+        assertEquals("", viewModel.dialogState.value.dayLocationInput)
         coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
     }
 
@@ -277,8 +277,8 @@ class TodayViewModelTest {
         viewModel.submitDailyManualCheckIn()
 
         assertTrue(successLatch.await(2, TimeUnit.SECONDS))
-        assertEquals(false, viewModel.showDailyCheckInDialog.value)
-        assertEquals("Gespeichert", viewModel.dailyCheckInLocationInput.value)
+        assertEquals(false, viewModel.dialogState.value.showDailyCheckInDialog)
+        assertEquals("Gespeichert", viewModel.dialogState.value.dailyCheckInLocationInput)
         coVerify(exactly = 1) { recordDailyManualCheckIn(match { it.date == today && it.dayLocationLabel == "Baustelle A" }) }
         collectJob.cancel()
     }
@@ -624,9 +624,9 @@ class TodayViewModelTest {
 
         viewModel.openDailyCheckInDialog()
 
-        assertTrue(viewModel.showDailyCheckInDialog.value)
-        assertEquals(true, viewModel.dailyCheckInIsArrivalDeparture.value)
-        assertEquals(true, viewModel.dailyCheckInBreakfastIncluded.value)
+        assertTrue(viewModel.dialogState.value.showDailyCheckInDialog)
+        assertEquals(true, viewModel.dialogState.value.dailyCheckInIsArrivalDeparture)
+        assertEquals(true, viewModel.dialogState.value.dailyCheckInBreakfastIncluded)
     }
 
     @Test
@@ -640,9 +640,9 @@ class TodayViewModelTest {
 
         viewModel.openDailyCheckInDialog()
 
-        assertTrue(viewModel.showDailyCheckInDialog.value)
-        assertEquals(false, viewModel.dailyCheckInIsArrivalDeparture.value)
-        assertEquals(false, viewModel.dailyCheckInBreakfastIncluded.value)
+        assertTrue(viewModel.dialogState.value.showDailyCheckInDialog)
+        assertEquals(false, viewModel.dialogState.value.dailyCheckInIsArrivalDeparture)
+        assertEquals(false, viewModel.dialogState.value.dailyCheckInBreakfastIncluded)
     }
 
     private fun createViewModel(
@@ -665,7 +665,6 @@ class TodayViewModelTest {
             workEntryRepository = repository,
             dateCoordinator = TodayDateCoordinator(Clock.systemDefaultZone()),
             weekOverviewUseCase = TodayWeekOverviewUseCase(),
-            dialogsStateHolder = TodayDialogsStateHolder(),
             actionsHandler = actionsHandler,
             clock = Clock.systemDefaultZone()
         ).also {

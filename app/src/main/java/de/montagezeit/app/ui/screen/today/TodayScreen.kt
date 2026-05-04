@@ -276,6 +276,7 @@ private fun TodayDialogsHost(
         DailyManualCheckInDialog(
             input = dialogState.dailyCheckInLocationInput,
             isLoading = dialogState.isDailyCheckInLoading,
+            isMealEligible = dialogState.dailyCheckInIsMealEligible,
             isArrivalDeparture = dialogState.dailyCheckInIsArrivalDeparture,
             breakfastIncluded = dialogState.dailyCheckInBreakfastIncluded,
             allowancePreviewCents = dialogState.dailyCheckInAllowancePreviewCents,
@@ -647,6 +648,7 @@ private fun WorkHoursCard(
 private fun DailyManualCheckInDialog(
     input: String,
     isLoading: Boolean,
+    isMealEligible: Boolean,
     isArrivalDeparture: Boolean,
     breakfastIncluded: Boolean,
     allowancePreviewCents: Int,
@@ -679,24 +681,32 @@ private fun DailyManualCheckInDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                CheckboxRow(
-                    checked = isArrivalDeparture,
-                    onCheckedChange = onArrivalDepartureChanged,
-                    label = stringResource(R.string.meal_allowance_arrival_departure_label)
-                )
-                CheckboxRow(
-                    checked = breakfastIncluded,
-                    onCheckedChange = onBreakfastIncludedChanged,
-                    label = stringResource(R.string.meal_allowance_breakfast_label)
-                )
-                Text(
-                    text = stringResource(
-                        R.string.meal_allowance_preview_label,
-                        MealAllowanceCalculator.formatEuro(allowancePreviewCents)
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                if (isMealEligible) {
+                    CheckboxRow(
+                        checked = isArrivalDeparture,
+                        onCheckedChange = onArrivalDepartureChanged,
+                        label = stringResource(R.string.meal_allowance_arrival_departure_label)
+                    )
+                    CheckboxRow(
+                        checked = breakfastIncluded,
+                        onCheckedChange = onBreakfastIncludedChanged,
+                        label = stringResource(R.string.meal_allowance_breakfast_label)
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.meal_allowance_preview_label,
+                            MealAllowanceCalculator.formatEuro(allowancePreviewCents)
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.meal_allowance_not_eligible_for_location),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
         confirmButton = {

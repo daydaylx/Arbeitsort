@@ -13,8 +13,7 @@ import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
-import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
-import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.domain.usecase.RecordCheckIn
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.usecase.SetTravelEvent
 import de.montagezeit.app.domain.util.NonWorkingDayChecker
@@ -28,13 +27,8 @@ object ApplicationModule {
     fun provideClock(): Clock = Clock.systemDefaultZone()
 
     @Provides
-    fun provideRecordMorningCheckIn(repository: WorkEntryRepository): RecordMorningCheckIn {
-        return RecordMorningCheckIn(repository)
-    }
-
-    @Provides
-    fun provideRecordEveningCheckIn(repository: WorkEntryRepository): RecordEveningCheckIn {
-        return RecordEveningCheckIn(repository)
+    fun provideRecordCheckIn(repository: WorkEntryRepository): RecordCheckIn {
+        return RecordCheckIn(repository)
     }
 
     @Provides

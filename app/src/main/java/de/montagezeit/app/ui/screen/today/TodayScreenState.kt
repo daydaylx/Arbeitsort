@@ -66,6 +66,9 @@ data class TodayDialogState(
     val showDeleteDayDialog: Boolean,
     val loadingActions: Set<TodayAction>
 ) {
+    val dailyCheckInIsMealEligible: Boolean
+        get() = dailyCheckInAllowancePreviewCents > 0
+
     val isDailyCheckInLoading: Boolean
         get() = loadingActions.contains(TodayAction.DAILY_MANUAL_CHECK_IN)
 

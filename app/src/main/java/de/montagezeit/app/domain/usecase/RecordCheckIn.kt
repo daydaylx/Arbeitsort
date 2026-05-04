@@ -4,20 +4,16 @@ import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
-/**
- * UseCase für den Abend-Check-in (ohne GPS-Erfassung)
- */
-class RecordEveningCheckIn(
+class RecordCheckIn(
     private val workEntryDao: WorkEntryRepository
 ) {
-
-    suspend operator fun invoke(date: LocalDate): WorkEntry {
+    suspend operator fun invoke(date: LocalDate, snapshot: CheckInEntryBuilder.Snapshot): WorkEntry {
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(date) { existingEntry ->
             val updatedEntry = CheckInEntryBuilder.build(
                 date = date,
                 existingEntry = existingEntry,
-                snapshot = CheckInEntryBuilder.Snapshot.EVENING
+                snapshot = snapshot
             )
             result = updatedEntry
             updatedEntry

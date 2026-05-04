@@ -97,6 +97,7 @@
     <string name="meal_allowance_arrival_departure_label">Anreise/Abreise (14,00 € statt 28,00 €)</string>
     <string name="meal_allowance_breakfast_label">Frühstück erhalten (−5,60 €)</string>
     <string name="meal_allowance_preview_label">Verpflegungspauschale: %1$s</string>
+    <string name="meal_allowance_not_eligible_for_location">Kein VP-Anspruch für diesen Ort</string>
     <string name="today_paid_hours_summary">Bezahlt: %1$s</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="day_type_work">Arbeitstag</string>

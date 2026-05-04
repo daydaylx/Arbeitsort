@@ -4,7 +4,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import java.time.LocalDate
 
-internal object CheckInEntryBuilder {
+object CheckInEntryBuilder {
 
     enum class Snapshot {
         MORNING,

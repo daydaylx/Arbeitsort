@@ -5,12 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
 import de.montagezeit.app.diagnostics.DiagnosticCategory
-import de.montagezeit.app.diagnostics.DiagnosticDateRange
 import de.montagezeit.app.diagnostics.DiagnosticStatus
 import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
@@ -71,7 +71,6 @@ class TodayViewModel @Inject constructor(
     private val workEntryRepository: WorkEntryRepository,
     private val dateCoordinator: TodayDateCoordinator,
     private val weekOverviewUseCase: TodayWeekOverviewUseCase,
-    private val dialogsStateHolder: TodayDialogsStateHolder,
     private val actionsHandler: TodayActionsHandler,
     private val clock: Clock
 ) : ViewModel() {
@@ -100,20 +99,8 @@ class TodayViewModel @Inject constructor(
     private val _weekDaysUi = MutableStateFlow<List<WeekDayUi>>(emptyList())
     val weekDaysUi: StateFlow<List<WeekDayUi>> = _weekDaysUi.asStateFlow()
 
-    val showDailyCheckInDialog: StateFlow<Boolean> = dialogsStateHolder.showDailyCheckInDialog
-    val dailyCheckInLocationInput: StateFlow<String> = dialogsStateHolder.dailyCheckInLocationInput
-    val dailyCheckInIsArrivalDeparture: StateFlow<Boolean> = dialogsStateHolder.dailyCheckInIsArrivalDeparture
-    val dailyCheckInBreakfastIncluded: StateFlow<Boolean> = dialogsStateHolder.dailyCheckInBreakfastIncluded
-    val showDayLocationDialog: StateFlow<Boolean> = dialogsStateHolder.showDayLocationDialog
-    val dayLocationInput: StateFlow<String> = dialogsStateHolder.dayLocationInput
-    val showDeleteDayDialog: StateFlow<Boolean> = dialogsStateHolder.showDeleteDayDialog
-
-    val dailyCheckInAllowancePreviewCents: StateFlow<Int> = dialogsStateHolder.dailyCheckInAllowancePreviewCents
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = MealAllowanceCalculator.BASE_NORMAL_CENTS
-        )
+    private val _dialogState = MutableStateFlow(initialDialogState())
+    private var dailyCheckInDate: LocalDate = LocalDate.now()
 
     val loadingActions: StateFlow<Set<TodayAction>> = actionsHandler.loadingActions
     val snackbarMessage: StateFlow<UiText?> = actionsHandler.snackbarMessage
@@ -167,48 +154,11 @@ class TodayViewModel @Inject constructor(
         ).finish()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialScreenState())
 
-    private val dailyCheckInDialogState = combine(
-        showDailyCheckInDialog,
-        dailyCheckInLocationInput,
-        dailyCheckInIsArrivalDeparture,
-        dailyCheckInBreakfastIncluded,
-        dailyCheckInAllowancePreviewCents
-    ) { showCheckIn, locationInput, isArrivalDeparture, breakfastIncluded, allowancePreviewCents ->
-        (showCheckIn to locationInput) to Triple(
-            isArrivalDeparture,
-            breakfastIncluded,
-            allowancePreviewCents
-        )
-    }
-
-    private val secondaryDialogState = combine(
-        showDayLocationDialog,
-        dayLocationInput,
-        showDeleteDayDialog
-    ) { showLocationDialog, dayLocationValue, showDeleteDialog ->
-        Triple(showLocationDialog, dayLocationValue, showDeleteDialog)
-    }
-
     val dialogState: StateFlow<TodayDialogState> = combine(
-        dailyCheckInDialogState,
-        secondaryDialogState,
+        _dialogState,
         loadingActions
-    ) { checkInState, secondaryState, loading ->
-        val (visibilityAndLocation, mealState) = checkInState
-        val (showCheckIn, locationInput) = visibilityAndLocation
-        val (isArrivalDeparture, breakfastIncluded, allowancePreviewCents) = mealState
-        val (showLocationDialog, dayLocationValue, showDeleteDialog) = secondaryState
-        TodayDialogState(
-            showDailyCheckInDialog = showCheckIn,
-            dailyCheckInLocationInput = locationInput,
-            dailyCheckInIsArrivalDeparture = isArrivalDeparture,
-            dailyCheckInBreakfastIncluded = breakfastIncluded,
-            dailyCheckInAllowancePreviewCents = allowancePreviewCents,
-            showDayLocationDialog = showLocationDialog,
-            dayLocationInput = dayLocationValue,
-            showDeleteDayDialog = showDeleteDialog,
-            loadingActions = loading
-        )
+    ) { ds, loading ->
+        ds.copy(loadingActions = loading)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialDialogState())
 
     init {
@@ -402,54 +352,98 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val existingEntry = currentSelectedEntryOrNull() ?: workEntryRepository.getByDate(selectedDate.value)
-                dialogsStateHolder.openDailyCheckInDialog(
-                    selectedDate = selectedDate.value,
-                    locationPrefill = existingEntry?.dayLocationLabel?.trim().orEmpty(),
-                    isArrivalDeparture = existingEntry?.mealIsArrivalDeparture ?: false,
-                    breakfastIncluded = existingEntry?.mealBreakfastIncluded ?: false
-                )
+                dailyCheckInDate = selectedDate.value
+                val location = existingEntry?.dayLocationLabel?.trim().orEmpty()
+                val isArrival = existingEntry?.mealIsArrivalDeparture ?: false
+                val breakfast = existingEntry?.mealBreakfastIncluded ?: false
+                _dialogState.update { state ->
+                    state.copy(
+                        showDailyCheckInDialog = true,
+                        dailyCheckInLocationInput = location,
+                        dailyCheckInIsArrivalDeparture = isArrival,
+                        dailyCheckInBreakfastIncluded = breakfast,
+                        dailyCheckInAllowancePreviewCents = computeAllowancePreview(location, isArrival, breakfast)
+                    )
+                }
             } catch (e: Exception) {
                 actionsHandler.publishSnackbar(e.toUiText(R.string.today_error_day_location_save_failed))
             }
         }
     }
 
-    fun onDailyCheckInLocationChanged(label: String) = dialogsStateHolder.updateDailyCheckInLocation(label)
-    fun onDailyCheckInArrivalDepartureChanged(value: Boolean) = dialogsStateHolder.updateDailyCheckInArrivalDeparture(value)
-    fun onDailyCheckInBreakfastIncludedChanged(value: Boolean) = dialogsStateHolder.updateDailyCheckInBreakfastIncluded(value)
-    fun onDismissDailyCheckInDialog() = dialogsStateHolder.dismissDailyCheckInDialog()
+    fun onDailyCheckInLocationChanged(label: String) {
+        _dialogState.update { state ->
+            state.copy(
+                dailyCheckInLocationInput = label,
+                dailyCheckInAllowancePreviewCents = computeAllowancePreview(
+                    label, state.dailyCheckInIsArrivalDeparture, state.dailyCheckInBreakfastIncluded
+                )
+            )
+        }
+    }
+
+    fun onDailyCheckInArrivalDepartureChanged(value: Boolean) {
+        _dialogState.update { state ->
+            state.copy(
+                dailyCheckInIsArrivalDeparture = value,
+                dailyCheckInAllowancePreviewCents = computeAllowancePreview(
+                    state.dailyCheckInLocationInput, value, state.dailyCheckInBreakfastIncluded
+                )
+            )
+        }
+    }
+
+    fun onDailyCheckInBreakfastIncludedChanged(value: Boolean) {
+        _dialogState.update { state ->
+            state.copy(
+                dailyCheckInBreakfastIncluded = value,
+                dailyCheckInAllowancePreviewCents = computeAllowancePreview(
+                    state.dailyCheckInLocationInput, state.dailyCheckInIsArrivalDeparture, value
+                )
+            )
+        }
+    }
+
+    fun onDismissDailyCheckInDialog() = _dialogState.update { it.copy(showDailyCheckInDialog = false) }
 
     fun openDayLocationDialog() {
         viewModelScope.launch {
             try {
                 val existingEntry = currentSelectedEntryOrNull() ?: workEntryRepository.getByDate(selectedDate.value)
-                dialogsStateHolder.openDayLocationDialog(existingEntry?.dayLocationLabel?.trim().orEmpty())
+                _dialogState.update {
+                    it.copy(
+                        showDayLocationDialog = true,
+                        dayLocationInput = existingEntry?.dayLocationLabel?.trim().orEmpty()
+                    )
+                }
             } catch (e: Exception) {
                 actionsHandler.publishSnackbar(e.toUiText(R.string.today_error_day_location_save_failed))
             }
         }
     }
 
-    fun onDayLocationInputChanged(label: String) = dialogsStateHolder.updateDayLocationInput(label)
-    fun onDismissDayLocationDialog() = dialogsStateHolder.dismissDayLocationDialog()
+    fun onDayLocationInputChanged(label: String) = _dialogState.update { it.copy(dayLocationInput = label) }
+    fun onDismissDayLocationDialog() = _dialogState.update { it.copy(showDayLocationDialog = false) }
 
-    fun submitDailyManualCheckIn(label: String = dailyCheckInLocationInput.value) {
+    fun submitDailyManualCheckIn(label: String = _dialogState.value.dailyCheckInLocationInput) {
         if (label.trim().isBlank()) {
             actionsHandler.publishSnackbar(UiText.StringResource(R.string.error_day_location_required))
             return
         }
         viewModelScope.launch {
+            val state = _dialogState.value
             val input = DailyManualCheckInInput(
-                date = dialogsStateHolder.dailyCheckInDate.value,
+                date = dailyCheckInDate,
                 dayLocationLabel = label,
-                isArrivalDeparture = dailyCheckInIsArrivalDeparture.value,
-                breakfastIncluded = dailyCheckInBreakfastIncluded.value
+                isArrivalDeparture = state.dailyCheckInIsArrivalDeparture,
+                breakfastIncluded = state.dailyCheckInBreakfastIncluded
             )
             val entry = actionsHandler.submitDailyManualCheckIn(input)
             if (entry != null) {
                 _uiState.value = TodayUiState.Success(entry)
-                dialogsStateHolder.updateDailyCheckInLocation(entry.dayLocationLabel)
-                dialogsStateHolder.dismissDailyCheckInDialog()
+                _dialogState.update {
+                    it.copy(dailyCheckInLocationInput = entry.dayLocationLabel, showDailyCheckInDialog = false)
+                }
             }
         }
     }
@@ -479,12 +473,12 @@ class TodayViewModel @Inject constructor(
             val entry = actionsHandler.confirmOffDay(selectedDate.value)
             if (entry != null) {
                 _uiState.value = TodayUiState.Success(entry)
-                dialogsStateHolder.dismissDailyCheckInDialog()
+                _dialogState.update { it.copy(showDailyCheckInDialog = false) }
             }
         }
     }
 
-    fun submitDayLocationUpdate(label: String = dayLocationInput.value) {
+    fun submitDayLocationUpdate(label: String = _dialogState.value.dayLocationInput) {
         val trimmed = label.trim()
         if (trimmed.isBlank()) {
             actionsHandler.publishSnackbar(UiText.StringResource(R.string.error_day_location_required))
@@ -494,19 +488,20 @@ class TodayViewModel @Inject constructor(
             val entry = actionsHandler.submitDayLocationUpdate(selectedDate.value, trimmed)
             if (entry != null) {
                 _uiState.value = TodayUiState.Success(entry)
-                dialogsStateHolder.updateDayLocationInput(entry.dayLocationLabel)
-                dialogsStateHolder.dismissDayLocationDialog()
+                _dialogState.update {
+                    it.copy(dayLocationInput = entry.dayLocationLabel, showDayLocationDialog = false)
+                }
             }
         }
     }
 
-    fun openDeleteDayDialog() = dialogsStateHolder.openDeleteDayDialog()
-    fun dismissDeleteDayDialog() = dialogsStateHolder.dismissDeleteDayDialog()
+    fun openDeleteDayDialog() = _dialogState.update { it.copy(showDeleteDayDialog = true) }
+    fun dismissDeleteDayDialog() = _dialogState.update { it.copy(showDeleteDayDialog = false) }
 
     fun confirmDeleteDay() {
         viewModelScope.launch {
             if (actionsHandler.confirmDeleteDay(selectedDate.value)) {
-                dialogsStateHolder.dismissDeleteDayDialog()
+                _dialogState.update { it.copy(showDeleteDayDialog = false) }
                 _uiState.value = TodayUiState.Success(null)
             }
         }
@@ -521,6 +516,16 @@ class TodayViewModel @Inject constructor(
 
     fun onUndoWindowClosed() = actionsHandler.onUndoWindowClosed()
     fun onSnackbarShown() = actionsHandler.onSnackbarShown()
+
+    private fun computeAllowancePreview(location: String, isArrival: Boolean, breakfast: Boolean): Int =
+        MealAllowanceCalculator.resolveForActivity(
+            dayType = DayType.WORK,
+            isArrivalDeparture = isArrival,
+            breakfastIncluded = breakfast,
+            workMinutes = 1,
+            travelMinutes = 0,
+            locationLabel = location
+        ).amountCents
 
     private fun currentSelectedEntryOrNull(): WorkEntry? =
         selectedEntry.value?.takeIf { it.date == selectedDate.value }

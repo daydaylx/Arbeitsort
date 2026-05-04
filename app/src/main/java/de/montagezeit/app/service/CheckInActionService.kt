@@ -12,8 +12,8 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
 import de.montagezeit.app.R
-import de.montagezeit.app.domain.usecase.RecordEveningCheckIn
-import de.montagezeit.app.domain.usecase.RecordMorningCheckIn
+import de.montagezeit.app.domain.usecase.CheckInEntryBuilder
+import de.montagezeit.app.domain.usecase.RecordCheckIn
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
@@ -50,10 +50,7 @@ import kotlin.math.abs
 class CheckInActionService : Service() {
 
     @Inject
-    lateinit var recordMorningCheckIn: RecordMorningCheckIn
-
-    @Inject
-    lateinit var recordEveningCheckIn: RecordEveningCheckIn
+    lateinit var recordCheckIn: RecordCheckIn
 
     @Inject
     lateinit var notificationManager: ReminderNotificationManager
@@ -121,7 +118,7 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     operationMutex.withLock {
                         try {
-                            recordMorningCheckIn(date)
+                            recordCheckIn(date, CheckInEntryBuilder.Snapshot.MORNING)
                             showToast(R.string.toast_check_in_success)
                             notificationManager.cancelMorningReminder()
                         } catch (e: IllegalStateException) {
@@ -144,7 +141,7 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     operationMutex.withLock {
                         try {
-                            recordEveningCheckIn(date)
+                            recordCheckIn(date, CheckInEntryBuilder.Snapshot.EVENING)
                             showToast(R.string.toast_check_in_success)
                             notificationManager.cancelEveningReminder()
                         } catch (e: IllegalStateException) {
