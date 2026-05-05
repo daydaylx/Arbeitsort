@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "MaxLineLength", "MagicNumber", "LongMethod", "LongParameterList")
+@file:Suppress("TooManyFunctions", "MaxLineLength", "MagicNumber", "LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 
 package de.montagezeit.app.ui.screen.edit
 
@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,7 +27,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.components.MZContentCard
 import de.montagezeit.app.ui.components.MZInlineNotice
@@ -77,7 +76,7 @@ internal fun EditFormContent(
     onWorkStartChange: (Int, Int) -> Unit,
     onWorkEndChange: (Int, Int) -> Unit,
     onBreakMinutesChange: (Int) -> Unit,
-    onAddTravelLeg: () -> Unit,
+    onAddTravelLeg: (TravelLegCategory) -> Unit,
     onTravelLegStartChange: (Int, java.time.LocalTime?) -> Unit,
     onTravelLegArriveChange: (Int, java.time.LocalTime?) -> Unit,
     onTravelLegStartLabelChange: (Int, String) -> Unit,
@@ -89,13 +88,12 @@ internal fun EditFormContent(
     onMealBreakfastIncludedChange: (Boolean) -> Unit,
     onNoteChange: (String) -> Unit,
     onApplyDefaultTimes: (() -> Unit)? = null,
-    onCopyPrevious: (() -> Unit)? = null,
     onSave: () -> Unit,
     isSaving: Boolean = false
 ) {
     val isCompTime = formData.dayType == DayType.COMP_TIME
     val isMealEligibleType = formData.dayType == DayType.WORK &&
-        formData.dayLocationLabel?.trim()?.lowercase() != "leipzig"
+        MealAllowanceCalculator.isLocationEligible(formData.dayLocationLabel)
 
     val travelHasErrors = validationErrors.any {
         it is ValidationError.TravelArriveBeforeStart ||
@@ -105,22 +103,11 @@ internal fun EditFormContent(
             it is ValidationError.TravelNotAllowedForCompTime ||
             it is ValidationError.MissingWorkOrTravel
     }
-    val locationHasErrors = validationErrors.any { it is ValidationError.MissingDayLocation }
 
-    var travelExpanded by rememberSaveable { mutableStateOf(formData.travelLegs.isNotEmpty()) }
-    var locationExpanded by rememberSaveable {
-        mutableStateOf(
-            formData.dayType.isWorkLike &&
-                formData.dayLocationLabel.isNullOrBlank()
-        )
-    }
     var mealExpanded by rememberSaveable {
         mutableStateOf(formData.mealIsArrivalDeparture || formData.mealBreakfastIncluded)
     }
     var noteExpanded by rememberSaveable { mutableStateOf(!formData.note.isNullOrBlank()) }
-
-    LaunchedEffect(travelHasErrors) { if (travelHasErrors) travelExpanded = true }
-    LaunchedEffect(locationHasErrors) { if (locationHasErrors) locationExpanded = true }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         EditFormSectionCard {
@@ -143,6 +130,14 @@ internal fun EditFormContent(
 
         if (!isCompTime && formData.dayType.isWorkLike) {
             EditFormSectionCard {
+                LocationLabelsSection(
+                    dayLocationLabel = formData.dayLocationLabel,
+                    validationErrors = validationErrors,
+                    onDayLocationChange = onDayLocationChange
+                )
+            }
+
+            EditFormSectionCard {
                 EditWorkTimesSection(
                     enabled = formData.hasWorkTimes,
                     workStart = formData.workStart,
@@ -159,50 +154,24 @@ internal fun EditFormContent(
         }
 
         if (!isCompTime) {
-            val travelSummary = when {
-                travelHasErrors -> stringResource(R.string.edit_validation_title)
-                formData.travelLegs.isNotEmpty() -> "${formData.travelLegs.size} Fahrt(en)"
-                else -> null
-            }
-            CollapsibleSectionHeader(
-                title = stringResource(R.string.edit_section_travel),
-                expanded = travelExpanded,
-                onToggle = { travelExpanded = !travelExpanded },
-                summary = travelSummary,
-                hasError = travelHasErrors
-            )
-            AnimatedVisibility(visible = travelExpanded) {
-                EditFormSectionCard {
-                    TravelLegsSection(
-                        travelLegs = formData.travelLegs,
-                        validationErrors = validationErrors,
-                        onAddTravelLeg = onAddTravelLeg,
-                        onTravelLegStartChange = onTravelLegStartChange,
-                        onTravelLegArriveChange = onTravelLegArriveChange,
-                        onTravelLegStartLabelChange = onTravelLegStartLabelChange,
-                        onTravelLegEndLabelChange = onTravelLegEndLabelChange,
-                        onRemoveTravelLeg = onRemoveTravelLeg,
-                        onClearTravel = onTravelClear
-                    )
+            EditFormSectionCard {
+                if (travelHasErrors) {
+                    validationErrors.firstOrNull {
+                        it is ValidationError.TravelNotAllowedForCompTime ||
+                            it is ValidationError.MissingWorkOrTravel
+                    }?.let { ValidationMessage(it) }
                 }
-            }
-
-            val locationSummary = formData.dayLocationLabel?.takeIf { it.isNotBlank() }
-            CollapsibleSectionHeader(
-                title = stringResource(R.string.edit_section_location),
-                expanded = locationExpanded,
-                onToggle = { locationExpanded = !locationExpanded },
-                summary = locationSummary,
-                hasError = locationHasErrors
-            )
-            AnimatedVisibility(visible = locationExpanded) {
-                EditFormSectionCard {
-                    LocationLabelsSection(
-                        dayLocationLabel = formData.dayLocationLabel,
-                        validationErrors = validationErrors,
-                        onDayLocationChange = onDayLocationChange
-                    )
-                }
+                TravelLegsSection(
+                    travelLegs = formData.travelLegs,
+                    validationErrors = validationErrors,
+                    onAddTravelLeg = onAddTravelLeg,
+                    onTravelLegStartChange = onTravelLegStartChange,
+                    onTravelLegArriveChange = onTravelLegArriveChange,
+                    onTravelLegStartLabelChange = onTravelLegStartLabelChange,
+                    onTravelLegEndLabelChange = onTravelLegEndLabelChange,
+                    onRemoveTravelLeg = onRemoveTravelLeg,
+                    onClearTravel = onTravelClear
+                )
             }
         }
 
@@ -246,20 +215,6 @@ internal fun EditFormContent(
                     note = formData.note,
                     onNoteChange = onNoteChange
                 )
-            }
-        }
-
-        if (onCopyPrevious != null) {
-            SecondaryActionButton(
-                onClick = onCopyPrevious,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(stringResource(R.string.edit_action_copy_previous))
             }
         }
     }

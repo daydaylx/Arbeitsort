@@ -9,7 +9,7 @@ The binding references for behavior and architecture are:
 - `README.md`
 - `docs/ARCHITECTURE.md`
 
-When implementation changes make either document stale, update the docs in the same change. Files under `docs/ARCHIVE/` are historical and should not be refreshed unless the task explicitly targets archived material.
+When implementation changes make either document stale, update the docs in the same change. Audit, review, and UI-status notes should be summarized in `docs/AUDITS/CURRENT_STATUS.md` instead of adding long-lived one-off reports.
 
 For AI-assisted work:
 

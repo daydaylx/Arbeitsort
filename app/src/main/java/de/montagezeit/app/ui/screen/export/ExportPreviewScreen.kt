@@ -84,7 +84,7 @@ fun ExportPreviewBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaGlassSheet)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaSheet)
     ) {
         Column(
             modifier = Modifier

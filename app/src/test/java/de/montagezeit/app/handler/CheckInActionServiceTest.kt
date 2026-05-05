@@ -75,4 +75,37 @@ class CheckInActionServiceTest {
             CheckInActionService.processingNotificationTextRes(ReminderActions.ACTION_REMIND_LATER_CONFIRMATION)
         )
     }
+
+    @Test
+    fun `foregroundNotificationTextRes falls back for unknown actions`() {
+        assertEquals(
+            R.string.notification_processing_generic,
+            CheckInActionService.foregroundNotificationTextRes("unknown_action")
+        )
+        assertEquals(
+            R.string.notification_processing_generic,
+            CheckInActionService.foregroundNotificationTextRes(null)
+        )
+    }
+
+    @Test
+    fun `foreground service actions all have explicit processing text`() {
+        val actions = listOf(
+            ReminderActions.ACTION_MORNING_CHECK_IN,
+            ReminderActions.ACTION_EVENING_CHECK_IN,
+            ReminderActions.ACTION_REMIND_LATER,
+            ReminderActions.ACTION_REMIND_LATER_CONFIRMATION,
+            ReminderActions.ACTION_CONFIRM_WORK_DAY,
+            ReminderActions.ACTION_CONFIRM_OFF_DAY,
+            ReminderActions.ACTION_MARK_DAY_OFF
+        )
+
+        actions.forEach { action ->
+            assertEquals(
+                "Missing processing text for $action",
+                CheckInActionService.processingNotificationTextRes(action),
+                CheckInActionService.foregroundNotificationTextRes(action)
+            )
+        }
+    }
 }

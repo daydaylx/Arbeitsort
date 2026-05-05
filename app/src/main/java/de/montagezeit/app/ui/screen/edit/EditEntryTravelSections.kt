@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "MaxLineLength")
+@file:Suppress("LongMethod", "MaxLineLength", "LongParameterList")
 
 package de.montagezeit.app.ui.screen.edit
 
@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,16 +21,21 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
+import de.montagezeit.app.data.local.entity.TravelLegCategory
+import de.montagezeit.app.ui.components.MZSegmentedControl
+import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.TertiaryActionButton
 import de.montagezeit.app.ui.components.TimePickerDialog
@@ -41,11 +45,23 @@ import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import java.time.LocalTime
 
+private enum class TravelMode { NONE, OUTBOUND, RETURN, BOTH, MANUAL }
+
+private fun deriveTravelMode(legs: List<EditTravelLegForm>): TravelMode = when {
+    legs.isEmpty() -> TravelMode.NONE
+    legs.size == 1 && legs.single().category == TravelLegCategory.OUTBOUND -> TravelMode.OUTBOUND
+    legs.size == 1 && legs.single().category == TravelLegCategory.RETURN -> TravelMode.RETURN
+    legs.size == 2 &&
+        legs[0].category == TravelLegCategory.OUTBOUND &&
+        legs[1].category == TravelLegCategory.RETURN -> TravelMode.BOTH
+    else -> TravelMode.MANUAL
+}
+
 @Composable
 internal fun TravelLegsSection(
     travelLegs: List<EditTravelLegForm>,
     validationErrors: List<ValidationError> = emptyList(),
-    onAddTravelLeg: () -> Unit,
+    onAddTravelLeg: (TravelLegCategory) -> Unit,
     onTravelLegStartChange: (Int, LocalTime?) -> Unit,
     onTravelLegArriveChange: (Int, LocalTime?) -> Unit,
     onTravelLegStartLabelChange: (Int, String) -> Unit,
@@ -53,6 +69,12 @@ internal fun TravelLegsSection(
     onRemoveTravelLeg: (Int) -> Unit,
     onClearTravel: () -> Unit
 ) {
+    var selectedMode by rememberSaveable { mutableStateOf(deriveTravelMode(travelLegs)) }
+
+    LaunchedEffect(travelLegs) {
+        selectedMode = deriveTravelMode(travelLegs)
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -63,64 +85,50 @@ internal fun TravelLegsSection(
                 text = stringResource(R.string.edit_section_travel),
                 style = MaterialTheme.typography.titleMedium
             )
-
-            if (travelLegs.isNotEmpty()) {
-                TertiaryActionButton(onClick = onClearTravel) {
+            if (selectedMode != TravelMode.NONE) {
+                TertiaryActionButton(onClick = {
+                    onClearTravel()
+                    selectedMode = TravelMode.NONE
+                }) {
                     Text(stringResource(R.string.edit_action_clear_all_travel))
                 }
             }
         }
 
-        if (travelLegs.isEmpty()) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.AlphaSubtle)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaSubtle)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(10.dp)
-                        )
+        val modeOptions = listOf(
+            MZSegmentedOption(TravelMode.NONE, stringResource(R.string.edit_travel_mode_none)),
+            MZSegmentedOption(TravelMode.OUTBOUND, stringResource(R.string.edit_travel_mode_outbound)),
+            MZSegmentedOption(TravelMode.RETURN, stringResource(R.string.edit_travel_mode_return)),
+            MZSegmentedOption(TravelMode.BOTH, stringResource(R.string.edit_travel_mode_both)),
+            MZSegmentedOption(TravelMode.MANUAL, stringResource(R.string.edit_travel_mode_manual))
+        )
+        MZSegmentedControl(
+            options = modeOptions,
+            selectedValue = selectedMode,
+            onValueSelected = { mode ->
+                selectedMode = mode
+                when (mode) {
+                    TravelMode.NONE -> onClearTravel()
+                    TravelMode.OUTBOUND -> {
+                        onClearTravel()
+                        onAddTravelLeg(TravelLegCategory.OUTBOUND)
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.edit_travel_empty_title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.edit_travel_empty_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    TravelMode.RETURN -> {
+                        onClearTravel()
+                        onAddTravelLeg(TravelLegCategory.RETURN)
                     }
-                    SecondaryActionButton(onClick = onAddTravelLeg) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp)
-                        )
-                        Text(stringResource(R.string.edit_action_add_travel_leg))
+                    TravelMode.BOTH -> {
+                        onClearTravel()
+                        onAddTravelLeg(TravelLegCategory.OUTBOUND)
+                        onAddTravelLeg(TravelLegCategory.RETURN)
                     }
+                    TravelMode.MANUAL -> Unit
                 }
-            }
-        } else {
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (selectedMode != TravelMode.NONE) {
             travelLegs.forEachIndexed { index, leg ->
                 key(index) {
                     TravelLegCard(
@@ -136,16 +144,18 @@ internal fun TravelLegsSection(
                 }
             }
 
-            SecondaryActionButton(
-                onClick = onAddTravelLeg,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(stringResource(R.string.edit_action_add_travel_leg))
+            if (selectedMode == TravelMode.MANUAL) {
+                SecondaryActionButton(
+                    onClick = { onAddTravelLeg(TravelLegCategory.OTHER) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(stringResource(R.string.edit_action_add_travel_leg))
+                }
             }
         }
     }
@@ -171,11 +181,15 @@ private fun TravelLegCard(
     }
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = MZTokens.AlphaSecondary),
+        shape = RoundedCornerShape(MZTokens.RadiusCard),
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f)
+            color = if (hasTravelError) {
+                MaterialTheme.colorScheme.error.copy(alpha = 0.28f)
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
+            }
         )
     ) {
         Column(
@@ -188,7 +202,7 @@ private fun TravelLegCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.edit_travel_leg_title, index + 1),
+                    text = travelLegTitle(index = index, leg = leg),
                     style = MaterialTheme.typography.titleSmall
                 )
                 IconButton(onClick = { onRemove(index) }) {
@@ -284,6 +298,15 @@ private fun TravelLegCard(
         )
     }
 }
+
+@Composable
+private fun travelLegTitle(index: Int, leg: EditTravelLegForm): String =
+    when (leg.category) {
+        TravelLegCategory.OUTBOUND -> stringResource(R.string.edit_travel_mode_outbound)
+        TravelLegCategory.RETURN -> stringResource(R.string.edit_travel_mode_return)
+        TravelLegCategory.INTERSITE -> stringResource(R.string.edit_travel_leg_intersite)
+        TravelLegCategory.OTHER -> stringResource(R.string.edit_travel_leg_title, index + 1)
+    }
 
 @Composable
 private fun TravelTimeButton(

@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.diagnostics.redactedTextSummary
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
@@ -185,8 +186,8 @@ class EditEntryViewModel @Inject constructor(
         updateFormData { it.copy(mealBreakfastIncluded = breakfastIncluded) }
     }
 
-    fun addTravelLeg() {
-        updateFormData { it.copy(travelLegs = it.travelLegs + EditTravelLegForm()) }
+    fun addTravelLeg(category: TravelLegCategory = TravelLegCategory.OTHER) {
+        updateFormData { it.copy(travelLegs = it.travelLegs + EditTravelLegForm(category = category)) }
     }
 
     fun removeTravelLeg(index: Int) {
@@ -545,7 +546,8 @@ data class EditTravelLegForm(
     val arriveTime: LocalTime? = null,
     val startLabel: String? = null,
     val endLabel: String? = null,
-    val paidMinutesOverride: Int? = null
+    val paidMinutesOverride: Int? = null,
+    val category: TravelLegCategory = TravelLegCategory.OTHER
 ) {
     fun isBlank(): Boolean {
         return startTime == null &&
@@ -611,7 +613,8 @@ data class EditFormData(
                         arriveTime = leg.arriveAt?.let { toLocalTime(it, zoneId) },
                         startLabel = leg.startLabel,
                         endLabel = leg.endLabel,
-                        paidMinutesOverride = leg.paidMinutesOverride
+                        paidMinutesOverride = leg.paidMinutesOverride,
+                        category = leg.category
                     )
                 }
             )

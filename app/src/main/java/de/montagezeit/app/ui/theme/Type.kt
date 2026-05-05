@@ -23,14 +23,14 @@ val Typography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 30.sp,
         lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp
+        letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
         fontFamily = DisplayFont,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
-        letterSpacing = (-0.2).sp
+        letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = DisplayFont,
@@ -126,7 +126,7 @@ object NumberStyles {
         fontWeight = FontWeight.SemiBold,
         fontSize = 30.sp,
         lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum"
     )
     val headlineLarge = TextStyle(
@@ -134,7 +134,7 @@ object NumberStyles {
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
-        letterSpacing = (-0.2).sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum"
     )
     val titleLarge = TextStyle(

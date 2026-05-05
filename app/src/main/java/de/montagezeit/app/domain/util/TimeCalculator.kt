@@ -79,6 +79,7 @@ object TimeCalculator {
         val start = leg.startAt
         val arrive = leg.arriveAt
         if (start != null && arrive != null) {
+            // Persisted travel timestamps are absolute instants; an arrival before start is invalid data.
             val diffMs = arrive - start
             return if (diffMs <= 0) 0 else (diffMs / 60_000L).toInt()
         }

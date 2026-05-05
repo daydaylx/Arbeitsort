@@ -153,13 +153,9 @@ fun MontageZeitNavGraph(
                         )
 
                         1 -> OverviewScreen(
-                            onOpenToday = {
-                                coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                            },
                             onOpenHistory = { date, period ->
                                 openHistory(date, period)
                             },
-                            onOpenSettings = { navController.navigate("settings") },
                             onOpenEditSheet = { date -> openEditSheet(date) }
                         )
 

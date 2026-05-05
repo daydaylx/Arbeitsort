@@ -20,93 +20,28 @@ val ColorScheme.success: Color get() = GlassSuccess
 val ColorScheme.warning: Color get() = GlassWarning
 val ColorScheme.danger: Color get() = GlassError
 val ColorScheme.info: Color get() = GlassInfo
-val ColorScheme.panelBorder: Color get() = outline.copy(alpha = 0.4f)
+val ColorScheme.panelBorder: Color get() = outline.copy(alpha = MZTokens.BorderAlphaNormal)
 val ColorScheme.panelBorderBrush: Brush get() = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = MZTokens.GlassBorderAlpha),
-        0.35f to Color.White.copy(alpha = 0.07f),
-        1.0f to Color.White.copy(alpha = MZTokens.GlassBorderFadeAlpha)
-    )
+    listOf(panelBorder, panelBorder)
 )
 val ColorScheme.panelColor: Color get() = surface.copy(alpha = MZTokens.CardSurfaceAlpha)
-val ColorScheme.panelStrongColor: Color get() = surfaceVariant.copy(alpha = 0.55f)
-
-val ColorScheme.backgroundBrush: Brush get() = Brush.verticalGradient(
-    listOf(Color(0xFF0B1722), Color(0xFF0E1C28), Color(0xFF091018))
-)
-
-val ColorScheme.heroBrush: Brush get() = Brush.linearGradient(
-    listOf(Color(0xFF143040), Color(0xFF0F2430), Color(0xFF0A1A24))
-)
-
-val ColorScheme.glassHighlightBrush: Brush get() = Brush.verticalGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = MZTokens.GlassHighlightAlpha),
-        0.45f to Color.White.copy(alpha = MZTokens.GlassInnerGlowAlpha),
-        1.0f to Color.Transparent
-    )
-)
-
-val ColorScheme.glassPrimaryButtonBrush: Brush get() = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.08f),
-        0.5f to primary.copy(alpha = 0.28f),
-        1.0f to primary.copy(alpha = 0.16f)
-    )
-)
-
-val ColorScheme.glassPrimaryButtonBorderBrush: Brush get() = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.18f),
-        1.0f to primary.copy(alpha = 0.20f)
-    )
-)
-
-val ColorScheme.glassSelectionBrush: Brush get() = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.08f),
-        0.5f to primary.copy(alpha = 0.22f),
-        1.0f to primary.copy(alpha = 0.12f)
-    )
-)
-
-val ColorScheme.glassSelectionBorderBrush: Brush get() = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.14f),
-        1.0f to primary.copy(alpha = 0.12f)
-    )
-)
-
-fun ColorScheme.glassAccentBrush(accentColor: Color): Brush = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = MZTokens.GlassInnerGlowAlpha),
-        0.5f to accentColor.copy(alpha = 0.10f),
-        1.0f to accentColor.copy(alpha = 0.06f)
-    )
-)
-
-fun ColorScheme.glassAccentBorderBrush(accentColor: Color): Brush = Brush.linearGradient(
-    colorStops = arrayOf(
-        0.0f to Color.White.copy(alpha = 0.12f),
-        1.0f to accentColor.copy(alpha = 0.12f)
-    )
-)
+val ColorScheme.panelStrongColor: Color get() = surfaceVariant
 
 private val GlassColorScheme = darkColorScheme(
     primary = GlassPrimary,
-    onPrimary = GlassOnDark,
+    onPrimary = GlassOnAccent,
     primaryContainer = GlassPrimaryContainer,
     onPrimaryContainer = GlassOnDark,
     secondary = GlassSecondary,
-    onSecondary = GlassOnDark,
+    onSecondary = GlassOnAccent,
     secondaryContainer = GlassSecondaryContainer,
-    onSecondaryContainer = GlassSecondary,
+    onSecondaryContainer = GlassOnDark,
     tertiary = GlassTertiary,
-    onTertiary = GlassOnDark,
+    onTertiary = GlassOnAccent,
     tertiaryContainer = GlassTertiaryContainer,
-    onTertiaryContainer = GlassTertiary,
+    onTertiaryContainer = GlassOnDark,
     error = GlassError,
-    onError = GlassOnDark,
+    onError = GlassOnAccent,
     errorContainer = GlassErrorContainer,
     onErrorContainer = GlassError,
     background = GlassBackground,
@@ -115,8 +50,8 @@ private val GlassColorScheme = darkColorScheme(
     onSurface = GlassOnDark,
     surfaceVariant = GlassSurfaceVariant,
     onSurfaceVariant = GlassOnDarkMuted,
-    outline = Color(0xFF3A4A5C),         // Neutral slate — prevents orange bleed into borders/dividers
-    outlineVariant = Color(0xFF223344),  // Subtle slate for HorizontalDivider
+    outline = Color(0xFF4B5560),
+    outlineVariant = Color(0xFF303942),
     inverseSurface = GlassOnDark,
     inverseOnSurface = GlassBackground,
     inversePrimary = GlassPrimaryContainer,

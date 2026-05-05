@@ -15,12 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,15 +43,12 @@ import de.montagezeit.app.R
 import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZErrorState
-import de.montagezeit.app.ui.components.MZHeroPanel
-import de.montagezeit.app.ui.components.MZMetricChip
 import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.MZSnackbarHost
 import de.montagezeit.app.ui.components.MZStatusChip
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,7 +117,7 @@ fun EditEntrySheet(
         onDismissRequest = handleDismiss,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = MZTokens.RadiusSheet, topEnd = MZTokens.RadiusSheet),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaGlassSheet)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = MZTokens.AlphaSheet)
     ) {
         EditEntrySheetScaffold(
             date = date,
@@ -133,7 +125,6 @@ fun EditEntrySheet(
             onNavigateDate = if (onNavigateDate != null) guardedNavigateDate else null,
             onOpenNavigateDatePicker = { activeDialog = EditSheetDialog.NavigateDatePicker },
             onDismiss = onDismiss,
-            onOpenCopyDatePicker = { activeDialog = EditSheetDialog.CopyDatePicker },
             onOpenDeleteDialog = { activeDialog = EditSheetDialog.DeleteDayConfirm },
             viewModel = viewModel,
             context = context,
@@ -161,7 +152,6 @@ private fun EditEntrySheetScaffold(
     onNavigateDate: ((LocalDate) -> Unit)?,
     onOpenNavigateDatePicker: () -> Unit,
     onDismiss: () -> Unit,
-    onOpenCopyDatePicker: () -> Unit,
     onOpenDeleteDialog: () -> Unit,
     viewModel: EditEntryViewModel,
     context: Context,
@@ -200,8 +190,7 @@ private fun EditEntrySheetScaffold(
                 isDirty = screenState.isDirty,
                 uiState = uiState,
                 isNewEntry = isNewEntry,
-                onDeleteDay = if (!isNewEntry) onOpenDeleteDialog else null,
-                onCopy = if (!isNewEntry) onOpenCopyDatePicker else null
+                onDeleteDay = if (!isNewEntry) onOpenDeleteDialog else null
             )
 
             if (onNavigateDate != null) {
@@ -220,7 +209,6 @@ private fun EditEntrySheetScaffold(
                 screenState = screenState,
                 viewModel = viewModel,
                 context = context,
-                snackbarHostState = snackbarHostState,
                 onDismiss = onDismiss
             )
         }
@@ -234,10 +222,9 @@ private fun EditSheetHero(
     isDirty: Boolean,
     uiState: EditUiState,
     isNewEntry: Boolean,
-    onDeleteDay: (() -> Unit)?,
-    onCopy: (() -> Unit)?
+    onDeleteDay: (() -> Unit)?
 ) {
-    MZHeroPanel {
+    MZAppPanel {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -250,48 +237,13 @@ private fun EditSheetHero(
                 ),
                 modifier = Modifier.weight(1f)
             )
-            if (!isNewEntry && (onDeleteDay != null || onCopy != null)) {
-                var showMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.cd_edit_sheet_more_actions),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        if (onCopy != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_action_copy_entry)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = null)
-                                },
-                                onClick = { showMenu = false; onCopy() }
-                            )
-                        }
-                        if (onDeleteDay != null) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = stringResource(R.string.action_delete_day),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                onClick = { showMenu = false; onDeleteDay() }
-                            )
-                        }
-                    }
+            if (!isNewEntry && onDeleteDay != null) {
+                IconButton(onClick = onDeleteDay) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.action_delete_day),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
@@ -299,30 +251,25 @@ private fun EditSheetHero(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            MZMetricChip(
-                label = stringResource(R.string.edit_sheet_metric_state),
-                value = when {
+            MZStatusChip(
+                text = when {
                     isSaving -> stringResource(R.string.loading)
                     isDirty -> stringResource(R.string.edit_sheet_metric_unsaved)
                     else -> stringResource(R.string.today_confirmed)
                 },
-                modifier = Modifier.weight(1f)
+                color = if (isDirty || isSaving) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
             )
-            MZMetricChip(
-                label = stringResource(R.string.edit_sheet_metric_mode),
-                value = if (isNewEntry) {
+            MZStatusChip(
+                text = if (isNewEntry) {
                     stringResource(R.string.action_add)
                 } else {
                     stringResource(R.string.action_edit_entry_manual)
                 },
-                modifier = Modifier.weight(1f),
-                accentColor = MaterialTheme.colorScheme.secondary
-            )
-        }
-        if (isDirty) {
-            MZStatusChip(
-                text = stringResource(R.string.edit_sheet_metric_unsaved),
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.secondary
             )
         }
     }
@@ -333,7 +280,6 @@ private fun ColumnScope.EditEntryStateContent(
     screenState: EditScreenState,
     viewModel: EditEntryViewModel,
     context: Context,
-    snackbarHostState: SnackbarHostState,
     onDismiss: () -> Unit
 ) {
     when (val state = screenState.uiState) {
@@ -359,8 +305,6 @@ private fun ColumnScope.EditEntryStateContent(
                 dailyTargetHours = screenState.dailyTargetHours,
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
-                context = context,
-                snackbarHostState = snackbarHostState,
                 isSaving = screenState.isSaving
             )
         }
@@ -379,8 +323,6 @@ private fun ColumnScope.EditEntryStateContent(
                 dailyTargetHours = screenState.dailyTargetHours,
                 mealAllowancePreviewCents = screenState.mealAllowancePreviewCents,
                 viewModel = viewModel,
-                context = context,
-                snackbarHostState = snackbarHostState,
                 isSaving = screenState.isSaving
             )
         }
@@ -398,12 +340,8 @@ private fun EditEntryFormStateContent(
     dailyTargetHours: Double,
     mealAllowancePreviewCents: Int,
     viewModel: EditEntryViewModel,
-    context: Context,
-    snackbarHostState: SnackbarHostState,
     isSaving: Boolean
 ) {
-    val scope = rememberCoroutineScope()
-
     EditValidationCard(
         validationErrors = validationErrors,
         onDismiss = { viewModel.clearValidationErrors() }
@@ -431,17 +369,6 @@ private fun EditEntryFormStateContent(
         onMealBreakfastIncludedChange = viewModel::updateMealBreakfastIncluded,
         onNoteChange = viewModel::updateNote,
         onApplyDefaultTimes = viewModel::applyDefaultWorkTimes,
-        onCopyPrevious = {
-            viewModel.copyFromPreviousDay { success ->
-                if (!success) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            context.getString(R.string.edit_toast_no_previous_entry)
-                        )
-                    }
-                }
-            }
-        },
         onSave = viewModel::save,
         isSaving = isSaving
     )

@@ -4,7 +4,6 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.ui.screen.overview.OverviewPeriod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -52,12 +51,10 @@ class HistoryOpenRequestTest {
 
         assertFalse(weekSeed.showCalendar)
         assertFalse(weekSeed.showMonths)
-        assertEquals(CalendarMode.WEEK, weekSeed.calendarMode)
         assertEquals(date, weekSeed.selectedDate)
 
         assertFalse(monthSeed.showCalendar)
-        assertTrue(monthSeed.showMonths)
-        assertEquals(CalendarMode.MONTH, monthSeed.calendarMode)
+        assertFalse(monthSeed.showMonths)
         assertEquals(date, monthSeed.selectedDate)
     }
 

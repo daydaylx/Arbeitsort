@@ -3,8 +3,6 @@
 package de.montagezeit.app.ui.screen.overview
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,11 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,11 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -74,18 +64,15 @@ import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZSegmentedControl
 import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.MZLoadingState
-import de.montagezeit.app.ui.components.MZHeroPanel
 import de.montagezeit.app.ui.components.MZInlineNotice
-import de.montagezeit.app.ui.components.MZMetricChip
+import de.montagezeit.app.ui.components.MZKeyValueRow
 import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZSnackbarHost
 import de.montagezeit.app.ui.components.AnimatedCounter
 import de.montagezeit.app.ui.components.MZStatusBadge
-import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
-import de.montagezeit.app.ui.components.staggeredAppear
 import de.montagezeit.app.ui.theme.panelBorder
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
@@ -101,9 +88,7 @@ private val overviewWeekFields = WeekFields.ISO
 @Composable
 fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel(),
-    onOpenToday: () -> Unit,
     onOpenHistory: (LocalDate, OverviewPeriod) -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenEditSheet: (LocalDate) -> Unit
 ) {
     val context = LocalContext.current
@@ -159,10 +144,7 @@ fun OverviewScreen(
                     onNextRange = viewModel::goToNextRange,
                     onSelectPeriod = viewModel::selectPeriod,
                     onOpenPeriodPicker = { showPeriodPicker = true },
-                    onActionNeededClick = openHistoryForSelection,
-                    onOpenToday = onOpenToday,
-                    onOpenHistory = openHistoryForSelection,
-                    onOpenSettings = onOpenSettings
+                    onActionNeededClick = openHistoryForSelection
                 )
             }
         }
@@ -187,8 +169,8 @@ fun OverviewScreen(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun OverviewContent(
     selectedDate: LocalDate,
     selectedPeriod: OverviewPeriod,
@@ -197,10 +179,7 @@ private fun OverviewContent(
     onNextRange: () -> Unit,
     onSelectPeriod: (OverviewPeriod) -> Unit,
     onOpenPeriodPicker: () -> Unit,
-    onActionNeededClick: () -> Unit,
-    onOpenToday: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onOpenSettings: () -> Unit
+    onActionNeededClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -209,7 +188,7 @@ private fun OverviewContent(
             .padding(horizontal = MZTokens.ScreenPadding, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        MZHeroPanel {
+        MZAppPanel {
             OverviewTopRangeBar(
                 selectedDate = selectedDate,
                 selectedPeriod = selectedPeriod,
@@ -223,6 +202,20 @@ private fun OverviewContent(
                 onSelectPeriod = onSelectPeriod
             )
 
+            MZStatusBadge(
+                text = if (metrics.unconfirmedDaysCount > 0) {
+                    pluralStringResource(
+                        R.plurals.overview_kpi_unconfirmed_count,
+                        metrics.unconfirmedDaysCount,
+                        metrics.unconfirmedDaysCount
+                    )
+                } else {
+                    stringResource(R.string.overview_kpi_none_unconfirmed)
+                },
+                type = if (metrics.unconfirmedDaysCount > 0) StatusType.WARNING else StatusType.SUCCESS,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),
                 color = MaterialTheme.colorScheme.panelBorder.copy(alpha = 0.5f)
@@ -234,11 +227,6 @@ private fun OverviewContent(
                 metrics = metrics
             )
         }
-
-        OverviewKpiGrid(
-            metrics = metrics,
-            onActionNeededClick = onActionNeededClick
-        )
 
         if (metrics.unconfirmedDaysCount > 0) {
             MZInlineNotice(
@@ -257,27 +245,7 @@ private fun OverviewContent(
             )
         }
 
-        MZAppPanel {
-            MZSectionHeader(
-                title = stringResource(R.string.overview_quick_actions_title),
-                supportingText = stringResource(R.string.overview_quick_actions_support)
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SecondaryActionButton(onClick = onOpenToday) {
-                    Text(stringResource(R.string.today_title))
-                }
-                SecondaryActionButton(onClick = onOpenHistory) {
-                    Text(stringResource(R.string.history_title))
-                }
-                TertiaryActionButton(onClick = onOpenSettings) {
-                    Text(stringResource(R.string.settings_title))
-                }
-            }
-        }
+        OverviewSecondarySummary(metrics = metrics)
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -400,26 +368,20 @@ private fun OverviewHeroSection(
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MZMetricChip(
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            MZKeyValueRow(
                 label = stringResource(R.string.overview_actual_label),
                 value = Formatters.formatHours(metrics.actualHours),
-                modifier = Modifier.weight(1f)
+                emphasize = true
             )
-            MZMetricChip(
+            MZKeyValueRow(
                 label = stringResource(R.string.overview_target_label),
-                value = Formatters.formatHours(metrics.targetHours),
-                modifier = Modifier.weight(1f),
-                accentColor = MaterialTheme.colorScheme.secondary
+                value = Formatters.formatHours(metrics.targetHours)
             )
-            MZMetricChip(
+            MZKeyValueRow(
                 label = stringResource(R.string.overview_difference_label),
                 value = formatSignedHoursValue(metrics.overtimeHours),
-                modifier = Modifier.weight(1f),
-                accentColor = if (metrics.overtimeHours >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                emphasize = true
             )
         }
 
@@ -445,112 +407,23 @@ private fun OverviewHeroSection(
 }
 
 @Composable
-private fun OverviewKpiGrid(
-    metrics: OverviewMetrics,
-    onActionNeededClick: () -> Unit
+private fun OverviewSecondarySummary(
+    metrics: OverviewMetrics
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MZSectionHeader(
-            title = stringResource(R.string.overview_section_metrics_title),
-            supportingText = stringResource(R.string.overview_section_metrics_support)
+    MZAppPanel {
+        MZSectionHeader(title = stringResource(R.string.overview_section_metrics_title))
+        MZKeyValueRow(
+            label = stringResource(R.string.overview_kpi_travel),
+            value = Formatters.formatHours(metrics.travelHours)
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            KpiGridItem(
-                modifier = Modifier.weight(1f).staggeredAppear(index = 0),
-                icon = Icons.Default.DirectionsCar,
-                label = stringResource(R.string.overview_kpi_travel),
-                value = Formatters.formatHours(metrics.travelHours),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            KpiGridItem(
-                modifier = Modifier.weight(1f).staggeredAppear(index = 1),
-                icon = Icons.Default.Restaurant,
-                label = stringResource(R.string.overview_kpi_meal),
-                value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents),
-                tint = MaterialTheme.colorScheme.secondary
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            KpiGridItem(
-                modifier = Modifier.weight(1f).staggeredAppear(index = 2),
-                icon = Icons.Default.Today,
-                label = stringResource(R.string.overview_counted_days_label),
-                value = stringResource(R.string.overtime_counted_days, metrics.countedDays),
-                tint = MaterialTheme.colorScheme.tertiary
-            )
-            val actionNeeded = metrics.unconfirmedDaysCount > 0
-            KpiGridItem(
-                modifier = Modifier.weight(1f).staggeredAppear(index = 3),
-                icon = if (actionNeeded) Icons.Default.ErrorOutline else Icons.Default.CalendarMonth,
-                label = stringResource(R.string.overview_kpi_action_needed),
-                value = if (actionNeeded) {
-                    pluralStringResource(
-                        R.plurals.overview_kpi_unconfirmed_count,
-                        metrics.unconfirmedDaysCount,
-                        metrics.unconfirmedDaysCount
-                    )
-                } else {
-                    stringResource(R.string.overview_kpi_none_unconfirmed)
-                },
-                tint = if (actionNeeded) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                onClick = onActionNeededClick
-            )
-        }
-    }
-}
-
-@Composable
-private fun KpiGridItem(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    label: String,
-    value: String,
-    tint: Color,
-    onClick: (() -> Unit)? = null
-) {
-    MZAppPanel(
-        modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(MZTokens.RadiusChip),
-                color = tint.copy(alpha = MZTokens.AlphaSubtle),
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = tint,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        MZKeyValueRow(
+            label = stringResource(R.string.overview_kpi_meal),
+            value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents)
+        )
+        MZKeyValueRow(
+            label = stringResource(R.string.overview_counted_days_label),
+            value = metrics.countedDays.toString()
+        )
     }
 }
 

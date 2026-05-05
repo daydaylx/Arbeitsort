@@ -3,6 +3,7 @@
 package de.montagezeit.app.ui.screen.history
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +23,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,7 +48,6 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.DatePickerDialog
-import de.montagezeit.app.ui.util.DateTimeUtils
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import de.montagezeit.app.ui.components.PrimaryActionButton
@@ -57,6 +61,7 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 private const val MONTH_PREVIEW_COUNT = 5
+private const val HISTORY_LIST_CONTENT_START_INDEX = 2
 private val historyWeekFields = WeekFields.ISO
 
 
@@ -68,11 +73,6 @@ private val localDateSaver = Saver<LocalDate, String>(
 private val yearMonthSaver = Saver<YearMonth, String>(
     save = { it.toString() },
     restore = { YearMonth.parse(it) }
-)
-
-private val calendarModeSaver = Saver<CalendarMode, String>(
-    save = { it.name },
-    restore = { CalendarMode.valueOf(it) }
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -174,21 +174,21 @@ fun HistoryContent(
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showMonths by rememberSaveable { mutableStateOf(false) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
-    var calendarMode by rememberSaveable(stateSaver = calendarModeSaver) { mutableStateOf(CalendarMode.MONTH) }
     var selectedMonth by rememberSaveable(stateSaver = yearMonthSaver) { mutableStateOf(YearMonth.now()) }
     var selectedDate by rememberSaveable(stateSaver = localDateSaver) { mutableStateOf(LocalDate.now()) }
     var pendingScrollRequest by remember { mutableStateOf<HistoryOpenRequest?>(null) }
     val listState = rememberLazyListState()
     val entries = remember(entriesByDate) { entriesByDate.values.sortedByDescending(WorkEntry::date) }
-    val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
-    val unconfirmedCount = remember(entries, travelLegsByDate) {
-        entries.count { entry ->
+    val pendingEntries = remember(entries, travelLegsByDate) {
+        entries.filter { entry ->
             EntryStatusResolver.isPendingWorkDay(
                 entry = entry,
                 travelLegs = travelLegsByDate[entry.date].orEmpty()
             )
         }
     }
+    val workEntryCount = remember(entries) { entries.count { it.dayType == DayType.WORK } }
+    val unconfirmedCount = pendingEntries.size
     val hasGroupedContent = weeks.isNotEmpty() || months.isNotEmpty()
     val openEntryForDate: (LocalDate) -> Unit = { date ->
         selectedDate = date
@@ -201,21 +201,26 @@ fun HistoryContent(
         val selectionSeed = historySelectionSeedForRequest(request)
         showCalendar = selectionSeed.showCalendar
         showMonths = selectionSeed.showMonths
-        calendarMode = selectionSeed.calendarMode
         selectedDate = selectionSeed.selectedDate
         selectedMonth = selectionSeed.selectedMonth
         pendingScrollRequest = request
     }
 
-    LaunchedEffect(pendingScrollRequest?.requestId, showCalendar, showMonths, weeks, months) {
+    LaunchedEffect(pendingScrollRequest?.requestId, showCalendar, showMonths, entries, weeks, months, unconfirmedCount) {
         val request = pendingScrollRequest ?: return@LaunchedEffect
         if (showCalendar) return@LaunchedEffect
 
-        historyGroupedScrollTargetIndex(
-            request = request,
-            weeks = weeks,
-            months = months
-        )?.let { targetIndex ->
+        val targetIndex = if (showMonths) {
+            historyGroupedScrollTargetIndex(
+                request = request,
+                weeks = weeks,
+                months = months
+            )
+        } else {
+            val entryIndex = historyListEntryIndex(request.anchorDate, entries)
+            entryIndex?.let { HISTORY_LIST_CONTENT_START_INDEX + (if (unconfirmedCount > 0) 1 else 0) + it }
+        }
+        targetIndex?.let {
             listState.scrollToItem(targetIndex)
         }
 
@@ -231,7 +236,7 @@ fun HistoryContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "history-hero") {
-            MZHeroPanel {
+            MZAppPanel {
                 MZSectionIntro(
                     eyebrow = stringResource(R.string.history_title),
                     title = stringResource(R.string.history_hero_title),
@@ -241,22 +246,21 @@ fun HistoryContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    MZMetricChip(
-                        label = stringResource(R.string.history_metric_entries),
-                        value = entries.size.toString(),
-                        modifier = Modifier.weight(1f)
+                    MZStatusChip(
+                        text = stringResource(R.string.history_entries_count, entries.size),
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    MZMetricChip(
-                        label = stringResource(R.string.history_metric_workdays),
-                        value = workEntryCount.toString(),
-                        modifier = Modifier.weight(1f),
-                        accentColor = MaterialTheme.colorScheme.secondary
+                    MZStatusChip(
+                        text = stringResource(R.string.history_workdays_count, workEntryCount),
+                        color = MaterialTheme.colorScheme.secondary
                     )
-                    MZMetricChip(
-                        label = stringResource(R.string.history_metric_open),
-                        value = unconfirmedCount.toString(),
-                        modifier = Modifier.weight(1f),
-                        accentColor = if (unconfirmedCount > 0) {
+                    MZStatusChip(
+                        text = pluralStringResource(
+                            R.plurals.overview_kpi_unconfirmed_count,
+                            unconfirmedCount,
+                            unconfirmedCount
+                        ),
+                        color = if (unconfirmedCount > 0) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.tertiary
@@ -270,16 +274,14 @@ fun HistoryContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaOverlay))
                     .padding(bottom = 8.dp)
             ) {
                 HistoryMiniFilterBar(
                     showCalendar = showCalendar,
-                    calendarMode = calendarMode,
                     showMonths = showMonths,
                     canToggleMonths = months.isNotEmpty(),
                     onShowCalendarChange = { showCalendar = it },
-                    onCalendarModeChange = { calendarMode = it },
                     onShowMonthsChange = { showMonths = it },
                     onPickDate = { showDatePicker = true },
                     onOpenBatchEdit = onOpenBatchEdit
@@ -287,29 +289,31 @@ fun HistoryContent(
             }
         }
 
-        // selected-day was removed to save space
+        if (unconfirmedCount > 0) {
+            item(key = "history-open-days") {
+                MZInlineNotice(
+                    title = stringResource(R.string.overview_action_required_title),
+                    message = pluralStringResource(
+                        R.plurals.overview_kpi_unconfirmed_count,
+                        unconfirmedCount,
+                        unconfirmedCount
+                    ),
+                    type = StatusType.WARNING
+                )
+            }
+        }
 
         when {
             showCalendar -> {
                 item(key = "calendar") {
                     MZAppPanel {
-                        if (calendarMode == CalendarMode.MONTH) {
-                            CalendarView(
-                                month = selectedMonth,
-                                entriesByDate = entriesByDate,
-                                onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
-                                onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
-                                onDayClick = openEntryForDate
-                            )
-                        } else {
-                            WeekCalendarView(
-                                selectedDate = selectedDate,
-                                entriesByDate = entriesByDate,
-                                onPreviousWeek = { selectedDate = selectedDate.minusDays(7) },
-                                onNextWeek = { selectedDate = selectedDate.plusDays(7) },
-                                onDayClick = openEntryForDate
-                            )
-                        }
+                        CalendarView(
+                            month = selectedMonth,
+                            entriesByDate = entriesByDate,
+                            onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
+                            onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
+                            onDayClick = openEntryForDate
+                        )
                     }
                 }
             }
@@ -321,6 +325,19 @@ fun HistoryContent(
                         title = stringResource(R.string.history_empty_title),
                         subtitle = stringResource(R.string.history_empty_subtitle),
                         icon = Icons.Default.History
+                    )
+                }
+            }
+
+            !showMonths -> {
+                items(
+                    items = entries,
+                    key = { entry -> entry.date }
+                ) { entry ->
+                    HistoryEntryItem(
+                        entry = entry,
+                        travelLegs = travelLegsByDate[entry.date].orEmpty(),
+                        onEntryClick = openEntryForDate
                     )
                 }
             }
@@ -347,6 +364,13 @@ fun HistoryContent(
             onDismiss = { showDatePicker = false }
         )
     }
+}
+
+private fun historyListEntryIndex(anchorDate: LocalDate, entries: List<WorkEntry>): Int? {
+    if (entries.isEmpty()) return null
+    val exactIndex = entries.indexOfFirst { it.date == anchorDate }
+    return if (exactIndex >= 0) exactIndex
+    else entries.indexOfFirst { !it.date.isAfter(anchorDate) }.takeIf { it >= 0 } ?: 0
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -396,80 +420,83 @@ private fun LazyListScope.historyGroupedEntries(
 @Composable
 private fun HistoryMiniFilterBar(
     showCalendar: Boolean,
-    calendarMode: CalendarMode,
     showMonths: Boolean,
     canToggleMonths: Boolean,
     onShowCalendarChange: (Boolean) -> Unit,
-    onCalendarModeChange: (CalendarMode) -> Unit,
     onShowMonthsChange: (Boolean) -> Unit,
     onPickDate: () -> Unit,
     onOpenBatchEdit: () -> Unit = {}
 ) {
-    MZAppPanel {
-        Column(
-            modifier = Modifier.padding(vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(MZTokens.RadiusCard),
+        border = BorderStroke(
+            MZTokens.PanelBorderWidth,
+            MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MZSegmentedControl(
-                    options = listOf(
-                        MZSegmentedOption(false, stringResource(R.string.history_summary_list)),
-                        MZSegmentedOption(true, stringResource(R.string.history_summary_calendar))
-                    ),
-                    selectedValue = showCalendar,
-                    onValueSelected = onShowCalendarChange,
-                    modifier = Modifier.weight(1f)
+            MZSegmentedControl(
+                options = listOf(
+                    MZSegmentedOption(false, stringResource(R.string.history_summary_list)),
+                    MZSegmentedOption(true, stringResource(R.string.history_summary_calendar))
+                ),
+                selectedValue = showCalendar,
+                onValueSelected = onShowCalendarChange,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onPickDate) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = stringResource(R.string.history_action_pick_date)
                 )
-                SecondaryActionButton(onClick = onPickDate) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-                    Text(stringResource(R.string.history_action_pick_date))
-                }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (showCalendar) {
-                    MZSegmentedControl(
-                        options = listOf(
-                            MZSegmentedOption(CalendarMode.WEEK, stringResource(R.string.history_summary_week)),
-                            MZSegmentedOption(CalendarMode.MONTH, stringResource(R.string.history_summary_month))
-                        ),
-                        selectedValue = calendarMode,
-                        onValueSelected = onCalendarModeChange,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else if (canToggleMonths) {
-                    MZSegmentedControl(
-                        options = listOf(
-                            MZSegmentedOption(false, stringResource(R.string.history_summary_weeks)),
-                            MZSegmentedOption(true, stringResource(R.string.history_summary_months))
-                        ),
-                        selectedValue = showMonths,
-                        onValueSelected = onShowMonthsChange,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-
-                TertiaryActionButton(onClick = onOpenBatchEdit) {
+            Box {
+                IconButton(onClick = { showOverflowMenu = true }) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 6.dp)
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.cd_batch_edit)
                     )
-                    Text(stringResource(R.string.cd_batch_edit))
+                }
+                DropdownMenu(
+                    expanded = showOverflowMenu,
+                    onDismissRequest = { showOverflowMenu = false }
+                ) {
+                    if (!showCalendar && canToggleMonths) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    if (showMonths) {
+                                        stringResource(R.string.history_summary_weeks)
+                                    } else {
+                                        stringResource(R.string.history_summary_months)
+                                    }
+                                )
+                            },
+                            onClick = {
+                                onShowMonthsChange(!showMonths)
+                                showOverflowMenu = false
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cd_batch_edit)) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Edit, contentDescription = null)
+                        },
+                        onClick = {
+                            showOverflowMenu = false
+                            onOpenBatchEdit()
+                        }
+                    )
                 }
             }
         }
@@ -532,72 +559,6 @@ fun CalendarView(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun WeekCalendarView(
-    selectedDate: LocalDate,
-    entriesByDate: Map<LocalDate, WorkEntry>,
-    onPreviousWeek: () -> Unit,
-    onNextWeek: () -> Unit,
-    onDayClick: (LocalDate) -> Unit
-) {
-    val today = LocalDate.now()
-    val weekStart = selectedDate.with(historyWeekFields.dayOfWeek(), 1)
-    val weekEnd = selectedDate.with(historyWeekFields.dayOfWeek(), 7)
-    val weekNumber = selectedDate.get(historyWeekFields.weekOfWeekBasedYear())
-    val days = remember(weekStart) {
-        (0..6).map { offset ->
-            CalendarDay(weekStart.plusDays(offset.toLong()), true)
-        }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onPreviousWeek) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.history_cd_prev_week)
-                )
-            }
-            Text(
-                text = stringResource(
-                    R.string.history_week_header,
-                    weekNumber,
-                    Formatters.formatDate(weekStart),
-                    Formatters.formatDate(weekEnd)
-                ),
-                style = MaterialTheme.typography.titleSmall
-            )
-            IconButton(onClick = onNextWeek) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.history_cd_next_week)
-                )
-            }
-        }
-
-        WeekdayHeader()
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            days.forEach { day ->
-                CalendarDayCell(
-                    day = day,
-                    entry = entriesByDate[day.date],
-                    isToday = day.date == today,
-                    onClick = { onDayClick(day.date) },
-                    modifier = Modifier.weight(1f)
-                )
             }
         }
     }
@@ -984,52 +945,43 @@ fun BatchEditDialog(
 fun WeekGroupHeader(
     week: WeekGroup
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaOverlay))
             .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        MZSectionHeader(
-            title = stringResource(R.string.history_week_header, week.week, "", "").substringBefore("·").trim()
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.history_week_header, week.week, "", "").substringBefore("·").trim(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = pluralStringResource(
+                    R.plurals.history_summary_workdays,
+                    week.workDaysCount,
+                    week.workDaysCount
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = stringResource(R.string.history_hours_decimal, week.totalHours),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
-        
-        MZAppPanel(emphasized = false) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MZStatusChip(
-                    text = "KW ${week.week}",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.history_hours_decimal, week.totalHours),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = pluralStringResource(
-                            R.plurals.history_summary_workdays,
-                            week.workDaysCount,
-                            week.workDaysCount
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                    Text(
-                        text = year,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        week.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+            Text(
+                text = year,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1038,50 +990,43 @@ fun WeekGroupHeader(
 fun MonthGroupHeader(
     month: MonthGroup
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaGlassOverlay))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = MZTokens.AlphaOverlay))
             .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        MZSectionHeader(title = month.displayText)
-        
-        MZAppPanel(emphasized = false) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MZStatusChip(
-                    text = month.displayText,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.history_hours_decimal, month.totalHours),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = pluralStringResource(
-                            R.plurals.history_summary_workdays,
-                            month.workDaysCount,
-                            month.workDaysCount
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
-                    Text(
-                        text = year,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = month.displayText,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = pluralStringResource(
+                    R.plurals.history_summary_workdays,
+                    month.workDaysCount,
+                    month.workDaysCount
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = stringResource(R.string.history_hours_decimal, month.totalHours),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        month.yearText.takeIf { it.isNotEmpty() }?.let { year ->
+            Text(
+                text = year,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1101,12 +1046,10 @@ fun HistoryEntryItem(
     val locationLabel = entry.dayLocationLabel.ifBlank {
         stringResource(R.string.today_day_location_unset)
     }
-    
-    val statusChipInfo: Pair<String, Color>? = when {
-        EntryStatusResolver.isPendingWorkDay(entry, travelLegs) -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
-        entry.dayType == DayType.OFF -> stringResource(R.string.history_day_type_off) to MaterialTheme.colorScheme.outline
-        entry.dayType == DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time) to MaterialTheme.colorScheme.secondary
-        else -> null
+    val isPending = EntryStatusResolver.isPendingWorkDay(entry, travelLegs)
+    val statusChipInfo: Pair<String, Color> = when {
+        isPending -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
+        else -> stringResource(R.string.today_confirmed) to MaterialTheme.colorScheme.primary
     }
 
     val travelSummary = remember(travelLegs) {
@@ -1122,13 +1065,31 @@ fun HistoryEntryItem(
             .orEmpty()
     }
 
-    MZAppPanel(
+    Surface(
         modifier = Modifier
-            .clickable { onEntryClick(entry.date) }
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MZTokens.RadiusCard))
+            .clickable { onEntryClick(entry.date) },
+        shape = RoundedCornerShape(MZTokens.RadiusCard),
+        color = if (isPending) {
+            MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(
+            MZTokens.PanelBorderWidth,
+            if (isPending) {
+                MaterialTheme.colorScheme.error.copy(alpha = 0.28f)
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
+            }
+        )
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1167,22 +1128,28 @@ fun HistoryEntryItem(
                 }
             }
 
+            Text(
+                text = locationLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 MZStatusChip(
-                    text = locationLabel,
-                    color = MaterialTheme.colorScheme.outline
+                    text = historyDayTypeLabel(entry.dayType),
+                    color = MaterialTheme.colorScheme.primary
                 )
 
-                statusChipInfo?.let { (text, color) ->
-                    MZStatusChip(
-                        text = text,
-                        color = color
-                    )
-                }
+                MZStatusChip(
+                    text = statusChipInfo.first,
+                    color = statusChipInfo.second
+                )
 
                 if (travelSummary.isNotBlank()) {
                     MZStatusChip(
@@ -1206,194 +1173,10 @@ fun HistoryEntryItem(
     }
 }
 
-@Composable
-fun DayTypeIndicator(dayType: DayType) {
-    val (icon, color) = when (dayType) {
-        DayType.WORK -> Icons.Default.Work to MaterialTheme.colorScheme.primary
-        DayType.OFF -> Icons.Default.FreeBreakfast to MaterialTheme.colorScheme.secondary
-        DayType.COMP_TIME -> Icons.Default.Bedtime to MaterialTheme.colorScheme.tertiary
-        DayType.SCHULUNG, DayType.LEHRGANG -> Icons.Default.Work to MaterialTheme.colorScheme.primary
-    }
-    
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = color,
-        modifier = Modifier.size(18.dp)
-    )
-}
-
-@Composable
-fun LocationSummary(entry: WorkEntry) {
-    val locationLabel = entry.dayLocationLabel.ifBlank {
-        stringResource(R.string.today_day_location_unset)
-    }
-    val checkInSummary = listOfNotNull(
-        entry.morningCapturedAt?.let {
-            stringResource(R.string.today_location_morning) + " " + formatTime(it)
-        },
-        entry.eveningCapturedAt?.let {
-            stringResource(R.string.today_location_evening) + " " + formatTime(it)
-        }
-    )
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = stringResource(
-                    R.string.history_day_location_summary,
-                    stringResource(R.string.day_location_label),
-                    locationLabel
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1
-            )
-        }
-        Text(
-            text = checkInSummary.ifEmpty {
-                listOf(stringResource(R.string.history_label_no_checkin))
-            }.joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun TravelSummaryRow(travelLegs: List<TravelLeg>) {
-    val orderedLegs = remember(travelLegs) {
-        travelLegs
-            .sortedBy(TravelLeg::sortOrder)
-            .filter { leg ->
-                leg.startAt != null ||
-                    leg.arriveAt != null ||
-                    !leg.startLabel.isNullOrBlank() ||
-                    !leg.endLabel.isNullOrBlank() ||
-                    (leg.paidMinutesOverride ?: 0) > 0
-            }
-    }
-
-    if (orderedLegs.isEmpty()) return
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        orderedLegs.forEach { leg ->
-            val labelText = when {
-                !leg.startLabel.isNullOrBlank() && !leg.endLabel.isNullOrBlank() ->
-                    stringResource(
-                        R.string.travel_label_from_to,
-                        leg.startLabel.orEmpty(),
-                        leg.endLabel.orEmpty()
-                    )
-                !leg.startLabel.isNullOrBlank() ->
-                    stringResource(R.string.travel_label_from, leg.startLabel.orEmpty())
-                !leg.endLabel.isNullOrBlank() ->
-                    stringResource(R.string.travel_label_to, leg.endLabel.orEmpty())
-                else -> null
-            }
-            val timeText = when {
-                leg.startAt != null && leg.arriveAt != null ->
-                    stringResource(R.string.travel_time_range, formatTime(leg.startAt), formatTime(leg.arriveAt))
-                leg.startAt != null -> stringResource(R.string.travel_time_start, formatTime(leg.startAt))
-                leg.arriveAt != null -> stringResource(R.string.travel_time_arrive, formatTime(leg.arriveAt))
-                else -> null
-            }
-            val durationText = remember(leg.startAt, leg.arriveAt, leg.paidMinutesOverride) {
-                when {
-                    leg.startAt != null && leg.arriveAt != null ->
-                        DateTimeUtils.calculateTravelDuration(leg.startAt, leg.arriveAt)?.let(Formatters::formatDuration)
-                    (leg.paidMinutesOverride ?: 0) > 0 ->
-                        Formatters.formatDuration(java.time.Duration.ofMinutes(leg.paidMinutesOverride!!.toLong()))
-                    else -> null
-                }
-            }
-            val summaryText = listOfNotNull(
-                timeText,
-                durationText?.let { stringResource(R.string.history_travel_duration_inline, it) }
-            ).joinToString(" · ")
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary),
-                    modifier = Modifier
-                        .size(14.dp)
-                        .padding(top = 2.dp)
-                )
-                Column {
-                    if (summaryText.isNotBlank()) {
-                        Text(
-                            text = summaryText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = MZTokens.AlphaSecondary)
-                        )
-                    }
-                    labelText?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Error,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        PrimaryActionButton(onClick = onRetry) {
-            Text(stringResource(R.string.history_action_repeat))
-        }
-    }
-}
-
 data class CalendarDay(
     val date: LocalDate,
     val inMonth: Boolean
 )
-
-enum class CalendarMode {
-    WEEK,
-    MONTH
-}
 
 private fun buildCalendarDays(month: YearMonth): List<CalendarDay> {
     val firstOfMonth = month.atDay(1)
@@ -1422,6 +1205,15 @@ private fun formatEntryDate(date: java.time.LocalDate): String {
 
 private fun formatOverviewDate(date: java.time.LocalDate): String {
     return date.format(historyOverviewDateFormatter)
+}
+
+@Composable
+private fun historyDayTypeLabel(dayType: DayType): String = when (dayType) {
+    DayType.WORK -> stringResource(R.string.edit_day_type_workday)
+    DayType.OFF -> stringResource(R.string.history_day_type_off)
+    DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
+    DayType.SCHULUNG -> stringResource(R.string.day_type_schulung)
+    DayType.LEHRGANG -> stringResource(R.string.day_type_lehrgang)
 }
 
 private fun formatTime(timestamp: Long): String {

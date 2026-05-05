@@ -9,7 +9,6 @@ import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
 import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
-import de.montagezeit.app.domain.util.WeekCalculator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -341,12 +340,6 @@ class TodayViewModelTest {
         assertEquals(today, viewModel.selectedDate.value)
         assertTrue(successLatch.await(2, TimeUnit.SECONDS))
 
-        // Week days UI should reflect selection
-        val weekDays = viewModel.weekDaysUi.value
-        if (weekDays.isNotEmpty()) {
-            val todayChip = weekDays.find { it.date == today }
-            assertTrue("Today should be marked as selected", todayChip?.isSelected == true)
-        }
         collectJob.cancel()
     }
 
@@ -407,37 +400,6 @@ class TodayViewModelTest {
 
         assertEquals(yesterday, viewModel.selectedDate.value)
         assertEquals(TodayUiState.Success(yesterdayEntry), viewModel.uiState.value)
-    }
-
-    @Test
-    fun `selectDate rebuilds week overview from selected date`() {
-        val today = LocalDate.now()
-        val otherWeekDate = today.plusWeeks(1)
-        val repository = mockk<WorkEntryRepository>(relaxed = true)
-
-        coEvery { repository.getByDate(any()) } returns null
-
-        val viewModel = createViewModel(repository)
-        val weekLatch = CountDownLatch(1)
-        val collectJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.weekDaysUi.collect { days ->
-                if (
-                    days.firstOrNull()?.date == WeekCalculator.weekStart(otherWeekDate) &&
-                    days.any { it.date == otherWeekDate && it.isSelected }
-                ) {
-                    weekLatch.countDown()
-                }
-            }
-        }
-
-        viewModel.selectDate(otherWeekDate)
-
-        assertTrue(weekLatch.await(2, TimeUnit.SECONDS))
-        val weekDays = viewModel.weekDaysUi.value
-        assertEquals(WeekCalculator.weekStart(otherWeekDate), weekDays.first().date)
-        assertTrue(weekDays.any { it.date == otherWeekDate && it.isSelected })
-        assertTrue(weekDays.none { it.isToday })
-        collectJob.cancel()
     }
 
     @Test
@@ -664,7 +626,6 @@ class TodayViewModelTest {
         return TodayViewModel(
             workEntryRepository = repository,
             dateCoordinator = TodayDateCoordinator(Clock.systemDefaultZone()),
-            weekOverviewUseCase = TodayWeekOverviewUseCase(),
             actionsHandler = actionsHandler,
             clock = Clock.systemDefaultZone()
         ).also {

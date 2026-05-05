@@ -14,7 +14,6 @@ data class TodayScreenState(
     val selectedEntryWithTravel: WorkEntryWithTravelLegs? = null,
     val selectedDate: LocalDate,
     val todayDate: LocalDate,
-    val weekDaysUi: List<WeekDayUi>,
     val loadingActions: Set<TodayAction>
 ) {
     val currentEntry: WorkEntry?

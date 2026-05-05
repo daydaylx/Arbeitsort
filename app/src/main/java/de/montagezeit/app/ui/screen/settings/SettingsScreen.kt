@@ -12,10 +12,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -44,8 +40,6 @@ import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.Duration
-import kotlinx.coroutines.launch
 
 /**
  * Verbesserter SettingsScreen mit besserer Accessibility und neuen Komponenten
@@ -180,7 +174,6 @@ fun SettingsScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsContent(
     settings: de.montagezeit.app.data.preferences.ReminderSettings,
@@ -224,11 +217,6 @@ private fun SettingsContent(
     var remindersExpanded by rememberSaveable { mutableStateOf(true) }
     var nonWorkingExpanded by rememberSaveable { mutableStateOf(false) }
     var exportExpanded by rememberSaveable { mutableStateOf(false) }
-    var advancedExpanded by rememberSaveable { mutableStateOf(false) }
-    val generalSectionRequester = remember { BringIntoViewRequester() }
-    val automationSectionRequester = remember { BringIntoViewRequester() }
-    val dataSectionRequester = remember { BringIntoViewRequester() }
-    val scope = rememberCoroutineScope()
     val enabledReminderCount = listOf(
         settings.morningReminderEnabled,
         settings.eveningReminderEnabled,
@@ -236,106 +224,13 @@ private fun SettingsContent(
         settings.dailyReminderEnabled
     ).count { it }
     val reminderError = (uiState as? SettingsUiState.ReminderError)?.message
-    val defaultWorkMinutes = remember(settings.workStart, settings.workEnd, settings.breakMinutes) {
-        (Duration.between(settings.workStart, settings.workEnd).toMinutes().toInt() - settings.breakMinutes)
-            .coerceAtLeast(0)
-    }
-    val exportProfileReady = settings.pdfEmployeeName.orEmpty().isNotBlank()
 
     Column(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        MZHeroPanel {
-            MZSectionIntro(
-                eyebrow = stringResource(R.string.settings_title),
-                title = stringResource(R.string.settings_dashboard_title),
-                supportingText = stringResource(R.string.settings_dashboard_subtitle)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MZMetricChip(
-                    label = stringResource(R.string.settings_reminders),
-                    value = "$enabledReminderCount/4",
-                    modifier = Modifier.weight(1f)
-                )
-                MZMetricChip(
-                    label = stringResource(R.string.settings_metric_schedule),
-                    value = formatMinutesAsHoursMinutes(defaultWorkMinutes),
-                    modifier = Modifier.weight(1f),
-                    accentColor = MaterialTheme.colorScheme.secondary
-                )
-                MZMetricChip(
-                    label = stringResource(R.string.settings_metric_profile),
-                    value = if (exportProfileReady) {
-                        stringResource(R.string.status_active)
-                    } else {
-                        stringResource(R.string.settings_export_name_missing)
-                    },
-                    modifier = Modifier.weight(1f),
-                    accentColor = if (exportProfileReady) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    }
-                )
-            }
-        }
-
-        MZAppPanel {
-            MZSectionHeader(
-                title = stringResource(R.string.settings_quick_links_title),
-                supportingText = stringResource(R.string.settings_quick_links_support)
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SecondaryActionButton(
-                    onClick = {
-                        workTimesExpanded = true
-                        scope.launch { generalSectionRequester.bringIntoView() }
-                    }
-                ) {
-                    Text(stringResource(R.string.settings_group_general))
-                }
-                SecondaryActionButton(
-                    onClick = {
-                        remindersExpanded = true
-                        scope.launch { automationSectionRequester.bringIntoView() }
-                    }
-                ) {
-                    Text(stringResource(R.string.settings_group_automation))
-                }
-                TertiaryActionButton(
-                    onClick = {
-                        exportExpanded = true
-                        scope.launch { dataSectionRequester.bringIntoView() }
-                    }
-                ) {
-                    Text(stringResource(R.string.settings_group_data))
-                }
-            }
-        }
-
         MZSectionHeader(
-            title = stringResource(R.string.settings_group_general),
-            modifier = Modifier.bringIntoViewRequester(generalSectionRequester)
-        )
-
-        SetupSection(
-            hasNotificationPermission = hasNotificationPermission,
-            isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-            enabledReminderCount = enabledReminderCount,
-            workStartLabel = Formatters.formatTime(settings.workStart),
-            workEndLabel = Formatters.formatTime(settings.workEnd),
-            onRequestNotificationPermission = onRequestNotificationPermission,
-            onOpenNotificationSettings = onOpenNotificationSettings,
-            onOpenBatterySettings = onOpenBatterySettings,
-            onSendTestReminder = onSendTestReminder
+            title = stringResource(R.string.settings_category_work_time)
         )
 
         WorkTimesSection(
@@ -357,8 +252,7 @@ private fun SettingsContent(
         )
 
         MZSectionHeader(
-            title = stringResource(R.string.settings_group_automation),
-            modifier = Modifier.bringIntoViewRequester(automationSectionRequester)
+            title = stringResource(R.string.settings_category_reminders)
         )
 
         ReminderSettingsSection(
@@ -385,6 +279,10 @@ private fun SettingsContent(
             onExpandedChange = { remindersExpanded = it }
         )
 
+        MZSectionHeader(
+            title = stringResource(R.string.settings_category_free_days)
+        )
+
         NonWorkingDaysSection(
             autoOffWeekends = settings.autoOffWeekends,
             autoOffHolidays = settings.autoOffHolidays,
@@ -398,8 +296,7 @@ private fun SettingsContent(
         )
 
         MZSectionHeader(
-            title = stringResource(R.string.settings_group_data),
-            modifier = Modifier.bringIntoViewRequester(dataSectionRequester)
+            title = stringResource(R.string.settings_category_export)
         )
 
         ExportSection(
@@ -421,17 +318,26 @@ private fun SettingsContent(
             onExpandedChange = { exportExpanded = it }
         )
 
-        CollapsibleSettingsCard(
-            title = stringResource(R.string.settings_section_advanced),
-            summary = stringResource(R.string.settings_section_advanced_summary),
-            expanded = advancedExpanded,
-            onExpandedChange = { advancedExpanded = it }
-        ) {
-            SettingsDeveloperSection(
-                onNavigateToRoute = onNavigateToRoute,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+        MZSectionHeader(
+            title = stringResource(R.string.settings_category_system)
+        )
+
+        SetupSection(
+            hasNotificationPermission = hasNotificationPermission,
+            isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+            enabledReminderCount = enabledReminderCount,
+            workStartLabel = Formatters.formatTime(settings.workStart),
+            workEndLabel = Formatters.formatTime(settings.workEnd),
+            onRequestNotificationPermission = onRequestNotificationPermission,
+            onOpenNotificationSettings = onOpenNotificationSettings,
+            onOpenBatterySettings = onOpenBatterySettings,
+            onSendTestReminder = onSendTestReminder
+        )
+
+        SettingsDeveloperSection(
+            onNavigateToRoute = onNavigateToRoute,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -475,15 +381,5 @@ private fun openBatterySettings(context: Context) {
     }
     if (intent.resolveActivity(context.packageManager) != null) {
         context.startActivity(intent)
-    }
-}
-
-private fun formatMinutesAsHoursMinutes(totalMinutes: Int): String {
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return if (minutes == 0) {
-        "${hours}h"
-    } else {
-        "${hours}h ${minutes}m"
     }
 }

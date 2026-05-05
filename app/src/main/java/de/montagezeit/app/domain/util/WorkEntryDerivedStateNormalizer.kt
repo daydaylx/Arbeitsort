@@ -5,8 +5,6 @@ import de.montagezeit.app.data.local.entity.WorkEntry
 
 object WorkEntryDerivedStateNormalizer {
 
-    private const val CONFIRMATION_SOURCE_DERIVED_STATE = "DERIVED_STATE"
-
     fun normalize(
         entry: WorkEntry,
         travelLegs: List<TravelLeg>,
@@ -32,7 +30,7 @@ object WorkEntryDerivedStateNormalizer {
                     confirmationAt = entry.confirmationAt ?: now,
                     confirmationSource = entry.confirmationSource
                         ?.takeIf(String::isNotBlank)
-                        ?: CONFIRMATION_SOURCE_DERIVED_STATE,
+                        ?: ConfirmationSources.DERIVED_STATE,
                     mealIsArrivalDeparture = mealSnapshot.isArrivalDeparture,
                     mealBreakfastIncluded = mealSnapshot.breakfastIncluded,
                     mealAllowanceBaseCents = mealSnapshot.baseCents,
@@ -55,7 +53,7 @@ object WorkEntryDerivedStateNormalizer {
                 confirmationAt = entry.confirmationAt ?: now,
                 confirmationSource = entry.confirmationSource
                     ?.takeIf(String::isNotBlank)
-                    ?: entry.dayType.name,
+                    ?: ConfirmationSources.DERIVED_STATE,
                 mealIsArrivalDeparture = mealSnapshot.isArrivalDeparture,
                 mealBreakfastIncluded = mealSnapshot.breakfastIncluded,
                 mealAllowanceBaseCents = mealSnapshot.baseCents,

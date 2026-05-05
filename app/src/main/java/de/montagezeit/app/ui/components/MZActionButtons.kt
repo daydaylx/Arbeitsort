@@ -3,8 +3,6 @@ package de.montagezeit.app.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -24,8 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,9 +31,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
-import de.montagezeit.app.ui.theme.glassPrimaryButtonBorderBrush
-import de.montagezeit.app.ui.theme.glassPrimaryButtonBrush
-import de.montagezeit.app.ui.theme.panelBorderBrush
 
 private const val BUTTON_PRESS_ANIMATION_MS = 120
 private const val BUTTON_PRESSED_SCALE = 0.98f
@@ -61,9 +54,8 @@ fun PrimaryActionButton(
         Modifier
     }
     val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    val useGlassChrome = colors == null
     val resolvedColors = colors ?: ButtonDefaults.buttonColors(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary
     )
     val interactionSource = remember { MutableInteractionSource() }
@@ -79,23 +71,6 @@ fun PrimaryActionButton(
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
-        }
-        .let { baseModifier ->
-            if (useGlassChrome) {
-                baseModifier
-                    .clip(resolvedShape)
-                    .background(
-                        brush = MaterialTheme.colorScheme.glassPrimaryButtonBrush,
-                        shape = resolvedShape
-                    )
-                    .border(
-                        width = MZTokens.PanelBorderWidth,
-                        brush = MaterialTheme.colorScheme.glassPrimaryButtonBorderBrush,
-                        shape = resolvedShape
-                    )
-            } else {
-                baseModifier
-            }
         }
 
     Button(
@@ -146,16 +121,14 @@ fun SecondaryActionButton(
         Modifier
     }
     val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    val useGlassChrome = colors == null
     val resolvedColors = colors ?: ButtonDefaults.outlinedButtonColors(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
     )
-    val resolvedBorder = if (useGlassChrome) {
-        BorderStroke(MZTokens.PanelBorderWidth, MaterialTheme.colorScheme.panelBorderBrush)
-    } else {
-        ButtonDefaults.outlinedButtonBorder(enabled = enabled && !isLoading)
-    }
+    val resolvedBorder = BorderStroke(
+        MZTokens.PanelBorderWidth,
+        MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal)
+    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -176,18 +149,6 @@ fun SecondaryActionButton(
             this.alpha = alpha
         }
         .heightIn(min = minHeight)
-        .let { baseModifier ->
-            if (useGlassChrome) {
-                baseModifier
-                    .clip(resolvedShape)
-                    .background(
-                        color = Color.White.copy(alpha = 0.10f),
-                        shape = resolvedShape
-                    )
-            } else {
-                baseModifier
-            }
-        }
 
     OutlinedButton(
         onClick = onClick,
@@ -237,7 +198,9 @@ fun TertiaryActionButton(
         Modifier
     }
     val resolvedShape = shape ?: RoundedCornerShape(AccessibilityDefaults.ButtonCornerRadius)
-    val resolvedColors = colors ?: ButtonDefaults.textButtonColors()
+    val resolvedColors = colors ?: ButtonDefaults.textButtonColors(
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(

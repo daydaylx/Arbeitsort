@@ -17,6 +17,7 @@ import de.montagezeit.app.domain.usecase.RecordCheckIn
 import de.montagezeit.app.domain.usecase.ConfirmWorkDay
 import de.montagezeit.app.data.preferences.ReminderFlagsStore
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.notification.ConfirmationReminderLimiter
 import de.montagezeit.app.notification.ReminderActions
 import de.montagezeit.app.notification.ReminderNotificationManager
@@ -101,6 +102,9 @@ class CheckInActionService : Service() {
             ReminderActions.ACTION_MARK_DAY_OFF -> R.string.notification_processing_mark_day_off
             else -> null
         }
+
+        internal fun foregroundNotificationTextRes(action: String?): Int =
+            processingNotificationTextRes(action) ?: R.string.notification_processing_generic
     }
 
     override fun onCreate() {
@@ -196,7 +200,8 @@ class CheckInActionService : Service() {
 
             ReminderActions.ACTION_CONFIRM_WORK_DAY -> {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
-                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
+                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE)
+                    ?: ConfirmationSources.NOTIFICATION
 
                 startForegroundForAction(intent.action)
 
@@ -218,7 +223,8 @@ class CheckInActionService : Service() {
 
             ReminderActions.ACTION_CONFIRM_OFF_DAY -> {
                 val date = parseActionDate(intent) ?: return START_NOT_STICKY
-                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE) ?: "NOTIFICATION"
+                val source = intent.getStringExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE)
+                    ?: ConfirmationSources.NOTIFICATION
 
                 startForegroundForAction(intent.action)
 
@@ -278,7 +284,7 @@ class CheckInActionService : Service() {
                 serviceScope.launch {
                     operationMutex.withLock {
                         try {
-                            confirmOffDay(date, source = "NOTIFICATION")
+                            confirmOffDay(date, source = ConfirmationSources.NOTIFICATION)
                             showToast(R.string.toast_day_marked_off)
                             markReminderFlags(date)
                             notificationManager.cancelMorningReminder()
@@ -346,7 +352,7 @@ class CheckInActionService : Service() {
     }
 
     private fun startForegroundForAction(action: String?) {
-        val textRes = processingNotificationTextRes(action) ?: return
+        val textRes = foregroundNotificationTextRes(action)
         startForeground(NOTIFICATION_ID, createProcessingNotification(getString(textRes)))
     }
 

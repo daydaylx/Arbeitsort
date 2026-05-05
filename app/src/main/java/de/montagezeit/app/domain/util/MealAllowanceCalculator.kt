@@ -25,6 +25,9 @@ object MealAllowanceCalculator {
     private fun isExcludedLocation(locationLabel: String) =
         locationLabel.trim().lowercase() == EXCLUDED_LOCATION
 
+    fun isLocationEligible(locationLabel: String?): Boolean =
+        !isExcludedLocation(locationLabel?.trim() ?: "")
+
     data class Result(val baseCents: Int, val amountCents: Int)
     data class Snapshot(
         val isArrivalDeparture: Boolean,

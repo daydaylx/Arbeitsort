@@ -9,6 +9,7 @@ import de.montagezeit.app.diagnostics.DiagnosticCategory
 import de.montagezeit.app.diagnostics.DiagnosticTraceRequest
 import de.montagezeit.app.diagnostics.redactedTextSummary
 import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.resolveWorkScheduleDefaults
 import kotlinx.coroutines.flow.first
@@ -28,10 +29,6 @@ class RecordDailyManualCheckIn(
     private val workEntryDao: WorkEntryRepository,
     private val reminderSettingsManager: ReminderSettingsManager
 ) {
-
-    companion object {
-        private const val CONFIRMATION_SOURCE_UI = "UI"
-    }
 
     suspend operator fun invoke(input: DailyManualCheckInInput): WorkEntry {
         val trace = AppDiagnosticsRuntime.startTrace(
@@ -109,7 +106,7 @@ class RecordDailyManualCheckIn(
                         mealAllowanceAmountCents = mealResult.amountCents,
                         confirmedWorkDay = true,
                         confirmationAt = now,
-                        confirmationSource = CONFIRMATION_SOURCE_UI,
+                        confirmationSource = ConfirmationSources.UI,
                         morningCapturedAt = existingEntry.morningCapturedAt ?: now,
                         eveningCapturedAt = existingEntry.eveningCapturedAt ?: now,
                         updatedAt = now
@@ -128,7 +125,7 @@ class RecordDailyManualCheckIn(
                         mealAllowanceAmountCents = mealResult.amountCents,
                         confirmedWorkDay = true,
                         confirmationAt = now,
-                        confirmationSource = CONFIRMATION_SOURCE_UI,
+                        confirmationSource = ConfirmationSources.UI,
                         morningCapturedAt = now,
                         eveningCapturedAt = now
                     )

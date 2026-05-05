@@ -24,7 +24,6 @@ enum class HistoryGrouping {
 internal data class HistoryUiSelectionSeed(
     val showCalendar: Boolean,
     val showMonths: Boolean,
-    val calendarMode: CalendarMode,
     val selectedDate: LocalDate,
     val selectedMonth: YearMonth
 )
@@ -48,12 +47,7 @@ internal fun historyGroupingForOverviewPeriod(period: OverviewPeriod): HistoryGr
 internal fun historySelectionSeedForRequest(request: HistoryOpenRequest): HistoryUiSelectionSeed =
     HistoryUiSelectionSeed(
         showCalendar = false,
-        showMonths = request.grouping == HistoryGrouping.MONTH,
-        calendarMode = if (request.grouping == HistoryGrouping.MONTH) {
-            CalendarMode.MONTH
-        } else {
-            CalendarMode.WEEK
-        },
+        showMonths = false,
         selectedDate = request.anchorDate,
         selectedMonth = YearMonth.from(request.anchorDate)
     )

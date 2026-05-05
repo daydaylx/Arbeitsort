@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.ui.theme.MZTokens
-import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelStrongColor
 
 @Composable
@@ -51,42 +50,55 @@ fun MZInlineNotice(
     action: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val palette = statusPalette(type)
-    MZAppPanel(
-        modifier = modifier,
-        emphasized = type == StatusType.ERROR
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = palette.containerColor,
+        contentColor = palette.accentColor,
+        shape = RoundedCornerShape(MZTokens.RadiusCard),
+        border = BorderStroke(
+            MZTokens.PanelBorderWidth,
+            palette.accentColor.copy(alpha = if (type == StatusType.NEUTRAL) 0.10f else 0.22f)
+        )
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = when (type) {
-                    StatusType.SUCCESS -> Icons.Default.CheckCircle
-                    StatusType.WARNING -> Icons.Default.Warning
-                    StatusType.ERROR -> Icons.Default.Error
-                    StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
-                },
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = palette.accentColor
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = when (type) {
+                        StatusType.SUCCESS -> Icons.Default.CheckCircle
+                        StatusType.WARNING -> Icons.Default.Warning
+                        StatusType.ERROR -> Icons.Default.Error
+                        StatusType.INFO, StatusType.NEUTRAL -> Icons.Default.Info
+                    },
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(top = 1.dp)
+                        .size(18.dp),
+                    tint = palette.accentColor
                 )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            action?.invoke(this)
         }
-        action?.invoke(this)
     }
 }
 
@@ -300,14 +312,14 @@ fun MZAlertDialog(
         modifier = modifier
             .border(
                 width = 1.dp,
-                brush = MaterialTheme.colorScheme.panelBorderBrush,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal),
                 shape = RoundedCornerShape(MZTokens.RadiusExtraLarge)
             ),
-        containerColor = MaterialTheme.colorScheme.panelStrongColor
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
 
-/** Glass-themed SnackbarHost — matches the app's dark palette and border radius. */
+/** SnackbarHost matched to the app's solid dark palette and border radius. */
 @Composable
 fun MZSnackbarHost(
     hostState: SnackbarHostState,
@@ -323,7 +335,7 @@ fun MZSnackbarHost(
             containerColor = MaterialTheme.colorScheme.panelStrongColor,
             modifier = Modifier.border(
                 width = 1.dp,
-                brush = MaterialTheme.colorScheme.panelBorderBrush,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaNormal),
                 shape = RoundedCornerShape(MZTokens.RadiusCard)
             ),
             contentColor = MaterialTheme.colorScheme.onSurface,

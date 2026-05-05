@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.MainActivity
 import de.montagezeit.app.R
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.service.CheckInActionService
 import de.montagezeit.app.work.ReminderType
 import java.time.LocalDate
@@ -533,7 +534,7 @@ class ReminderNotificationManager @Inject constructor(
             action = ReminderActions.ACTION_CONFIRM_WORK_DAY
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
             putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_CONFIRM_WORK_DAY)
-            putExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE, "NOTIFICATION")
+            putExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE, ConfirmationSources.NOTIFICATION)
         }
 
         return PendingIntent.getService(
@@ -555,7 +556,7 @@ class ReminderNotificationManager @Inject constructor(
             action = ReminderActions.ACTION_CONFIRM_OFF_DAY
             putExtra(ReminderActions.EXTRA_DATE, date.toString())
             putExtra(ReminderActions.EXTRA_ACTION_TYPE, ReminderActions.ACTION_CONFIRM_OFF_DAY)
-            putExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE, "NOTIFICATION")
+            putExtra(ReminderActions.EXTRA_CONFIRMATION_SOURCE, ConfirmationSources.NOTIFICATION)
         }
 
         return PendingIntent.getService(

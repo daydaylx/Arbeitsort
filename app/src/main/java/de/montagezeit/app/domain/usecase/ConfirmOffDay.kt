@@ -2,6 +2,7 @@ package de.montagezeit.app.domain.usecase
 
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.domain.util.createConfirmedOffDayEntry
 import de.montagezeit.app.domain.util.withConfirmedOffDay
 import java.time.LocalDate
@@ -16,11 +17,7 @@ import java.time.LocalDate
 class ConfirmOffDay(
     private val workEntryDao: WorkEntryRepository
 ) {
-    
-    companion object {
-        private const val CONFIRMATION_SOURCE_NOTIFICATION = "NOTIFICATION"
-    }
-    
+
     /**
      * Bestätigt, dass heute ein freier Tag ist
      * 
@@ -30,7 +27,7 @@ class ConfirmOffDay(
      */
     suspend operator fun invoke(
         date: LocalDate,
-        source: String = CONFIRMATION_SOURCE_NOTIFICATION
+        source: String = ConfirmationSources.NOTIFICATION
     ): WorkEntry {
         val now = System.currentTimeMillis()
         val dayLocationLabel = ""

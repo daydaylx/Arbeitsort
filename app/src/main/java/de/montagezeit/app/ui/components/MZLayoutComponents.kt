@@ -25,9 +25,9 @@ object AccessibilityDefaults {
     val IconButtonSize = 48.dp
 }
 
-private object GlassLayoutDefaults {
-    const val StatusSurfaceAlpha = 0.10f
-    const val NeutralSurfaceAlpha = 0.70f
+private object SolidLayoutDefaults {
+    const val StatusSurfaceAlpha = 0.12f
+    const val NeutralSurfaceAlpha = 1.0f
 }
 
 enum class StatusType {
@@ -44,7 +44,7 @@ internal data class StatusPalette(
 )
 
 /**
- * Consistent OutlinedTextField colors for the glass dark theme.
+ * Consistent OutlinedTextField colors for the solid dark theme.
  * Focused state stays orange (primary), unfocused border uses neutral slate outline.
  */
 @Composable
@@ -52,29 +52,36 @@ fun mzOutlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.col
     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     cursorColor = MaterialTheme.colorScheme.primary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    disabledContainerColor = MaterialTheme.colorScheme.surface,
+    errorContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
 
 @Composable
 internal fun statusPalette(status: StatusType): StatusPalette = when (status) {
     StatusType.SUCCESS -> StatusPalette(
-        containerColor = GlassSuccess.copy(alpha = GlassLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassSuccess.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
         accentColor = GlassSuccess
     )
     StatusType.WARNING -> StatusPalette(
-        containerColor = GlassWarning.copy(alpha = GlassLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassWarning.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
         accentColor = GlassWarning
     )
     StatusType.ERROR -> StatusPalette(
-        containerColor = GlassError.copy(alpha = GlassLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassError.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
         accentColor = GlassError
     )
     StatusType.INFO -> StatusPalette(
-        containerColor = GlassInfo.copy(alpha = GlassLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassInfo.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
         accentColor = GlassInfo
     )
     StatusType.NEUTRAL -> StatusPalette(
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = GlassLayoutDefaults.NeutralSurfaceAlpha),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SolidLayoutDefaults.NeutralSurfaceAlpha),
         accentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

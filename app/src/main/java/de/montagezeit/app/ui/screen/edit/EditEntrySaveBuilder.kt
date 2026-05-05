@@ -2,10 +2,10 @@ package de.montagezeit.app.ui.screen.edit
 
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
-import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.TravelSource
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.usecase.EntryStatusResolver
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.domain.util.transitionToDayType
 import java.time.LocalDate
 import java.time.LocalTime
@@ -20,10 +20,6 @@ data class EditEntryPendingSave(
 class EditEntrySaveBuilder @Inject constructor(
     private val draftRules: EditEntryDraftRules
 ) {
-    companion object {
-        private const val CONFIRMATION_SOURCE_EDIT_SAVE = "EDIT_SAVE"
-    }
-
     fun build(
         currentState: EditUiState,
         data: EditFormData,
@@ -90,7 +86,7 @@ class EditEntrySaveBuilder @Inject constructor(
                     draftEntry.copy(
                         confirmedWorkDay = true,
                         confirmationAt = draftEntry.confirmationAt ?: now,
-                        confirmationSource = draftEntry.confirmationSource ?: CONFIRMATION_SOURCE_EDIT_SAVE
+                        confirmationSource = draftEntry.confirmationSource ?: ConfirmationSources.EDIT_SAVE
                     )
                 } else {
                     draftEntry.copy(
@@ -120,7 +116,7 @@ class EditEntrySaveBuilder @Inject constructor(
             TravelLeg(
                 workEntryDate = date,
                 sortOrder = index,
-                category = inferCategory(index, normalizedTravelLegs.size),
+                category = leg.category,
                 startAt = leg.startTime?.let { toEpochMillis(date, it, zoneId) },
                 arriveAt = leg.arriveTime?.let {
                     val arriveDate = if (isOvernightLeg) date.plusDays(1) else date
@@ -145,12 +141,4 @@ class EditEntrySaveBuilder @Inject constructor(
             .toEpochMilli()
     }
 
-    private fun inferCategory(index: Int, totalSize: Int): TravelLegCategory {
-        return when {
-            totalSize == 1 -> TravelLegCategory.OTHER
-            index == 0 -> TravelLegCategory.OUTBOUND
-            index == totalSize - 1 -> TravelLegCategory.RETURN
-            else -> TravelLegCategory.INTERSITE
-        }
-    }
 }

@@ -5,12 +5,12 @@ package de.montagezeit.app.ui.theme
 import androidx.compose.ui.unit.dp
 
 object MZTokens {
-    // Radius — aligned with sshterm scale (12, 18, 24, 30, 36 dp)
-    val RadiusExtraSmall = 12.dp
-    val RadiusSmall      = 18.dp
-    val RadiusMedium     = 24.dp
-    val RadiusLarge      = 30.dp
-    val RadiusExtraLarge = 36.dp
+    // Radius
+    val RadiusExtraSmall = 6.dp
+    val RadiusSmall      = 8.dp
+    val RadiusMedium     = 12.dp
+    val RadiusLarge      = 16.dp
+    val RadiusExtraLarge = 22.dp
 
     // Semantic Radius Aliases
     val RadiusCard   = RadiusMedium
@@ -24,35 +24,25 @@ object MZTokens {
     // Border
     val PanelBorderWidth = 1.dp
 
-    // Surface hierarchy — transparent glass over solid orbs
+    // Surface hierarchy
     const val BorderAlphaSubtle   = 0.08f
-    const val BorderAlphaNormal   = 0.14f
-    const val BorderAlphaEmphasis = 0.22f
-    const val CardSurfaceAlpha    = 0.38f
-    const val GlassBorderAlpha    = 0.15f
-    const val GlassBorderFadeAlpha = 0.03f
-    const val GlassHighlightAlpha = 0.18f
-    const val GlassInnerGlowAlpha = 0.06f
+    const val BorderAlphaNormal   = 0.18f
+    const val BorderAlphaEmphasis = 0.30f
+    const val CardSurfaceAlpha    = 1.0f
 
     // Content alphas
-    const val AlphaGlassSheet   = 0.88f  // Bottom Sheets und Modal-Overlays
-    const val AlphaGlassOverlay = 0.85f  // Screen-Hintergrund-Overlays
+    const val AlphaSheet   = 1.0f
+    const val AlphaOverlay = 0.96f
     const val AlphaSecondary    = 0.70f  // Sekundärer Text und Icons
     const val AlphaDisabled     = 0.40f  // Disabled-State
-    const val AlphaSubtle       = 0.12f  // Hover-Overlays, subtile Trenner
-
-    // Background Orbs — solid bodies visible through glass panels
-    const val OrbAlphaPrimary       = 0.55f
-    const val OrbAlphaSecondary     = 0.40f
-    val OrbPrimaryRadiusDp    = 220.dp // Matched to sshterm (220 dp)
-    val OrbSecondaryRadiusDp  = 280.dp // Matched to sshterm (280 dp)
+    const val AlphaSubtle       = 0.08f  // Hover-Overlays, subtile Trenner
 
     // Spacing
-    val ScreenPadding  = 20.dp // Matched to sshterm (20 dp)
-    val CardSpacing    = 16.dp // Between cards — wider than ContentSpacing for clearer rhythm
-    val ContentSpacing = 12.dp // Within panels (vertical arrangement)
-    val InnerPadding   = 20.dp // Matched to sshterm (20 dp)
-    val HeroPadding    = 20.dp // HeroPanel uniform padding (was 22h/24v)
+    val ScreenPadding  = 16.dp
+    val CardSpacing    = 12.dp
+    val ContentSpacing = 10.dp
+    val InnerPadding   = 16.dp
+    val HeroPadding    = 18.dp
 
     // Elevation
     val CardElevation = 0.dp

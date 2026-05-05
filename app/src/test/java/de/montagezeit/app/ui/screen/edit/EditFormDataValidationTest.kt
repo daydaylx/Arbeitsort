@@ -2,11 +2,16 @@ package de.montagezeit.app.ui.screen.edit
 
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.TravelLegCategory
+import de.montagezeit.app.data.local.entity.WorkEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 
 class EditFormDataValidationTest {
 
@@ -430,6 +435,72 @@ class EditFormDataValidationTest {
 
         assertTrue("WORK-Tag mit Nachtschicht darf keinen WorkEndBeforeStart-Fehler erzeugen",
             errors.none { it is ValidationError.WorkEndBeforeStart })
+    }
+
+    @Test
+    fun `fromEntry keeps travel leg category in edit form`() {
+        val date = LocalDate.of(2026, 5, 5)
+        val entry = WorkEntry(date = date, dayType = DayType.WORK, dayLocationLabel = "Baustelle")
+        val formData = EditFormData.fromEntry(
+            entry = entry,
+            travelLegs = listOf(
+                TravelLeg(
+                    workEntryDate = date,
+                    sortOrder = 0,
+                    category = TravelLegCategory.RETURN
+                )
+            )
+        )
+
+        assertEquals(TravelLegCategory.RETURN, formData.travelLegs.single().category)
+    }
+
+    @Test
+    fun `save builder keeps selected return travel category`() {
+        val date = LocalDate.of(2026, 5, 5)
+        val pendingSave = EditEntrySaveBuilder(EditEntryDraftRules()).build(
+            currentState = EditUiState.NewEntry(date),
+            data = validFormData(
+                travelLegs = listOf(
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(17, 0),
+                        arriveTime = LocalTime.of(18, 0),
+                        category = TravelLegCategory.RETURN
+                    )
+                )
+            ),
+            zoneId = ZoneId.systemDefault()
+        )
+
+        assertEquals(TravelLegCategory.RETURN, pendingSave!!.legs.single().category)
+    }
+
+    @Test
+    fun `save builder keeps outbound and return categories for both travel legs`() {
+        val date = LocalDate.of(2026, 5, 5)
+        val pendingSave = EditEntrySaveBuilder(EditEntryDraftRules()).build(
+            currentState = EditUiState.NewEntry(date),
+            data = validFormData(
+                travelLegs = listOf(
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(6, 0),
+                        arriveTime = LocalTime.of(7, 0),
+                        category = TravelLegCategory.OUTBOUND
+                    ),
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(17, 0),
+                        arriveTime = LocalTime.of(18, 0),
+                        category = TravelLegCategory.RETURN
+                    )
+                )
+            ),
+            zoneId = ZoneId.systemDefault()
+        )
+
+        assertEquals(
+            listOf(TravelLegCategory.OUTBOUND, TravelLegCategory.RETURN),
+            pendingSave!!.legs.map { it.category }
+        )
     }
 
     private fun validFormData(

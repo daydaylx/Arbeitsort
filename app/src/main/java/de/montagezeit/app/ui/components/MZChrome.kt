@@ -42,11 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -58,18 +54,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
-import de.montagezeit.app.ui.theme.backgroundBrush
-import de.montagezeit.app.ui.theme.glassAccentBorderBrush
-import de.montagezeit.app.ui.theme.glassAccentBrush
-import de.montagezeit.app.ui.theme.glassHighlightBrush
-import de.montagezeit.app.ui.theme.heroBrush
 import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelColor
 import de.montagezeit.app.ui.theme.panelStrongColor
 
 /**
  * Universal screen wrapper with TopBar, Backdrop, optional FAB.
- * Backdrop uses the background brush and glow circles as per sshterm.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,10 +180,7 @@ fun MZHomeShellScaffold(
     }
 }
 
-/**
- * Atmospheric background with glow effects and vertical gradient.
- * Matches sshterm specifications: glow circles top-left (220dp) and bottom-right (280dp).
- */
+/** Solid app background for the quiet dark visual system. */
 @Composable
 fun MZAppBackdrop(
     modifier: Modifier = Modifier,
@@ -203,38 +190,8 @@ fun MZAppBackdrop(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(colorScheme.backgroundBrush)
+            .background(colorScheme.background)
     ) {
-        // Ambient Glow Orbs for Glassmorphism
-        // Solid color orb — top-left, primary (orange)
-        Box(
-            modifier = Modifier
-                .offset(x = (-100).dp, y = (-80).dp)
-                .size(MZTokens.OrbPrimaryRadiusDp * 2)
-                .blur(20.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(colorScheme.primary.copy(alpha = MZTokens.OrbAlphaPrimary), Color.Transparent)
-                    )
-                )
-        )
-
-        // Solid color orb — bottom-right, secondary (teal)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 100.dp, y = 100.dp)
-                .size(MZTokens.OrbSecondaryRadiusDp * 2)
-                .blur(24.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            colorScheme.secondary.copy(alpha = MZTokens.OrbAlphaSecondary),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
         content()
     }
 }
@@ -281,14 +238,7 @@ private fun MZHomeTabBar(
                     .height(44.dp)
                     .padding(horizontal = 4.dp)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
-                    .background(
-                        brush = Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
-                            )
-                        )
-                    )
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 tabs.forEachIndexed { index, label ->
@@ -348,10 +298,7 @@ private fun RowScope.MZTabItem(
     }
 }
 
-/**
- * Featured intro area per screen.
- * Brush background, 1 dp border, 30dp radius, 20dp padding.
- */
+/** Featured intro area per screen. */
 @Composable
 fun MZHeroPanel(
     modifier: Modifier = Modifier,
@@ -362,10 +309,7 @@ fun MZHeroPanel(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MZTokens.RadiusHero))
-            .background(colorScheme.heroBrush)
-            .drawBehind {
-                drawRect(brush = colorScheme.glassHighlightBrush)
-            }
+            .background(colorScheme.panelStrongColor)
             .border(
                 width = MZTokens.PanelBorderWidth,
                 brush = colorScheme.panelBorderBrush,
@@ -414,10 +358,7 @@ fun MZSectionIntro(
     }
 }
 
-/**
- * Standard container for content blocks.
- * surface.copy(0.94f), 1 dp border panelBorder, 24dp radius, 20dp padding.
- */
+/** Standard container for content blocks. */
 @Composable
 fun MZAppPanel(
     modifier: Modifier = Modifier,
@@ -432,15 +373,12 @@ fun MZAppPanel(
             .fillMaxWidth()
             .clip(RoundedCornerShape(MZTokens.RadiusMedium))
             .background(backgroundColor)
-            .drawBehind {
-                drawRect(brush = colorScheme.glassHighlightBrush)
-            }
             .border(
                 width = MZTokens.PanelBorderWidth,
                 brush = colorScheme.panelBorderBrush,
                 shape = RoundedCornerShape(MZTokens.RadiusMedium)
             )
-            .padding(20.dp)
+            .padding(MZTokens.InnerPadding)
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(MZTokens.ContentSpacing),
@@ -489,19 +427,19 @@ fun MZMetricChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(MaterialTheme.colorScheme.glassAccentBrush(accentColor))
+            .background(accentColor.copy(alpha = 0.08f))
             .border(
                 width = MZTokens.PanelBorderWidth,
-                brush = MaterialTheme.colorScheme.glassAccentBorderBrush(accentColor),
+                color = accentColor.copy(alpha = 0.18f),
                 shape = RoundedCornerShape(MZTokens.RadiusSmall)
             )
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column(horizontalAlignment = Alignment.Start) {
             Text(
                 text = label.uppercase(),
                 style = MaterialTheme.typography.labelLarge,
-                color = accentColor,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

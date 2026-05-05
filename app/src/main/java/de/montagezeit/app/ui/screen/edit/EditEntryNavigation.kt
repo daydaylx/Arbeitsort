@@ -85,6 +85,7 @@ internal fun EditStickySaveBar(
     onSave: () -> Unit
 ) {
     MZAppPanel(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         emphasized = true
     ) {
         Column(

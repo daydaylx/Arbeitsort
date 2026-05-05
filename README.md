@@ -8,7 +8,7 @@ Verbindliche Projektdokumentation:
 - `README.md`
 - `docs/ARCHITECTURE.md`
 
-Andere Dateien unter `docs/` sind nur ergänzende oder historische Referenzen. Wenn sich Doku und Code widersprechen, gilt der Code.
+Andere Dateien unter `docs/` sind nur ergänzende Referenzen. Wenn sich Doku und Code widersprechen, gilt der Code.
 
 ## Projektstatus
 
@@ -222,4 +222,4 @@ Zusätzlich relevant:
 
 - Reminder sind WorkManager-basiert und damit bewusst fensterbasiert, nicht exakt alarmgenau.
 - Hersteller-Energiesparmechanismen und Doze können die tatsächliche Ausführung verzögern.
-- Historische Doku unter `docs/AUDITS/` und `docs/ARCHIVE/` kann bewusst ältere Aussagen enthalten; für den Ist-Zustand sind README, `docs/ARCHITECTURE.md` und der Code maßgeblich.
+- Offene Audit- und UI-Punkte sind in `docs/AUDITS/CURRENT_STATUS.md` zusammengefasst; veraltete Audit-, Review- und Archivdokumente werden nicht separat gepflegt.

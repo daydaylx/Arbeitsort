@@ -6,8 +6,8 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.WorkEntryDerivedStateNormalizer
+import java.util.LinkedHashMap
 import java.time.LocalDate
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +18,12 @@ import kotlinx.coroutines.sync.withLock
 class RoomWorkEntryRepository @Inject constructor(
     private val workEntryDao: WorkEntryDao
 ) : WorkEntryRepository {
-    private val writeMutexes = ConcurrentHashMap<LocalDate, Mutex>()
+    private val writeMutexesGuard = Any()
+    private val writeMutexes = LinkedHashMap<LocalDate, DateMutex>(
+        MAX_CACHED_DATE_MUTEXES,
+        LOAD_FACTOR,
+        true
+    )
 
     override suspend fun getByDate(date: LocalDate): WorkEntry? = workEntryDao.getByDate(date)
 
@@ -122,8 +127,17 @@ class RoomWorkEntryRepository @Inject constructor(
     }
 
     private suspend fun <T> withDateLock(date: LocalDate, block: suspend () -> T): T {
-        val mutex = writeMutexes.computeIfAbsent(date) { Mutex() }
-        return mutex.withLock { block() }
+        val dateMutex = synchronized(writeMutexesGuard) {
+            writeMutexes.getOrPut(date) { DateMutex() }.also { it.references++ }
+        }
+        try {
+            return dateMutex.mutex.withLock { block() }
+        } finally {
+            synchronized(writeMutexesGuard) {
+                dateMutex.references--
+                trimUnusedDateMutexes()
+            }
+        }
     }
 
     private suspend fun <T> withDateLocks(dates: List<LocalDate>, block: suspend () -> T): T {
@@ -140,5 +154,27 @@ class RoomWorkEntryRepository @Inject constructor(
         return withDateLock(dates[index]) {
             withDateLocks(dates, index + 1, block)
         }
+    }
+
+    private fun trimUnusedDateMutexes() {
+        if (writeMutexes.size <= MAX_CACHED_DATE_MUTEXES) return
+
+        val iterator = writeMutexes.entries.iterator()
+        while (writeMutexes.size > MAX_CACHED_DATE_MUTEXES && iterator.hasNext()) {
+            val entry = iterator.next()
+            if (entry.value.references == 0) {
+                iterator.remove()
+            }
+        }
+    }
+
+    private class DateMutex(
+        val mutex: Mutex = Mutex(),
+        var references: Int = 0
+    )
+
+    private companion object {
+        private const val MAX_CACHED_DATE_MUTEXES = 128
+        private const val LOAD_FACTOR = 0.75f
     }
 }

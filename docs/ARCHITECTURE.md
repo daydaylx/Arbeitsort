@@ -21,9 +21,9 @@ Layer:
 
 ### 2.1 Persistence
 
-- Datenbank: `AppDatabase` (`version = 14`)
+- Datenbank: `AppDatabase` (`version = 16`)
 - Haupttabellen: `work_entries`, `travel_legs` (normalisiert in v13→14)
-- Migrationen: `MIGRATION_1_2` bis `MIGRATION_13_14`
+- Migrationen: `MIGRATION_1_2` bis `MIGRATION_15_16`
 - Backup: `android:allowBackup="false"` und `android:dataExtractionRules="@xml/data_extraction_rules"` schließen alle Domains (Database, SharedPreferences, Files) von Cloud-Backup und Geräteübertragung aus — Daten bleiben ausschließlich lokal.
 
 ### 2.2 Reminder & Scheduling
@@ -34,7 +34,7 @@ Dateien:
 - `work/WindowCheckWorker.kt`
 - `work/ReminderLaterWorker.kt`
 - `notification/ReminderNotificationManager.kt`
-- `handler/CheckInActionService.kt`
+- `service/CheckInActionService.kt`
 
 Strategie:
 

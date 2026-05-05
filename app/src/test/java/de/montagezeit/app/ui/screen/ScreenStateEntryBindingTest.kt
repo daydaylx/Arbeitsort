@@ -24,7 +24,6 @@ class ScreenStateEntryBindingTest {
             selectedEntry = staleEntry,
             selectedDate = selectedDate,
             todayDate = selectedDate,
-            weekDaysUi = emptyList(),
             loadingActions = emptySet()
         )
 
@@ -42,7 +41,6 @@ class ScreenStateEntryBindingTest {
             selectedEntry = currentEntry,
             selectedDate = selectedDate,
             todayDate = selectedDate,
-            weekDaysUi = emptyList(),
             loadingActions = emptySet()
         )
 
@@ -59,7 +57,6 @@ class ScreenStateEntryBindingTest {
             selectedEntry = null,
             selectedDate = selectedDate,
             todayDate = selectedDate,
-            weekDaysUi = emptyList(),
             loadingActions = emptySet()
         )
 

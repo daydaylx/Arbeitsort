@@ -26,8 +26,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.ui.theme.MZTokens
-import de.montagezeit.app.ui.theme.glassSelectionBorderBrush
-import de.montagezeit.app.ui.theme.glassSelectionBrush
 import de.montagezeit.app.ui.theme.panelBorderBrush
 import de.montagezeit.app.ui.theme.panelStrongColor
 
@@ -63,22 +61,23 @@ fun <T> MZSegmentedControl(
             val selected = option.value == selectedValue
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
+            val selectedContainer = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
                     .then(
                         if (selected) {
-                            Modifier.background(MaterialTheme.colorScheme.glassSelectionBrush)
+                            Modifier.background(selectedContainer)
                         } else {
-                            Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.01f))
+                            Modifier.background(MaterialTheme.colorScheme.surface)
                         }
                     )
                     .then(
                         if (selected) {
                             Modifier.border(
                                 width = 1.dp,
-                                brush = MaterialTheme.colorScheme.glassSelectionBorderBrush,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                                 shape = RoundedCornerShape(MZTokens.RadiusChip)
                             )
                         } else {
@@ -104,7 +103,7 @@ fun <T> MZSegmentedControl(
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                     color = if (selected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     }

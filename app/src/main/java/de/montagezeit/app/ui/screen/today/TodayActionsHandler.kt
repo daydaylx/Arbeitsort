@@ -9,6 +9,7 @@ import de.montagezeit.app.domain.usecase.DeleteDayEntry
 import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.SetDayLocation
+import de.montagezeit.app.domain.util.ConfirmationSources
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,7 +55,7 @@ class TodayActionsHandler @Inject constructor(
         if (TodayAction.CONFIRM_OFFDAY in _loadingActions.value) return null
         addLoadingAction(TodayAction.CONFIRM_OFFDAY)
         return try {
-            confirmOffDay(selectedDate, source = "UI").also {
+            confirmOffDay(selectedDate, source = ConfirmationSources.UI).also {
                 clearDeletedEntryUndo()
                 _snackbarMessage.value = UiText.StringResource(R.string.toast_off_day_saved)
             }

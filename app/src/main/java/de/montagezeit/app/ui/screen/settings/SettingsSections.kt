@@ -626,53 +626,37 @@ private fun ExportSuccessCard(
     onShare: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    MZAppPanel(emphasized = true) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.export_success_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            MZStatusChip(
-                text = stringResource(R.string.export_success_status),
-                color = MaterialTheme.colorScheme.primary
-            )
+    val formatLabel = stringResource(
+        when (format) {
+            ExportFormat.PDF -> R.string.export_format_pdf
+            ExportFormat.CSV -> R.string.export_format_csv
         }
-
-        val formatLabel = stringResource(
-            when (format) {
-                ExportFormat.PDF -> R.string.export_format_pdf
-                ExportFormat.CSV -> R.string.export_format_csv
+    )
+    MZInlineNotice(
+        title = stringResource(R.string.export_success_title),
+        message = stringResource(R.string.export_success_format, formatLabel),
+        type = StatusType.SUCCESS,
+        action = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PrimaryActionButton(
+                    onClick = onShare,
+                    modifier = Modifier.weight(1f),
+                    content = { Text(stringResource(R.string.action_share)) }
+                )
+                SecondaryActionButton(
+                    onClick = onCopy,
+                    modifier = Modifier.weight(1f),
+                    content = { Text(stringResource(R.string.action_copy)) }
+                )
             }
-        )
-        Text(
-            text = stringResource(R.string.export_success_format, formatLabel),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            PrimaryActionButton(
-                onClick = onShare,
-                modifier = Modifier.weight(1f),
-                content = { Text(stringResource(R.string.action_share)) }
-            )
-            SecondaryActionButton(
-                onClick = onCopy,
-                modifier = Modifier.weight(1f),
-                content = { Text(stringResource(R.string.action_copy)) }
-            )
             TertiaryActionButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_close))
             }
         }
-    }
+    )
 }
 
 private fun copyExportUriToClipboard(context: Context, fileUri: Uri) {

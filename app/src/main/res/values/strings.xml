@@ -10,6 +10,7 @@
     <string name="notification_processing_confirm_day">Tag wird bestätigt…</string>
     <string name="notification_processing_mark_day_off">Tag als frei markieren…</string>
     <string name="notification_processing_remind_later">Erinnerung wird verschoben…</string>
+    <string name="notification_processing_generic">Aktion wird verarbeitet…</string>
 
     <!-- Reminder Notifications -->
     <string name="notification_channel_reminders">Check-in Erinnerungen</string>
@@ -105,8 +106,6 @@
     <string name="day_type_comp_time">Ausgleich</string>
     <string name="day_type_schulung">Schulung</string>
     <string name="day_type_lehrgang">Lehrgang</string>
-    <string name="today_location_morning">Morgens</string>
-    <string name="today_location_evening">Abends</string>
     <string name="day_location_label">Arbeitsort</string>
     <string name="overtime_actual_target">IST %1$s | SOLL %2$s</string>
     <string name="overtime_counted_days">Gezählte Tage: %1$d</string>
@@ -142,8 +141,6 @@
     <string name="overview_section_metrics_title">Kennzahlen</string>
     <string name="overview_section_metrics_support">Fahrzeit, Verpflegung und offene Tage im gleichen Panel-System</string>
     <string name="overview_action_required_title">Erfassung offen</string>
-    <string name="overview_quick_actions_title">Schnellzugriff</string>
-    <string name="overview_quick_actions_support">Springe direkt in den nächsten sinnvollen Bereich.</string>
     <string name="action_review_open_days">Offene Tage prüfen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_apply">Übernehmen</string>
@@ -160,11 +157,14 @@
     <string name="settings_group_general">Grundlage</string>
     <string name="settings_group_automation">Automatisierung</string>
     <string name="settings_group_data">Daten und Export</string>
+    <string name="settings_category_work_time">Arbeitszeit</string>
+    <string name="settings_category_reminders">Erinnerungen</string>
+    <string name="settings_category_free_days">Freie Tage</string>
+    <string name="settings_category_export">Export</string>
+    <string name="settings_category_system">System</string>
     <string name="settings_metric_schedule">Tag</string>
     <string name="settings_metric_profile">Profil</string>
     <string name="settings_setup_title">Einrichtung</string>
-    <string name="settings_quick_links_title">Schnellzugriff</string>
-    <string name="settings_quick_links_support">Springe direkt zu häufig genutzten Aufgabenbereichen.</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_battery_optimization">Akku-Optimierung</string>
     <string name="settings_work_times">Arbeitszeiten</string>
@@ -391,7 +391,6 @@
     <string name="history_summary_calendar">Kalender</string>
     <string name="history_summary_list">Liste</string>
     <string name="history_summary_month">Monat</string>
-    <string name="history_summary_week">Woche</string>
     <string name="history_week_label">KW %1$d · %2$s – %3$s</string>
     <string name="history_summary_months">Monate</string>
     <string name="history_summary_weeks">Wochen</string>
@@ -402,11 +401,11 @@
     <string name="history_metric_entries">Einträge</string>
     <string name="history_metric_workdays">Arbeitstage</string>
     <string name="history_metric_open">Offen</string>
+    <string name="history_entries_count">%1$d Einträge</string>
+    <string name="history_workdays_count">%1$d Arbeitstage</string>
     <string name="history_action_pick_date">Datum wählen</string>
     <string name="history_cd_prev_month">Vorheriger Monat</string>
     <string name="history_cd_next_month">Nächster Monat</string>
-    <string name="history_cd_prev_week">Vorherige Woche</string>
-    <string name="history_cd_next_week">Nächste Woche</string>
     <string name="history_week_header">KW %1$d · %2$s – %3$s</string>
     <string name="history_action_repeat">Wiederholen</string>
     <string name="history_weekday_mo">Mo</string>
@@ -427,12 +426,10 @@
     <string name="history_stat_work">Arbeit:</string>
     <string name="history_stat_travel">Reisezeit:</string>
     <string name="history_entry_total_paid">Gesamt: %1$s</string>
-    <string name="history_day_location_summary">%1$s: %2$s</string>
     <string name="history_travel_duration_inline">Fahrzeit %1$s</string>
     <string name="history_hours_only">%1$d Std.</string>
     <string name="history_hours_and_minutes">%1$dh %2$dmin</string>
     <string name="history_action_add_past_day">Vergangenen Tag hinzufügen</string>
-    <string name="history_label_no_checkin">Kein Check-in</string>
     <string name="history_batch_title">Bereich bearbeiten</string>
     <string name="history_batch_period">Zeitraum</string>
     <string name="history_batch_invalid_range">Das Enddatum muss nach dem Startdatum liegen.</string>
@@ -493,15 +490,21 @@
     <string name="edit_label_travel_arrival">Ankunft</string>
     <string name="edit_time_pick">Zeit wählen</string>
     <string name="edit_travel_duration">Fahrzeit: %1$s</string>
-    <string name="edit_label_from_optional">Von (Optional)</string>
+    <string name="edit_label_from_optional">Startort (optional)</string>
     <string name="edit_placeholder_start_location">Startort</string>
-    <string name="edit_label_to_optional">Nach (Optional)</string>
+    <string name="edit_label_to_optional">Zielort (optional)</string>
     <string name="edit_placeholder_destination">Zielort</string>
     <string name="edit_action_clear_all_travel">Alle löschen</string>
     <string name="edit_action_add_travel_leg">Fahrt hinzufügen</string>
     <string name="edit_travel_empty_title">Noch keine Fahrt erfasst</string>
     <string name="edit_travel_empty_hint">Füge eine Fahrt hinzu, wenn Reise- oder Fahrzeit bezahlt wird.</string>
     <string name="edit_travel_leg_title">Fahrt %1$d</string>
+    <string name="edit_travel_leg_intersite">Zwischenfahrt</string>
+    <string name="edit_travel_mode_none">Keine Fahrt</string>
+    <string name="edit_travel_mode_outbound">Hinweg</string>
+    <string name="edit_travel_mode_return">Rückweg</string>
+    <string name="edit_travel_mode_both">Hin+Rück</string>
+    <string name="edit_travel_mode_manual">Manuell</string>
     <string name="edit_travel_legacy_override">Altbestand ohne Zeitfenster: %1$d min</string>
     <string name="edit_section_location">Standort</string>
     <string name="edit_label_day_location_required">Arbeitsort</string>

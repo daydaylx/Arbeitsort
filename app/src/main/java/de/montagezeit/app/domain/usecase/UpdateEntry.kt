@@ -3,6 +3,7 @@ package de.montagezeit.app.domain.usecase
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
+import de.montagezeit.app.domain.util.ConfirmationSources
 
 /**
  * UseCase für manuelle Bearbeitung eines WorkEntry
@@ -40,7 +41,7 @@ class UpdateEntry(
             },
             confirmationSource = when {
                 entry.dayType != DayType.WORK -> entry.confirmationSource
-                shouldConfirmWorkDay -> entry.confirmationSource ?: "WORK_BLOCK"
+                shouldConfirmWorkDay -> entry.confirmationSource ?: ConfirmationSources.WORK_BLOCK
                 else -> null
             },
             updatedAt = now
