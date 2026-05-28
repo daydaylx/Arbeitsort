@@ -85,15 +85,6 @@ class AggregateWorkStats {
         val classifiedDays = eligibleEntries.map { resolved ->
             val entry = resolved.entry
             val status = resolved.status
-            trace?.event(
-                name = "aggregate_entry",
-                payload = mapOf(
-                    "classification" to status.classification.name,
-                    "workMinutes" to status.workMinutes,
-                    "travelMinutes" to status.travelMinutes,
-                    "entry" to entry.toSanitizedDiagnosticPayload()
-                )
-            )
             if (!MealAllowanceCalculator.isEligible(
                     dayType = entry.workEntry.dayType,
                     workMinutes = status.workMinutes,

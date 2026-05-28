@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -125,7 +126,7 @@ class HistoryViewModelTest {
                 applyNote = false
             )
         )
-        waitUntil { viewModel.batchEditState.value is BatchEditState.Failure }
+        advanceUntilIdle()
 
         assertEquals(
             BatchEditState.Failure(UiText.StringResource(R.string.history_batch_no_changes)),
@@ -384,6 +385,9 @@ class HistoryViewModelTest {
         return HistoryViewModel(
             workEntryRepository = repository,
             reminderSettingsManager = reminderSettingsManager
-        )
+        ).also {
+            it.ioDispatcher = UnconfinedTestDispatcher()
+            it.calculationDispatcher = dispatcher
+        }
     }
 }

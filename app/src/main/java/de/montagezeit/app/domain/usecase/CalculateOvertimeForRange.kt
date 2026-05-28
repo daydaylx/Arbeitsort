@@ -45,16 +45,6 @@ class CalculateOvertimeForRange {
             if (!status.isStatisticsEligible) {
                 return@forEach
             }
-            trace?.event(
-                name = "overtime_entry",
-                payload = mapOf(
-                    "classification" to status.classification.name,
-                    "dailyTargetHours" to dailyTargetHours,
-                    "workMinutes" to status.workMinutes,
-                    "travelMinutes" to status.travelMinutes,
-                    "entry" to entry.toSanitizedDiagnosticPayload()
-                )
-            )
 
             when (status.classification) {
                 DayClassification.ARBEITSTAG_MIT_ARBEIT,
@@ -83,6 +73,8 @@ class CalculateOvertimeForRange {
                 }
                 DayClassification.UEBERSTUNDEN_ABBAU -> {
                     if (entry.workEntry.dayType == DayType.COMP_TIME) {
+                        // Fachentscheidung: Reisezeit an COMP_TIME-Tagen zählt nicht zur Ist-Zeit.
+                        // Travel Legs werden beim Batch-Edit zu COMP_TIME gelöscht (HistoryViewModel).
                         countedDays += 1
                         totalTargetHours += dailyTargetHours
                     }

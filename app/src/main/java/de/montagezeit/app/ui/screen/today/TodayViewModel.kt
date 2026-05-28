@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -110,16 +109,6 @@ class TodayViewModel @Inject constructor(
             todayDate = today,
             loadingActions = loading
         )
-    }.onEach {
-        AppDiagnosticsRuntime.startTrace(
-            DiagnosticTraceRequest(
-                category = DiagnosticCategory.STATE_MUTATION,
-                name = "screenState_emit",
-                sourceClass = "TodayViewModel",
-                screenOrWorker = "TodayScreen",
-                payload = mapOf("uiState" to (it.uiState::class.simpleName ?: "unknown"))
-            )
-        ).finish()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialScreenState())
 
     val dialogState: StateFlow<TodayDialogState> = combine(

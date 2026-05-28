@@ -1,6 +1,5 @@
 package de.montagezeit.app.ui.screen.edit
 
-import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
 import de.montagezeit.app.diagnostics.DiagnosticCategory
 import de.montagezeit.app.diagnostics.DiagnosticPhase
@@ -74,8 +73,9 @@ class EditEntrySaveTrace(
         trace.event(
             name = "edit_pending_save_built",
             payload = mapOf(
-                "entry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
-                "travelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload),
+                "dayType" to pendingSave.entry.dayType.name,
+                "hasWorkTimes" to (pendingSave.entry.workStart != null && pendingSave.entry.workEnd != null),
+                "travelLegCount" to pendingSave.legs.size,
                 "mealAllowanceAmountCents" to pendingSave.entry.mealAllowanceAmountCents
             )
         )
@@ -94,8 +94,9 @@ class EditEntrySaveTrace(
     fun saveSucceeded(pendingSave: EditEntryPendingSave) {
         trace.finish(
             payload = mapOf(
-                "savedEntry" to pendingSave.entry.toSanitizedDiagnosticPayload(),
-                "savedTravelLegs" to pendingSave.legs.map(TravelLeg::toSanitizedDiagnosticPayload)
+                "dayType" to pendingSave.entry.dayType.name,
+                "travelLegCount" to pendingSave.legs.size,
+                "mealAllowanceAmountCents" to pendingSave.entry.mealAllowanceAmountCents
             )
         )
     }

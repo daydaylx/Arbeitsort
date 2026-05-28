@@ -75,7 +75,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
 
         advanceUntilIdle()
 
@@ -105,7 +105,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
 
         advanceUntilIdle()
 
@@ -158,7 +158,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
 
         val collector = launch { viewModel.validationErrors.collect {} }
         advanceUntilIdle()
@@ -194,7 +194,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
 
         advanceUntilIdle()
 
@@ -264,7 +264,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
 
         advanceUntilIdle()
 
@@ -299,7 +299,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
         advanceUntilIdle()
 
         val previewBeforeEdits = viewModel.screenState.value.mealAllowancePreviewCents
@@ -339,7 +339,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
         advanceUntilIdle()
 
         // Edit travel leg (schedules debounce, does NOT fire yet)
@@ -381,7 +381,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
         advanceUntilIdle()
 
         viewModel.updateDayType(DayType.OFF)
@@ -405,7 +405,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
         advanceUntilIdle()
         viewModel.addTravelLeg()
         viewModel.addTravelLeg()
@@ -436,7 +436,7 @@ class EditEntryViewModelTest {
             saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
             editEntryDiagnostics = diagnostics,
             savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
-        )
+        ).also { it.ioDispatcher = dispatcher }
         advanceUntilIdle()
 
         var callbackResult = false

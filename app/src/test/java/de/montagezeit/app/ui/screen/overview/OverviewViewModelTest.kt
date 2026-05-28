@@ -50,6 +50,7 @@ class OverviewViewModelTest {
     }
 
     private fun createViewModel() = OverviewViewModel(workEntryRepository, reminderSettingsManager)
+        .also { it.calculationDispatcher = dispatcher }
 
     @Test
     fun `selectDate aktualisiert selectedDate StateFlow`() = runTest {

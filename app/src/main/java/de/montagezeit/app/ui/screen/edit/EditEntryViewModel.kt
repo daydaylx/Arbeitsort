@@ -24,6 +24,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -72,6 +73,7 @@ class EditEntryViewModel @Inject constructor(
 
     private var loadEntryJob: Job? = null
     private var mealPreviewJob: Job? = null
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val validationErrors: StateFlow<List<ValidationError>> = _screenState
@@ -113,10 +115,11 @@ class EditEntryViewModel @Inject constructor(
             _screenState.update { it.copy(uiState = EditUiState.Loading, isSaving = false, originalFormData = null) }
 
             try {
-                val settings = reminderSettingsManager.settings.first()
+                val (settings, record) = withContext(ioDispatcher) {
+                    val settings = reminderSettingsManager.settings.first()
+                    settings to workEntryRepository.getByDateWithTravel(date)
+                }
                 val dailyTargetHours = settings.dailyTargetHours
-
-                val record = workEntryRepository.getByDateWithTravel(date)
                 if (record != null) {
                     showExistingEntry(record, dailyTargetHours)
                 } else {
@@ -233,7 +236,7 @@ class EditEntryViewModel @Inject constructor(
 
     fun copyFromPreviousDay(onResult: (Boolean) -> Unit) {
         if (_screenState.value.isSaving) { onResult(false); return }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val previousDate = currentDate.minusDays(1)
             val record = workEntryRepository.getByDateWithTravel(previousDate)
             withContext(Dispatchers.Main) {
@@ -258,14 +261,18 @@ class EditEntryViewModel @Inject constructor(
 
             try {
                 _screenState.update { it.copy(isSaving = true) }
-                val existingEntry = workEntryRepository.getByDate(currentDate)
+                val existingEntry = withContext(ioDispatcher) {
+                    workEntryRepository.getByDate(currentDate)
+                }
                 if (existingEntry == null) {
                     _screenState.update { it.copy(isSaving = false, uiState = EditUiState.NewEntry(currentDate)) }
                     onResult(false)
                     return@launch
                 }
 
-                workEntryRepository.deleteByDate(currentDate)
+                withContext(ioDispatcher) {
+                    workEntryRepository.deleteByDate(currentDate)
+                }
                 _screenState.update { it.copy(isSaving = false, uiState = EditUiState.Saved) }
                 onResult(true)
             } catch (e: Exception) {
@@ -304,7 +311,9 @@ class EditEntryViewModel @Inject constructor(
             }
 
             try {
-                val latestState = resolveLatestSaveState(currentState) ?: return@launch
+                val latestState = withContext(ioDispatcher) {
+                    resolveLatestSaveState(currentState)
+                } ?: return@launch
                 val pendingSave = saveBuilder.build(
                     currentState = latestState,
                     data = data,
@@ -312,8 +321,10 @@ class EditEntryViewModel @Inject constructor(
                 ) ?: return@launch
                 trace.pendingSaveBuilt(pendingSave)
                 _screenState.update { it.copy(isSaving = true) }
-                saveEditedEntryWithTravel(pendingSave)
-                trace.saveSucceeded(pendingSave)
+                val saved = withContext(ioDispatcher) {
+                    saveEditedEntryWithTravel(pendingSave)
+                }
+                trace.saveSucceeded(saved)
                 _screenState.update {
                     it.copy(
                         isSaving = false,
@@ -345,7 +356,9 @@ class EditEntryViewModel @Inject constructor(
                 return@launch
             }
             try {
-                val latestState = resolveLatestSaveState(currentState) ?: run {
+                val latestState = withContext(ioDispatcher) {
+                    resolveLatestSaveState(currentState)
+                } ?: run {
                     onNavigate(newDate); return@launch
                 }
                 val pendingSave = saveBuilder.build(
@@ -356,7 +369,9 @@ class EditEntryViewModel @Inject constructor(
                     onNavigate(newDate); return@launch
                 }
                 _screenState.update { it.copy(isSaving = true) }
-                saveEditedEntryWithTravel(pendingSave)
+                withContext(ioDispatcher) {
+                    saveEditedEntryWithTravel(pendingSave)
+                }
                 _screenState.update {
                     it.copy(
                         isSaving = false,

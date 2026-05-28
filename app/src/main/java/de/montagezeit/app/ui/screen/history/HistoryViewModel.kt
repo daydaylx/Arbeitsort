@@ -22,6 +22,7 @@ import androidx.compose.runtime.Stable
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -52,6 +53,9 @@ class HistoryViewModel @Inject constructor(
     private val reminderSettingsManager: ReminderSettingsManager
 ) : ViewModel() {
 
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    internal var calculationDispatcher: CoroutineDispatcher = Dispatchers.Default
+
     private val _batchEditState = MutableStateFlow<BatchEditState>(BatchEditState.Idle)
     val batchEditState: StateFlow<BatchEditState> = _batchEditState.asStateFlow()
 
@@ -65,7 +69,7 @@ class HistoryViewModel @Inject constructor(
                 .debounce(HISTORY_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
-                    withContext(Dispatchers.Default) {
+                    withContext(calculationDispatcher) {
                         buildSuccessState(entries)
                     }
                 }
@@ -130,7 +134,10 @@ class HistoryViewModel @Inject constructor(
         }
         if (_batchEditState.value is BatchEditState.InProgress) return
 
-        viewModelScope.launch(Dispatchers.IO) {
+        // Read-modify-write über Repository-Datumslocks serialisiert. Ein simultaner
+        // Einzel-Tag-Edit zwischen Read und Write überschreibt den Batch-Schreibstand —
+        // akzeptiertes Risiko, da UI Batch-Edit als serialisierten Vorgang präsentiert.
+        viewModelScope.launch(ioDispatcher) {
             _batchEditState.value = BatchEditState.InProgress
             try {
                 val settings = reminderSettingsManager.settings.first()

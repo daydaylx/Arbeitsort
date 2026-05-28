@@ -17,6 +17,7 @@ import de.montagezeit.app.ui.util.toUiText
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -55,6 +56,7 @@ class OverviewViewModel @Inject constructor(
 
     private var refreshJob: Job? = null
     private var lastExplicitRefreshMs: Long = 0L
+    internal var calculationDispatcher: CoroutineDispatcher = Dispatchers.Default
 
     private data class SelectedEntrySnapshot(
         val requestedDate: LocalDate? = null,
@@ -291,12 +293,15 @@ class OverviewViewModel @Inject constructor(
                     payload = mapOf("entryCount" to entries.size)
                 )
 
-                _metrics.value = buildOverviewMetrics(
-                    period = selectedPeriod,
-                    entries = entries,
-                    settings = settings,
-                    trace = trace
-                )
+                val metrics = withContext(calculationDispatcher) {
+                    buildOverviewMetrics(
+                        period = selectedPeriod,
+                        entries = entries,
+                        settings = settings,
+                        trace = trace
+                    )
+                }
+                _metrics.value = metrics
                 trace.finish(
                     payload = mapOf(
                         "metricsPresent" to (_metrics.value != null),

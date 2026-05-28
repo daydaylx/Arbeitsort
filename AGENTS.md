@@ -58,7 +58,7 @@ Use the smallest relevant verification set first. Escalate to the full local qua
 - Keep package paths under `de.montagezeit.app`.
 - Screens use `*Screen` names.
 - View models use `*ViewModel`.
-- Use cases are verb-focused, for example `RecordEveningCheckIn`.
+- Use cases are verb-focused, for example `RecordCheckIn`.
 - Tests use `*Test`.
 - Prefer resource strings in `app/src/main/res/values/strings.xml` over hardcoded UI text.
 - Avoid committing machine-specific values such as device serials, local absolute paths, or personal IDE settings.
