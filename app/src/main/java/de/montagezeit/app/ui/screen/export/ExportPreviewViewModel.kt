@@ -94,11 +94,11 @@ internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPrevi
     val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, record.orderedTravelLegs)
     val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
     val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK && entry.workStart != null && entry.workEnd != null
-    val mealLabel = if (mealSnapshot.amountCents > 0) {
-        MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents)
-    } else {
-        null
-    }
+    val mealLabel = PdfUtilities.buildMealAllowanceLabel(
+        amountCents = mealSnapshot.amountCents,
+        isArrivalDeparture = mealSnapshot.isArrivalDeparture,
+        breakfastIncluded = mealSnapshot.breakfastIncluded
+    ).takeIf(String::isNotBlank)
     return ExportPreviewRow(
         date = entry.date,
         dateLabel = PdfUtilities.formatDate(entry.date),

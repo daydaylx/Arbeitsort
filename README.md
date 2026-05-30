@@ -13,8 +13,11 @@ Andere Dateien unter `docs/` sind nur ergänzende Referenzen. Wenn sich Doku und
 ## Projektstatus
 
 - Single-Module-Android-Projekt (`:app`)
-- App-Version: `1.1.1` (`versionCode 5`)
+- App-Version: `1.1.2` (`versionCode 6`)
 - Room-Datenbank: Schema `16`, Migrationen `1 -> 16`
+
+Release- und Migrationsänderungen müssen diese Angaben gegen `app/build.gradle.kts`
+und `AppDatabase` mitprüfen.
 
 ## Tech Stack
 

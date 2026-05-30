@@ -205,6 +205,11 @@
     <string name="settings_error_no_entries_custom_range">Keine Einträge für den gewählten Zeitraum gefunden.</string>
     <string name="settings_error_pdf_export_failed">PDF-Export fehlgeschlagen</string>
     <string name="settings_error_csv_export_failed">CSV-Export fehlgeschlagen</string>
+    <string name="csv_export_error_export_dir_failed">CSV-Exportordner konnte nicht erstellt werden.</string>
+    <string name="csv_export_error_export_dir_not_writable">CSV-Exportordner ist nicht beschreibbar.</string>
+    <string name="csv_export_error_not_enough_storage">Nicht genug Speicherplatz für den CSV-Export verfügbar.</string>
+    <string name="csv_export_error_write_failed">CSV-Datei konnte nicht geschrieben werden.</string>
+    <string name="csv_export_error_permission_denied">Keine Berechtigung zum Schreiben der CSV-Datei.</string>
     <string name="settings_error_export_failed">Export fehlgeschlagen</string>
     
     <!-- Status -->
@@ -292,6 +297,9 @@
         <item quantity="other">PDF-Vorschau · %1$d Seiten</item>
     </plurals>
     <string name="export_preview_pdf_page_label">Seite %1$d</string>
+    <string name="export_preview_pdf_page_position">Seite %1$d von %2$d</string>
+    <string name="export_preview_pdf_previous_page">Vorherige</string>
+    <string name="export_preview_pdf_next_page">Nächste</string>
     <string name="export_preview_pdf_render_failed">PDF-Vorschau konnte nicht geladen werden.</string>
     <string name="export_preview_totals_title">Summen</string>
     <string name="export_preview_totals_work_time">Arbeitszeit</string>

@@ -182,7 +182,7 @@ class SettingsViewModelTest {
         val entries = listOf(eligibleWorkRecord(today))
         val exportUri = mockk<android.net.Uri>()
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns exportUri
+        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.Success(exportUri)
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -198,18 +198,52 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `exportCsvCurrentMonth maps exporter null to csv error`() = runTest {
+    fun `exportCsvCurrentMonth maps exporter validation error to csv error`() = runTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns null
+        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.ValidationError("Keine CSV-Daten")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
         advanceUntilIdle()
 
         assertEquals(
-            SettingsUiState.ExportError(UiText.StringResource(R.string.settings_error_csv_export_failed)),
+            SettingsUiState.ExportError(UiText.DynamicString("Keine CSV-Daten")),
+            viewModel.uiState.value
+        )
+    }
+
+    @Test
+    fun `exportCsvCurrentMonth maps exporter storage error to concrete csv error`() = runTest {
+        val today = LocalDate.now()
+        val entries = listOf(eligibleWorkRecord(today))
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
+        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.StorageError("Nicht genug Speicher")
+
+        val viewModel = createViewModel()
+        viewModel.exportCsvCurrentMonth()
+        advanceUntilIdle()
+
+        assertEquals(
+            SettingsUiState.ExportError(UiText.DynamicString("Nicht genug Speicher")),
+            viewModel.uiState.value
+        )
+    }
+
+    @Test
+    fun `exportCsvCurrentMonth maps exporter write error to concrete csv error`() = runTest {
+        val today = LocalDate.now()
+        val entries = listOf(eligibleWorkRecord(today))
+        coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
+        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.FileWriteError("Schreiben fehlgeschlagen")
+
+        val viewModel = createViewModel()
+        viewModel.exportCsvCurrentMonth()
+        advanceUntilIdle()
+
+        assertEquals(
+            SettingsUiState.ExportError(UiText.DynamicString("Schreiben fehlgeschlagen")),
             viewModel.uiState.value
         )
     }
@@ -221,7 +255,7 @@ class SettingsViewModelTest {
         val exportUri = mockk<android.net.Uri>()
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings(pdfEmployeeName = null))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns exportUri
+        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.Success(exportUri)
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()

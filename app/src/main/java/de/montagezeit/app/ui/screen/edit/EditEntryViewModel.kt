@@ -22,6 +22,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -556,13 +557,18 @@ data class EditScreenState(
         get() = originalFormData != null && formData != originalFormData
 }
 
+private val travelLegDraftIdSequence = AtomicLong(0L)
+
+private fun nextTravelLegDraftId(): Long = travelLegDraftIdSequence.incrementAndGet()
+
 data class EditTravelLegForm(
     val startTime: LocalTime? = null,
     val arriveTime: LocalTime? = null,
     val startLabel: String? = null,
     val endLabel: String? = null,
     val paidMinutesOverride: Int? = null,
-    val category: TravelLegCategory = TravelLegCategory.OTHER
+    val category: TravelLegCategory = TravelLegCategory.OTHER,
+    val draftId: Long = nextTravelLegDraftId()
 ) {
     fun isBlank(): Boolean {
         return startTime == null &&

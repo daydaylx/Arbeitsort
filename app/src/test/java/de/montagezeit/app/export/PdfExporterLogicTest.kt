@@ -111,6 +111,30 @@ class PdfExporterLogicTest {
         assertEquals(820, MealAllowanceCalculator.resolveEffectiveStoredSnapshot(eligible).amountCents)
     }
 
+    @Test
+    fun `buildMealAllowanceLabel includes arrival departure and breakfast flags`() {
+        val label = PdfUtilities.buildMealAllowanceLabel(
+            amountCents = 840,
+            isArrivalDeparture = true,
+            breakfastIncluded = true,
+            arrivalDepartureLabel = "An-/Abreise",
+            breakfastIncludedLabel = "Frühstück"
+        )
+
+        assertEquals("8,40 € / An-/Abreise / Frühstück", label)
+    }
+
+    @Test
+    fun `buildMealAllowanceLabel stays blank without amount`() {
+        val label = PdfUtilities.buildMealAllowanceLabel(
+            amountCents = 0,
+            isArrivalDeparture = true,
+            breakfastIncluded = true
+        )
+
+        assertEquals("", label)
+    }
+
     // -------------------------------------------------------------------------
     // buildTravelRouteSummary
     // -------------------------------------------------------------------------

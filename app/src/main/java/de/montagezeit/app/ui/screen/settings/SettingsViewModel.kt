@@ -339,17 +339,14 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun exportCsv(entries: List<WorkEntryWithTravelLegs>): SettingsUiState {
-        val fileUri = csvExporter.exportToCsv(entries)
-        return if (fileUri != null) {
-            SettingsUiState.ExportSuccess(
-                fileUri = fileUri,
-                format = ExportFormat.CSV
-            )
-        } else {
-            buildExportError(
-                message = null,
-                fallbackRes = R.string.settings_error_csv_export_failed
-            )
+        return when (val result = csvExporter.exportToCsv(entries)) {
+            is CsvExporter.CsvExportResult.Success -> {
+                SettingsUiState.ExportSuccess(
+                    fileUri = result.fileUri,
+                    format = ExportFormat.CSV
+                )
+            }
+            else -> mapCsvExportError(result)
         }
     }
 
@@ -422,6 +419,32 @@ class SettingsViewModel @Inject constructor(
             is PdfExporter.PdfExportResult.UnknownError -> buildExportError(
                 message = result.message,
                 fallbackRes = R.string.settings_error_export_failed
+            )
+        }
+    }
+
+    private fun mapCsvExportError(result: CsvExporter.CsvExportResult): SettingsUiState.ExportError {
+        return when (result) {
+            is CsvExporter.CsvExportResult.Success -> error("Success must be handled separately")
+            is CsvExporter.CsvExportResult.ValidationError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_csv_export_failed
+            )
+            is CsvExporter.CsvExportResult.StorageError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.csv_export_error_not_enough_storage
+            )
+            is CsvExporter.CsvExportResult.FileWriteError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.csv_export_error_write_failed
+            )
+            is CsvExporter.CsvExportResult.SecurityError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.csv_export_error_permission_denied
+            )
+            is CsvExporter.CsvExportResult.UnknownError -> buildExportError(
+                message = result.message,
+                fallbackRes = R.string.settings_error_csv_export_failed
             )
         }
     }

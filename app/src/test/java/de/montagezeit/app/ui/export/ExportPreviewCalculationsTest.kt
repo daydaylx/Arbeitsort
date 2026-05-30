@@ -13,7 +13,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
 
-class ExportPreviewViewModelTest {
+class ExportPreviewCalculationsTest {
 
     private fun record(entry: WorkEntry, travelMinutes: Int = 0): WorkEntryWithTravelLegs {
         val legs = if (travelMinutes > 0) listOf(
@@ -178,6 +178,26 @@ class ExportPreviewViewModelTest {
 
         assertEquals("8,20 €", buildExportPreviewRow(record(entryWithMeal)).mealAllowanceLabel)
         assertNull(buildExportPreviewRow(record(entryWithoutMeal)).mealAllowanceLabel)
+    }
+
+    @Test
+    fun `buildExportPreviewRow exposes meal allowance flags`() {
+        val entry = WorkEntry(
+            date = LocalDate.of(2026, 1, 10),
+            dayType = DayType.WORK,
+            workStart = LocalTime.of(8, 0),
+            workEnd = LocalTime.of(17, 0),
+            breakMinutes = 60,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 840
+        )
+
+        assertEquals(
+            "8,40 € / An-/Abreise / Frühstück",
+            buildExportPreviewRow(record(entry)).mealAllowanceLabel
+        )
     }
 
     @Test

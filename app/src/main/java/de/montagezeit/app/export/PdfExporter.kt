@@ -531,7 +531,13 @@ class PdfExporter @Inject constructor(
             PdfUtilities.buildTravelRouteSummary(travelLegs).ifBlank { dash },
             travelTypeText,
             PdfUtilities.getLocation(entry, travelLegs).ifBlank { dash },
-            if (mealSnapshot.amountCents > 0) MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents) else dash
+            PdfUtilities.buildMealAllowanceLabel(
+                amountCents = mealSnapshot.amountCents,
+                isArrivalDeparture = mealSnapshot.isArrivalDeparture,
+                breakfastIncluded = mealSnapshot.breakfastIncluded,
+                arrivalDepartureLabel = string(R.string.pdf_export_travel_type_arrival_departure),
+                breakfastIncludedLabel = string(R.string.pdf_export_column_breakfast)
+            ).ifBlank { dash }
         )
     }
 

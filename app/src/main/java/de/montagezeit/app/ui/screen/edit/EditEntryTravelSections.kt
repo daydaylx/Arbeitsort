@@ -130,7 +130,7 @@ internal fun TravelLegsSection(
 
         if (selectedMode != TravelMode.NONE) {
             travelLegs.forEachIndexed { index, leg ->
-                key(index) {
+                key(leg.draftId) {
                     TravelLegCard(
                         index = index,
                         leg = leg,

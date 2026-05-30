@@ -417,6 +417,34 @@ class EditEntryViewModelTest {
     }
 
     @Test
+    fun `removeTravelLeg behaelt DraftId des verbleibenden TravelLegs`() = runTest {
+        val date = LocalDate.of(2026, 4, 1)
+        every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())
+        coEvery { workEntryDao.getByDateWithTravel(date) } returns null
+
+        val repository = testRepository(workEntryDao)
+        val viewModel = EditEntryViewModel(
+            workEntryRepository = repository,
+            reminderSettingsManager = reminderSettingsManager,
+            draftRules = draftRules,
+            saveBuilder = saveBuilder,
+            saveEditedEntryWithTravel = SaveEditedEntryWithTravel(repository),
+            editEntryDiagnostics = diagnostics,
+            savedStateHandle = SavedStateHandle(mapOf("date" to date.toString()))
+        ).also { it.ioDispatcher = dispatcher }
+        advanceUntilIdle()
+        viewModel.addTravelLeg()
+        viewModel.addTravelLeg()
+        val firstDraftId = viewModel.screenState.value.formData.travelLegs[0].draftId
+        val secondDraftId = viewModel.screenState.value.formData.travelLegs[1].draftId
+        assertTrue(firstDraftId != secondDraftId)
+
+        viewModel.removeTravelLeg(0)
+
+        assertEquals(secondDraftId, viewModel.screenState.value.formData.travelLegs.single().draftId)
+    }
+
+    @Test
     fun `deleteCurrentEntry loescht Eintrag und liefert true zurueck`() = runTest {
         val date = LocalDate.of(2026, 4, 1)
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings())

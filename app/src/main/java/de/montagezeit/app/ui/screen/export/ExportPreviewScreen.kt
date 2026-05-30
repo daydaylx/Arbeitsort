@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +23,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,11 +40,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -63,6 +67,7 @@ import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -280,19 +285,59 @@ private fun PdfReadyContent(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
-            LazyColumn(
+            val pageCount = rendererState.renderer.pageCount
+            val pagerState = rememberPagerState(pageCount = { pageCount })
+            val scope = rememberCoroutineScope()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TertiaryActionButton(
+                    onClick = {
+                        scope.launch {
+                            pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0))
+                        }
+                    },
+                    enabled = pagerState.currentPage > 0
+                ) {
+                    Text(stringResource(R.string.export_preview_pdf_previous_page))
+                }
+                Text(
+                    text = stringResource(
+                        R.string.export_preview_pdf_page_position,
+                        pagerState.currentPage + 1,
+                        pageCount
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TertiaryActionButton(
+                    onClick = {
+                        scope.launch {
+                            pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(pageCount - 1))
+                        }
+                    },
+                    enabled = pagerState.currentPage < pageCount - 1
+                ) {
+                    Text(stringResource(R.string.export_preview_pdf_next_page))
+                }
+            }
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 240.dp, max = 560.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .heightIn(min = 240.dp, max = 560.dp)
             ) {
-                itemsIndexed(
-                    items = List(rendererState.renderer.pageCount) { it },
-                    key = { _, pageIndex -> pageIndex }
-                ) { _, pageIndex ->
+                val density = LocalDensity.current
+                val targetWidthPx = with(density) { maxWidth.toPx().roundToInt() }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxWidth()
+                ) { pageIndex ->
                     PdfPageCard(
                         renderer = rendererState.renderer,
-                        pageIndex = pageIndex
+                        pageIndex = pageIndex,
+                        targetWidthPx = targetWidthPx
                     )
                 }
             }
@@ -446,17 +491,18 @@ private fun ErrorCard(message: String) {
 @Composable
 private fun PdfPageCard(
     renderer: PdfRenderer,
-    pageIndex: Int
+    pageIndex: Int,
+    targetWidthPx: Int
 ) {
-    var bitmapState by remember(renderer, pageIndex) {
+    var bitmapState by remember(renderer, pageIndex, targetWidthPx) {
         mutableStateOf<PdfPageRenderState>(PdfPageRenderState.Loading)
     }
 
-    LaunchedEffect(renderer, pageIndex) {
+    LaunchedEffect(renderer, pageIndex, targetWidthPx) {
         bitmapState = PdfPageRenderState.Loading
         try {
             val bitmap = withContext(Dispatchers.IO) {
-                renderPdfPage(renderer, pageIndex)
+                renderPdfPage(renderer, pageIndex, targetWidthPx)
             }
             bitmapState = PdfPageRenderState.Success(bitmap)
         } catch (_: Exception) {
@@ -541,15 +587,22 @@ private fun rememberPdfRendererState(
 
 private suspend fun renderPdfPage(
     renderer: PdfRenderer,
-    pageIndex: Int
+    pageIndex: Int,
+    targetWidthPx: Int
 ): Bitmap {
     synchronized(renderer) {
         val page = renderer.openPage(pageIndex)
         try {
-            val targetWidth = (page.width * 1.8f).roundToInt().coerceAtLeast(1)
-            val scale = targetWidth.toFloat() / page.width.toFloat()
+            val targetWidth = targetWidthPx
+                .coerceAtLeast(PDF_PREVIEW_MIN_BITMAP_WIDTH_PX)
+                .coerceAtMost(PDF_PREVIEW_MAX_BITMAP_WIDTH_PX)
+            val widthScale = targetWidth.toFloat() / page.width.toFloat()
+            val heightScale = PDF_PREVIEW_MAX_BITMAP_HEIGHT_PX.toFloat() / page.height.toFloat()
+            val scale = minOf(widthScale, heightScale, PDF_PREVIEW_MAX_SCALE)
+                .coerceAtLeast(PDF_PREVIEW_MIN_SCALE)
             val targetHeight = (page.height * scale).roundToInt().coerceAtLeast(1)
-            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            val scaledWidth = (page.width * scale).roundToInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(scaledWidth, targetHeight, Bitmap.Config.ARGB_8888)
             bitmap.eraseColor(android.graphics.Color.WHITE)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             return bitmap
@@ -564,6 +617,12 @@ private sealed interface PdfPageRenderState {
     object Error : PdfPageRenderState
     data class Success(val bitmap: Bitmap) : PdfPageRenderState
 }
+
+private const val PDF_PREVIEW_MIN_BITMAP_WIDTH_PX = 320
+private const val PDF_PREVIEW_MAX_BITMAP_WIDTH_PX = 1080
+private const val PDF_PREVIEW_MAX_BITMAP_HEIGHT_PX = 1600
+private const val PDF_PREVIEW_MIN_SCALE = 0.5f
+private const val PDF_PREVIEW_MAX_SCALE = 1.8f
 
 private data class PdfRendererState(
     val descriptor: ParcelFileDescriptor,

@@ -5,6 +5,7 @@ import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -159,5 +160,20 @@ object PdfUtilities {
             hasIntersite             -> "CONTINUATION"
             else                     -> "TRAVEL"
         }
+    }
+
+    fun buildMealAllowanceLabel(
+        amountCents: Int,
+        isArrivalDeparture: Boolean,
+        breakfastIncluded: Boolean,
+        arrivalDepartureLabel: String = "An-/Abreise",
+        breakfastIncludedLabel: String = "Frühstück"
+    ): String {
+        if (amountCents <= 0) return ""
+        return buildList {
+            add(MealAllowanceCalculator.formatEuro(amountCents))
+            if (isArrivalDeparture) add(arrivalDepartureLabel)
+            if (breakfastIncluded) add(breakfastIncludedLabel)
+        }.joinToString(" / ")
     }
 }

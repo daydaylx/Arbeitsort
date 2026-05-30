@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.storage.StorageManager
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
@@ -46,6 +47,15 @@ internal fun filterCsvExportEntries(entries: List<WorkEntryWithTravelLegs>): Lis
 class CsvExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    sealed interface CsvExportResult {
+        data class Success(val fileUri: Uri) : CsvExportResult
+        data class ValidationError(val message: String) : CsvExportResult
+        data class StorageError(val message: String) : CsvExportResult
+        data class FileWriteError(val message: String) : CsvExportResult
+        data class SecurityError(val message: String) : CsvExportResult
+        data class UnknownError(val message: String) : CsvExportResult
+    }
+
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -57,15 +67,15 @@ class CsvExporter @Inject constructor(
      * Exportiert Einträge als CSV-Datei.
      *
      * @param entries Liste der zu exportierenden Einträge
-     * @return Uri zur CSV-Datei bei Erfolg, null bei Fehler
+     * @return Strukturiertes Exportergebnis mit konkretem Fehlergrund
      */
-    fun exportToCsv(entries: List<WorkEntryWithTravelLegs>): Uri? {
+    fun exportToCsv(entries: List<WorkEntryWithTravelLegs>): CsvExportResult {
         val eligibleEntries = filterCsvExportEntries(entries)
 
         // Validate input
         if (eligibleEntries.isEmpty()) {
             android.util.Log.w("CsvExporter", "No entries to export")
-            return null
+            return CsvExportResult.ValidationError(context.getString(R.string.export_preview_empty_range))
         }
 
         return try {
@@ -76,13 +86,17 @@ class CsvExporter @Inject constructor(
                 val created = cacheDir.mkdirs()
                 if (!created) {
                     android.util.Log.e("CsvExporter", "Failed to create export directory")
-                    return null
+                    return CsvExportResult.StorageError(
+                        context.getString(R.string.csv_export_error_export_dir_failed)
+                    )
                 }
             }
 
             if (!cacheDir.canWrite()) {
                 android.util.Log.e("CsvExporter", "Export directory is not writable")
-                return null
+                return CsvExportResult.StorageError(
+                    context.getString(R.string.csv_export_error_export_dir_not_writable)
+                )
             }
 
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.GERMAN).format(Date())
@@ -98,7 +112,9 @@ class CsvExporter @Inject constructor(
             }
             if (availableBytes < MIN_DISK_SPACE_BYTES) {
                 android.util.Log.e("CsvExporter", "Insufficient disk space: $availableBytes bytes")
-                return null
+                return CsvExportResult.StorageError(
+                    context.getString(R.string.csv_export_error_not_enough_storage)
+                )
             }
 
             FileOutputStream(file).use {
@@ -172,20 +188,28 @@ class CsvExporter @Inject constructor(
                 "Successfully exported ${eligibleEntries.size} entries to $filename"
             )
 
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
+            CsvExportResult.Success(
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
             )
         } catch (e: java.io.IOException) {
             android.util.Log.e("CsvExporter", "IO error during export", e)
-            null
+            CsvExportResult.FileWriteError(
+                context.getString(R.string.csv_export_error_write_failed)
+            )
         } catch (e: SecurityException) {
             android.util.Log.e("CsvExporter", "Permission error during export", e)
-            null
+            CsvExportResult.SecurityError(
+                context.getString(R.string.csv_export_error_permission_denied)
+            )
         } catch (e: Exception) {
             android.util.Log.e("CsvExporter", "Unexpected error during export", e)
-            null
+            CsvExportResult.UnknownError(
+                context.getString(R.string.settings_error_csv_export_failed)
+            )
         }
     }
 }
