@@ -22,15 +22,6 @@ object PdfUtilities {
     private val dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
     /**
-     * Berechnet die Arbeitszeit in Stunden für einen WorkEntry
-     * Arbeitszeit = (workEnd - workStart - pause) / 60
-     * Für OFF-Tage: 0.0
-     */
-    fun calculateWorkHours(entry: WorkEntry): Double {
-        return TimeCalculator.calculateWorkHours(entry)
-    }
-    
-    /**
      * Formatiert Arbeitszeit als String (z.B. "8.00")
      */
     fun formatWorkHours(hours: Double): String {
@@ -116,11 +107,11 @@ object PdfUtilities {
      * Berechnet die Summe der Arbeitsstunden für eine Liste von WorkEntries
      */
     fun sumWorkHours(entries: List<WorkEntryWithTravelLegs>): Double {
-        return entries.sumOf { calculateWorkHours(it.workEntry) }
+        return entries.sumOf { TimeCalculator.calculateWorkHours(it.workEntry) }
     }
 
     fun sumWorkHours(entries: Collection<WorkEntry>): Double {
-        return entries.sumOf(::calculateWorkHours)
+        return entries.sumOf { TimeCalculator.calculateWorkHours(it) }
     }
     
     /**

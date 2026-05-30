@@ -65,7 +65,7 @@ import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
 import de.montagezeit.app.ui.components.DatePickerDialog
 import de.montagezeit.app.ui.components.MZAlertDialog
-import de.montagezeit.app.ui.components.MZContentCard
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZErrorState
 import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.MZKeyValueRow
@@ -375,7 +375,7 @@ private fun StatusCard(
     val hasEntry = entry != null
     val showOffdayAction = entryStatus?.isConfirmed != true && entry?.dayType != DayType.COMP_TIME
 
-    MZContentCard(
+    MZAppPanel(
         modifier = modifier,
         emphasized = entry == null || entryStatus?.isConfirmed == false
     ) {
@@ -554,7 +554,7 @@ private fun WorkHoursCard(
     totalMinutes: Int,
     modifier: Modifier = Modifier
 ) {
-    MZContentCard(modifier = modifier) {
+    MZAppPanel(modifier = modifier) {
         MZSectionHeader(
             title = stringResource(R.string.work_hours_title),
             supportingText = if (travelLegs.isNotEmpty()) {

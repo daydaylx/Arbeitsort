@@ -4,6 +4,7 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
@@ -26,7 +27,7 @@ class PdfUtilitiesTest {
             confirmationAt = System.currentTimeMillis()
         )
         
-        val hours = PdfUtilities.calculateWorkHours(entry)
+        val hours = TimeCalculator.calculateWorkHours(entry)
         
         // (19:00 - 08:00 - 01:00) / 60 = 10/60 = 0.1666... = 10.00 Stunden
         val expected = 10.0
@@ -45,7 +46,7 @@ class PdfUtilitiesTest {
             confirmationAt = System.currentTimeMillis()
         )
         
-        val hours = PdfUtilities.calculateWorkHours(entry)
+        val hours = TimeCalculator.calculateWorkHours(entry)
         
         assertEquals(0.0, hours, 0.01)
     }
@@ -62,7 +63,7 @@ class PdfUtilitiesTest {
             confirmationAt = System.currentTimeMillis()
         )
         
-        val hours = PdfUtilities.calculateWorkHours(entry)
+        val hours = TimeCalculator.calculateWorkHours(entry)
         
         // (17:00 - 08:00 - 01:00) / 60 = 8/60 = 0.1333...
         val expected = 8.0

@@ -41,7 +41,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.ui.components.MZContentCard
+import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.MZSegmentedControl
 import de.montagezeit.app.ui.components.MZSegmentedOption
@@ -59,7 +59,7 @@ internal fun EditFormSectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    MZContentCard(
+    MZAppPanel(
         modifier = modifier,
         content = content
     )

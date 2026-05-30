@@ -387,32 +387,6 @@ fun MZAppPanel(
     }
 }
 
-@Composable
-fun MZPanel(
-    modifier: Modifier = Modifier,
-    emphasized: Boolean = false,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    MZAppPanel(
-        modifier = modifier,
-        emphasized = emphasized,
-        content = content
-    )
-}
-
-@Composable
-fun MZContentCard(
-    modifier: Modifier = Modifier,
-    emphasized: Boolean = false,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    MZAppPanel(
-        modifier = modifier,
-        emphasized = emphasized,
-        content = content
-    )
-}
-
 /**
  * Compact numeric/label indicator.
  * label (UPPERCASE, Monospace), value (titleSmall).
