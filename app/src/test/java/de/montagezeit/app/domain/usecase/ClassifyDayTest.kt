@@ -119,39 +119,48 @@ class ClassifyDayTest {
     }
 
     // -------------------------------------------------------------------------
-    // SCHULUNG-Tage
+    // VACATION-Tage
     // -------------------------------------------------------------------------
 
     @Test
-    fun `SCHULUNG mit Arbeitszeit ergibt SCHULUNG`() {
+    fun `VACATION ergibt URLAUB`() {
         val result = classifier(
-            dayType = DayType.SCHULUNG,
+            dayType = DayType.VACATION,
+            workMinutes = 0,
+            travelMinutes = 0
+        )
+        assertEquals(DayClassification.URLAUB, result)
+    }
+
+    @Test
+    fun `VACATION ignoriert vorhandene Rohzeiten und bleibt URLAUB`() {
+        val result = classifier(
+            dayType = DayType.VACATION,
+            workMinutes = 480,
+            travelMinutes = 120
+        )
+        assertEquals(DayClassification.URLAUB, result)
+    }
+
+    @Test
+    fun `VACATION ist nicht berechtigt fuer Verpflegungspauschale`() {
+        assert(!DayClassification.URLAUB.isMealAllowanceEligible)
+    }
+
+    @Test
+    fun `VACATION ist ein gezaehlter Solltag`() {
+        assert(DayClassification.URLAUB.isCountedWorkDay)
+    }
+
+    @Test
+    fun `VACATION enthaelt keine Arbeitszeit und keine Reisezeit`() {
+        val result = classifier(
+            dayType = DayType.VACATION,
             workMinutes = 480,
             travelMinutes = 0
         )
-        assertEquals(DayClassification.SCHULUNG, result)
-    }
-
-    @Test
-    fun `LEHRGANG mit Arbeitszeit ergibt LEHRGANG`() {
-        val result = classifier(
-            dayType = DayType.LEHRGANG,
-            workMinutes = 480,
-            travelMinutes = 0
-        )
-        assertEquals(DayClassification.LEHRGANG, result)
-    }
-
-    @Test
-    fun `SCHULUNG und LEHRGANG sind nicht berechtigt fuer Verpflegungspauschale`() {
-        assert(!DayClassification.SCHULUNG.isMealAllowanceEligible)
-        assert(!DayClassification.LEHRGANG.isMealAllowanceEligible)
-    }
-
-    @Test
-    fun `SCHULUNG und LEHRGANG sind gezaehlte Arbeitstage`() {
-        assert(DayClassification.SCHULUNG.isCountedWorkDay)
-        assert(DayClassification.LEHRGANG.isCountedWorkDay)
+        assert(!result.hasWorkTime)
+        assert(!result.canHaveTravelTime)
     }
 
     // -------------------------------------------------------------------------
@@ -202,6 +211,7 @@ class ClassifyDayTest {
         assert(!DayClassification.FREI_MIT_REISE.isMealAllowanceEligible)
         assert(!DayClassification.ARBEITSTAG_LEER.isMealAllowanceEligible)
         assert(!DayClassification.FREI.isMealAllowanceEligible)
+        assert(!DayClassification.URLAUB.isMealAllowanceEligible)
         assert(!DayClassification.UEBERSTUNDEN_ABBAU.isMealAllowanceEligible)
     }
 

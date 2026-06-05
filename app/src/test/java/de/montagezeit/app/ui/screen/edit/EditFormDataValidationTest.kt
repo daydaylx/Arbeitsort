@@ -422,6 +422,23 @@ class EditFormDataValidationTest {
     }
 
     @Test
+    fun `VACATION ist ohne Ort Zeiten und Reise valide`() {
+        val formData = validFormData(
+            dayType = DayType.VACATION,
+            dayLocationLabel = "",
+            travelStartTime = LocalTime.of(7, 0),
+            travelArriveTime = null
+        )
+
+        val errors = formData.validate()
+
+        assertTrue(errors.isEmpty())
+        assertTrue(formData.isValid())
+        assertEquals(0, formData.calculateEffectiveWorkMinutes())
+        assertEquals(0, formData.calculateEffectiveTravelMinutes())
+    }
+
+    @Test
     fun `WORK-Tag mit Nachtschicht ist valide`() {
         // 17:00 bis 08:00 = 15h Nachtschicht -> valide
         val formData = validFormData(
@@ -501,6 +518,31 @@ class EditFormDataValidationTest {
             listOf(TravelLegCategory.OUTBOUND, TravelLegCategory.RETURN),
             pendingSave!!.legs.map { it.category }
         )
+    }
+
+    @Test
+    fun `save builder removes times and travel for vacation`() {
+        val date = LocalDate.of(2026, 5, 6)
+        val pendingSave = EditEntrySaveBuilder(EditEntryDraftRules()).build(
+            currentState = EditUiState.NewEntry(date),
+            data = validFormData(
+                dayType = DayType.VACATION,
+                travelLegs = listOf(
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(6, 0),
+                        arriveTime = LocalTime.of(7, 0),
+                        category = TravelLegCategory.OUTBOUND
+                    )
+                )
+            ),
+            zoneId = ZoneId.systemDefault()
+        )
+
+        assertEquals(DayType.VACATION, pendingSave!!.entry.dayType)
+        assertEquals("", pendingSave.entry.dayLocationLabel)
+        assertFalse(pendingSave.entry.workStart != null)
+        assertFalse(pendingSave.entry.workEnd != null)
+        assertTrue(pendingSave.legs.isEmpty())
     }
 
     private fun validFormData(

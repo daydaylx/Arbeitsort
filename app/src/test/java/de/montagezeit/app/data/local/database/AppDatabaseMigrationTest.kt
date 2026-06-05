@@ -46,7 +46,8 @@ class AppDatabaseMigrationTest {
             "migration_13_14_outbound_return_test.db",
             "migration_13_14_edge_cases_test.db",
             "migration_14_15_test.db",
-            "migration_15_16_test.db"
+            "migration_15_16_test.db",
+            "migration_16_17_day_type_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
         }
@@ -69,7 +70,8 @@ class AppDatabaseMigrationTest {
                 AppDatabase.MIGRATION_12_13,
                 AppDatabase.MIGRATION_13_14,
                 AppDatabase.MIGRATION_14_15,
-                AppDatabase.MIGRATION_15_16
+                AppDatabase.MIGRATION_15_16,
+                AppDatabase.MIGRATION_16_17
             )
             .build()
 
@@ -661,6 +663,48 @@ class AppDatabaseMigrationTest {
                 assertEquals(0, c.getInt(1))
                 assertTrue(c.isNull(2))
                 assertTrue(c.isNull(3))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 16 to 17 maps Schulung and Lehrgang to Work`() {
+        val dbName = "migration_16_17_day_type_test.db"
+        val (helper, db) = createSupportDatabase(dbName, version = 16)
+
+        try {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `work_entries` (
+                    `date` TEXT NOT NULL,
+                    `dayType` TEXT NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO work_entries (date, dayType) VALUES
+                    ('2026-03-01', 'SCHULUNG'),
+                    ('2026-03-02', 'LEHRGANG'),
+                    ('2026-03-03', 'WORK'),
+                    ('2026-03-04', 'VACATION')
+                """.trimIndent()
+            )
+
+            AppDatabase.MIGRATION_16_17.migrate(db)
+
+            db.query("SELECT dayType FROM work_entries ORDER BY date").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("WORK", c.getString(0))
+                assertTrue(c.moveToNext())
+                assertEquals("WORK", c.getString(0))
+                assertTrue(c.moveToNext())
+                assertEquals("WORK", c.getString(0))
+                assertTrue(c.moveToNext())
+                assertEquals("VACATION", c.getString(0))
             }
         } finally {
             helper.close()

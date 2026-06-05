@@ -30,19 +30,16 @@ class ConfirmOffDay(
         source: String = ConfirmationSources.NOTIFICATION
     ): WorkEntry {
         val now = System.currentTimeMillis()
-        val dayLocationLabel = ""
 
         var result: WorkEntry? = null
         workEntryDao.readModifyWrite(date) { existingEntry ->
             val updatedEntry = existingEntry?.withConfirmedOffDay(
                 source = source,
-                now = now,
-                fallbackDayLocationLabel = dayLocationLabel
+                now = now
             ) ?: createConfirmedOffDayEntry(
                 date = date,
                 source = source,
-                now = now,
-                fallbackDayLocationLabel = dayLocationLabel
+                now = now
             )
             result = updatedEntry
             updatedEntry

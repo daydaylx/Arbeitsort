@@ -119,6 +119,15 @@ class RoomWorkEntryRepository @Inject constructor(
         }
     }
 
+    override suspend fun readModifyWriteAndDeleteTravelLegs(
+        date: LocalDate,
+        modify: (WorkEntry?) -> WorkEntry
+    ) = withDateLock(date) {
+        workEntryDao.readModifyWriteAndDeleteTravelLegs(date) { existing ->
+            WorkEntryDerivedStateNormalizer.normalize(modify(existing), emptyList())
+        }
+    }
+
     private suspend fun normalizeWithStoredTravel(entry: WorkEntry): WorkEntry {
         return WorkEntryDerivedStateNormalizer.normalize(
             entry = entry,

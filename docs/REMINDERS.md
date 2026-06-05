@@ -113,6 +113,7 @@ Als terminal gelten:
 
 - `confirmedWorkDay = true`
 - `OFF`
+- `VACATION`
 - `COMP_TIME`
 
 Notification-Aktionen:
@@ -148,6 +149,7 @@ Wichtige aktuelle Details:
 - `RecordDailyManualCheckIn` speichert einen manuellen Arbeitstagsabschluss inklusive Tagesort.
 - `ConfirmWorkDay` bestaetigt einen Arbeitstag mit Default-Arbeitszeiten, wenn keine Zeiten vorhanden sind.
 - `ConfirmOffDay` bestaetigt den Tag als `OFF`.
+- `VACATION` gilt als abgeschlossener Urlaubstag und unterdrueckt Daily-Reminder.
 - `COMP_TIME` gilt ebenfalls als abgeschlossener Tag und unterdrueckt Daily-Reminder.
 - Morning-, Evening- und Fallback-Reminder laufen nur sinnvoll fuer `WORK`-Pfad bzw. unvollstaendige Tage.
 
@@ -176,7 +178,7 @@ Die Reminder-Logik sollte mindestens in diesen Bereichen abgesichert bleiben:
 - taegliche Zielzeiten fuer Fallback und Daily
 - Nicht-Arbeitstage und manuelle Overrides
 - Snooze-/Reminder-Later-Pfade
-- terminale Daily-Zustaende (`OFF`, `COMP_TIME`, bestaetigte Tage)
+- terminale Daily-Zustaende (`OFF`, `VACATION`, `COMP_TIME`, bestaetigte Tage)
 - Re-Scheduling nach Reboot, App-Update, Zeit- und Zeitzonenwechsel
 
 ## Bekannte Systemgrenzen
@@ -186,4 +188,4 @@ Die Reminder-Logik sollte mindestens in diesen Bereichen abgesichert bleiben:
 - Das Produkt modelliert Reminder bewusst als "im sinnvollen Fenster" statt als harte Alarmuhr.
 - Die App arbeitet ohne Standortberechtigung; Tagesort ist ein Textwert und kein GPS-Snapshot.
 
-**Letzte Aktualisierung:** 2026-04-05
+**Letzte Aktualisierung:** 2026-05-30

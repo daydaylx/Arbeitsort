@@ -9,6 +9,7 @@ import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.testRepository
 import de.montagezeit.app.export.CsvExporter
+import de.montagezeit.app.export.PdfExportRequest
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.notification.ReminderNotificationManager
 import de.montagezeit.app.ui.util.UiText
@@ -155,15 +156,7 @@ class SettingsViewModelTest {
         val entries = listOf(WorkEntryWithTravelLegs(workEntry = WorkEntry(date = today), travelLegs = emptyList()))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
         coEvery {
-            pdfExporter.exportToPdf(
-                entries = entries,
-                employeeName = "Max Mustermann",
-                company = null,
-                project = null,
-                personnelNumber = null,
-                startDate = any(),
-                endDate = any()
-            )
+            pdfExporter.exportToPdf(any<PdfExportRequest>())
         } returns PdfExporter.PdfExportResult.StorageError("Nicht genug Speicher")
 
         val viewModel = createViewModel()
@@ -182,7 +175,7 @@ class SettingsViewModelTest {
         val entries = listOf(eligibleWorkRecord(today))
         val exportUri = mockk<android.net.Uri>()
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.Success(exportUri)
+        every { csvExporter.exportToCsv(entries, 8.0) } returns CsvExporter.CsvExportResult.Success(exportUri)
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -202,7 +195,9 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.ValidationError("Keine CSV-Daten")
+        every {
+            csvExporter.exportToCsv(entries, 8.0)
+        } returns CsvExporter.CsvExportResult.ValidationError("Keine CSV-Daten")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -219,7 +214,9 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.StorageError("Nicht genug Speicher")
+        every {
+            csvExporter.exportToCsv(entries, 8.0)
+        } returns CsvExporter.CsvExportResult.StorageError("Nicht genug Speicher")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -236,7 +233,9 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.FileWriteError("Schreiben fehlgeschlagen")
+        every {
+            csvExporter.exportToCsv(entries, 8.0)
+        } returns CsvExporter.CsvExportResult.FileWriteError("Schreiben fehlgeschlagen")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -255,7 +254,7 @@ class SettingsViewModelTest {
         val exportUri = mockk<android.net.Uri>()
         every { reminderSettingsManager.settings } returns flowOf(ReminderSettings(pdfEmployeeName = null))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.Success(exportUri)
+        every { csvExporter.exportToCsv(entries, 8.0) } returns CsvExporter.CsvExportResult.Success(exportUri)
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -292,7 +291,7 @@ class SettingsViewModelTest {
             SettingsUiState.ExportError(UiText.StringResource(R.string.settings_error_no_entries_current_month)),
             viewModel.uiState.value
         )
-        verify(exactly = 0) { csvExporter.exportToCsv(any()) }
+        verify(exactly = 0) { csvExporter.exportToCsv(any(), any()) }
     }
 
     private fun createViewModel(): SettingsViewModel {

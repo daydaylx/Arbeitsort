@@ -3,6 +3,7 @@
 package de.montagezeit.app.ui.screen.edit
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,13 +46,12 @@ import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.ui.components.MZAppPanel
 import de.montagezeit.app.ui.components.MZInlineNotice
-import de.montagezeit.app.ui.components.MZSegmentedControl
-import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZStatusBadge
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.components.TimePickerDialog
 import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.util.Formatters
@@ -92,6 +94,8 @@ internal fun EditFormContent(
     isSaving: Boolean = false
 ) {
     val isCompTime = formData.dayType == DayType.COMP_TIME
+    val isVacation = formData.dayType == DayType.VACATION
+    val isWorkDay = formData.dayType.isWorkLike
     val isMealEligibleType = formData.dayType == DayType.WORK &&
         MealAllowanceCalculator.isLocationEligible(formData.dayLocationLabel)
 
@@ -113,14 +117,23 @@ internal fun EditFormContent(
         EditFormSectionCard {
             DayTypeSelector(
                 selectedType = formData.dayType,
+                dailyTargetHours = dailyTargetHours,
                 onTypeChange = onDayTypeChange
             )
-            if (isCompTime) {
+            if (isVacation) {
+                val str = if (dailyTargetHours % 1.0 == 0.0) dailyTargetHours.toInt().toString()
+                    else "%.1f".format(dailyTargetHours)
                 MZStatusBadge(
-                    text = stringResource(
-                        R.string.edit_comp_time_info,
-                        dailyTargetHours.toInt()
-                    ),
+                    text = stringResource(R.string.edit_vacation_info, str),
+                    type = StatusType.NEUTRAL,
+                    modifier = Modifier.fillMaxWidth(),
+                    showIcon = false
+                )
+            } else if (isCompTime) {
+                val str = if (dailyTargetHours % 1.0 == 0.0) dailyTargetHours.toInt().toString()
+                    else "%.1f".format(dailyTargetHours)
+                MZStatusBadge(
+                    text = stringResource(R.string.edit_comp_time_info, str),
                     type = StatusType.NEUTRAL,
                     modifier = Modifier.fillMaxWidth(),
                     showIcon = false
@@ -128,7 +141,7 @@ internal fun EditFormContent(
             }
         }
 
-        if (!isCompTime && formData.dayType.isWorkLike) {
+        if (isWorkDay) {
             EditFormSectionCard {
                 LocationLabelsSection(
                     dayLocationLabel = formData.dayLocationLabel,
@@ -153,7 +166,7 @@ internal fun EditFormContent(
             }
         }
 
-        if (!isCompTime) {
+        if (isWorkDay) {
             EditFormSectionCard {
                 if (travelHasErrors) {
                     validationErrors.firstOrNull {
@@ -266,27 +279,100 @@ private fun CollapsibleSectionHeader(
 @Composable
 internal fun DayTypeSelector(
     selectedType: DayType,
+    dailyTargetHours: Double,
     onTypeChange: (DayType) -> Unit
 ) {
+    val targetHoursStr = if (dailyTargetHours % 1.0 == 0.0) dailyTargetHours.toInt().toString()
+        else "%.1f".format(dailyTargetHours)
+    val options = listOf(
+        DayTypeOption(
+            type = DayType.WORK,
+            label = stringResource(R.string.edit_day_type_workday),
+            description = stringResource(R.string.edit_day_type_workday_description)
+        ),
+        DayTypeOption(
+            type = DayType.OFF,
+            label = stringResource(R.string.edit_day_type_off),
+            description = stringResource(R.string.edit_day_type_off_description)
+        ),
+        DayTypeOption(
+            type = DayType.VACATION,
+            label = stringResource(R.string.edit_day_type_vacation),
+            description = stringResource(R.string.edit_day_type_vacation_description, targetHoursStr)
+        ),
+        DayTypeOption(
+            type = DayType.COMP_TIME,
+            label = stringResource(R.string.edit_day_type_comp_time),
+            description = stringResource(R.string.edit_day_type_comp_time_description, targetHoursStr)
+        )
+    )
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionTitle(text = stringResource(R.string.edit_section_day_type))
-        MZSegmentedControl(
-            options = listOf(
-                MZSegmentedOption(DayType.WORK, stringResource(R.string.edit_day_type_workday)),
-                MZSegmentedOption(DayType.OFF, stringResource(R.string.edit_day_type_off)),
-                MZSegmentedOption(DayType.COMP_TIME, stringResource(R.string.edit_day_type_comp_time))
-            ),
-            selectedValue = selectedType,
-            onValueSelected = onTypeChange
+        options.forEach { option ->
+            DayTypeOptionRow(
+                option = option,
+                selected = selectedType == option.type,
+                onClick = { onTypeChange(option.type) }
+            )
+        }
+    }
+}
+
+private data class DayTypeOption(
+    val type: DayType,
+    val label: String,
+    val description: String
+)
+
+@Composable
+private fun DayTypeOptionRow(
+    option: DayTypeOption,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(MZTokens.RadiusCard),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
+            }
         )
-        MZSegmentedControl(
-            options = listOf(
-                MZSegmentedOption(DayType.SCHULUNG, stringResource(R.string.edit_day_type_schulung)),
-                MZSegmentedOption(DayType.LEHRGANG, stringResource(R.string.edit_day_type_lehrgang))
-            ),
-            selectedValue = selectedType,
-            onValueSelected = onTypeChange
-        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            RadioButton(
+                selected = selected,
+                onClick = onClick
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = option.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = option.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -319,7 +405,7 @@ internal fun EditWorkTimesSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SectionTitle(text = stringResource(R.string.edit_section_work_times))
+            SectionTitle(text = stringResource(R.string.edit_section_work_times), modifier = Modifier.weight(1f))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.edit_toggle_work_times),
@@ -523,9 +609,10 @@ internal fun MealAllowanceSection(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
+private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     MZSectionHeader(
-        title = text
+        title = text,
+        modifier = modifier
     )
 }
 

@@ -16,6 +16,7 @@ Die Klassifikation wird nur für fachlich bestätigte Tage verwendet. Unbestäti
 | --- | --- | --- | --- | --- |
 | `FREI` | `OFF` ohne Reisezeit | Nein | Nein | Nein |
 | `FREI_MIT_REISE` | `OFF` mit Reisezeit | Nein | Nein | Nein |
+| `URLAUB` | `VACATION` | Nein | Ja | Nein |
 | `ARBEITSTAG_MIT_ARBEIT` | `WORK` mit positiver Arbeitszeit, optional zusätzlich Reisezeit | Ja | Ja | Ja |
 | `ARBEITSTAG_NUR_REISE` | `WORK` ohne Arbeitszeit, aber mit Reisezeit | Ja | Ja | Ja |
 | `ARBEITSTAG_LEER` | `WORK` ohne Arbeits- und Reisezeit | Ja | Ja | Nein |
@@ -32,6 +33,7 @@ Für bestätigte Tage gilt vereinfacht:
 ```kotlin
 when (dayType) {
     OFF -> if (travelMinutes > 0) FREI_MIT_REISE else FREI
+    VACATION -> URLAUB
     COMP_TIME -> UEBERSTUNDEN_ABBAU
     WORK -> when {
         workMinutes > 0 -> ARBEITSTAG_MIT_ARBEIT
@@ -53,13 +55,14 @@ when (dayType) {
 - `ARBEITSTAG_NUR_REISE`
 - `ARBEITSTAG_LEER`
 
-`COMP_TIME` gehört ausdrücklich nicht in diesen sichtbaren Zähler.
+`VACATION` und `COMP_TIME` gehören ausdrücklich nicht in diesen sichtbaren Zähler.
 
 ### Sollstundenrelevante Tage (`targetCountedDays`)
 
-Für die Sollstunden- und Overtime-Logik werden zusätzlich `COMP_TIME`-Tage gezählt:
+Für die Sollstunden- und Overtime-Logik werden zusätzlich `VACATION`- und `COMP_TIME`-Tage gezählt:
 
 - alle sichtbaren Arbeitstage
+- plus `URLAUB`
 - plus `UEBERSTUNDEN_ABBAU`
 
 Damit bleibt der fachliche Unterschied zwischen „Arbeitstage“ und „Solltage“ erhalten.
@@ -70,7 +73,7 @@ Damit bleibt der fachliche Unterschied zwischen „Arbeitstage“ und „Solltag
 - `totalTravelMinutes`: Summe der Reisezeit bestätigter Tage
 - `totalPaidMinutes`: `totalWorkMinutes + totalTravelMinutes`
 
-Reisezeit an freien Tagen (`FREI_MIT_REISE`) zählt in bezahlte Zeit und Überstunden-Istzeit, aber nicht als Arbeitstag.
+Reisezeit an freien Tagen (`FREI_MIT_REISE`) wird getrennt ausgewiesen, zählt aber nicht in bezahlte Zeit oder Überstunden-Istzeit. `VACATION` wird in der Überstunden- und Exportlogik mit dem Tagesziel als Soll und Ist bewertet.
 
 ### Verpflegungspauschale
 
@@ -84,6 +87,7 @@ Keinen Anspruch haben:
 - `ARBEITSTAG_LEER`
 - `FREI`
 - `FREI_MIT_REISE`
+- `URLAUB`
 - `UEBERSTUNDEN_ABBAU`
 - `WORK`-Tage mit `0` Netto-Arbeitszeit und ohne Reisezeit
 
@@ -145,6 +149,21 @@ Klassifikation: UEBERSTUNDEN_ABBAU
 Sichtbarer Arbeitstag: Nein
 Sollstundenrelevant: Ja
 Verpflegungspauschale: Nein
+```
+
+### Urlaub
+
+```text
+Tagtyp: VACATION
+Bestätigt: Ja
+Arbeitszeit: Tagesziel
+Reisezeit: 0h
+
+Klassifikation: URLAUB
+Sichtbarer Arbeitstag: Nein
+Sollstundenrelevant: Ja
+Verpflegungspauschale: Nein
+Überstundenwirkung: 0h
 ```
 
 ## Hinweise für Implementierung und Tests

@@ -4,6 +4,8 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.data.preferences.ReminderSettings
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
 import de.montagezeit.app.domain.usecase.DeletedDaySnapshot
@@ -623,10 +625,13 @@ class TodayViewModelTest {
             deleteDayEntry = DeleteDayEntry(repository),
             workEntryRepository = repository
         )
+        val settingsManager = mockk<ReminderSettingsManager>()
+        every { settingsManager.settings } returns flowOf(ReminderSettings())
         return TodayViewModel(
             workEntryRepository = repository,
             dateCoordinator = TodayDateCoordinator(Clock.systemDefaultZone()),
             actionsHandler = actionsHandler,
+            reminderSettingsManager = settingsManager,
             clock = Clock.systemDefaultZone()
         ).also {
             createdViewModels.add(it)

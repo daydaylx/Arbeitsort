@@ -4,7 +4,6 @@ import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.domain.util.TimeCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,55 +20,40 @@ class CsvExporterLogicTest {
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     private fun buildCsvLine(entry: WorkEntry): String {
-        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(
-            WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
-        )
-        val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-        val travelMinutes = TimeCalculator.calculateTravelMinutes(emptyList())
-        val paidTotalMinutes = TimeCalculator.calculatePaidTotalMinutes(entry)
-        val isWorkDay = entry.dayType == DayType.WORK
-        val dayTypeLabel = when (entry.dayType) {
-            DayType.COMP_TIME -> "Ausgleich"
-            else -> entry.dayType.name
-        }
-        return buildString {
-            append(entry.date.format(dateFormatter))
-            append(";")
-            append(dayTypeLabel)
-            append(";")
-            append(if (entry.confirmedWorkDay) 1 else 0)
-            append(";")
-            append(CsvCellEncoder.encode(entry.dayLocationLabel))
-            append(";")
-            append(if (isWorkDay) entry.workStart?.format(timeFormatter).orEmpty() else "")
-            append(";")
-            append(if (isWorkDay) entry.workEnd?.format(timeFormatter).orEmpty() else "")
-            append(";")
-            append(if (isWorkDay) entry.breakMinutes.toString() else "")
-            append(";")
-            append(workMinutes)
-            append(";")
-            append(travelMinutes)
-            append(";")
-            append(0)
-            append(";")
-            append("")
-            append(";")
-            append(paidTotalMinutes)
-            append(";")
-            append(if (mealSnapshot.isArrivalDeparture) 1 else 0)
-            append(";")
-            append(if (mealSnapshot.breakfastIncluded) 1 else 0)
-            append(";")
-            append(mealSnapshot.baseCents)
-            append(";")
-            append(mealSnapshot.amountCents)
-            append(";")
-            append(MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents))
-            append(";")
-            append(CsvCellEncoder.encode(entry.note ?: ""))
-            append("\n")
-        }
+        val record = WorkEntryWithTravelLegs(workEntry = entry, travelLegs = emptyList())
+        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
+        val metrics = buildExportDayMetrics(record, dailyTargetHours = 8.0)
+
+        return listOf(
+            entry.date.format(dateFormatter),
+            dayTypeLabel(entry.dayType),
+            if (entry.confirmedWorkDay) "1" else "0",
+            CsvCellEncoder.encode(workDayText(metrics.isWorkDay) { entry.dayLocationLabel }),
+            workDayText(metrics.isWorkDay) { entry.workStart?.format(timeFormatter).orEmpty() },
+            workDayText(metrics.isWorkDay) { entry.workEnd?.format(timeFormatter).orEmpty() },
+            workDayText(metrics.isWorkDay) { entry.breakMinutes.toString() },
+            metrics.workMinutes.toString(),
+            metrics.travelMinutes.toString(),
+            "0",
+            "",
+            metrics.paidTotalMinutes.toString(),
+            if (mealSnapshot.isArrivalDeparture) "1" else "0",
+            if (mealSnapshot.breakfastIncluded) "1" else "0",
+            mealSnapshot.baseCents.toString(),
+            mealSnapshot.amountCents.toString(),
+            MealAllowanceCalculator.formatEuro(mealSnapshot.amountCents),
+            CsvCellEncoder.encode(entry.note ?: "")
+        ).joinToString(separator = ";", postfix = "\n")
+    }
+
+    private fun dayTypeLabel(dayType: DayType): String = when (dayType) {
+        DayType.WORK, DayType.OFF -> dayType.name
+        DayType.VACATION -> "Urlaub"
+        DayType.COMP_TIME -> "Ausgleich"
+    }
+
+    private fun workDayText(isWorkDay: Boolean, value: () -> String): String {
+        return if (isWorkDay) value() else ""
     }
 
     private fun entry(
@@ -242,6 +226,19 @@ class CsvExporterLogicTest {
         assertEquals("", cols[4])
         assertEquals("", cols[5])
         assertEquals("", cols[6])
+    }
+
+    @Test
+    fun `VACATION Tag hat leere Zeitfelder und acht bezahlte Stunden`() {
+        val line = buildCsvLine(entry(dayType = DayType.VACATION))
+        val cols = line.trimEnd('\n').split(";")
+        assertEquals("Urlaub", cols[1])
+        assertEquals("", cols[3])
+        assertEquals("", cols[4])
+        assertEquals("", cols[5])
+        assertEquals("", cols[6])
+        assertEquals("480", cols[7])
+        assertEquals("480", cols[11])
     }
 
     @Test

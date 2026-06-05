@@ -183,7 +183,7 @@ class HistoryViewModelTest {
         assertEquals(false, saved.mealBreakfastIncluded)
         assertEquals(0, saved.mealAllowanceBaseCents)
         assertEquals(0, saved.mealAllowanceAmountCents)
-        assertTrue(deletedTravelDates.isEmpty())
+        assertEquals(listOf(date), deletedTravelDates)
         coVerify(atLeast = 1) { workEntryDao.upsertAllAndDeleteTravelLegs(any(), any()) }
     }
 

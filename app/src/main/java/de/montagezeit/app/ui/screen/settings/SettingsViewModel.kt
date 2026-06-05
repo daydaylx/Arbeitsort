@@ -12,6 +12,7 @@ import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.export.CsvExporter
 import de.montagezeit.app.export.PdfExporter
+import de.montagezeit.app.export.PdfExportRequest
 import de.montagezeit.app.domain.util.hasPositiveNetWorkDuration
 import de.montagezeit.app.domain.util.isValidWorkTimeRange
 import de.montagezeit.app.notification.ReminderNotificationManager
@@ -278,13 +279,16 @@ class SettingsViewModel @Inject constructor(
 
                 _uiState.value = when (format) {
                     ExportFormat.PDF -> exportPdf(
-                        entries = entries,
-                        employeeName = settings.pdfEmployeeName.orEmpty(),
-                        company = settings.pdfCompany,
-                        project = settings.pdfProject,
-                        personnelNumber = settings.pdfPersonnelNumber,
-                        startDate = startDate,
-                        endDate = endDate
+                        PdfExportRequest(
+                            entries = entries,
+                            employeeName = settings.pdfEmployeeName.orEmpty(),
+                            company = settings.pdfCompany,
+                            project = settings.pdfProject,
+                            personnelNumber = settings.pdfPersonnelNumber,
+                            startDate = startDate,
+                            endDate = endDate,
+                            dailyTargetHours = settings.dailyTargetHours
+                        )
                     )
                     ExportFormat.CSV -> {
                         if (entries.none(::isStatisticsEligible)) {
@@ -292,7 +296,7 @@ class SettingsViewModel @Inject constructor(
                                 UiText.StringResource(emptyRangeRes)
                             )
                         } else {
-                            exportCsv(entries)
+                            exportCsv(entries, settings.dailyTargetHours)
                         }
                     }
                 }
@@ -308,25 +312,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun exportPdf(
-        entries: List<WorkEntryWithTravelLegs>,
-        employeeName: String,
-        company: String?,
-        project: String?,
-        personnelNumber: String?,
-        startDate: LocalDate,
-        endDate: LocalDate
-    ): SettingsUiState {
+    private suspend fun exportPdf(request: PdfExportRequest): SettingsUiState {
         return when (
-            val exportResult = pdfExporter.exportToPdf(
-                entries = entries,
-                employeeName = employeeName,
-                company = company,
-                project = project,
-                personnelNumber = personnelNumber,
-                startDate = startDate,
-                endDate = endDate
-            )
+            val exportResult = pdfExporter.exportToPdf(request)
         ) {
             is PdfExporter.PdfExportResult.Success -> {
                 SettingsUiState.ExportSuccess(
@@ -338,8 +326,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun exportCsv(entries: List<WorkEntryWithTravelLegs>): SettingsUiState {
-        return when (val result = csvExporter.exportToCsv(entries)) {
+    private fun exportCsv(entries: List<WorkEntryWithTravelLegs>, dailyTargetHours: Double): SettingsUiState {
+        return when (val result = csvExporter.exportToCsv(entries, dailyTargetHours)) {
             is CsvExporter.CsvExportResult.Success -> {
                 SettingsUiState.ExportSuccess(
                     fileUri = result.fileUri,

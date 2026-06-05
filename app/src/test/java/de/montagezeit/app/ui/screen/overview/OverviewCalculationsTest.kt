@@ -152,8 +152,33 @@ class OverviewCalculationsTest {
 
         assertEquals(2.0, metrics.overtimeHours, 0.001)
         assertEquals(2.0, metrics.actualHours, 0.001)
-        assertEquals(2.0, metrics.travelHours, 0.001)
+        assertEquals(0.0, metrics.travelHours, 0.001)  // work-day travel only; off-day travel in overtime balance
         assertEquals(0, metrics.countedDays)
+    }
+
+    @Test
+    fun `buildOverviewMetrics counts vacation as neutral target day`() {
+        val date = LocalDate.of(2026, 3, 20)
+        val vacationEntry = WorkEntryWithTravelLegs(
+            workEntry = WorkEntry(
+                date = date,
+                dayType = DayType.VACATION,
+                confirmedWorkDay = true
+            ),
+            travelLegs = emptyList()
+        )
+
+        val metrics = buildOverviewMetrics(
+            period = OverviewPeriod.DAY,
+            entries = listOf(vacationEntry),
+            settings = settings
+        )
+
+        assertEquals(0.0, metrics.overtimeHours, 0.001)
+        assertEquals(8.0, metrics.targetHours, 0.001)
+        assertEquals(8.0, metrics.actualHours, 0.001)
+        assertEquals(1, metrics.countedDays)
+        assertEquals(1, metrics.vacationDays)
     }
 
 }

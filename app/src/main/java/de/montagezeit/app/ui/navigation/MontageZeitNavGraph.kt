@@ -146,10 +146,7 @@ fun MontageZeitNavGraph(
                 ) { page ->
                     when (page) {
                         0 -> TodayScreen(
-                            onOpenEditSheet = { date -> openEditSheet(date) },
-                            onOpenWeekView = {
-                                coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                            }
+                            onOpenEditSheet = { date -> openEditSheet(date) }
                         )
 
                         1 -> OverviewScreen(

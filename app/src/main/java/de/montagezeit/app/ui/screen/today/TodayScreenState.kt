@@ -14,7 +14,8 @@ data class TodayScreenState(
     val selectedEntryWithTravel: WorkEntryWithTravelLegs? = null,
     val selectedDate: LocalDate,
     val todayDate: LocalDate,
-    val loadingActions: Set<TodayAction>
+    val loadingActions: Set<TodayAction>,
+    val dailyTargetHours: Double = 8.0
 ) {
     val currentEntry: WorkEntry?
         get() {
@@ -51,6 +52,9 @@ data class TodayScreenState(
 
     val isConfirmOffdayLoading: Boolean
         get() = loadingActions.contains(TodayAction.CONFIRM_OFFDAY)
+
+    val isSetDayTypeLoading: Boolean
+        get() = loadingActions.contains(TodayAction.SET_DAY_TYPE)
 }
 
 @Immutable

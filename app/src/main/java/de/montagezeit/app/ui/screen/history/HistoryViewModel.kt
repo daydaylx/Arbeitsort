@@ -27,6 +27,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -65,14 +67,16 @@ class HistoryViewModel @Inject constructor(
 
     val uiState: StateFlow<HistoryUiState> = _refreshTrigger
         .flatMapLatest {
-            workEntryRepository.getAllWithTravelFlow()
-                .debounce(HISTORY_DEBOUNCE_MS)
-                .distinctUntilChanged()
-                .map<List<WorkEntryWithTravelLegs>, HistoryUiState> { entries ->
-                    withContext(calculationDispatcher) {
-                        buildSuccessState(entries)
-                    }
-                }
+            combine(
+                workEntryRepository.getAllWithTravelFlow()
+                    .debounce(HISTORY_DEBOUNCE_MS)
+                    .distinctUntilChanged(),
+                reminderSettingsManager.settings
+            ) { entries, settings ->
+                withContext(calculationDispatcher) {
+                    buildSuccessState(entries, (settings.dailyTargetHours * MINUTES_PER_HOUR).roundToInt())
+                } as HistoryUiState
+            }
                 .catch { e ->
                     emit(HistoryUiState.Error(message = e.toUiText(R.string.history_error_unknown)))
                 }
@@ -88,7 +92,10 @@ class HistoryViewModel @Inject constructor(
         _refreshTrigger.value++
     }
 
-    private fun buildSuccessState(entries: List<WorkEntryWithTravelLegs>): HistoryUiState.Success {
+    private fun buildSuccessState(
+        entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetMinutes: Int
+    ): HistoryUiState.Success {
         val trace = AppDiagnosticsRuntime.startTrace(
             DiagnosticTraceRequest(
                 category = DiagnosticCategory.CALCULATION_RUN,
@@ -99,9 +106,9 @@ class HistoryViewModel @Inject constructor(
             )
         )
         try {
-            val groupedWeeks = groupByWeek(entries)
+            val groupedWeeks = groupByWeek(entries, dailyTargetMinutes)
             trace.event("weeks_grouped", payload = mapOf("weekCount" to groupedWeeks.size))
-            val groupedMonths = groupByMonth(entries)
+            val groupedMonths = groupByMonth(entries, dailyTargetMinutes)
             trace.event("months_grouped", payload = mapOf("monthCount" to groupedMonths.size))
             val entriesByDate = entries.associate { it.workEntry.date to it.workEntry }
             val travelLegsByDate = entries.associate { it.workEntry.date to it.orderedTravelLegs }
@@ -163,10 +170,10 @@ class HistoryViewModel @Inject constructor(
                     if (request.dayType != null) {
                         updated = updated.transitionToDayType(dayType = request.dayType, now = now)
                     }
-                    if (request.applyDayLocation) {
+                    if (request.applyDayLocation && updated.dayType.isWorkLike) {
                         updated = updated.copy(dayLocationLabel = request.dayLocationLabel?.trim().orEmpty())
                     }
-                    if (request.dayType == DayType.COMP_TIME) {
+                    if (request.dayType != null && !request.dayType.isWorkLike) {
                         travelLegDatesToDelete += date
                     }
                     if (updated.dayType == DayType.WORK && updated.dayLocationLabel.isBlank()) {
@@ -215,7 +222,7 @@ class HistoryViewModel @Inject constructor(
         _batchEditState.value = BatchEditState.Idle
     }
     
-    private fun groupByWeek(entries: List<WorkEntryWithTravelLegs>): List<WeekGroup> {
+    private fun groupByWeek(entries: List<WorkEntryWithTravelLegs>, dailyTargetMinutes: Int): List<WeekGroup> {
         val weekFields = WeekFields.ISO
         
         return entries
@@ -226,7 +233,7 @@ class HistoryViewModel @Inject constructor(
             }
             .map { (yearWeek, weekEntries) ->
                 val sortedEntries = weekEntries.sortedByDescending { it.workEntry.date }
-                val stats = calculateGroupStats(sortedEntries)
+                val stats = calculateGroupStats(sortedEntries, dailyTargetMinutes)
                 val weekStart = weekEntries.minOf { it.workEntry.date }.with(weekFields.dayOfWeek(), 1)
                 WeekGroup(
                     year = yearWeek.first,
@@ -243,14 +250,14 @@ class HistoryViewModel @Inject constructor(
             .sortedByDescending { it.year * 100 + it.week }
     }
     
-    private fun groupByMonth(entries: List<WorkEntryWithTravelLegs>): List<MonthGroup> {
+    private fun groupByMonth(entries: List<WorkEntryWithTravelLegs>, dailyTargetMinutes: Int): List<MonthGroup> {
         return entries
             .groupBy { entry ->
                 Pair(entry.workEntry.date.year, entry.workEntry.date.monthValue)
             }
             .map { (yearMonth, monthEntries) ->
                 val sortedEntries = monthEntries.sortedByDescending { it.workEntry.date }
-                val stats = calculateGroupStats(sortedEntries)
+                val stats = calculateGroupStats(sortedEntries, dailyTargetMinutes)
                 MonthGroup(
                     year = yearMonth.first,
                     month = yearMonth.second,
@@ -268,13 +275,17 @@ class HistoryViewModel @Inject constructor(
 
     private val aggregateWorkStats = AggregateWorkStats()
 
-    private fun calculateGroupStats(entries: List<WorkEntryWithTravelLegs>): HistoryGroupStats {
-        val stats = aggregateWorkStats(entries)
+    private fun calculateGroupStats(
+        entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetMinutes: Int = 0
+    ): HistoryGroupStats {
+        val stats = aggregateWorkStats(entries, dailyTargetMinutes)
         return HistoryGroupStats(
             workDaysCount = stats.workDays,
-            offDaysCount = stats.freeDaysWithTravel + stats.freeDaysWithoutTravel + stats.compTimeDays,
-            totalHours = stats.totalWorkMinutes / 60.0,
-            totalPaidHours = stats.totalPaidMinutes / 60.0,
+            offDaysCount = stats.freeDaysWithTravel + stats.freeDaysWithoutTravel +
+                stats.vacationDays + stats.compTimeDays,
+            totalHours = stats.totalWorkMinutes / MINUTES_PER_HOUR.toDouble(),
+            totalPaidHours = stats.totalPaidMinutes / MINUTES_PER_HOUR.toDouble(),
             averageHoursPerDay = stats.averageWorkHoursPerDay,
             totalTravelMinutes = stats.totalTravelMinutes
         )
@@ -305,6 +316,7 @@ class HistoryViewModel @Inject constructor(
 
     private companion object {
         private const val HISTORY_DEBOUNCE_MS = 150L
+        private const val MINUTES_PER_HOUR = 60
     }
 }
 

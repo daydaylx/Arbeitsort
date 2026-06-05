@@ -112,6 +112,7 @@ class WorkEntryExtensionsTest {
         val result = entry.transitionToDayType(dayType = DayType.COMP_TIME, now = now)
 
         assertEquals(DayType.COMP_TIME, result.dayType)
+        assertEquals("", result.dayLocationLabel)
         assertTrue(result.confirmedWorkDay)
         assertEquals(DayType.COMP_TIME.name, result.confirmationSource)
         assertFalse(result.mealIsArrivalDeparture)
@@ -150,6 +151,7 @@ class WorkEntryExtensionsTest {
         val result = entry.transitionToDayType(dayType = DayType.OFF, now = now)
 
         assertEquals(DayType.OFF, result.dayType)
+        assertEquals("", result.dayLocationLabel)
         assertTrue(result.confirmedWorkDay)
         assertEquals(DayType.OFF.name, result.confirmationSource)
         assertEquals(0, result.breakMinutes)

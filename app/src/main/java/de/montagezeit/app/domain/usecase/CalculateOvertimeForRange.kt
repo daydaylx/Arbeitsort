@@ -1,6 +1,5 @@
 package de.montagezeit.app.domain.usecase
 
-import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.diagnostics.DiagnosticTrace
 import de.montagezeit.app.diagnostics.toSanitizedDiagnosticPayload
@@ -56,7 +55,6 @@ class CalculateOvertimeForRange {
                 DayClassification.FREI_MIT_REISE -> {
                     val travelHours = status.travelMinutes / 60.0
                     if (travelHours > 0.0) {
-                        // Fahrzeit an freien Tagen wird nun ebenfalls als Ist-Zeit erfasst
                         totalActualHours += travelHours
                         offDayTravelHours += travelHours
                         offDayTravelDays += 1
@@ -65,19 +63,15 @@ class CalculateOvertimeForRange {
                 DayClassification.FREI -> {
                     // Keine Stunden, kein Ziel
                 }
-                DayClassification.ARBEITSTAG_LEER -> Unit
-                DayClassification.SCHULUNG, DayClassification.LEHRGANG -> {
+                DayClassification.URLAUB -> {
                     countedDays += 1
                     totalTargetHours += dailyTargetHours
-                    totalActualHours += (status.workMinutes + status.travelMinutes) / 60.0
+                    totalActualHours += dailyTargetHours
                 }
+                DayClassification.ARBEITSTAG_LEER -> Unit
                 DayClassification.UEBERSTUNDEN_ABBAU -> {
-                    if (entry.workEntry.dayType == DayType.COMP_TIME) {
-                        // Fachentscheidung: Reisezeit an COMP_TIME-Tagen zählt nicht zur Ist-Zeit.
-                        // Travel Legs werden beim Batch-Edit zu COMP_TIME gelöscht (HistoryViewModel).
-                        countedDays += 1
-                        totalTargetHours += dailyTargetHours
-                    }
+                    countedDays += 1
+                    totalTargetHours += dailyTargetHours
                 }
             }
         }

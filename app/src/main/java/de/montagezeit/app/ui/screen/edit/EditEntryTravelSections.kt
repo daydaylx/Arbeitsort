@@ -34,6 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.TravelLegCategory
+import de.montagezeit.app.ui.components.MZInlineNotice
+import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.MZSegmentedControl
 import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.SecondaryActionButton
@@ -95,12 +97,18 @@ internal fun TravelLegsSection(
             }
         }
 
+        if (selectedMode == TravelMode.MANUAL) {
+            MZInlineNotice(
+                title = stringResource(R.string.edit_travel_manual_config_title),
+                message = stringResource(R.string.edit_travel_manual_config_hint),
+                type = StatusType.INFO
+            )
+        }
         val modeOptions = listOf(
             MZSegmentedOption(TravelMode.NONE, stringResource(R.string.edit_travel_mode_none)),
             MZSegmentedOption(TravelMode.OUTBOUND, stringResource(R.string.edit_travel_mode_outbound)),
             MZSegmentedOption(TravelMode.RETURN, stringResource(R.string.edit_travel_mode_return)),
-            MZSegmentedOption(TravelMode.BOTH, stringResource(R.string.edit_travel_mode_both)),
-            MZSegmentedOption(TravelMode.MANUAL, stringResource(R.string.edit_travel_mode_manual))
+            MZSegmentedOption(TravelMode.BOTH, stringResource(R.string.edit_travel_mode_both))
         )
         MZSegmentedControl(
             options = modeOptions,
@@ -144,18 +152,16 @@ internal fun TravelLegsSection(
                 }
             }
 
-            if (selectedMode == TravelMode.MANUAL) {
-                SecondaryActionButton(
-                    onClick = { onAddTravelLeg(TravelLegCategory.OTHER) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(stringResource(R.string.edit_action_add_travel_leg))
-                }
+            SecondaryActionButton(
+                onClick = { onAddTravelLeg(TravelLegCategory.OTHER) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(stringResource(R.string.edit_action_add_travel_leg))
             }
         }
     }

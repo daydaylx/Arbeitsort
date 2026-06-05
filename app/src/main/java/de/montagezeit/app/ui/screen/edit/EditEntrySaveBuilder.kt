@@ -72,7 +72,7 @@ class EditEntrySaveBuilder @Inject constructor(
             workStart = if (persistWorkBlock) data.workStart else null,
             workEnd = if (persistWorkBlock) data.workEnd else null,
             breakMinutes = if (persistWorkBlock) data.breakMinutes else 0,
-            dayLocationLabel = data.dayLocationLabel.orEmpty(),
+            dayLocationLabel = dayLocationLabelForSave(data),
             note = data.note,
             mealIsArrivalDeparture = mealAllowance.isArrivalDeparture,
             mealBreakfastIncluded = mealAllowance.breakfastIncluded,
@@ -81,7 +81,7 @@ class EditEntrySaveBuilder @Inject constructor(
             updatedAt = now
         )
         return when (draftEntry.dayType) {
-            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> {
+            DayType.WORK -> {
                 if (EntryStatusResolver.shouldAutoConfirmWorkDay(draftEntry, travelLegs)) {
                     draftEntry.copy(
                         confirmedWorkDay = true,
@@ -96,8 +96,12 @@ class EditEntrySaveBuilder @Inject constructor(
                     )
                 }
             }
-            DayType.OFF, DayType.COMP_TIME -> draftEntry
+            DayType.OFF, DayType.VACATION, DayType.COMP_TIME -> draftEntry
         }
+    }
+
+    private fun dayLocationLabelForSave(data: EditFormData): String {
+        return if (data.dayType.isWorkLike) data.dayLocationLabel.orEmpty() else ""
     }
 
     private fun buildTravelLegsToSave(
@@ -106,7 +110,7 @@ class EditEntrySaveBuilder @Inject constructor(
         zoneId: ZoneId,
         now: Long
     ): List<TravelLeg> {
-        if (data.dayType == DayType.COMP_TIME) return emptyList()
+        if (!data.dayType.isWorkLike) return emptyList()
 
         val normalizedTravelLegs = draftRules.normalizedTravelLegs(data)
         return normalizedTravelLegs.mapIndexed { index, leg ->

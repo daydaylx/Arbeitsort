@@ -15,7 +15,7 @@
     <ID>CyclomaticComplexMethod:WeekOverviewRow.kt$@Composable private fun WeekDayChip( day: WeekDayUi, onClick: () -&gt; Unit )</ID>
     <ID>CyclomaticComplexMethod:WindowCheckWorker.kt$WindowCheckWorker$override suspend fun doWork(): Result</ID>
     <ID>LargeClass:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest</ID>
-    <ID>LongMethod:AggregateWorkStats.kt$AggregateWorkStats$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, trace: DiagnosticTrace? = null ): WorkStatsResult</ID>
+    <ID>LongMethod:AggregateWorkStats.kt$AggregateWorkStats$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, dailyTargetMinutes: Int = 0, trace: DiagnosticTrace? = null ): WorkStatsResult</ID>
     <ID>LongMethod:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$override fun migrate(db: SupportSQLiteDatabase)</ID>
     <ID>LongMethod:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$private fun createVersion11Database(dbName: String)</ID>
     <ID>LongMethod:CalculateOvertimeForRange.kt$CalculateOvertimeForRange$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, dailyTargetHours: Double, trace: DiagnosticTrace? = null ): OvertimeResult</ID>

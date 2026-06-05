@@ -14,6 +14,7 @@ import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
@@ -27,9 +28,125 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.roundToInt
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+data class PdfExportRequest(
+    val entries: List<WorkEntryWithTravelLegs>,
+    val employeeName: String,
+    val company: String? = null,
+    val project: String? = null,
+    val personnelNumber: String? = null,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val dailyTargetHours: Double = 8.0
+)
+
+private class PdfTableCellTextBuilder(
+    private val context: Context
+) {
+    fun build(
+        record: WorkEntryWithTravelLegs,
+        dash: String,
+        dailyTargetHours: Double
+    ): List<String> {
+        val entry = record.workEntry
+        val metrics = buildExportDayMetrics(record, dailyTargetHours)
+        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
+
+        return listOf(
+            PdfUtilities.formatDate(entry.date),
+            buildStartText(entry.dayType, entry.workStart, metrics.travelMinutes, dash),
+            buildEndText(entry, metrics.isWorkDay, dash),
+            buildBreakText(entry, metrics.isWorkDay, dash),
+            buildWorkHoursText(metrics.workHours, dash),
+            buildTravelRouteText(metrics, dash),
+            buildTravelTypeText(metrics, dash),
+            buildLocationText(entry, metrics, dash),
+            PdfUtilities.buildMealAllowanceLabel(
+                amountCents = mealSnapshot.amountCents,
+                isArrivalDeparture = mealSnapshot.isArrivalDeparture,
+                breakfastIncluded = mealSnapshot.breakfastIncluded,
+                arrivalDepartureLabel = string(R.string.pdf_export_travel_type_arrival_departure),
+                breakfastIncludedLabel = string(R.string.pdf_export_column_breakfast)
+            ).ifBlank { dash }
+        )
+    }
+
+    private fun buildStartText(
+        dayType: DayType,
+        workStart: java.time.LocalTime?,
+        travelMinutes: Int,
+        dash: String
+    ): String = when (dayType) {
+        DayType.WORK -> when {
+            workStart != null -> PdfUtilities.formatTime(workStart)
+            travelMinutes > 0 -> string(R.string.pdf_export_row_label_travel_only)
+            else -> dash
+        }
+        DayType.OFF -> string(R.string.day_type_off)
+        DayType.VACATION -> string(R.string.day_type_vacation)
+        DayType.COMP_TIME -> string(R.string.day_type_comp_time)
+    }
+
+    private fun buildEndText(entry: WorkEntry, isWorkDay: Boolean, dash: String): String {
+        return if (isWorkDay && entry.workStart != null) {
+            PdfUtilities.formatTime(entry.workEnd).ifBlank { dash }
+        } else {
+            dash
+        }
+    }
+
+    private fun buildBreakText(entry: WorkEntry, isWorkDay: Boolean, dash: String): String {
+        return if (isWorkDay && entry.workStart != null) {
+            string(R.string.format_minutes, entry.breakMinutes)
+        } else {
+            dash
+        }
+    }
+
+    private fun buildWorkHoursText(workHours: Double, dash: String): String {
+        return if (workHours > 0) {
+            string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours))
+        } else {
+            dash
+        }
+    }
+
+    private fun buildTravelRouteText(metrics: ExportDayMetrics, dash: String): String {
+        return if (metrics.isWorkDay) {
+            PdfUtilities.buildTravelRouteSummary(metrics.travelLegs).ifBlank { dash }
+        } else {
+            dash
+        }
+    }
+
+    private fun buildTravelTypeText(metrics: ExportDayMetrics, dash: String): String {
+        if (!metrics.isWorkDay) return dash
+        return when (PdfUtilities.determineTravelTypeKey(metrics.travelLegs)) {
+            "ARRIVAL" -> string(R.string.pdf_export_travel_type_arrival)
+            "DEPARTURE" -> string(R.string.pdf_export_travel_type_departure)
+            "ARRIVAL_DEPARTURE" -> string(R.string.pdf_export_travel_type_arrival_departure)
+            "CONTINUATION" -> string(R.string.pdf_export_travel_type_continuation)
+            "TRAVEL" -> string(R.string.pdf_export_travel_type_travel)
+            else -> dash
+        }
+    }
+
+    private fun buildLocationText(entry: WorkEntry, metrics: ExportDayMetrics, dash: String): String {
+        return if (metrics.isWorkDay) {
+            PdfUtilities.getLocation(entry, metrics.travelLegs).ifBlank { dash }
+        } else {
+            dash
+        }
+    }
+
+    private fun string(resId: Int, vararg args: Any): String {
+        return context.getString(resId, *args)
+    }
+}
 
 /**
  * PDF Exporter für MontageZeit
@@ -49,6 +166,8 @@ class PdfExporter @Inject constructor(
         data class FileWriteError(val message: String) : PdfExportResult
         data class UnknownError(val message: String) : PdfExportResult
     }
+
+    private val tableCellTextBuilder = PdfTableCellTextBuilder(context)
     
     // PDF-Konstanten (A4 in Punkten: 595 x 842)
     companion object {
@@ -147,53 +266,51 @@ class PdfExporter @Inject constructor(
     /**
      * Exportiert WorkEntries in eine PDF-Datei
      * 
-     * @param entries Die zu exportierenden Einträge
-     * @param employeeName Name des Mitarbeiters (Pflichtfeld)
-     * @param company Firma (optional)
-     * @param project Projekt (optional)
-     * @param personnelNumber Personalnummer (optional)
-     * @param startDate Startdatum des Zeitraums
-     * @param endDate Enddatum des Zeitraums
+     * @param request PDF-Exportauftrag inklusive Profil, Zeitraum und Einträgen
      * @return Ergebnis der PDF-Erstellung
      */
-    suspend fun exportToPdf(
-        entries: List<WorkEntryWithTravelLegs>,
-        employeeName: String,
-        company: String? = null,
-        project: String? = null,
-        personnelNumber: String? = null,
-        startDate: java.time.LocalDate,
-        endDate: java.time.LocalDate
-    ): PdfExportResult = withContext(Dispatchers.IO) {
+    suspend fun exportToPdf(request: PdfExportRequest): PdfExportResult = withContext(Dispatchers.IO) {
         try {
-            val eligibleEntries = entries.filter(::isStatisticsEligible)
-            // Pflichtfeld-Validierung
-            if (employeeName.isBlank()) {
-                throw IllegalArgumentException(string(R.string.pdf_export_error_name_missing))
-            }
-            if (eligibleEntries.isEmpty()) {
-                return@withContext PdfExportResult.ValidationError(string(R.string.export_preview_empty_range))
-            }
-            if (eligibleEntries.size > MAX_ENTRIES_PER_PDF) {
-                return@withContext PdfExportResult.ValidationError(string(R.string.pdf_export_error_too_many_entries))
-            }
+            val eligibleEntries = request.entries.filter(::isStatisticsEligible)
+            validatePdfRequest(request, eligibleEntries)?.let { return@withContext it }
 
             val pdfDocument = PdfDocument()
             try {
-                var currentPage = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create())
+                val firstPageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
+                var currentPage = pdfDocument.startPage(firstPageInfo)
                 var canvas = currentPage.canvas
 
                 // Header zeichnen
                 // Letzten erfassten Tag ermitteln – bei Teilmonat wird "Stand:" angezeigt
                 val lastEntryDate = eligibleEntries.maxOfOrNull { it.workEntry.date }
-                val actualEndDate = if (lastEntryDate != null && lastEntryDate < endDate) lastEntryDate else null
-                var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate, actualEndDate)
+                val actualEndDate = if (lastEntryDate != null && lastEntryDate < request.endDate) {
+                    lastEntryDate
+                } else {
+                    null
+                }
+                var yPosition = drawHeader(
+                    canvas = canvas,
+                    employeeName = request.employeeName,
+                    company = request.company,
+                    project = request.project,
+                    personnelNumber = request.personnelNumber,
+                    startDate = request.startDate,
+                    endDate = request.endDate,
+                    actualEndDate = actualEndDate
+                )
 
                 // Tabellenkopf zeichnen
                 yPosition = drawTableHeader(canvas, yPosition)
 
                 // Tabelle zeichnen (Multi-Pag)
-                val tableResult = drawTable(canvas, pdfDocument, currentPage, eligibleEntries, yPosition)
+                val tableResult = drawTable(
+                    canvas,
+                    pdfDocument,
+                    currentPage,
+                    eligibleEntries,
+                    yPosition,
+                    request.dailyTargetHours
+                )
                 currentPage = tableResult.page
                 canvas = currentPage.canvas
                 yPosition = tableResult.yPosition
@@ -210,7 +327,7 @@ class PdfExporter @Inject constructor(
                 }
 
                 // Summenblock zeichnen
-                yPosition = drawSummary(canvas, eligibleEntries, yPosition)
+                yPosition = drawSummary(canvas, eligibleEntries, yPosition, request.dailyTargetHours)
 
                 // Unterschriften zeichnen
                 drawSignatures(canvas, yPosition)
@@ -220,7 +337,7 @@ class PdfExporter @Inject constructor(
                 pdfDocument.finishPage(currentPage)
 
                 // PDF schreiben
-                writePdfFile(pdfDocument, startDate, endDate)
+                writePdfFile(pdfDocument, request.startDate, request.endDate)
             } finally {
                 closePdfDocumentQuietly(pdfDocument)
             }
@@ -237,6 +354,22 @@ class PdfExporter @Inject constructor(
             Log.e("PdfExporter", "PDF export failed (${e.javaClass.simpleName})", e)
             PdfExportResult.UnknownError(e.message ?: string(R.string.settings_error_export_failed))
         }
+    }
+
+    private fun validatePdfRequest(
+        request: PdfExportRequest,
+        eligibleEntries: List<WorkEntryWithTravelLegs>
+    ): PdfExportResult.ValidationError? = when {
+        request.employeeName.isBlank() -> {
+            PdfExportResult.ValidationError(string(R.string.pdf_export_error_name_missing))
+        }
+        eligibleEntries.isEmpty() -> {
+            PdfExportResult.ValidationError(string(R.string.export_preview_empty_range))
+        }
+        eligibleEntries.size > MAX_ENTRIES_PER_PDF -> {
+            PdfExportResult.ValidationError(string(R.string.pdf_export_error_too_many_entries))
+        }
+        else -> null
     }
 
     /**
@@ -437,7 +570,8 @@ class PdfExporter @Inject constructor(
         pdfDocument: PdfDocument,
         currentPage: PdfDocument.Page,
         entries: List<WorkEntryWithTravelLegs>,
-        startY: Float
+        startY: Float,
+        dailyTargetHours: Double
     ): TableDrawResult {
         val columns = tableColumns()
         val dash = string(R.string.pdf_export_placeholder_dash)
@@ -447,7 +581,7 @@ class PdfExporter @Inject constructor(
         var activeCanvas = canvas
         
         entries.forEach { record ->
-            val cellLayouts = buildTableCellTexts(record, dash)
+            val cellLayouts = tableCellTextBuilder.build(record, dash, dailyTargetHours)
                 .zip(columns)
                 .map { (text, column) ->
                     CellLayout(
@@ -493,52 +627,6 @@ class PdfExporter @Inject constructor(
         y += SPACING * 2
         
         return TableDrawResult(activePage, y, pageNum)
-    }
-
-    private fun buildTableCellTexts(record: WorkEntryWithTravelLegs, dash: String): List<String> {
-        val entry = record.workEntry
-        val travelLegs = record.orderedTravelLegs
-        val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
-        val workHours = TimeCalculator.calculateWorkHours(entry)
-        val isWorkDay = entry.dayType.isWorkLike
-        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
-
-        val startText = when (entry.dayType) {
-            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> when {
-                entry.workStart != null -> PdfUtilities.formatTime(entry.workStart)
-                travelMinutes > 0 -> string(R.string.pdf_export_row_label_travel_only)
-                else -> dash
-            }
-            DayType.OFF -> string(R.string.day_type_off)
-            DayType.COMP_TIME -> string(R.string.day_type_comp_time)
-        }
-
-        val travelTypeText = when (PdfUtilities.determineTravelTypeKey(travelLegs)) {
-            "ARRIVAL" -> string(R.string.pdf_export_travel_type_arrival)
-            "DEPARTURE" -> string(R.string.pdf_export_travel_type_departure)
-            "ARRIVAL_DEPARTURE" -> string(R.string.pdf_export_travel_type_arrival_departure)
-            "CONTINUATION" -> string(R.string.pdf_export_travel_type_continuation)
-            "TRAVEL" -> string(R.string.pdf_export_travel_type_travel)
-            else -> dash
-        }
-
-        return listOf(
-            PdfUtilities.formatDate(entry.date),
-            startText,
-            if (isWorkDay && entry.workStart != null) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash,
-            if (isWorkDay && entry.workStart != null) string(R.string.format_minutes, entry.breakMinutes) else dash,
-            if (workHours > 0) string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours)) else dash,
-            PdfUtilities.buildTravelRouteSummary(travelLegs).ifBlank { dash },
-            travelTypeText,
-            PdfUtilities.getLocation(entry, travelLegs).ifBlank { dash },
-            PdfUtilities.buildMealAllowanceLabel(
-                amountCents = mealSnapshot.amountCents,
-                isArrivalDeparture = mealSnapshot.isArrivalDeparture,
-                breakfastIncluded = mealSnapshot.breakfastIncluded,
-                arrivalDepartureLabel = string(R.string.pdf_export_travel_type_arrival_departure),
-                breakfastIncludedLabel = string(R.string.pdf_export_column_breakfast)
-            ).ifBlank { dash }
-        )
     }
 
     private fun cellHeight(layout: CellLayout, lineHeight: Float): Float {
@@ -634,10 +722,16 @@ class PdfExporter @Inject constructor(
     /**
      * Zeichnet den Summenblock
      */
-    private fun drawSummary(canvas: Canvas, entries: List<WorkEntryWithTravelLegs>, y: Float): Float {
+    private fun drawSummary(
+        canvas: Canvas,
+        entries: List<WorkEntryWithTravelLegs>,
+        y: Float,
+        dailyTargetHours: Double
+    ): Float {
         var yPos = y + 20
-        val stats = AggregateWorkStats()(entries)
-        val totalWorkHours = stats.totalWorkMinutes / 60.0
+        val dailyTargetMinutes = (dailyTargetHours * MINUTES_PER_HOUR).roundToInt()
+        val stats = AggregateWorkStats()(entries, dailyTargetMinutes)
+        val totalWorkHours = stats.totalPaidMinutes / 60.0 - stats.totalTravelMinutes / 60.0
         val totalTravelMinutes = stats.totalTravelMinutes
         val totalMealAllowanceCents = stats.mealAllowanceCents
 
@@ -655,7 +749,10 @@ class PdfExporter @Inject constructor(
 
         if (totalTravelMinutes > 0) {
             canvas.drawText(
-                string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelMinutes / 60.0)),
+                string(
+                    R.string.pdf_export_summary_travel_time,
+                    PdfUtilities.formatWorkHours(totalTravelMinutes / MINUTES_PER_HOUR.toDouble())
+                ),
                 MARGIN.toFloat(), yPos, paintSummary
             )
             yPos += 25
@@ -669,7 +766,10 @@ class PdfExporter @Inject constructor(
         }
 
         canvas.drawText(
-            string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),
+            string(
+                R.string.pdf_export_summary_meal_allowance,
+                MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)
+            ),
             MARGIN.toFloat(), yPos, paintSummary
         )
         yPos += 25

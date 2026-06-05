@@ -14,7 +14,7 @@ Andere Dateien unter `docs/` sind nur ergänzende Referenzen. Wenn sich Doku und
 
 - Single-Module-Android-Projekt (`:app`)
 - App-Version: `1.1.2` (`versionCode 6`)
-- Room-Datenbank: Schema `16`, Migrationen `1 -> 16`
+- Room-Datenbank: Schema `17`, Migrationen `1 -> 17`
 
 Release- und Migrationsänderungen müssen diese Angaben gegen `app/build.gradle.kts`
 und `AppDatabase` mitprüfen.
@@ -23,8 +23,8 @@ und `AppDatabase` mitprüfen.
 
 - Kotlin 2.1.10, Coroutines, Flow
 - Jetpack Compose (Material3), Navigation Compose
-- Room 2.6.1
-- WorkManager 2.9.0
+- Room 2.7.1
+- WorkManager 2.10.1
 - Hilt 2.56.2 (`hilt-work`, `hilt-navigation-compose`)
 - DataStore Preferences
 
@@ -32,7 +32,7 @@ Build-Umgebung:
 - JDK 17
 - `minSdk 24`
 - `compileSdk 35`
-- `targetSdk 34`
+- `targetSdk 35`
 
 ## Kernfunktionen
 
@@ -100,11 +100,12 @@ Build-Umgebung:
 
 ### DayType
 
-- `WORK`: normaler Arbeitstag
-- `OFF`: freier Tag / Urlaub
-- `COMP_TIME`: Überstundenabbau; wird im Code beim Setzen direkt bestätigt
+- `WORK`: normaler Arbeitstag; Soll = Tagesziel, Ist = Arbeitszeit + Reisezeit
+- `OFF`: freier Tag; Soll = 0, Ist = 0
+- `VACATION`: bezahlter Urlaubstag; Soll = Tagesziel, Ist = Tagesziel, Saldo = 0
+- `COMP_TIME`: Überstundenabbau; Soll = Tagesziel, Ist = 0
 
-`Heute frei` im Today-Screen verwendet `ConfirmOffDay` und bestätigt den Tag sofort. `COMP_TIME` kann über Bearbeitungsfunktionen gesetzt werden und unterdrückt Daily-Reminder.
+`SCHULUNG` und `LEHRGANG` sind keine aktiven Haupttypen mehr. Migration `16 -> 17` normalisiert bestehende Altwerte still auf `WORK`. `Heute frei` im Today-Screen verwendet `ConfirmOffDay` und bestätigt den Tag sofort. `VACATION` und `COMP_TIME` werden beim Setzen ebenfalls terminal bestätigt und unterdrücken Daily-Reminder.
 
 ### Reminder-Logik
 

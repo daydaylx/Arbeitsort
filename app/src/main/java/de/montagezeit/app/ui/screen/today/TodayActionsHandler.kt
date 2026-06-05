@@ -1,6 +1,7 @@
 package de.montagezeit.app.ui.screen.today
 
 import de.montagezeit.app.R
+import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.ConfirmOffDay
@@ -10,6 +11,7 @@ import de.montagezeit.app.domain.usecase.DailyManualCheckInInput
 import de.montagezeit.app.domain.usecase.RecordDailyManualCheckIn
 import de.montagezeit.app.domain.usecase.SetDayLocation
 import de.montagezeit.app.domain.util.ConfirmationSources
+import de.montagezeit.app.domain.util.transitionToDayType
 import de.montagezeit.app.ui.util.UiText
 import de.montagezeit.app.ui.util.toUiText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +66,37 @@ class TodayActionsHandler @Inject constructor(
             null
         } finally {
             removeLoadingAction(TodayAction.CONFIRM_OFFDAY)
+        }
+    }
+
+    suspend fun setDayType(selectedDate: LocalDate, dayType: DayType): WorkEntry? {
+        if (TodayAction.SET_DAY_TYPE in _loadingActions.value) return null
+        addLoadingAction(TodayAction.SET_DAY_TYPE)
+        return try {
+            var updatedEntry: WorkEntry? = null
+            val now = System.currentTimeMillis()
+            val transform: (WorkEntry?) -> WorkEntry = { existing ->
+                val baseEntry = existing ?: WorkEntry(
+                    date = selectedDate,
+                    createdAt = now,
+                    updatedAt = now
+                )
+                baseEntry.transitionToDayType(dayType = dayType, now = now)
+                    .also { updatedEntry = it }
+            }
+            if (dayType.isWorkLike) {
+                workEntryRepository.readModifyWrite(selectedDate, transform)
+            } else {
+                workEntryRepository.readModifyWriteAndDeleteTravelLegs(selectedDate, transform)
+            }
+            clearDeletedEntryUndo()
+            _snackbarMessage.value = dayType.toSavedSnackbar()
+            updatedEntry
+        } catch (e: Exception) {
+            _snackbarMessage.value = e.toUiText(R.string.today_error_confirm_day_failed)
+            null
+        } finally {
+            removeLoadingAction(TodayAction.SET_DAY_TYPE)
         }
     }
 
@@ -131,5 +164,12 @@ class TodayActionsHandler @Inject constructor(
 
     private fun clearDeletedEntryUndo() {
         _deletedEntryForUndo.value = null
+    }
+
+    private fun DayType.toSavedSnackbar(): UiText = when (this) {
+        DayType.WORK -> UiText.StringResource(R.string.toast_check_in_day_saved)
+        DayType.OFF -> UiText.StringResource(R.string.toast_off_day_saved)
+        DayType.VACATION -> UiText.StringResource(R.string.toast_vacation_day_saved)
+        DayType.COMP_TIME -> UiText.StringResource(R.string.toast_comp_time_day_saved)
     }
 }

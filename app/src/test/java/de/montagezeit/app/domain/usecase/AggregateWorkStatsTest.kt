@@ -67,6 +67,7 @@ class AggregateWorkStatsTest {
         assertEquals(0, result.workDaysWithWork)
         assertEquals(0, result.workDaysTravelOnly)
         assertEquals(0, result.workDaysEmpty)
+        assertEquals(0, result.vacationDays)
         assertEquals(0, result.freeDaysWithTravel)
         assertEquals(0, result.freeDaysWithoutTravel)
     }
@@ -151,15 +152,15 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `Reisezeit auf OFF-Tag fliesst in bezahlte Wochensumme ein`() {
+    fun `Reisezeit auf OFF-Tag wird nicht in bezahlte Wochensumme gerechnet`() {
         val result = useCase(
             listOf(
                 entry(LocalDate.of(2026, 1, 8), DayType.OFF, travelMinutes = 120)
             )
         )
         assertEquals(0, result.totalWorkMinutes)
-        assertEquals(120, result.totalTravelMinutes)
-        assertEquals(120, result.totalPaidMinutes)
+        assertEquals(0, result.totalTravelMinutes)
+        assertEquals(0, result.totalPaidMinutes)
     }
 
     @Test
@@ -244,8 +245,8 @@ class AggregateWorkStatsTest {
         assertEquals(1, result.targetCountedDays)
         assertEquals(1, result.offDays)
         assertEquals(480, result.totalWorkMinutes)
-        assertEquals(120, result.totalTravelMinutes)
-        assertEquals(600, result.totalPaidMinutes)
+        assertEquals(30, result.totalTravelMinutes)
+        assertEquals(510, result.totalPaidMinutes)
         assertEquals(820, result.mealAllowanceCents)
     }
 
@@ -349,8 +350,8 @@ class AggregateWorkStatsTest {
         assertEquals(1, result.freeDaysWithTravel)
         assertEquals(0, result.freeDaysWithoutTravel)
         assertEquals(1, result.offDays)
-        // Reisezeit wird berücksichtigt
-        assertEquals(90, result.totalTravelMinutes)
+        // Reisezeit an freien Tagen wird diagnostisch klassifiziert, aber nicht als Arbeits-/Reisezeit bezahlt.
+        assertEquals(0, result.totalTravelMinutes)
     }
 
     @Test
@@ -398,8 +399,8 @@ class AggregateWorkStatsTest {
         
         // Zeitwerte
         assertEquals(960, result.totalWorkMinutes) // 480 + 480
-        assertEquals(360, result.totalTravelMinutes) // 60 + 180 + 120
-        assertEquals(1320, result.totalPaidMinutes)
+        assertEquals(240, result.totalTravelMinutes) // 60 + 180
+        assertEquals(1200, result.totalPaidMinutes)
         
         // Verpflegungspauschale nur für ARBEITSTAG_NUR_REISE
         assertEquals(820, result.mealAllowanceCents)
@@ -501,30 +502,17 @@ class AggregateWorkStatsTest {
     }
 
     @Test
-    fun `SCHULUNG Tag zaehlt als Arbeitstag ohne Verpflegungspauschale`() {
+    fun `VACATION Tag zaehlt als Solltag ohne Verpflegungspauschale`() {
         val result = useCase(
             listOf(
-                entry(LocalDate.of(2026, 4, 20), DayType.SCHULUNG,
+                entry(LocalDate.of(2026, 4, 20), DayType.VACATION,
                     workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0),
                     breakMinutes = 60, mealAllowanceCents = 1400)
             )
         )
-        assertEquals(1, result.workDays)
+        assertEquals(0, result.workDays)
         assertEquals(1, result.targetCountedDays)
-        assertEquals(0, result.mealAllowanceCents)
-    }
-
-    @Test
-    fun `LEHRGANG Tag zaehlt als Arbeitstag ohne Verpflegungspauschale`() {
-        val result = useCase(
-            listOf(
-                entry(LocalDate.of(2026, 4, 21), DayType.LEHRGANG,
-                    workStart = LocalTime.of(8, 0), workEnd = LocalTime.of(17, 0),
-                    breakMinutes = 60, mealAllowanceCents = 820)
-            )
-        )
-        assertEquals(1, result.workDays)
-        assertEquals(1, result.targetCountedDays)
+        assertEquals(1, result.vacationDays)
         assertEquals(0, result.mealAllowanceCents)
     }
 

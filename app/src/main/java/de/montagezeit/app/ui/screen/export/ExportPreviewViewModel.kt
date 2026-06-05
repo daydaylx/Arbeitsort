@@ -17,8 +17,10 @@ import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
 import de.montagezeit.app.domain.util.TimeCalculator
+import de.montagezeit.app.export.PdfExportRequest
 import de.montagezeit.app.export.PdfExporter
 import de.montagezeit.app.export.PdfUtilities
+import de.montagezeit.app.export.buildExportDayMetrics
 import de.montagezeit.app.ui.util.UiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,11 +62,15 @@ data class PreviewSummary(
     val paidHours: Double = paidMinutes / 60.0
 }
 
-internal fun calculatePreviewSummary(entries: List<WorkEntryWithTravelLegs>): PreviewSummary {
+internal fun calculatePreviewSummary(
+    entries: List<WorkEntryWithTravelLegs>,
+    dailyTargetHours: Double = 8.0
+): PreviewSummary {
     val eligibleEntries = entries.filter(::isStatisticsEligible)
-    val workMinutes = eligibleEntries.sumOf { TimeCalculator.calculateWorkMinutes(it.workEntry) }
-    val travelMinutes = eligibleEntries.sumOf { TimeCalculator.calculateTravelMinutes(it.orderedTravelLegs) }
-    val paidMinutes = eligibleEntries.sumOf { TimeCalculator.calculatePaidTotalMinutes(it.workEntry, it.orderedTravelLegs) }
+    val metrics = eligibleEntries.map { buildExportDayMetrics(it, dailyTargetHours) }
+    val workMinutes = metrics.sumOf { it.workMinutes }
+    val travelMinutes = metrics.sumOf { it.travelMinutes }
+    val paidMinutes = metrics.sumOf { it.paidTotalMinutes }
     val mealAllowanceCents = eligibleEntries.sumOf {
         MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it).amountCents
     }
@@ -87,13 +93,14 @@ internal fun buildExportPreviewTotals(summary: PreviewSummary): ExportPreviewTot
     )
 }
 
-internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPreviewRow {
+internal fun buildExportPreviewRow(
+    record: WorkEntryWithTravelLegs,
+    dailyTargetHours: Double = 8.0
+): ExportPreviewRow {
     val entry = record.workEntry
-    val workMinutes = TimeCalculator.calculateWorkMinutes(entry)
-    val travelMinutes = TimeCalculator.calculateTravelMinutes(record.orderedTravelLegs)
-    val paidMinutes = TimeCalculator.calculatePaidTotalMinutes(entry, record.orderedTravelLegs)
+    val metrics = buildExportDayMetrics(record, dailyTargetHours)
     val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
-    val showWorkSchedule = entry.dayType == de.montagezeit.app.data.local.entity.DayType.WORK && entry.workStart != null && entry.workEnd != null
+    val showWorkSchedule = entry.dayType.isWorkLike && entry.workStart != null && entry.workEnd != null
     val mealLabel = PdfUtilities.buildMealAllowanceLabel(
         amountCents = mealSnapshot.amountCents,
         isArrivalDeparture = mealSnapshot.isArrivalDeparture,
@@ -105,10 +112,14 @@ internal fun buildExportPreviewRow(record: WorkEntryWithTravelLegs): ExportPrevi
         startLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workStart).ifBlank { PREVIEW_DASH } else PREVIEW_DASH,
         endLabel = if (showWorkSchedule) PdfUtilities.formatTime(entry.workEnd).ifBlank { PREVIEW_DASH } else PREVIEW_DASH,
         breakLabel = if (showWorkSchedule) "${entry.breakMinutes} min" else PREVIEW_DASH,
-        workLabel = buildPreviewMinutesLabel(workMinutes),
-        travelLabel = buildPreviewMinutesLabel(travelMinutes),
-        totalLabel = buildPreviewMinutesLabel(paidMinutes),
-        locationNote = buildPreviewLocationNote(entry, record.orderedTravelLegs),
+        workLabel = buildPreviewMinutesLabel(metrics.workMinutes),
+        travelLabel = buildPreviewMinutesLabel(metrics.travelMinutes),
+        totalLabel = buildPreviewMinutesLabel(metrics.paidTotalMinutes),
+        locationNote = buildPreviewLocationNote(
+            entry,
+            metrics.travelLegs,
+            includeLocation = metrics.isWorkDay
+        ),
         mealAllowanceLabel = mealLabel
     )
 }
@@ -119,8 +130,16 @@ private fun buildPreviewMinutesLabel(minutes: Int): String {
 
 private const val PREVIEW_DASH = "–"
 
-private fun buildPreviewLocationNote(entry: WorkEntry, travelLegs: List<TravelLeg>): String? {
-    val location = PdfUtilities.getLocation(entry, travelLegs).trim().takeIf { it.isNotBlank() }
+private fun buildPreviewLocationNote(
+    entry: WorkEntry,
+    travelLegs: List<TravelLeg>,
+    includeLocation: Boolean = true
+): String? {
+    val location = if (includeLocation) {
+        PdfUtilities.getLocation(entry, travelLegs).trim().takeIf { it.isNotBlank() }
+    } else {
+        null
+    }
     val route = PdfUtilities.buildTravelRouteSummary(travelLegs).trim().takeIf { it.isNotBlank() }
     val note = PdfUtilities.getNote(entry).trim().takeIf { it.isNotBlank() }
     val combined = listOfNotNull(location, route, note).joinToString(" • ")
@@ -217,7 +236,8 @@ class ExportPreviewViewModel @Inject constructor(
                 val dbStart = System.currentTimeMillis()
                 val entries = loadEntries(range)
                 trace.event("entries_loaded", payload = mapOf("entryCount" to entries.size, "durationMs" to (System.currentTimeMillis() - dbStart)))
-                updateState(buildPreviewState(header, entries))
+                val settings = reminderSettingsManager.settings.first()
+                updateState(buildPreviewState(header, entries, settings.dailyTargetHours))
                 trace.finish(payload = mapOf("entryCount" to entries.size))
             } catch (e: CancellationException) {
                 trace.finish(status = DiagnosticStatus.CANCELLED)
@@ -303,15 +323,17 @@ class ExportPreviewViewModel @Inject constructor(
                     )
                     return@launch
                 }
-                when (val exportResult = pdfExporter.exportToPdf(
+                val request = PdfExportRequest(
                     entries = entries,
                     employeeName = settings.pdfEmployeeName,
                     company = settings.pdfCompany,
                     project = settings.pdfProject,
                     personnelNumber = settings.pdfPersonnelNumber,
                     startDate = range.start,
-                    endDate = range.end
-                )) {
+                    endDate = range.end,
+                    dailyTargetHours = settings.dailyTargetHours
+                )
+                when (val exportResult = pdfExporter.exportToPdf(request)) {
                     is PdfExporter.PdfExportResult.Success -> {
                         val fileName = exportResult.fileUri.lastPathSegment ?: "montagezeit_export.pdf"
                         trace.finish(payload = mapOf("entryCount" to entries.size, "fileName" to fileName))
@@ -421,7 +443,8 @@ class ExportPreviewViewModel @Inject constructor(
 
     private fun buildPreviewState(
         header: String,
-        entries: List<WorkEntryWithTravelLegs>
+        entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetHours: Double
     ): PreviewState {
         return if (entries.isEmpty()) {
             PreviewState.Empty(
@@ -431,19 +454,22 @@ class ExportPreviewViewModel @Inject constructor(
         } else {
             PreviewState.List(
                 header = header,
-                totals = buildTotals(entries),
-                rows = entries.map(::buildRow)
+                totals = buildTotals(entries, dailyTargetHours),
+                rows = entries.map { buildRow(it, dailyTargetHours) }
             )
         }
     }
 
-    private fun buildTotals(entries: List<WorkEntryWithTravelLegs>): ExportPreviewTotals {
-        val summary = calculatePreviewSummary(entries)
+    private fun buildTotals(
+        entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetHours: Double
+    ): ExportPreviewTotals {
+        val summary = calculatePreviewSummary(entries, dailyTargetHours)
         return buildExportPreviewTotals(summary)
     }
 
-    private fun buildRow(entry: WorkEntryWithTravelLegs): ExportPreviewRow {
-        return buildExportPreviewRow(entry)
+    private fun buildRow(entry: WorkEntryWithTravelLegs, dailyTargetHours: Double): ExportPreviewRow {
+        return buildExportPreviewRow(entry, dailyTargetHours)
     }
 
     private data class DateRange(val start: LocalDate, val end: LocalDate)

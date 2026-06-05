@@ -7,7 +7,7 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
  * Berechnet die Verpflegungspauschale nach fachlichen Regeln.
  *
  * Regeln:
- * - Gilt nur für DayType.WORK; bei OFF, COMP_TIME, SCHULUNG, LEHRGANG immer 0.
+ * - Gilt nur für DayType.WORK; bei OFF, VACATION und COMP_TIME immer 0.
  * - Kein Anspruch wenn Arbeitsort = Leipzig.
  * - Standardbasis: 28,00 € (2800 Cent)
  * - Bei Anreise/Abreise: Basis 14,00 € (1400 Cent)

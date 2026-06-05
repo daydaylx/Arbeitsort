@@ -1,0 +1,268 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 17,
+    "identityHash": "41b06fe04a994a3e44a1c61d5e33118c",
+    "entities": [
+      {
+        "tableName": "work_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `workStart` TEXT, `workEnd` TEXT, `breakMinutes` INTEGER NOT NULL, `dayType` TEXT NOT NULL, `dayLocationLabel` TEXT NOT NULL, `morningCapturedAt` INTEGER, `eveningCapturedAt` INTEGER, `confirmedWorkDay` INTEGER NOT NULL, `confirmationAt` INTEGER, `confirmationSource` TEXT, `mealIsArrivalDeparture` INTEGER NOT NULL, `mealBreakfastIncluded` INTEGER NOT NULL, `mealAllowanceBaseCents` INTEGER NOT NULL, `mealAllowanceAmountCents` INTEGER NOT NULL, `note` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workStart",
+            "columnName": "workStart",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "workEnd",
+            "columnName": "workEnd",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "breakMinutes",
+            "columnName": "breakMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayType",
+            "columnName": "dayType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayLocationLabel",
+            "columnName": "dayLocationLabel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "morningCapturedAt",
+            "columnName": "morningCapturedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "eveningCapturedAt",
+            "columnName": "eveningCapturedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "confirmedWorkDay",
+            "columnName": "confirmedWorkDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmationAt",
+            "columnName": "confirmationAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "confirmationSource",
+            "columnName": "confirmationSource",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "mealIsArrivalDeparture",
+            "columnName": "mealIsArrivalDeparture",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealBreakfastIncluded",
+            "columnName": "mealBreakfastIncluded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealAllowanceBaseCents",
+            "columnName": "mealAllowanceBaseCents",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealAllowanceAmountCents",
+            "columnName": "mealAllowanceAmountCents",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_work_entries_date",
+            "unique": true,
+            "columnNames": [
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_work_entries_date` ON `${TABLE_NAME}` (`date`)"
+          },
+          {
+            "name": "index_work_entries_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_work_entries_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          },
+          {
+            "name": "index_work_entries_dayType_date",
+            "unique": false,
+            "columnNames": [
+              "dayType",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_work_entries_dayType_date` ON `${TABLE_NAME}` (`dayType`, `date`)"
+          }
+        ]
+      },
+      {
+        "tableName": "travel_legs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `workEntryDate` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `category` TEXT NOT NULL, `startAt` INTEGER, `arriveAt` INTEGER, `startLabel` TEXT, `endLabel` TEXT, `paidMinutesOverride` INTEGER, `source` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`workEntryDate`) REFERENCES `work_entries`(`date`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workEntryDate",
+            "columnName": "workEntryDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startAt",
+            "columnName": "startAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "arriveAt",
+            "columnName": "arriveAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "startLabel",
+            "columnName": "startLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "endLabel",
+            "columnName": "endLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "paidMinutesOverride",
+            "columnName": "paidMinutesOverride",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_travel_legs_workEntryDate",
+            "unique": false,
+            "columnNames": [
+              "workEntryDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_travel_legs_workEntryDate` ON `${TABLE_NAME}` (`workEntryDate`)"
+          },
+          {
+            "name": "index_travel_legs_workEntryDate_sortOrder",
+            "unique": true,
+            "columnNames": [
+              "workEntryDate",
+              "sortOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_travel_legs_workEntryDate_sortOrder` ON `${TABLE_NAME}` (`workEntryDate`, `sortOrder`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "work_entries",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workEntryDate"
+            ],
+            "referencedColumns": [
+              "date"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '41b06fe04a994a3e44a1c61d5e33118c')"
+    ]
+  }
+}

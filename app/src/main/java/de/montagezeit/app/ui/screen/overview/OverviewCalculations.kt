@@ -1,5 +1,6 @@
 package de.montagezeit.app.ui.screen.overview
 
+import kotlin.math.roundToInt
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
@@ -12,6 +13,8 @@ import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import java.time.LocalDate
 import java.time.temporal.WeekFields
+
+private const val MINUTES_PER_HOUR = 60
 
 data class OverviewDateRange(
     val startDate: LocalDate,
@@ -58,7 +61,8 @@ internal fun buildOverviewMetrics(
         )
     )
 
-    val stats = AggregateWorkStats()(entries, trace)
+    val dailyTargetMinutes = (settings.dailyTargetHours * MINUTES_PER_HOUR).roundToInt()
+    val stats = AggregateWorkStats()(entries, dailyTargetMinutes, trace)
     val overtime = CalculateOvertimeForRange()(entries, settings.dailyTargetHours, trace)
     val unconfirmedCount = entries.count {
         it.workEntry.dayType == DayType.WORK && !EntryStatusResolver.resolve(it).isConfirmed
@@ -81,6 +85,7 @@ internal fun buildOverviewMetrics(
         mealAllowanceCents = stats.mealAllowanceCents,
         countedDays = overtime.countedDays,
         unconfirmedDaysCount = unconfirmedCount,
+        vacationDays = stats.vacationDays,
         compTimeDays = stats.compTimeDays
     ).also { metrics ->
         trace?.event(
@@ -94,6 +99,7 @@ internal fun buildOverviewMetrics(
                 "mealAllowanceCents" to metrics.mealAllowanceCents,
                 "countedDays" to metrics.countedDays,
                 "unconfirmedDaysCount" to metrics.unconfirmedDaysCount,
+                "vacationDays" to metrics.vacationDays,
                 "compTimeDays" to metrics.compTimeDays
             )
         )

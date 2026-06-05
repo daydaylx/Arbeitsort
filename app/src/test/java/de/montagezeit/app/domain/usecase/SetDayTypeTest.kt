@@ -169,6 +169,40 @@ class SetDayTypeTest {
     }
 
     @Test
+    fun `invoke - WORK zu VACATION - Setzt confirmedWorkDay und loescht Zeiten und Verpflegung`() = runTest {
+        val date = LocalDate.now()
+        val existingEntry = WorkEntry(
+            date = date,
+            dayType = DayType.WORK,
+            workStart = java.time.LocalTime.of(8, 0),
+            workEnd = java.time.LocalTime.of(17, 0),
+            breakMinutes = 60,
+            confirmedWorkDay = false,
+            mealIsArrivalDeparture = true,
+            mealBreakfastIncluded = true,
+            mealAllowanceBaseCents = 1400,
+            mealAllowanceAmountCents = 820,
+            createdAt = 1000000L,
+            updatedAt = 1000000L
+        )
+        mockReadModifyWrite(date, existingEntry)
+
+        val result = setDayType.invoke(date, DayType.VACATION)
+
+        assertEquals(DayType.VACATION, result.dayType)
+        assertNull(result.workStart)
+        assertNull(result.workEnd)
+        assertEquals(0, result.breakMinutes)
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(DayType.VACATION.name, result.confirmationSource)
+        assertFalse(result.mealIsArrivalDeparture)
+        assertFalse(result.mealBreakfastIncluded)
+        assertEquals(0, result.mealAllowanceBaseCents)
+        assertEquals(0, result.mealAllowanceAmountCents)
+        coVerify { workEntryDao.readModifyWrite(date, any()) }
+    }
+
+    @Test
     fun `invoke - OFF zu COMP_TIME - Setzt confirmedWorkDay und confirmationSource`() = runTest {
         val date = LocalDate.now()
         val existingEntry = WorkEntry(

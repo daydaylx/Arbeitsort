@@ -57,9 +57,9 @@ class EditMealAllowanceLogicTest {
     }
 
     @Test
-    fun `resolveMealAllowanceForSave gibt 0 Cent fuer SCHULUNG`() {
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer Urlaub`() {
         val result = resolveMealAllowanceForSave(
-            dayType = DayType.SCHULUNG,
+            dayType = DayType.VACATION,
             isArrivalDeparture = true,
             breakfastIncluded = true,
             workMinutes = 480,
@@ -70,9 +70,9 @@ class EditMealAllowanceLogicTest {
     }
 
     @Test
-    fun `resolveMealAllowanceForSave gibt 0 Cent fuer LEHRGANG`() {
+    fun `resolveMealAllowanceForSave gibt 0 Cent fuer Ueberstundenabbau`() {
         val result = resolveMealAllowanceForSave(
-            dayType = DayType.LEHRGANG,
+            dayType = DayType.COMP_TIME,
             isArrivalDeparture = false,
             breakfastIncluded = false,
             workMinutes = 480,

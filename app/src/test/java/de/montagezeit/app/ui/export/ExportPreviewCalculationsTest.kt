@@ -161,6 +161,26 @@ class ExportPreviewCalculationsTest {
     }
 
     @Test
+    fun `calculatePreviewSummary counts vacation as paid target time`() {
+        val entries = listOf(
+            record(
+                WorkEntry(
+                    date = LocalDate.of(2026, 1, 12),
+                    dayType = DayType.VACATION,
+                    confirmedWorkDay = true
+                )
+            )
+        )
+
+        val summary = calculatePreviewSummary(entries, dailyTargetHours = 8.0)
+
+        assertEquals(480, summary.workMinutes)
+        assertEquals(0, summary.travelMinutes)
+        assertEquals(480, summary.paidMinutes)
+        assertEquals(0, summary.mealAllowanceCents)
+    }
+
+    @Test
     fun `buildExportPreviewRow exposes meal allowance label only when amount is positive`() {
         val entryWithMeal = WorkEntry(
             date = LocalDate.of(2026, 1, 10),
@@ -242,5 +262,24 @@ class ExportPreviewCalculationsTest {
         assertEquals("–", row.endLabel)
         assertEquals("–", row.breakLabel)
         assertEquals("0,00 h", row.workLabel)
+    }
+
+    @Test
+    fun `buildExportPreviewRow shows vacation as paid target time without schedule`() {
+        val vacationEntry = WorkEntry(
+            date = LocalDate.of(2026, 1, 13),
+            dayType = DayType.VACATION,
+            dayLocationLabel = "Altstandort"
+        )
+
+        val row = buildExportPreviewRow(record(vacationEntry), dailyTargetHours = 8.0)
+
+        assertEquals("–", row.startLabel)
+        assertEquals("–", row.endLabel)
+        assertEquals("–", row.breakLabel)
+        assertEquals("8,00 h", row.workLabel)
+        assertEquals("8,00 h", row.totalLabel)
+        assertNull(row.locationNote)
+        assertNull(row.mealAllowanceLabel)
     }
 }

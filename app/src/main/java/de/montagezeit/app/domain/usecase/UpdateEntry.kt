@@ -57,11 +57,10 @@ class UpdateEntry(
      *
      * Fachliche Regeln je DayType:
      * - WORK: dayLocationLabel Pflicht, Arbeitszeit valide
-     * - OFF:  dayLocationLabel optional, Arbeitszeit nicht relevant (TimeCalculator gibt 0)
-     * - COMP_TIME: keine Pflichtfelder für Ort oder Zeiten
+     * - OFF/VACATION/COMP_TIME: keine Pflichtfelder für Ort oder Zeiten
      */
     private fun validateEntry(entry: WorkEntry) {
-        if (entry.dayType == DayType.COMP_TIME) return
+        if (!entry.dayType.isWorkLike) return
 
         if (entry.dayType == DayType.WORK && entry.dayLocationLabel.isBlank()) {
             throw IllegalArgumentException("dayLocationLabel darf bei WORK nicht leer sein")

@@ -28,6 +28,7 @@ data class WorkStatsResult(
     val workDaysWithWork: Int,           // ARBEITSTAG_MIT_ARBEIT
     val workDaysTravelOnly: Int,         // ARBEITSTAG_NUR_REISE
     val workDaysEmpty: Int,              // ARBEITSTAG_LEER
+    val vacationDays: Int,               // URLAUB
     val compTimeDays: Int,               // UEBERSTUNDEN_ABBAU
     val freeDaysWithTravel: Int,         // FREI_MIT_REISE
     val freeDaysWithoutTravel: Int       // FREI
@@ -52,6 +53,7 @@ data class WorkStatsResult(
 class AggregateWorkStats {
     operator fun invoke(
         entries: List<WorkEntryWithTravelLegs>,
+        dailyTargetMinutes: Int = 0,
         trace: DiagnosticTrace? = null
     ): WorkStatsResult {
         val resolvedEntries = entries.map { entry ->
@@ -108,12 +110,11 @@ class AggregateWorkStats {
             )
         }
         
-        // Sichtbare Arbeitstage (inkl. Schulung/Lehrgang) ohne UEBERSTUNDEN_ABBAU
+        // Sichtbare Arbeitstage ohne Urlaub und UEBERSTUNDEN_ABBAU
         val visibleWorkDays = classifiedDays.count {
             it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT ||
                 it.classification == DayClassification.ARBEITSTAG_NUR_REISE ||
-                it.classification == DayClassification.SCHULUNG ||
-                it.classification == DayClassification.LEHRGANG
+                it.classification == DayClassification.ARBEITSTAG_LEER
         }
         val targetCountedDays = classifiedDays.count { it.classification.isCountedWorkDay }
 
@@ -121,27 +122,36 @@ class AggregateWorkStats {
         val workDaysWithWork = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_MIT_ARBEIT }
         val workDaysTravelOnly = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_NUR_REISE }
         val workDaysEmpty = classifiedDays.count { it.classification == DayClassification.ARBEITSTAG_LEER }
+        val vacationDays = classifiedDays.count { it.classification == DayClassification.URLAUB }
         val compTimeDays = classifiedDays.count { it.classification == DayClassification.UEBERSTUNDEN_ABBAU }
         val freeDaysWithTravel = classifiedDays.count { it.classification == DayClassification.FREI_MIT_REISE }
         val freeDaysWithoutTravel = classifiedDays.count { it.classification == DayClassification.FREI }
         val offDays = freeDaysWithTravel + freeDaysWithoutTravel
         val totalWorkMinutes = eligibleEntries.sumOf { it.status.workMinutes }
-        val totalTravelMinutes = eligibleEntries.sumOf { it.status.travelMinutes }
+        val totalTravelMinutes = eligibleEntries.sumOf {
+            when (it.status.classification) {
+                DayClassification.ARBEITSTAG_MIT_ARBEIT,
+                DayClassification.ARBEITSTAG_NUR_REISE -> it.status.travelMinutes
+                else -> 0
+            }
+        }
 
         val mealAllowanceCents = classifiedDays
             .sumOf { MealAllowanceCalculator.resolveEffectiveStoredSnapshot(it.entry).amountCents }
         
+        val vacationPaidMinutes = vacationDays * dailyTargetMinutes
         return WorkStatsResult(
             workDays = visibleWorkDays,
             targetCountedDays = targetCountedDays,
             offDays = offDays,
             totalWorkMinutes = totalWorkMinutes,
             totalTravelMinutes = totalTravelMinutes,
-            totalPaidMinutes = totalWorkMinutes + totalTravelMinutes,
+            totalPaidMinutes = totalWorkMinutes + totalTravelMinutes + vacationPaidMinutes,
             mealAllowanceCents = mealAllowanceCents,
             workDaysWithWork = workDaysWithWork,
             workDaysTravelOnly = workDaysTravelOnly,
             workDaysEmpty = workDaysEmpty,
+            vacationDays = vacationDays,
             compTimeDays = compTimeDays,
             freeDaysWithTravel = freeDaysWithTravel,
             freeDaysWithoutTravel = freeDaysWithoutTravel

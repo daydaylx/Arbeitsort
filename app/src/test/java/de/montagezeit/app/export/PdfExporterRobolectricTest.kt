@@ -35,10 +35,12 @@ class PdfExporterRobolectricTest {
     @Test
     fun `exportToPdf returns validation error when employee name is blank`() = runTest {
         val result = exporter.exportToPdf(
-            entries = listOf(workRecord(LocalDate.of(2026, 3, 3))),
-            employeeName = "",
-            startDate = LocalDate.of(2026, 3, 3),
-            endDate = LocalDate.of(2026, 3, 3)
+            PdfExportRequest(
+                entries = listOf(workRecord(LocalDate.of(2026, 3, 3))),
+                employeeName = "",
+                startDate = LocalDate.of(2026, 3, 3),
+                endDate = LocalDate.of(2026, 3, 3)
+            )
         )
 
         assertEquals(
@@ -57,10 +59,12 @@ class PdfExporterRobolectricTest {
         }
 
         val result = exporter.exportToPdf(
-            entries = entries,
-            employeeName = "Max Mustermann",
-            startDate = startDate,
-            endDate = startDate.plusDays(entries.lastIndex.toLong())
+            PdfExportRequest(
+                entries = entries,
+                employeeName = "Max Mustermann",
+                startDate = startDate,
+                endDate = startDate.plusDays(entries.lastIndex.toLong())
+            )
         )
 
         assertEquals(

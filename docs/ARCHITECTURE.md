@@ -1,7 +1,7 @@
 # Architektur - MontageZeit
 
 **Status:** Aktiv / verbindlich
-**Letzte Aktualisierung:** 2026-03-16
+**Letzte Aktualisierung:** 2026-05-30
 
 ## Dokumentstatus
 
@@ -21,9 +21,9 @@ Layer:
 
 ### 2.1 Persistence
 
-- Datenbank: `AppDatabase` (`version = 16`)
+- Datenbank: `AppDatabase` (`version = 17`)
 - Haupttabellen: `work_entries`, `travel_legs` (normalisiert in v13→14)
-- Migrationen: `MIGRATION_1_2` bis `MIGRATION_15_16`
+- Migrationen: `MIGRATION_1_2` bis `MIGRATION_16_17`
 - Backup: `android:allowBackup="false"` und `android:dataExtractionRules="@xml/data_extraction_rules"` schließen alle Domains (Database, SharedPreferences, Files) von Cloud-Backup und Geräteübertragung aus — Daten bleiben ausschließlich lokal.
 
 ### 2.2 Reminder & Scheduling
@@ -54,7 +54,7 @@ Strategie:
     - bestehende Arbeitszeiten bleiben bei vorhandenem Eintrag erhalten; sonst gelten Settings-Defaults
 - Der Edit-Save-Pfad verwendet dieselbe Abschlusssemantik:
     - `WORK` wird nur dann bestätigt, wenn positive Arbeits- oder Reisezeit vorliegt
-    - `OFF` und `COMP_TIME` bleiben terminale Zustände
+    - `OFF`, `VACATION` und `COMP_TIME` bleiben terminale Zustände
     - leere oder Zero-Net-`WORK`-Tage bleiben offen und sind für Reminder, Statistik und Export nicht eligible
 - Optionale Nebenaktion: `ConfirmOffDay`
 - Quelle (`confirmationSource`) wird mitgeführt (z. B. `UI`, `NOTIFICATION`)
@@ -86,8 +86,11 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 ### DayType Enum
 
 - `WORK` - Arbeitstag
-- `OFF` - Frei/Urlaub
-- `COMP_TIME` - Überstundenabbau (ganzer Tag)
+- `OFF` - freier Tag ohne Soll-/Istzeit
+- `VACATION` - bezahlter Urlaubstag; Soll = Tagesziel, Ist = Tagesziel, Saldo = 0
+- `COMP_TIME` - Überstundenabbau; Soll = Tagesziel, Ist = 0
+
+Migration `16 -> 17` bildet persistierte Legacy-Werte `SCHULUNG` und `LEHRGANG` auf `WORK` ab. Diese Werte sind nicht mehr Teil der aktiven UI-Auswahl.
 
 Ergänzende Helper zur Entkopplung von Copy-Bomben:
 

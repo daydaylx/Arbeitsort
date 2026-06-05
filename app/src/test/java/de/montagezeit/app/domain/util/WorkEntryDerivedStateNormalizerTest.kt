@@ -96,6 +96,16 @@ class WorkEntryDerivedStateNormalizerTest {
     }
 
     @Test
+    fun `VACATION day without source gets DERIVED_STATE confirmation source`() {
+        val entry = WorkEntry(date = date, dayType = DayType.VACATION)
+        val result = WorkEntryDerivedStateNormalizer.normalize(entry, emptyList(), fixedNow)
+
+        assertTrue(result.confirmedWorkDay)
+        assertEquals(ConfirmationSources.DERIVED_STATE, result.confirmationSource)
+        assertEquals(0, result.mealAllowanceAmountCents)
+    }
+
+    @Test
     fun `OFF day with existing source keeps that source`() {
         val entry = WorkEntry(
             date = date,

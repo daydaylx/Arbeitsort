@@ -58,7 +58,7 @@ class ConfirmOffDayTest {
     }
 
     @Test
-    fun `invoke converts existing work entry to OFF and keeps manual day location`() = runTest {
+    fun `invoke converts existing work entry to OFF and preserves day location`() = runTest {
         val date = LocalDate.now()
         val existing = WorkEntry(
             date = date,

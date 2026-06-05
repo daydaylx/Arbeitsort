@@ -70,16 +70,18 @@ Die App soll aus lokalen Tagesdaten einfache Nachweise erzeugen:
 
 ### DayType und Tagesabschluss
 
-Es gibt drei aktive Tagtypen:
+Es gibt vier aktive Tagtypen:
 
 - `WORK`
 - `OFF`
+- `VACATION`
 - `COMP_TIME`
 
 Wichtige fachliche Unterschiede:
 
 - `WORK` kann Arbeit, Reise oder auch einen bestaetigten leeren Arbeitstag darstellen
 - `OFF` ist ein freier Tag
+- `VACATION` ist bezahlter Urlaub: Soll = Tagesziel, Ist = Tagesziel, Saldo = 0
 - `COMP_TIME` ist Ueberstundenabbau und kein sichtbarer Arbeitstag
 
 Nur bestaetigte Tage sollen in Statistik, Export-Summen und Ueberstundenlogik eingehen.

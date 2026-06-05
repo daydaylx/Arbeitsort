@@ -33,7 +33,7 @@ class ClassifyDay {
     /**
      * Klassifiziert einen Tag anhand der Rohdaten.
      * 
-     * @param dayType Der Tagtyp (WORK, OFF, COMP_TIME)
+     * @param dayType Der Tagtyp (WORK, OFF, VACATION, COMP_TIME)
      * @param workMinutes Die Arbeitsminuten (berechnet)
      * @param travelMinutes Die Reiseminuten (berechnet)
      * @return Die passende DayClassification
@@ -58,6 +58,9 @@ class ClassifyDay {
             DayType.OFF -> {
                 if (hasTravel) DayClassification.FREI_MIT_REISE else DayClassification.FREI
             }
+            DayType.VACATION -> {
+                DayClassification.URLAUB
+            }
             DayType.COMP_TIME -> {
                 DayClassification.UEBERSTUNDEN_ABBAU
             }
@@ -68,8 +71,6 @@ class ClassifyDay {
                     else -> DayClassification.ARBEITSTAG_LEER
                 }
             }
-            DayType.SCHULUNG -> DayClassification.SCHULUNG
-            DayType.LEHRGANG -> DayClassification.LEHRGANG
         }
     }
 }
@@ -80,4 +81,3 @@ class ClassifyDay {
 fun WorkEntryWithTravelLegs.classifyDay(): DayClassification {
     return ClassifyDay()(this)
 }
-

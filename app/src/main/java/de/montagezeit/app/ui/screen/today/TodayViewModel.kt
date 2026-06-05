@@ -7,6 +7,7 @@ import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
+import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import de.montagezeit.app.diagnostics.AppDiagnosticsRuntime
 import de.montagezeit.app.diagnostics.DiagnosticCategory
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -41,6 +43,7 @@ import javax.inject.Inject
 enum class TodayAction {
     DAILY_MANUAL_CHECK_IN,
     CONFIRM_OFFDAY,
+    SET_DAY_TYPE,
     UPDATE_DAY_LOCATION,
     DELETE_DAY
 }
@@ -51,6 +54,7 @@ class TodayViewModel @Inject constructor(
     private val workEntryRepository: WorkEntryRepository,
     private val dateCoordinator: TodayDateCoordinator,
     private val actionsHandler: TodayActionsHandler,
+    private val reminderSettingsManager: ReminderSettingsManager,
     private val clock: Clock
 ) : ViewModel() {
 
@@ -82,6 +86,10 @@ class TodayViewModel @Inject constructor(
     val snackbarMessage: StateFlow<UiText?> = actionsHandler.snackbarMessage
     val deletedEntryForUndo = actionsHandler.deletedEntryForUndo
 
+    private val dailyTargetHours: StateFlow<Double> = reminderSettingsManager.settings
+        .map { it.dailyTargetHours }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DEFAULT_DAILY_TARGET_HOURS)
+
     private val entryLoadRequests = MutableSharedFlow<EntryLoadRequest>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -95,11 +103,9 @@ class TodayViewModel @Inject constructor(
     }
 
     val screenState: StateFlow<TodayScreenState> = combine(
-        selectedEntryState,
-        selectedDate,
-        todayDate,
-        loadingActions
-    ) { entryState, date, today, loading ->
+        combine(selectedEntryState, selectedDate, todayDate) { e, d, t -> Triple(e, d, t) },
+        combine(loadingActions, dailyTargetHours) { l, h -> Pair(l, h) }
+    ) { (entryState, date, today), (loading, targetHours) ->
         val (ui, entry, entryWithTravel) = entryState
         TodayScreenState(
             uiState = ui,
@@ -107,7 +113,8 @@ class TodayViewModel @Inject constructor(
             selectedEntryWithTravel = entryWithTravel,
             selectedDate = date,
             todayDate = today,
-            loadingActions = loading
+            loadingActions = loading,
+            dailyTargetHours = targetHours
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialScreenState())
 
@@ -338,6 +345,15 @@ class TodayViewModel @Inject constructor(
         }
     }
 
+    fun setDayType(dayType: DayType) {
+        viewModelScope.launch {
+            val entry = actionsHandler.setDayType(selectedDate.value, dayType)
+            if (entry != null) {
+                _uiState.value = TodayUiState.Success(entry)
+            }
+        }
+    }
+
     fun submitDayLocationUpdate(label: String = _dialogState.value.dayLocationInput) {
         val trimmed = label.trim()
         if (trimmed.isBlank()) {
@@ -391,6 +407,8 @@ class TodayViewModel @Inject constructor(
         selectedEntry.value?.takeIf { it.date == selectedDate.value }
 
     private companion object {
+        private const val DEFAULT_DAILY_TARGET_HOURS = 8.0
+
         private data class EntryLoadRequest(
             val targetDate: LocalDate,
             val preferCachedSelection: Boolean

@@ -8,6 +8,7 @@ import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.data.preferences.ReminderSettings
 import de.montagezeit.app.data.preferences.ReminderSettingsManager
 import de.montagezeit.app.data.repository.WorkEntryRepository
+import de.montagezeit.app.export.PdfExportRequest
 import de.montagezeit.app.export.PdfExporter
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -172,15 +173,7 @@ class ExportPreviewViewModelTest {
         val fakeUri = mockk<Uri>()
         every { fakeUri.lastPathSegment } returns "export.pdf"
         coEvery {
-            pdfExporter.exportToPdf(
-                entries = any(),
-                employeeName = any(),
-                company = any(),
-                project = any(),
-                personnelNumber = any(),
-                startDate = any(),
-                endDate = any()
-            )
+            pdfExporter.exportToPdf(any<PdfExportRequest>())
         } returns PdfExporter.PdfExportResult.Success(fakeUri)
 
         vm.loadRange(startDate, endDate)
@@ -228,7 +221,7 @@ class ExportPreviewViewModelTest {
         vm.createPdf()
 
         assertTrue("Expected Error state but got: ${vm.uiState.value}", vm.uiState.value is PreviewState.Error)
-        coVerify(exactly = 0) { pdfExporter.exportToPdf(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { pdfExporter.exportToPdf(any<PdfExportRequest>()) }
         vm.viewModelScope.cancel()
     }
 }

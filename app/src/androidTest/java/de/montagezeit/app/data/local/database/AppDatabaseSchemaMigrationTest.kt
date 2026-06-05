@@ -27,23 +27,24 @@ class AppDatabaseSchemaMigrationTest {
     @After
     fun tearDown() {
         listOf(
-            "schema_migration_13_16.db",
-            "schema_migration_15_16.db"
+            "schema_migration_13_17.db",
+            "schema_migration_15_17.db"
         ).forEach(context::deleteDatabase)
     }
 
     @Test
-    fun `migration helper validates 13 to 16 against exported schema`() {
-        val dbName = "schema_migration_13_16.db"
+    fun `migration helper validates 13 to 17 against exported schema`() {
+        val dbName = "schema_migration_13_17.db"
         createVersion13Database(dbName)
 
         helper.runMigrationsAndValidate(
             dbName,
-            16,
+            17,
             true,
             AppDatabase.MIGRATION_13_14,
             AppDatabase.MIGRATION_14_15,
-            AppDatabase.MIGRATION_15_16
+            AppDatabase.MIGRATION_15_16,
+            AppDatabase.MIGRATION_16_17
         ).close()
 
         SQLiteDatabase.openDatabase(
@@ -63,15 +64,16 @@ class AppDatabaseSchemaMigrationTest {
     }
 
     @Test
-    fun `migration helper validates 15 to 16 against exported schema`() {
-        val dbName = "schema_migration_15_16.db"
+    fun `migration helper validates 15 to 17 against exported schema`() {
+        val dbName = "schema_migration_15_17.db"
         createVersion15Database(dbName)
 
         helper.runMigrationsAndValidate(
             dbName,
-            16,
+            17,
             true,
-            AppDatabase.MIGRATION_15_16
+            AppDatabase.MIGRATION_15_16,
+            AppDatabase.MIGRATION_16_17
         ).close()
 
         SQLiteDatabase.openDatabase(
@@ -81,24 +83,33 @@ class AppDatabaseSchemaMigrationTest {
         ).use { db ->
             db.rawQuery(
                 """
-                SELECT date, confirmedWorkDay
+                SELECT date, dayType, confirmedWorkDay
                 FROM work_entries
-                WHERE date IN ('2026-02-01', '2026-02-02', '2026-02-03')
+                WHERE date IN ('2026-02-01', '2026-02-02', '2026-02-03', '2026-02-04')
                 ORDER BY date
                 """.trimIndent(),
                 null
             ).use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("2026-02-01", c.getString(0))
-                assertEquals(1, c.getInt(1))
+                assertEquals("WORK", c.getString(1))
+                assertEquals(1, c.getInt(2))
 
                 assertTrue(c.moveToNext())
                 assertEquals("2026-02-02", c.getString(0))
-                assertEquals(1, c.getInt(1))
+                assertEquals("WORK", c.getString(1))
+                assertEquals(1, c.getInt(2))
 
                 assertTrue(c.moveToNext())
                 assertEquals("2026-02-03", c.getString(0))
-                assertEquals(0, c.getInt(1))
+                assertEquals("WORK", c.getString(1))
+                assertEquals(0, c.getInt(2))
+
+                // VACATION must be left unchanged by MIGRATION_16_17
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-04", c.getString(0))
+                assertEquals("VACATION", c.getString(1))
+                assertEquals(1, c.getInt(2))
             }
         }
     }
@@ -217,7 +228,8 @@ class AppDatabaseSchemaMigrationTest {
                 ) VALUES
                     ('2026-02-01', 'WORK', '08:00', '17:00', 60, 0, NULL, NULL),
                     ('2026-02-02', 'SCHULUNG', '08:00', '16:00', 30, 0, NULL, NULL),
-                    ('2026-02-03', 'LEHRGANG', NULL, NULL, 0, 1, 3333, 'UI')
+                    ('2026-02-03', 'LEHRGANG', NULL, NULL, 0, 1, 3333, 'UI'),
+                    ('2026-02-04', 'VACATION', NULL, NULL, 0, 1, 4444, 'VACATION')
                 """.trimIndent()
             )
             it.version = 15

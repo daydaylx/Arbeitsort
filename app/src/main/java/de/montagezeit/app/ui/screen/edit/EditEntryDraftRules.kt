@@ -39,6 +39,8 @@ class EditEntryDraftRules @Inject constructor() {
     }
 
     fun calculateEffectiveTravelMinutes(formData: EditFormData): Int {
+        if (!formData.dayType.isWorkLike) return 0
+
         return normalizedTravelLegs(formData).sumOf { leg ->
             when {
                 leg.paidMinutesOverride != null -> leg.paidMinutesOverride
@@ -55,12 +57,7 @@ class EditEntryDraftRules @Inject constructor() {
         val errors = mutableListOf<ValidationError>()
         val relevantTravelLegs = normalizedTravelLegs(formData)
 
-        if (formData.dayType == DayType.COMP_TIME) {
-            if (relevantTravelLegs.isNotEmpty()) {
-                errors += ValidationError.TravelNotAllowedForCompTime
-            }
-            return errors
-        }
+        if (!formData.dayType.isWorkLike) return errors
 
         if (formData.dayType.isWorkLike) {
             if (formData.dayLocationLabel.isNullOrBlank()) {

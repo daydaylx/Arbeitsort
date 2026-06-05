@@ -11,7 +11,7 @@ package de.montagezeit.app.domain.model
  */
 enum class DayClassification {
     /**
-     * Freier Tag ohne Reisezeit (DayType.OFF oder COMP_TIME, keine Reise).
+     * Freier Tag ohne Reisezeit (DayType.OFF, keine Reise).
      * - Kein gezählter Tag
      * - Keine Ist-Stunden
      * - Keine Sollstunden
@@ -27,6 +27,15 @@ enum class DayClassification {
      * - Keine Verpflegungspauschale (MealAllowanceCalculator gibt für DayType.OFF immer 0 zurück)
      */
     FREI_MIT_REISE,
+
+    /**
+     * Bezahlter Urlaubstag (DayType.VACATION).
+     * - Zählt als Soll-Tag
+     * - Ist-Stunden entsprechen dem Tagesziel
+     * - Keine Überstundenwirkung
+     * - Keine Verpflegungspauschale
+     */
+    URLAUB,
     
     /**
      * Arbeitstag mit Arbeitszeit (> 0 Minuten).
@@ -67,21 +76,7 @@ enum class DayClassification {
      * - Keine Ist-Stunden
      * - Keine Verpflegungspauschale
      */
-    UEBERSTUNDEN_ABBAU,
-
-    /**
-     * Schulungstag (DayType.SCHULUNG).
-     * - Gezählter Arbeitstag
-     * - Keine Verpflegungspauschale
-     */
-    SCHULUNG,
-
-    /**
-     * Lehrgang (DayType.LEHRGANG).
-     * - Gezählter Arbeitstag
-     * - Keine Verpflegungspauschale
-     */
-    LEHRGANG;
+    UEBERSTUNDEN_ABBAU;
 
     /**
      * true, wenn dieser Tag als Arbeitstag gezählt wird (für Sollstunden-Berechnung).
@@ -89,7 +84,7 @@ enum class DayClassification {
     val isCountedWorkDay: Boolean
         get() = when (this) {
             ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE, ARBEITSTAG_LEER,
-            UEBERSTUNDEN_ABBAU, SCHULUNG, LEHRGANG -> true
+            URLAUB, UEBERSTUNDEN_ABBAU -> true
             FREI, FREI_MIT_REISE -> false
         }
 
@@ -97,7 +92,7 @@ enum class DayClassification {
      * true, wenn dieser Tag Arbeitszeit enthält.
      */
     val hasWorkTime: Boolean
-        get() = this == ARBEITSTAG_MIT_ARBEIT || this == SCHULUNG || this == LEHRGANG
+        get() = this == ARBEITSTAG_MIT_ARBEIT
 
     /**
      * true, wenn dieser Tag Reisezeit enthalten kann.
@@ -107,9 +102,8 @@ enum class DayClassification {
      */
     val canHaveTravelTime: Boolean
         get() = when (this) {
-            FREI_MIT_REISE, ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE,
-            SCHULUNG, LEHRGANG -> true
-            FREI, ARBEITSTAG_LEER, UEBERSTUNDEN_ABBAU -> false
+            FREI_MIT_REISE, ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE -> true
+            FREI, URLAUB, ARBEITSTAG_LEER, UEBERSTUNDEN_ABBAU -> false
         }
 
     /**
@@ -120,7 +114,7 @@ enum class DayClassification {
         get() = when (this) {
             FREI_MIT_REISE, ARBEITSTAG_NUR_REISE -> true
             FREI, ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_LEER,
-            UEBERSTUNDEN_ABBAU, SCHULUNG, LEHRGANG -> false
+            URLAUB, UEBERSTUNDEN_ABBAU -> false
         }
 
     /**
@@ -130,6 +124,6 @@ enum class DayClassification {
         get() = when (this) {
             ARBEITSTAG_MIT_ARBEIT, ARBEITSTAG_NUR_REISE -> true
             FREI_MIT_REISE, FREI, ARBEITSTAG_LEER,
-            UEBERSTUNDEN_ABBAU, SCHULUNG, LEHRGANG -> false
+            URLAUB, UEBERSTUNDEN_ABBAU -> false
         }
 }

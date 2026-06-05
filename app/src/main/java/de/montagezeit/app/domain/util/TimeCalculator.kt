@@ -11,11 +11,11 @@ object TimeCalculator {
      * Berechnet die Netto-Arbeitszeit in Minuten.
      * (Ende - Start - Pause).
      * Nachtschichten (Ende < Start) werden korrekt über Mitternacht berechnet.
-     * Bei DayType.OFF/COMP_TIME oder fehlenden Zeiten wird 0 zurückgegeben.
+     * Bei Nicht-Arbeitstypen oder fehlenden Zeiten wird 0 zurückgegeben.
      * Wenn Pause > Arbeitszeit, wird 0 zurückgegeben.
      */
     fun calculateWorkMinutes(entry: WorkEntry): Int {
-        if (entry.dayType == DayType.OFF || entry.dayType == DayType.COMP_TIME) return 0
+        if (!entry.dayType.isWorkLike) return 0
 
         val workStart = entry.workStart ?: return 0
         val workEnd = entry.workEnd ?: return 0
@@ -41,7 +41,8 @@ object TimeCalculator {
     /**
      * Berechnet die gesamte bezahlte Zeit in Minuten.
      * Arbeitszeit + Reisezeit.
-     * Hinweis: An OFF-Tagen ist die Arbeitszeit 0, daher ist die Gesamtzeit = Reisezeit.
+     * Hinweis: Fachliche Zielstunden wie Urlaub werden in den Aggregationen berechnet,
+     * nicht in diesem Rohzeit-Helper.
      */
     fun calculatePaidTotalMinutes(entry: WorkEntry, travelLegs: List<TravelLeg> = emptyList()): Int {
         return calculateWorkMinutes(entry) + calculateTravelMinutes(travelLegs)

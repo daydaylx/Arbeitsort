@@ -2,6 +2,7 @@
 
 package de.montagezeit.app.ui.screen.today
 
+import kotlin.math.roundToInt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,9 +21,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,8 +102,7 @@ private data class TodayStatusUi(
 @Composable
 fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
-    onOpenEditSheet: (LocalDate) -> Unit,
-    onOpenWeekView: () -> Unit = {}
+    onOpenEditSheet: (LocalDate) -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -119,6 +122,12 @@ fun TodayScreen(
         {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             viewModel.onConfirmOffDay()
+        }
+    }
+    val onSetDayTypeAction = remember {
+        { dayType: DayType ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            viewModel.setDayType(dayType)
         }
     }
     val onDeleteDay = remember { { viewModel.openDeleteDayDialog() } }
@@ -171,8 +180,10 @@ fun TodayScreen(
                     entry = screenState.currentEntry,
                     travelLegs = screenState.currentTravelLegs,
                     selectedDate = screenState.selectedDate,
+                    dailyTargetHours = screenState.dailyTargetHours,
                     isDailyCheckInLoading = screenState.isDailyCheckInLoading,
                     isConfirmOffdayLoading = screenState.isConfirmOffdayLoading,
+                    isSetDayTypeLoading = screenState.isSetDayTypeLoading,
                     onSelectDay = onSelectDay,
                     onBackToToday = onBackToToday,
                     onOpenDatePicker = { showDatePicker = true },
@@ -181,7 +192,7 @@ fun TodayScreen(
                     onDeleteDay = onDeleteDay,
                     onOpenDailyCheckInDialog = onOpenDailyCheckInDialogAction,
                     onConfirmOffDay = onConfirmOffDayAction,
-                    onOpenWeekView = onOpenWeekView
+                    onSetDayType = onSetDayTypeAction
                 )
             }
         }
@@ -287,8 +298,10 @@ private fun TodayContent(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
     selectedDate: LocalDate,
+    dailyTargetHours: Double,
     isDailyCheckInLoading: Boolean,
     isConfirmOffdayLoading: Boolean,
+    isSetDayTypeLoading: Boolean,
     onSelectDay: (LocalDate) -> Unit,
     onBackToToday: () -> Unit,
     onOpenDatePicker: () -> Unit,
@@ -297,7 +310,7 @@ private fun TodayContent(
     onDeleteDay: () -> Unit,
     onOpenDailyCheckInDialog: () -> Unit,
     onConfirmOffDay: () -> Unit,
-    onOpenWeekView: () -> Unit
+    onSetDayType: (DayType) -> Unit
 ) {
     val workMinutes = remember(entry) { entry?.let(TimeCalculator::calculateWorkMinutes) ?: 0 }
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
@@ -322,22 +335,24 @@ private fun TodayContent(
             entry = entry,
             travelLegs = travelLegs,
             date = selectedDate,
+            dailyTargetHours = dailyTargetHours,
             statusUi = statusUi,
             isDailyCheckInLoading = isDailyCheckInLoading,
             isConfirmOffdayLoading = isConfirmOffdayLoading,
+            isSetDayTypeLoading = isSetDayTypeLoading,
             onSelectDay = onSelectDay,
             onBackToToday = onBackToToday,
             onOpenDatePicker = onOpenDatePicker,
             onOpenDailyCheckInDialog = onOpenDailyCheckInDialog,
             onConfirmOffDay = onConfirmOffDay,
+            onSetDayType = onSetDayType,
             onEditToday = onEditToday,
             onEditDayLocation = onEditDayLocation,
             onDeleteDay = onDeleteDay,
-            onOpenWeekView = onOpenWeekView,
             modifier = Modifier.staggeredAppear(index = 0)
         )
 
-        if (entry != null && (entry.dayType == DayType.WORK || travelLegs.isNotEmpty())) {
+        if (entry != null && entry.dayType == DayType.WORK) {
             WorkHoursCard(
                 entry = entry,
                 travelLegs = travelLegs,
@@ -355,26 +370,26 @@ private fun StatusCard(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
     date: LocalDate,
+    dailyTargetHours: Double,
     statusUi: TodayStatusUi,
     isDailyCheckInLoading: Boolean,
     isConfirmOffdayLoading: Boolean,
+    isSetDayTypeLoading: Boolean,
     onSelectDay: (LocalDate) -> Unit,
     onBackToToday: () -> Unit,
     onOpenDatePicker: () -> Unit,
     onOpenDailyCheckInDialog: () -> Unit,
     onConfirmOffDay: () -> Unit,
+    onSetDayType: (DayType) -> Unit,
     onEditToday: () -> Unit,
     onEditDayLocation: () -> Unit,
     onDeleteDay: () -> Unit,
-    onOpenWeekView: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val entryStatus = remember(entry, travelLegs) {
         entry?.let { EntryStatusResolver.resolve(it, travelLegs) }
     }
     val hasEntry = entry != null
-    val showOffdayAction = entryStatus?.isConfirmed != true && entry?.dayType != DayType.COMP_TIME
-
     MZAppPanel(
         modifier = modifier,
         emphasized = entry == null || entryStatus?.isConfirmed == false
@@ -416,45 +431,25 @@ private fun StatusCard(
         StatusCardContent(
             entry = entry,
             travelLegs = travelLegs,
-            entryStatus = entryStatus
-        )
-
-        StatusCardActions(
-            showOffdayAction = showOffdayAction,
-            isConfirmOffdayLoading = isConfirmOffdayLoading,
-            onConfirmOffDay = onConfirmOffDay
+            entryStatus = entryStatus,
+            dailyTargetHours = dailyTargetHours
         )
 
         if (hasEntry) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TertiaryActionButton(
-                    onClick = onEditDayLocation,
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Edit
-                ) {
-                    Text(stringResource(R.string.action_change_location))
-                }
-                TertiaryActionButton(
-                    onClick = onDeleteDay,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    icon = Icons.Default.Delete
-                ) {
-                    Text(stringResource(R.string.action_delete_day))
-                }
-            }
-        }
-
-        TertiaryActionButton(
-            onClick = onOpenWeekView,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.overview_title))
+            ExistingDayActionsMenu(
+                currentDayType = entry.dayType,
+                isLoading = isSetDayTypeLoading,
+                onEditDayLocation = onEditDayLocation,
+                onDeleteDay = onDeleteDay,
+                onSetDayType = onSetDayType
+            )
+        } else {
+            EmptyDayQuickActions(
+                isConfirmOffdayLoading = isConfirmOffdayLoading,
+                isSetDayTypeLoading = isSetDayTypeLoading,
+                onConfirmOffDay = onConfirmOffDay,
+                onSetDayType = onSetDayType
+            )
         }
     }
 }
@@ -483,7 +478,8 @@ private fun resolveTodayStatusUi(entry: WorkEntry?, isConfirmed: Boolean): Today
 private fun StatusCardContent(
     entry: WorkEntry?,
     travelLegs: List<TravelLeg>,
-    entryStatus: de.montagezeit.app.domain.usecase.EntryStatus?
+    entryStatus: de.montagezeit.app.domain.usecase.EntryStatus?,
+    dailyTargetHours: Double = 8.0
 ) {
     entry?.let {
         if (entryStatus?.isConfirmed == false) {
@@ -504,16 +500,24 @@ private fun StatusCardContent(
             label = stringResource(R.string.today_detail_type_label),
             value = dayTypeLabel(it.dayType)
         )
-        MZKeyValueRow(
-            label = stringResource(R.string.day_location_label),
-            value = it.dayLocationLabel.trim().ifEmpty {
-                stringResource(R.string.today_day_location_unset)
-            }
-        )
+        if (it.dayType.isWorkLike) {
+            MZKeyValueRow(
+                label = stringResource(R.string.day_location_label),
+                value = it.dayLocationLabel.trim().ifEmpty {
+                    stringResource(R.string.today_day_location_unset)
+                }
+            )
+        }
         if (it.dayType == DayType.WORK) {
             MZKeyValueRow(
                 label = stringResource(R.string.total_paid_hours),
                 value = formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it, travelLegs)),
+                emphasize = true
+            )
+        } else if (it.dayType == DayType.VACATION) {
+            MZKeyValueRow(
+                label = stringResource(R.string.total_paid_hours),
+                value = formatMinutes((dailyTargetHours * 60).roundToInt()),
                 emphasize = true
             )
         }
@@ -528,21 +532,106 @@ private fun StatusCardContent(
 }
 
 @Composable
-private fun StatusCardActions(
-    showOffdayAction: Boolean,
+private fun EmptyDayQuickActions(
     isConfirmOffdayLoading: Boolean,
-    onConfirmOffDay: () -> Unit
+    isSetDayTypeLoading: Boolean,
+    onConfirmOffDay: () -> Unit,
+    onSetDayType: (DayType) -> Unit
 ) {
-    if (showOffdayAction) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         SecondaryActionButton(
             onClick = onConfirmOffDay,
-            enabled = !isConfirmOffdayLoading,
-            modifier = Modifier.fillMaxWidth(),
+            enabled = !isConfirmOffdayLoading && !isSetDayTypeLoading,
+            modifier = Modifier.weight(1f),
             isLoading = isConfirmOffdayLoading
         ) {
-            Text(stringResource(R.string.action_confirm_offday))
+            Text(stringResource(R.string.edit_day_type_off))
+        }
+        SecondaryActionButton(
+            onClick = { onSetDayType(DayType.VACATION) },
+            enabled = !isConfirmOffdayLoading && !isSetDayTypeLoading,
+            modifier = Modifier.weight(1f),
+            isLoading = isSetDayTypeLoading
+        ) {
+            Text(stringResource(R.string.edit_day_type_vacation))
         }
     }
+    SecondaryActionButton(
+        onClick = { onSetDayType(DayType.COMP_TIME) },
+        enabled = !isConfirmOffdayLoading && !isSetDayTypeLoading,
+        modifier = Modifier.fillMaxWidth(),
+        isLoading = isSetDayTypeLoading
+    ) {
+        Text(stringResource(R.string.edit_day_type_comp_time))
+    }
+}
+
+@Composable
+private fun ExistingDayActionsMenu(
+    currentDayType: DayType,
+    isLoading: Boolean,
+    onEditDayLocation: () -> Unit,
+    onDeleteDay: () -> Unit,
+    onSetDayType: (DayType) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        TertiaryActionButton(
+            onClick = { expanded = true },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.MoreVert
+        ) {
+            Text(stringResource(R.string.action_more))
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_change_location)) },
+                onClick = {
+                    expanded = false
+                    onEditDayLocation()
+                }
+            )
+            listOf(DayType.WORK, DayType.OFF, DayType.VACATION, DayType.COMP_TIME)
+                .filterNot { it == currentDayType }
+                .forEach { dayType ->
+                    DropdownMenuItem(
+                        text = { Text(markAsDayTypeLabel(dayType)) },
+                        onClick = {
+                            expanded = false
+                            onSetDayType(dayType)
+                        }
+                    )
+                }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.action_delete_day),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onDeleteDay()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun markAsDayTypeLabel(dayType: DayType): String = when (dayType) {
+    DayType.WORK -> stringResource(R.string.action_mark_as_work)
+    DayType.OFF -> stringResource(R.string.action_mark_as_off)
+    DayType.VACATION -> stringResource(R.string.action_mark_as_vacation)
+    DayType.COMP_TIME -> stringResource(R.string.action_mark_as_comp_time)
 }
 
 @Composable
@@ -799,7 +888,6 @@ private fun statusColor(type: StatusType) = when (type) {
 private fun dayTypeLabel(dayType: DayType): String = when (dayType) {
     DayType.WORK -> stringResource(R.string.day_type_work)
     DayType.OFF -> stringResource(R.string.day_type_off)
+    DayType.VACATION -> stringResource(R.string.day_type_vacation)
     DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
-    DayType.SCHULUNG -> stringResource(R.string.day_type_schulung)
-    DayType.LEHRGANG -> stringResource(R.string.day_type_lehrgang)
 }

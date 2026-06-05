@@ -35,4 +35,7 @@ interface WorkEntryRepository {
     suspend fun replaceEntryWithTravelLegs(entry: WorkEntry, legs: List<TravelLeg>)
 
     suspend fun readModifyWrite(date: LocalDate, modify: (WorkEntry?) -> WorkEntry)
+
+    /** Atomically transitions to a non-work day type and deletes travel legs for [date]. */
+    suspend fun readModifyWriteAndDeleteTravelLegs(date: LocalDate, modify: (WorkEntry?) -> WorkEntry)
 }

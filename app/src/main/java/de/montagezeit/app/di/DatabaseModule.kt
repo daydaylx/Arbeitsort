@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.montagezeit.app.data.local.dao.WorkEntryDao
 import de.montagezeit.app.data.local.database.AppDatabase
+import de.montagezeit.app.data.local.database.DatabaseBackupManager
 import de.montagezeit.app.data.repository.RoomWorkEntryRepository
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import javax.inject.Singleton
@@ -20,6 +21,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        DatabaseBackupManager.backupIfVersionMismatch(
+            context,
+            AppDatabase.DATABASE_NAME,
+            AppDatabase.DATABASE_VERSION
+        )
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,

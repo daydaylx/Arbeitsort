@@ -14,7 +14,7 @@ import java.time.LocalTime
 
 @Database(
     entities = [WorkEntry::class, TravelLeg::class],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(
@@ -27,6 +27,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "montagezeit_database"
+        const val DATABASE_VERSION = 17
+        private const val SCHEMA_VERSION_16 = 16
+        private const val SCHEMA_VERSION_17 = DATABASE_VERSION
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -629,7 +632,8 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         // Migration 15→16: Vereinheitlicht den Bestätigungszustand:
-        // - gültige WORK-/SCHULUNG-/LEHRGANG-Tage mit positiver Arbeits- oder Reisezeit werden bestätigt
+        // - gültige WORK-Tage mit positiver Arbeits- oder Reisezeit werden bestätigt
+        // - historische SCHULUNG-/LEHRGANG-Werte werden hier noch wie WORK behandelt
         // - leere/bereits inkonsistente work-like Bestätigungen werden zurückgesetzt
         // - OFF und COMP_TIME werden immer terminal bestätigt
         val MIGRATION_15_16 = object : Migration(15, 16) {
@@ -749,6 +753,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 16→17: Entfernt legacy Sonder-Tagestypen aus dem aktiven Modell.
+        // Persistierte Altwerte bleiben lesbar, indem sie vor Enum-Deserialisierung
+        // auf normale Arbeitstage abgebildet werden.
+        val MIGRATION_16_17 = object : Migration(SCHEMA_VERSION_16, SCHEMA_VERSION_17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    UPDATE work_entries
+                    SET dayType = 'WORK'
+                    WHERE dayType IN ('SCHULUNG', 'LEHRGANG')
+                    """.trimIndent()
+                )
+            }
+        }
+
         val MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -764,7 +783,8 @@ abstract class AppDatabase : RoomDatabase() {
             MIGRATION_12_13,
             MIGRATION_13_14,
             MIGRATION_14_15,
-            MIGRATION_15_16
+            MIGRATION_15_16,
+            MIGRATION_16_17
         )
     }
 }

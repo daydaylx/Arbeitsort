@@ -211,8 +211,9 @@ class WindowCheckWorkerDecisionTest {
     }
 
     @Test
-    fun `isDailyReminderTerminal - bestaetigt oder comp time ergibt true`() {
+    fun `isDailyReminderTerminal - bestaetigt vacation oder comp time ergibt true`() {
         assertTrue(WindowCheckWorker.isDailyReminderTerminal(workEntry(confirmedWorkDay = true)))
+        assertTrue(WindowCheckWorker.isDailyReminderTerminal(workEntry(dayType = DayType.VACATION)))
         assertTrue(WindowCheckWorker.isDailyReminderTerminal(workEntry(dayType = DayType.COMP_TIME)))
         assertFalse(WindowCheckWorker.isDailyReminderTerminal(null))
     }
@@ -265,6 +266,19 @@ class WindowCheckWorkerDecisionTest {
         assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
         assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
         // shouldShowDailyReminder has an explicit COMP_TIME guard before the confirmedWorkDay check
+        assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
+    }
+
+    @Test
+    fun `VACATION tag ohne confirmedWorkDay - alle Reminder unterdrueckt`() {
+        val entry = workEntry(
+            dayType = DayType.VACATION,
+            confirmedWorkDay = false
+        )
+
+        assertFalse(WindowCheckWorker.shouldShowMorningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowEveningReminder(entry))
+        assertFalse(WindowCheckWorker.shouldShowFallbackReminder(entry))
         assertFalse(WindowCheckWorker.shouldShowDailyReminder(entry))
     }
 

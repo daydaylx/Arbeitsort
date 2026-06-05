@@ -1,7 +1,6 @@
 package de.montagezeit.app.work
 
 import de.montagezeit.app.data.local.dao.WorkEntryDao
-import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.preferences.ReminderSettings
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -32,7 +31,7 @@ object ReminderWindowEvaluator {
      *
      * Priorisierung: Manuelle DayType-Einstellungen überschreiben automatische Regeln
      * 1. Wenn DayType == WORK → immer Arbeitstag (auch an Wochenenden)
-     * 2. Wenn DayType == OFF oder COMP_TIME → immer Nicht-Arbeitstag
+     * 2. Wenn DayType == OFF, VACATION oder COMP_TIME → immer Nicht-Arbeitstag
      * 3. Sonst: Auto-Off Regeln anwenden (Wochenende/Feiertage)
      */
     suspend fun isNonWorkingDay(date: LocalDate, settings: ReminderSettings, workEntryDao: WorkEntryDao? = null): Boolean {
@@ -40,7 +39,7 @@ object ReminderWindowEvaluator {
         if (workEntryDao != null) {
             val entry = workEntryDao.getByDate(date)
             if (entry != null) {
-                return entry.dayType == DayType.OFF || entry.dayType == DayType.COMP_TIME
+                return !entry.dayType.isWorkLike
             }
         }
         

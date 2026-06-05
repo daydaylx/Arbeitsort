@@ -101,9 +101,7 @@ class CalculateOvertimeForRangeTest {
 
     @Test
     fun `frei mit Reise`() {
-        // OFF-Tag (3h IST, 0h SOLL, Saldo +3)
-        // Vorher: travelHours wurde nur zu offDayTravelHours addiert.
-        // Jetzt: erhöht totalActualHours!
+        // OFF-Tag: Reise zählt als Ist-Zeit und erhöht das Überstundenkonto.
         val result = useCase(
             entries = listOf(
                 overtimeEntry(
@@ -116,13 +114,31 @@ class CalculateOvertimeForRangeTest {
             dailyTargetHours = 8.0
         )
 
-        // 3h IST, 0 SOLL => +3 Überstunden
         assertEquals(3.0, result.totalOvertimeHours, 0.0001)
         assertEquals(3.0, result.totalActualHours, 0.0001)
         assertEquals(0.0, result.totalTargetHours, 0.0001)
         assertEquals(0, result.countedDays)
         assertEquals(3.0, result.offDayTravelHours, 0.0001)
         assertEquals(1, result.offDayTravelDays)
+    }
+
+    @Test
+    fun `Urlaub mit acht Stunden Soll ergibt null Ueberstunden`() {
+        val result = useCase(
+            entries = listOf(
+                overtimeEntry(
+                    date = LocalDate.of(2026, 1, 10),
+                    dayType = DayType.VACATION,
+                    confirmedWorkDay = true
+                )
+            ),
+            dailyTargetHours = 8.0
+        )
+
+        assertEquals(0.0, result.totalOvertimeHours, 0.0001)
+        assertEquals(8.0, result.totalActualHours, 0.0001)
+        assertEquals(8.0, result.totalTargetHours, 0.0001)
+        assertEquals(1, result.countedDays)
     }
 
     @Test

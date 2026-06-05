@@ -20,7 +20,7 @@ fun WorkEntry.withMealAllowanceCleared(): WorkEntry {
 }
 
 fun WorkEntry.confirmationStateForDayType(dayType: DayType, now: Long): DayTypeConfirmationState {
-    // OFF/COMP_TIME auto-confirm on transition; WORK-like types start pending unless
+    // OFF/VACATION/COMP_TIME auto-confirm on transition; WORK-like types start pending unless
     // we're staying on the same type and it was already confirmed.
     if (!dayType.isWorkLike) {
         val source = dayType.name
@@ -48,6 +48,7 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 workStart = null,
                 workEnd = null,
                 breakMinutes = 0,
+                dayLocationLabel = "",
                 confirmedWorkDay = confirmationState.confirmedWorkDay,
                 confirmationAt = confirmationState.confirmationAt,
                 confirmationSource = confirmationState.confirmationSource
@@ -62,6 +63,22 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
                 workStart = null,
                 workEnd = null,
                 breakMinutes = 0,
+                dayLocationLabel = "",
+                confirmedWorkDay = confirmationState.confirmedWorkDay,
+                confirmationAt = confirmationState.confirmationAt,
+                confirmationSource = confirmationState.confirmationSource
+            )
+                .withMealAllowanceCleared()
+        }
+
+        DayType.VACATION -> {
+            val confirmationState = confirmationStateForDayType(dayType = dayType, now = now)
+            copy(
+                dayType = dayType,
+                workStart = null,
+                workEnd = null,
+                breakMinutes = 0,
+                dayLocationLabel = "",
                 confirmedWorkDay = confirmationState.confirmedWorkDay,
                 confirmationAt = confirmationState.confirmationAt,
                 confirmationSource = confirmationState.confirmationSource
@@ -81,20 +98,11 @@ fun WorkEntry.transitionToDayType(dayType: DayType, now: Long): WorkEntry {
             if (shouldClearMealAllowance) transitioned.withMealAllowanceCleared() else transitioned
         }
 
-        DayType.SCHULUNG, DayType.LEHRGANG -> {
-            val confirmationState = confirmationStateForDayType(dayType = dayType, now = now)
-            copy(
-                dayType = dayType,
-                confirmedWorkDay = confirmationState.confirmedWorkDay,
-                confirmationAt = confirmationState.confirmationAt,
-                confirmationSource = confirmationState.confirmationSource
-            ).withMealAllowanceCleared()
-        }
     }
     return if (transitioned == this) this else transitioned.copy(updatedAt = now)
 }
 
-fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocationLabel: String): WorkEntry {
+fun WorkEntry.withConfirmedOffDay(source: String, now: Long): WorkEntry {
     return copy(
         dayType = DayType.OFF,
         workStart = null,
@@ -103,7 +111,6 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
         confirmedWorkDay = true,
         confirmationAt = now,
         confirmationSource = source,
-        dayLocationLabel = dayLocationLabel.ifBlank { fallbackDayLocationLabel.ifBlank { "" } },
         updatedAt = now
     )
         .withMealAllowanceCleared()
@@ -112,9 +119,8 @@ fun WorkEntry.withConfirmedOffDay(source: String, now: Long, fallbackDayLocation
 fun createConfirmedOffDayEntry(
     date: LocalDate,
     source: String,
-    now: Long,
-    fallbackDayLocationLabel: String
+    now: Long
 ): WorkEntry {
     return WorkEntry(date = date, createdAt = now)
-        .withConfirmedOffDay(source = source, now = now, fallbackDayLocationLabel = fallbackDayLocationLabel)
+        .withConfirmedOffDay(source = source, now = now)
 }

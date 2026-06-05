@@ -115,6 +115,16 @@ abstract class WorkEntryDao {
     }
 
     @Transaction
+    open suspend fun readModifyWriteAndDeleteTravelLegs(
+        date: LocalDate,
+        modify: (WorkEntry?) -> WorkEntry
+    ) {
+        val existing = getByDate(date)
+        upsert(modify(existing))
+        deleteTravelLegsByDate(date)
+    }
+
+    @Transaction
     open suspend fun upsertAllAndDeleteTravelLegs(
         entries: List<WorkEntry>,
         travelLegDatesToDelete: List<LocalDate>

@@ -23,6 +23,7 @@ data class OverviewMetrics(
     val mealAllowanceCents: Int = 0,
     val countedDays: Int = 0,
     val unconfirmedDaysCount: Int = 0,
+    val vacationDays: Int = 0,
     val compTimeDays: Int = 0
 )
 

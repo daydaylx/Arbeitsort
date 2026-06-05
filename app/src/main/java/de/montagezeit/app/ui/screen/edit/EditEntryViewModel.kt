@@ -138,9 +138,14 @@ class EditEntryViewModel @Inject constructor(
         val previousType = _screenState.value.formData.dayType
         updateFormData {
             when (dayType) {
-                DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> it.copy(dayType = dayType)
-                DayType.OFF -> it.copy(dayType = dayType, hasWorkTimes = false)
-                DayType.COMP_TIME -> it.copy(dayType = dayType, hasWorkTimes = false, travelLegs = emptyList())
+                DayType.WORK -> it.copy(dayType = dayType)
+                DayType.OFF, DayType.VACATION, DayType.COMP_TIME -> it.copy(
+                    dayType = dayType,
+                    hasWorkTimes = false,
+                    travelStartTime = null,
+                    travelArriveTime = null,
+                    travelLegs = emptyList()
+                )
             }
         }
         if (previousType.isWorkLike && !dayType.isWorkLike) {

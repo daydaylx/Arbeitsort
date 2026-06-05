@@ -224,6 +224,18 @@ private fun PdfReadyContent(
     val context = LocalContext.current
     val rendererState = rememberPdfRendererState(context, fileUri)
 
+    PdfReadyHeader(fileName)
+    PdfReadyActions(
+        onOpenPdf = onOpenPdf,
+        onSharePdf = onSharePdf,
+        onCopy = onCopy,
+        onBackToPreview = onBackToPreview
+    )
+    PdfReadyPreview(rendererState)
+}
+
+@Composable
+private fun PdfReadyHeader(fileName: String) {
     Text(
         stringResource(R.string.export_preview_pdf_ready_title),
         style = MaterialTheme.typography.titleMedium
@@ -233,7 +245,15 @@ private fun PdfReadyContent(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
 
+@Composable
+private fun PdfReadyActions(
+    onOpenPdf: () -> Unit,
+    onSharePdf: () -> Unit,
+    onCopy: () -> Unit,
+    onBackToPreview: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -269,7 +289,10 @@ private fun PdfReadyContent(
             Text(stringResource(R.string.export_preview_action_back_to_preview))
         }
     }
+}
 
+@Composable
+private fun PdfReadyPreview(rendererState: PdfRendererState?) {
     when (rendererState) {
         null -> {
             ErrorCard(stringResource(R.string.export_preview_pdf_render_failed))
@@ -287,60 +310,75 @@ private fun PdfReadyContent(
             )
             val pageCount = rendererState.renderer.pageCount
             val pagerState = rememberPagerState(pageCount = { pageCount })
-            val scope = rememberCoroutineScope()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TertiaryActionButton(
-                    onClick = {
-                        scope.launch {
-                            pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0))
-                        }
-                    },
-                    enabled = pagerState.currentPage > 0
-                ) {
-                    Text(stringResource(R.string.export_preview_pdf_previous_page))
-                }
-                Text(
-                    text = stringResource(
-                        R.string.export_preview_pdf_page_position,
-                        pagerState.currentPage + 1,
-                        pageCount
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TertiaryActionButton(
-                    onClick = {
-                        scope.launch {
-                            pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(pageCount - 1))
-                        }
-                    },
-                    enabled = pagerState.currentPage < pageCount - 1
-                ) {
-                    Text(stringResource(R.string.export_preview_pdf_next_page))
-                }
+            PdfPageNavigation(pageCount = pageCount, currentPage = pagerState.currentPage) { page ->
+                pagerState.animateScrollToPage(page)
             }
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 240.dp, max = 560.dp)
-            ) {
-                val density = LocalDensity.current
-                val targetWidthPx = with(density) { maxWidth.toPx().roundToInt() }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxWidth()
-                ) { pageIndex ->
-                    PdfPageCard(
-                        renderer = rendererState.renderer,
-                        pageIndex = pageIndex,
-                        targetWidthPx = targetWidthPx
-                    )
+            PdfPagePreviewPager(rendererState, pagerState)
+        }
+    }
+}
+
+@Composable
+private fun PdfPageNavigation(
+    pageCount: Int,
+    currentPage: Int,
+    scrollToPage: suspend (Int) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TertiaryActionButton(
+            onClick = {
+                scope.launch {
+                    scrollToPage((currentPage - 1).coerceAtLeast(0))
                 }
-            }
+            },
+            enabled = currentPage > 0
+        ) {
+            Text(stringResource(R.string.export_preview_pdf_previous_page))
+        }
+        Text(
+            text = stringResource(R.string.export_preview_pdf_page_position, currentPage + 1, pageCount),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TertiaryActionButton(
+            onClick = {
+                scope.launch {
+                    scrollToPage((currentPage + 1).coerceAtMost(pageCount - 1))
+                }
+            },
+            enabled = currentPage < pageCount - 1
+        ) {
+            Text(stringResource(R.string.export_preview_pdf_next_page))
+        }
+    }
+}
+
+@Composable
+private fun PdfPagePreviewPager(
+    rendererState: PdfRendererState,
+    pagerState: androidx.compose.foundation.pager.PagerState
+) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 240.dp, max = 560.dp)
+    ) {
+        val density = LocalDensity.current
+        val targetWidthPx = with(density) { maxWidth.toPx().roundToInt() }
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth()
+        ) { pageIndex ->
+            PdfPageCard(
+                renderer = rendererState.renderer,
+                pageIndex = pageIndex,
+                targetWidthPx = targetWidthPx
+            )
         }
     }
 }

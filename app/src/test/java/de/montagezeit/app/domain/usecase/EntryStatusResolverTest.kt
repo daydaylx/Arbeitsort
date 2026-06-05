@@ -86,10 +86,15 @@ class EntryStatusResolverTest {
     }
 
     @Test
-    fun `off and comp time are always terminal`() {
+    fun `off vacation and comp time are always terminal`() {
         assertTrue(
             EntryStatusResolver.resolve(
                 WorkEntry(date = date, dayType = DayType.OFF, confirmedWorkDay = false)
+            ).isReminderTerminal
+        )
+        assertTrue(
+            EntryStatusResolver.resolve(
+                WorkEntry(date = date, dayType = DayType.VACATION, confirmedWorkDay = false)
             ).isReminderTerminal
         )
         assertTrue(

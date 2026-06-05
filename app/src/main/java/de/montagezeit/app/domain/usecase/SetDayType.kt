@@ -7,11 +7,10 @@ import de.montagezeit.app.domain.util.transitionToDayType
 import java.time.LocalDate
 
 /**
- * UseCase zum Setzen des Tagtyps (WORK / OFF / COMP_TIME)
+ * UseCase zum Setzen des Tagtyps (WORK / OFF / VACATION / COMP_TIME)
  *
- * Für COMP_TIME wird [WorkEntry.confirmedWorkDay] sofort auf `true` gesetzt.
- * Begründung: COMP_TIME ist eine bewusste Nutzeraktion und verhält sich damit
- * konsistent zu direkt bestätigten OFF-Tagen.
+ * Für OFF, VACATION und COMP_TIME wird [WorkEntry.confirmedWorkDay] sofort auf `true`
+ * gesetzt. Diese Typen sind bewusste Nutzeraktionen und benötigen keine Arbeitszeitdaten.
  *
  * @param workEntryDao DAO für WorkEntry
  */
@@ -23,7 +22,7 @@ class SetDayType(
      * Setzt den Tagtyp für ein bestimmtes Datum.
      *
      * @param date Datum
-     * @param dayType Tagtyp (WORK, OFF oder COMP_TIME)
+     * @param dayType Tagtyp (WORK, OFF, VACATION oder COMP_TIME)
      * @return Aktualisierter WorkEntry
      */
     suspend operator fun invoke(
