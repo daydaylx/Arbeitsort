@@ -81,6 +81,11 @@ fun EditEntrySheet(
 
     LaunchedEffect(screenState.uiState) {
         if (screenState.uiState is EditUiState.Saved) {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.edit_saved_confirmation),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
             stableOnDismiss()
         }
     }

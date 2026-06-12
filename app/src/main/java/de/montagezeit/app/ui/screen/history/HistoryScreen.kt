@@ -23,9 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,20 +37,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.text.font.FontWeight
 import de.montagezeit.app.R
-import de.montagezeit.app.ui.theme.MZTokens
-import de.montagezeit.app.ui.theme.NumberStyles
 import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.TravelLeg
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.domain.usecase.EntryStatusResolver
 import de.montagezeit.app.domain.util.TimeCalculator
-import de.montagezeit.app.ui.components.DatePickerDialog
+import de.montagezeit.app.ui.components.*
+import de.montagezeit.app.ui.theme.MZTokens
+import de.montagezeit.app.ui.theme.NumberStyles
+import de.montagezeit.app.ui.theme.dayTypePalette
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
-import de.montagezeit.app.ui.components.PrimaryActionButton
-import de.montagezeit.app.ui.components.SecondaryActionButton
-import de.montagezeit.app.ui.components.TertiaryActionButton
-import de.montagezeit.app.ui.components.*
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -62,8 +56,9 @@ import java.util.Locale
 
 private const val MONTH_PREVIEW_COUNT = 5
 private const val HISTORY_LIST_CONTENT_START_INDEX = 2
+private const val PAID_HOURS_TOLERANCE = 0.01
+private const val MINUTES_PER_HOUR = 60.0
 private val historyWeekFields = WeekFields.ISO
-
 
 private val localDateSaver = Saver<LocalDate, String>(
     save = { it.toString() },
@@ -597,16 +592,15 @@ fun CalendarDayCell(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(MZTokens.RadiusSmall)
+    val palette = entry?.dayType?.let { dayTypePalette(it) }
     val containerColor = when {
         !day.inMonth -> MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-        entry?.dayType == DayType.OFF -> MaterialTheme.colorScheme.secondaryContainer
-        entry?.dayType == DayType.VACATION -> MaterialTheme.colorScheme.primaryContainer
-        entry?.dayType == DayType.COMP_TIME -> MaterialTheme.colorScheme.tertiaryContainer
+        palette != null -> palette.container
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val borderModifier = if (isToday) {
-        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, shape)
+        Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, shape)
     } else {
         Modifier
     }
@@ -618,17 +612,13 @@ fun CalendarDayCell(
             .background(containerColor)
             .then(borderModifier)
             .clickable(enabled = day.inMonth, onClick = onClick)
-            .padding(6.dp)
+            .padding(MZTokens.SpaceS)
     ) {
         val compactLayout = maxWidth < 52.dp
 
         Text(
             text = day.date.dayOfMonth.toString(),
-            style = if (compactLayout) {
-                MaterialTheme.typography.labelSmall
-            } else {
-                MaterialTheme.typography.bodySmall
-            },
+            style = MaterialTheme.typography.bodySmall,
             color = if (day.inMonth) {
                 MaterialTheme.colorScheme.onSurface
             } else {
@@ -637,80 +627,47 @@ fun CalendarDayCell(
         )
 
         if (entry != null) {
-            if (entry.dayType == DayType.OFF) {
-                if (compactLayout) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.16f),
-                        modifier = Modifier.align(Alignment.BottomStart)
+            when (entry.dayType) {
+                DayType.WORK -> {
+                    Row(
+                        modifier = Modifier.align(Alignment.BottomStart),
+                        horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceXS),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = stringResource(R.string.history_day_type_off_short),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        StatusDot(
+                            active = entry.morningCapturedAt != null,
+                            activeColor = MaterialTheme.colorScheme.primary
+                        )
+                        StatusDot(
+                            active = entry.eveningCapturedAt != null,
+                            activeColor = MaterialTheme.colorScheme.primary
                         )
                     }
-                } else {
-                    Text(
-                        text = stringResource(R.string.history_day_type_off),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    )
                 }
-            } else if (entry.dayType == DayType.VACATION || entry.dayType == DayType.COMP_TIME) {
-                val text = if (entry.dayType == DayType.VACATION) {
+                DayType.OFF, DayType.VACATION, DayType.COMP_TIME -> {
+                    val accent = palette?.accent ?: MaterialTheme.colorScheme.onSurfaceVariant
                     if (compactLayout) {
-                        stringResource(R.string.history_day_type_vacation_short)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(accent)
+                        )
                     } else {
-                        stringResource(R.string.day_type_vacation)
-                    }
-                } else if (compactLayout) {
-                    stringResource(R.string.history_day_type_comp_time_short)
-                } else {
-                    stringResource(R.string.day_type_comp_time)
-                }
-                val contentColor = if (entry.dayType == DayType.VACATION) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                }
-                if (compactLayout) {
-                    Surface(
-                        shape = CircleShape,
-                        color = contentColor.copy(alpha = 0.16f),
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    ) {
+                        val label = when (entry.dayType) {
+                            DayType.OFF -> stringResource(R.string.history_day_type_off)
+                            DayType.VACATION -> stringResource(R.string.day_type_vacation)
+                            DayType.COMP_TIME -> stringResource(R.string.day_type_comp_time)
+                            else -> ""
+                        }
                         Text(
-                            text = text,
+                            text = label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = contentColor,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            color = accent,
+                            modifier = Modifier.align(Alignment.BottomStart)
                         )
                     }
-                } else {
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = contentColor,
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.align(Alignment.BottomStart),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatusDot(
-                        active = entry.morningCapturedAt != null,
-                        activeColor = MaterialTheme.colorScheme.primary
-                    )
-                    StatusDot(
-                        active = entry.eveningCapturedAt != null,
-                        activeColor = MaterialTheme.colorScheme.secondary
-                    )
                 }
             }
         }
@@ -1055,7 +1012,7 @@ fun HistoryEntryItem(
     onEntryClick: (LocalDate) -> Unit
 ) {
     val travelMinutes = remember(travelLegs) { TimeCalculator.calculateTravelMinutes(travelLegs) }
-    val workHours = remember(entry) { TimeCalculator.calculateWorkHours(entry) }
+    val workMinutes = remember(entry) { TimeCalculator.calculateWorkMinutes(entry) }
     val totalPaidHours = remember(entry, travelLegs) { TimeCalculator.calculatePaidTotalHours(entry, travelLegs) }
     val hoursOnlyFormat = stringResource(R.string.history_hours_only)
     val hoursMinutesFormat = stringResource(R.string.history_hours_and_minutes)
@@ -1063,10 +1020,6 @@ fun HistoryEntryItem(
         stringResource(R.string.today_day_location_unset)
     }
     val isPending = EntryStatusResolver.isPendingWorkDay(entry, travelLegs)
-    val statusChipInfo: Pair<String, Color> = when {
-        isPending -> stringResource(R.string.today_unconfirmed) to MaterialTheme.colorScheme.error
-        else -> stringResource(R.string.today_confirmed) to MaterialTheme.colorScheme.primary
-    }
 
     val travelSummary = remember(travelLegs) {
         travelLegs
@@ -1081,6 +1034,8 @@ fun HistoryEntryItem(
             .orEmpty()
     }
 
+    val palette = dayTypePalette(entry.dayType)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1088,14 +1043,14 @@ fun HistoryEntryItem(
             .clickable { onEntryClick(entry.date) },
         shape = RoundedCornerShape(MZTokens.RadiusCard),
         color = if (isPending) {
-            MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+            MaterialTheme.colorScheme.error.copy(alpha = MZTokens.AlphaAccentSurfaceSubtle)
         } else {
             MaterialTheme.colorScheme.surface
         },
         border = BorderStroke(
             MZTokens.PanelBorderWidth,
             if (isPending) {
-                MaterialTheme.colorScheme.error.copy(alpha = 0.28f)
+                MaterialTheme.colorScheme.error.copy(alpha = MZTokens.AlphaAccentBorder)
             } else {
                 MaterialTheme.colorScheme.outline.copy(alpha = MZTokens.BorderAlphaSubtle)
             }
@@ -1105,7 +1060,7 @@ fun HistoryEntryItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(MZTokens.SpaceM)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1114,7 +1069,7 @@ fun HistoryEntryItem(
             ) {
                 Row(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceM),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -1123,25 +1078,33 @@ fun HistoryEntryItem(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (entry.dayType == DayType.WORK) {
-                        Icon(
-                            imageVector = Icons.Default.Work,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaSecondary),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
 
                 if (entry.dayType == DayType.WORK || travelMinutes > 0) {
-                    val displayHours = if (workHours > 0.0) workHours else totalPaidHours
                     Text(
-                        text = formatWorkHoursPlain(displayHours, hoursOnlyFormat, hoursMinutesFormat),
+                        text = formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat),
                         style = NumberStyles.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
+            }
+
+            if (entry.dayType == DayType.WORK && (entry.workStart != null || entry.workEnd != null)) {
+                val timeLine = buildString {
+                    append(Formatters.formatTime(entry.workStart))
+                    append("–")
+                    append(Formatters.formatTime(entry.workEnd))
+                    if (entry.breakMinutes > 0) {
+                        append(" · ")
+                        append(stringResource(R.string.format_minutes_short, entry.breakMinutes))
+                    }
+                }
+                Text(
+                    text = timeLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Text(
@@ -1153,19 +1116,21 @@ fun HistoryEntryItem(
             )
 
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceM),
+                verticalArrangement = Arrangement.spacedBy(MZTokens.SpaceM),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 MZStatusChip(
                     text = historyDayTypeLabel(entry.dayType),
-                    color = MaterialTheme.colorScheme.primary
+                    color = palette.accent
                 )
 
-                MZStatusChip(
-                    text = statusChipInfo.first,
-                    color = statusChipInfo.second
-                )
+                if (isPending) {
+                    MZStatusChip(
+                        text = stringResource(R.string.today_unconfirmed),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
 
                 if (travelSummary.isNotBlank()) {
                     MZStatusChip(
@@ -1175,14 +1140,15 @@ fun HistoryEntryItem(
                 }
             }
 
-            if (workHours > 0.0 && kotlin.math.abs(totalPaidHours - workHours) > 0.01 && travelSummary.isBlank()) {
+            val paidHoursDifferFromWorkHours = kotlin.math.abs(totalPaidHours - workMinutes / MINUTES_PER_HOUR) > PAID_HOURS_TOLERANCE
+            if (workMinutes > 0 && paidHoursDifferFromWorkHours && travelSummary.isBlank()) {
                 Text(
                     text = stringResource(
                         R.string.history_entry_total_paid,
                         formatWorkHoursPlain(totalPaidHours, hoursOnlyFormat, hoursMinutesFormat)
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

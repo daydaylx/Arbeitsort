@@ -69,8 +69,8 @@
     <string name="cd_batch_edit">Mehrfach bearbeiten</string>
     <string name="action_edit_entry_manual">Bearbeiten</string>
     <string name="today_confirmed">Erfasst</string>
-    <string name="today_unconfirmed">Offen</string>
-    <string name="today_no_check_in">Noch kein Check-in</string>
+    <string name="today_unconfirmed">Unvollständig</string>
+    <string name="today_no_check_in">Noch nicht erfasst</string>
     <string name="today_dashboard_subtitle_done">Alles für heute ist erfasst.</string>
     <string name="today_dashboard_subtitle_open">Eintrag vorhanden, aber noch nicht vollständig erfasst.</string>
     <string name="today_dashboard_subtitle_empty">Starte mit dem nächsten sinnvollen Schritt für diesen Tag.</string>
@@ -78,6 +78,13 @@
     <string name="today_empty_notice_title">Tag noch offen</string>
     <string name="today_day_location_unset">Arbeitsort nicht gesetzt</string>
     <string name="today_detail_type_label">Tagesart</string>
+    <string name="today_detail_work_start">Beginn</string>
+    <string name="today_detail_work_end">Ende</string>
+    <string name="today_detail_break">Pause</string>
+    <string name="today_detail_location">Ort</string>
+    <string name="today_cd_edit_detail">Bearbeiten</string>
+    <string name="today_cd_edit_location">Arbeitsort ändern</string>
+    <string name="daily_check_in_location_suggestion">Vorschlag: zuletzt verwendeter Arbeitsort</string>
     <string name="today_work_panel_support">Arbeits- und Reisezeit im selben System</string>
     <string name="today_error_unknown">Daten konnten nicht geladen werden</string>
     <string name="today_error_confirm_day_failed">Konnte Tag nicht erfassen</string>
@@ -146,7 +153,7 @@
     
     <!-- Settings Screen -->
     <string name="settings_title">Einstellungen</string>
-    <string name="settings_category_work_time">Arbeitszeit</string>
+    <string name="settings_category_work_time">Erfassung</string>
     <string name="settings_category_reminders">Erinnerungen</string>
     <string name="settings_category_free_days">Freie Tage</string>
     <string name="settings_category_export">Export</string>
@@ -241,8 +248,11 @@
     
     <!-- Reminders -->
     <string name="reminder_morning">Morgen-Erinnerung</string>
+    <string name="reminder_morning_description">Fragt im Zeitfenster nach Arbeitsort und Tagesstart, solange der Tag noch nicht erfasst ist.</string>
     <string name="reminder_evening">Abend-Erinnerung</string>
+    <string name="reminder_evening_description">Erinnert im Zeitfenster ans Vervollständigen (Zeiten, Ort), falls der Tag noch unvollständig ist.</string>
     <string name="reminder_fallback">Fallback am Abend</string>
+    <string name="reminder_fallback_description">Letzte Erinnerung zur festen Uhrzeit, falls bis dahin nichts erfasst wurde.</string>
     <string name="reminder_daily">Tägliche Erinnerung</string>
     <string name="reminder_daily_description">Erinnert jeden Tag, auch wenn bereits erfasst</string>
     
@@ -360,6 +370,7 @@
     <string name="no_holidays_added">Keine Feiertage hinzugefügt</string>
     <!-- Format -->
     <string name="format_minutes">%1$d min</string>
+    <string name="format_minutes_short">%1$d min</string>
     <string name="format_hours_short">%1$dh</string>
     <string name="format_hours_short_minutes">%1$dh %2$dmin</string>
     <string name="time_picker_title">Zeit wählen</string>
@@ -472,6 +483,8 @@
     <string name="edit_placeholder_destination">Zielort</string>
     <string name="edit_action_clear_all_travel">Alle löschen</string>
     <string name="edit_action_add_travel_leg">Weitere Fahrt hinzufügen</string>
+    <string name="edit_travel_section_hint">Start/Ankunft zählen als bezahlte Reisezeit. Von/Nach sind optionale Ortsangaben für den Export.</string>
+    <string name="edit_saved_confirmation">Eintrag gespeichert</string>
     <string name="edit_travel_leg_title">Fahrt %1$d</string>
     <string name="edit_travel_leg_intersite">Zwischenfahrt</string>
     <string name="edit_travel_mode_none">Keine Reise</string>

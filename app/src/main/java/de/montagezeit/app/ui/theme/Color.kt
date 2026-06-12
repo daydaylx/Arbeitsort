@@ -4,33 +4,30 @@ package de.montagezeit.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Semantic palette for the app's fixed dark theme.
-val GlassBackground     = Color(0xFF0B0F14)
-val GlassSurface        = Color(0xFF151A20)
-val GlassSurfaceVariant = Color(0xFF1D242B)
+val GlassBackground     = Color(0xFF0C1217)
+val GlassSurface        = Color(0xFF151C23)
+val GlassSurfaceVariant = Color(0xFF1E2730)
 
-// Primary: warm amber for the main work action.
-val GlassPrimary          = Color(0xFFFFAD42)
-val GlassPrimaryContainer = Color(0xFF382613)
+val GlassPrimary          = Color(0xFF53AEB4)
+val GlassPrimaryContainer = Color(0xFF103237)
 
-// Secondary: calm teal for supporting state.
-val GlassSecondary          = Color(0xFF76CFC2)
-val GlassSecondaryContainer = Color(0xFF143B37)
+val GlassSecondary          = Color(0xFF8FA9BD)
+val GlassSecondaryContainer = Color(0xFF24313D)
 
 // Tertiary: restrained blue for informational accents.
 val GlassTertiary          = Color(0xFF9DBBE5)
 val GlassTertiaryContainer = Color(0xFF213249)
 
 // Text
-val GlassOnDark      = Color(0xFFF3F0EB)
-val GlassOnDarkMuted = Color(0xFFC8C1B8)
-val GlassOnAccent    = Color(0xFF1B1208)
+val GlassOnDark      = Color(0xFFE9EDF1)
+val GlassOnDarkMuted = Color(0xFFADB9C3)
+val GlassOnAccent    = Color(0xFF0A181C)
 
 // Status / Semantic Palette
 val Mint500  = Color(0xFF58D68D)
 val Cyan500  = Color(0xFF6CB9E8)
 val Yellow500 = Color(0xFFE9B949)
-val Rose500  = Color(0xFFFF7A84)
+val Rose500  = Color(0xFFF07983)
 
 // Status Aliases
 val GlassError   = Rose500

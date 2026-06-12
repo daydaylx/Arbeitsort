@@ -199,6 +199,7 @@ internal fun ReminderSettingsSection(
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_morning),
+            supportingText = stringResource(R.string.reminder_morning_description),
             checked = morningReminderEnabled,
             onCheckedChange = onUpdateMorningEnabled
         )
@@ -219,6 +220,7 @@ internal fun ReminderSettingsSection(
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_evening),
+            supportingText = stringResource(R.string.reminder_evening_description),
             checked = eveningReminderEnabled,
             onCheckedChange = onUpdateEveningEnabled
         )
@@ -239,6 +241,7 @@ internal fun ReminderSettingsSection(
 
         SettingsToggleRow(
             title = stringResource(R.string.reminder_fallback),
+            supportingText = stringResource(R.string.reminder_fallback_description),
             checked = fallbackEnabled,
             onCheckedChange = onUpdateFallbackEnabled
         )

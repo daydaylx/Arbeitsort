@@ -137,6 +137,11 @@ internal fun TravelLegsSection(
         )
 
         if (selectedMode != TravelMode.NONE) {
+            Text(
+                text = stringResource(R.string.edit_travel_section_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             travelLegs.forEachIndexed { index, leg ->
                 key(leg.draftId) {
                     TravelLegCard(

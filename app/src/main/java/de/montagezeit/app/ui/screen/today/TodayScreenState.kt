@@ -61,6 +61,7 @@ data class TodayScreenState(
 data class TodayDialogState(
     val showDailyCheckInDialog: Boolean,
     val dailyCheckInLocationInput: String,
+    val dailyCheckInLocationIsSuggestion: Boolean = false,
     val dailyCheckInIsArrivalDeparture: Boolean,
     val dailyCheckInBreakfastIncluded: Boolean,
     val dailyCheckInAllowancePreviewCents: Int,

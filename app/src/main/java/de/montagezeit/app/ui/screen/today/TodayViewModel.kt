@@ -220,13 +220,23 @@ class TodayViewModel @Inject constructor(
             try {
                 val existingEntry = currentSelectedEntryOrNull() ?: workEntryRepository.getByDate(selectedDate.value)
                 dailyCheckInDate = selectedDate.value
-                val location = existingEntry?.dayLocationLabel?.trim().orEmpty()
+                val existingLocation = existingEntry?.dayLocationLabel?.trim()
+                val isSuggestion: Boolean
+                val location = if (!existingLocation.isNullOrEmpty()) {
+                    isSuggestion = false
+                    existingLocation
+                } else {
+                    val fromHistory = workEntryRepository.getLatestDayLocationLabelByDayType(DayType.WORK).orEmpty()
+                    isSuggestion = fromHistory.isNotEmpty()
+                    fromHistory
+                }
                 val isArrival = existingEntry?.mealIsArrivalDeparture ?: false
                 val breakfast = existingEntry?.mealBreakfastIncluded ?: false
                 _dialogState.update { state ->
                     state.copy(
                         showDailyCheckInDialog = true,
                         dailyCheckInLocationInput = location,
+                        dailyCheckInLocationIsSuggestion = isSuggestion,
                         dailyCheckInIsArrivalDeparture = isArrival,
                         dailyCheckInBreakfastIncluded = breakfast,
                         dailyCheckInAllowancePreviewCents = computeAllowancePreview(location, isArrival, breakfast)
@@ -242,6 +252,7 @@ class TodayViewModel @Inject constructor(
         _dialogState.update { state ->
             state.copy(
                 dailyCheckInLocationInput = label,
+                dailyCheckInLocationIsSuggestion = false,
                 dailyCheckInAllowancePreviewCents = computeAllowancePreview(
                     label, state.dailyCheckInIsArrivalDeparture, state.dailyCheckInBreakfastIncluded
                 )
@@ -425,6 +436,7 @@ class TodayViewModel @Inject constructor(
         fun initialDialogState() = TodayDialogState(
             showDailyCheckInDialog = false,
             dailyCheckInLocationInput = "",
+            dailyCheckInLocationIsSuggestion = false,
             dailyCheckInIsArrivalDeparture = false,
             dailyCheckInBreakfastIncluded = false,
             dailyCheckInAllowancePreviewCents = MealAllowanceCalculator.BASE_NORMAL_CENTS,

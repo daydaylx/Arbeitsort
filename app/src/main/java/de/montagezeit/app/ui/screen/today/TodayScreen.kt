@@ -1,8 +1,7 @@
-@file:Suppress("LongMethod", "LongParameterList")
+@file:Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 
 package de.montagezeit.app.ui.screen.today
 
-import kotlin.math.roundToInt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -77,21 +77,19 @@ import de.montagezeit.app.ui.components.MZLoadingState
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZSnackbarHost
 import de.montagezeit.app.ui.components.MZStatusBadge
-import de.montagezeit.app.ui.components.MZStatusChip
 import de.montagezeit.app.ui.components.PrimaryActionButton
 import de.montagezeit.app.ui.components.SecondaryActionButton
 import de.montagezeit.app.ui.components.StatusType
 import de.montagezeit.app.ui.components.TertiaryActionButton
+import de.montagezeit.app.ui.components.clickableWithAccessibility
 import de.montagezeit.app.ui.components.mzOutlinedTextFieldColors
 import de.montagezeit.app.ui.components.staggeredAppear
 import de.montagezeit.app.ui.screen.edit.DateNavigationRow
-import de.montagezeit.app.ui.theme.GlassInfo
-import de.montagezeit.app.ui.theme.GlassSuccess
-import de.montagezeit.app.ui.theme.GlassWarning
 import de.montagezeit.app.ui.theme.MZTokens
 import de.montagezeit.app.ui.util.Formatters
 import de.montagezeit.app.ui.util.asString
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 private data class TodayStatusUi(
     val type: StatusType,
@@ -279,6 +277,7 @@ private fun TodayDialogsHost(
     if (dialogState.showDailyCheckInDialog) {
         DailyManualCheckInDialog(
             input = dialogState.dailyCheckInLocationInput,
+            isSuggestion = dialogState.dailyCheckInLocationIsSuggestion,
             isLoading = dialogState.isDailyCheckInLoading,
             isMealEligible = dialogState.dailyCheckInIsMealEligible,
             isArrivalDeparture = dialogState.dailyCheckInIsArrivalDeparture,
@@ -401,15 +400,33 @@ private fun StatusCard(
             onToday = onBackToToday,
             onPickDate = onOpenDatePicker
         )
-        MZSectionHeader(
-            title = Formatters.formatDateLong(date),
-            supportingText = stringResource(statusUi.subtitleRes),
-            action = {
-                MZStatusChip(
-                    text = stringResource(statusUi.badgeTextRes),
-                    color = statusColor(statusUi.type)
-                )
-            }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = Formatters.formatDateLong(date),
+                style = MaterialTheme.typography.titleMedium
+            )
+            MZStatusBadge(
+                text = stringResource(statusUi.badgeTextRes),
+                type = statusUi.type
+            )
+        }
+        Text(
+            text = stringResource(statusUi.subtitleRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        StatusCardContent(
+            entry = entry,
+            entryStatus = entryStatus,
+            dailyTargetHours = dailyTargetHours,
+            onEditToday = onEditToday,
+            onEditDayLocation = onEditDayLocation
         )
 
         PrimaryActionButton(
@@ -428,18 +445,10 @@ private fun StatusCard(
             )
         }
 
-        StatusCardContent(
-            entry = entry,
-            travelLegs = travelLegs,
-            entryStatus = entryStatus,
-            dailyTargetHours = dailyTargetHours
-        )
-
         if (hasEntry) {
             ExistingDayActionsMenu(
                 currentDayType = entry.dayType,
                 isLoading = isSetDayTypeLoading,
-                onEditDayLocation = onEditDayLocation,
                 onDeleteDay = onDeleteDay,
                 onSetDayType = onSetDayType
             )
@@ -477,9 +486,10 @@ private fun resolveTodayStatusUi(entry: WorkEntry?, isConfirmed: Boolean): Today
 @Composable
 private fun StatusCardContent(
     entry: WorkEntry?,
-    travelLegs: List<TravelLeg>,
     entryStatus: de.montagezeit.app.domain.usecase.EntryStatus?,
-    dailyTargetHours: Double = 8.0
+    dailyTargetHours: Double = 8.0,
+    onEditToday: () -> Unit,
+    onEditDayLocation: () -> Unit
 ) {
     entry?.let {
         if (entryStatus?.isConfirmed == false) {
@@ -496,30 +506,49 @@ private fun StatusCardContent(
                 type = StatusType.WARNING
             )
         }
-        MZKeyValueRow(
-            label = stringResource(R.string.today_detail_type_label),
-            value = dayTypeLabel(it.dayType)
-        )
-        if (it.dayType.isWorkLike) {
-            MZKeyValueRow(
-                label = stringResource(R.string.day_location_label),
-                value = it.dayLocationLabel.trim().ifEmpty {
-                    stringResource(R.string.today_day_location_unset)
-                }
-            )
-        }
+
         if (it.dayType == DayType.WORK) {
-            MZKeyValueRow(
-                label = stringResource(R.string.total_paid_hours),
-                value = formatMinutes(TimeCalculator.calculatePaidTotalMinutes(it, travelLegs)),
-                emphasize = true
+            TodayDetailRow(
+                label = stringResource(R.string.today_detail_work_start),
+                value = it.workStart?.let { ws -> Formatters.formatTime(ws) } ?: "–",
+                onClick = onEditToday,
+                contentDescription = stringResource(R.string.today_cd_edit_detail)
             )
-        } else if (it.dayType == DayType.VACATION) {
-            MZKeyValueRow(
-                label = stringResource(R.string.total_paid_hours),
-                value = formatMinutes((dailyTargetHours * 60).roundToInt()),
-                emphasize = true
+            TodayDetailRow(
+                label = stringResource(R.string.today_detail_work_end),
+                value = it.workEnd?.let { we -> Formatters.formatTime(we) } ?: "–",
+                onClick = onEditToday,
+                contentDescription = stringResource(R.string.today_cd_edit_detail)
             )
+            TodayDetailRow(
+                label = stringResource(R.string.today_detail_break),
+                value = stringResource(R.string.format_minutes_short, it.breakMinutes),
+                onClick = onEditToday,
+                contentDescription = stringResource(R.string.today_cd_edit_detail)
+            )
+            val locationValue = it.dayLocationLabel.trim().ifEmpty {
+                stringResource(R.string.today_day_location_unset)
+            }
+            val locationWarn = it.dayLocationLabel.isBlank()
+            TodayDetailRow(
+                label = stringResource(R.string.today_detail_location),
+                value = locationValue,
+                onClick = onEditDayLocation,
+                contentDescription = stringResource(R.string.today_cd_edit_location),
+                valueColor = if (locationWarn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+        } else {
+            MZKeyValueRow(
+                label = stringResource(R.string.today_detail_type_label),
+                value = dayTypeLabel(it.dayType)
+            )
+            if (it.dayType == DayType.VACATION) {
+                MZKeyValueRow(
+                    label = stringResource(R.string.total_paid_hours),
+                    value = formatMinutes((dailyTargetHours * 60).roundToInt()),
+                    emphasize = true
+                )
+            }
         }
         return
     }
@@ -532,6 +561,47 @@ private fun StatusCardContent(
 }
 
 @Composable
+private fun TodayDetailRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickableWithAccessibility(onClick = onClick, contentDescription = contentDescription)
+            .padding(vertical = MZTokens.SpaceS),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceXS)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = valueColor
+            )
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MZTokens.AlphaSecondary)
+            )
+        }
+    }
+}
+
+@Composable
 private fun EmptyDayQuickActions(
     isConfirmOffdayLoading: Boolean,
     isSetDayTypeLoading: Boolean,
@@ -540,7 +610,7 @@ private fun EmptyDayQuickActions(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceM)
     ) {
         SecondaryActionButton(
             onClick = onConfirmOffDay,
@@ -558,14 +628,14 @@ private fun EmptyDayQuickActions(
         ) {
             Text(stringResource(R.string.edit_day_type_vacation))
         }
-    }
-    SecondaryActionButton(
-        onClick = { onSetDayType(DayType.COMP_TIME) },
-        enabled = !isConfirmOffdayLoading && !isSetDayTypeLoading,
-        modifier = Modifier.fillMaxWidth(),
-        isLoading = isSetDayTypeLoading
-    ) {
-        Text(stringResource(R.string.edit_day_type_comp_time))
+        SecondaryActionButton(
+            onClick = { onSetDayType(DayType.COMP_TIME) },
+            enabled = !isConfirmOffdayLoading && !isSetDayTypeLoading,
+            modifier = Modifier.weight(1f),
+            isLoading = isSetDayTypeLoading
+        ) {
+            Text(stringResource(R.string.edit_day_type_comp_time))
+        }
     }
 }
 
@@ -573,7 +643,6 @@ private fun EmptyDayQuickActions(
 private fun ExistingDayActionsMenu(
     currentDayType: DayType,
     isLoading: Boolean,
-    onEditDayLocation: () -> Unit,
     onDeleteDay: () -> Unit,
     onSetDayType: (DayType) -> Unit
 ) {
@@ -591,13 +660,6 @@ private fun ExistingDayActionsMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_change_location)) },
-                onClick = {
-                    expanded = false
-                    onEditDayLocation()
-                }
-            )
             listOf(DayType.WORK, DayType.OFF, DayType.VACATION, DayType.COMP_TIME)
                 .filterNot { it == currentDayType }
                 .forEach { dayType ->
@@ -684,6 +746,7 @@ private fun WorkHoursCard(
 @Composable
 private fun DailyManualCheckInDialog(
     input: String,
+    isSuggestion: Boolean,
     isLoading: Boolean,
     isMealEligible: Boolean,
     isArrivalDeparture: Boolean,
@@ -713,6 +776,24 @@ private fun DailyManualCheckInDialog(
                     colors = mzOutlinedTextFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (isSuggestion) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceS)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.daily_check_in_location_suggestion),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Text(
                     text = stringResource(R.string.daily_check_in_dialog_support),
                     style = MaterialTheme.typography.bodySmall,
@@ -875,13 +956,6 @@ private fun formatMinutes(minutes: Int): String {
     } else {
         stringResource(R.string.format_hours_short_minutes, h, m)
     }
-}
-
-private fun statusColor(type: StatusType) = when (type) {
-    StatusType.SUCCESS -> GlassSuccess
-    StatusType.WARNING -> GlassWarning
-    StatusType.ERROR -> GlassWarning
-    StatusType.INFO, StatusType.NEUTRAL -> GlassInfo
 }
 
 @Composable

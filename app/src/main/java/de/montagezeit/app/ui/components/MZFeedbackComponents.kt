@@ -50,6 +50,11 @@ fun MZInlineNotice(
     action: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val palette = statusPalette(type)
+    val borderColorAlpha = if (type == StatusType.NEUTRAL) {
+        MZTokens.AlphaAccentSurfaceSubtle
+    } else {
+        MZTokens.AlphaAccentBorder
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = palette.containerColor,
@@ -57,7 +62,7 @@ fun MZInlineNotice(
         shape = RoundedCornerShape(MZTokens.RadiusCard),
         border = BorderStroke(
             MZTokens.PanelBorderWidth,
-            palette.accentColor.copy(alpha = if (type == StatusType.NEUTRAL) 0.10f else 0.22f)
+            palette.accentColor.copy(alpha = borderColorAlpha)
         )
     ) {
         Column(

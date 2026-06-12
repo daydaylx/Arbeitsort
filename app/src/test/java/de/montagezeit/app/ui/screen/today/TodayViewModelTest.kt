@@ -111,12 +111,13 @@ class TodayViewModelTest {
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
         assertEquals("Baustelle Heute", viewModel.dialogState.value.dailyCheckInLocationInput)
+        assertEquals(false, viewModel.dialogState.value.dailyCheckInLocationIsSuggestion)
         coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
         collectJob.cancel()
     }
 
     @Test
-    fun `openDailyCheckInDialog stays empty when current day has no label even if history exists`() {
+    fun `openDailyCheckInDialog prefills from history when current day has no label`() {
         val today = LocalDate.now()
         val existing = WorkEntry(
             date = today,
@@ -141,13 +142,14 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("", viewModel.dialogState.value.dailyCheckInLocationInput)
-        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
+        assertEquals("Letzte Baustelle", viewModel.dialogState.value.dailyCheckInLocationInput)
+        assertEquals(true, viewModel.dialogState.value.dailyCheckInLocationIsSuggestion)
+        coVerify(exactly = 1) { repository.getLatestDayLocationLabelByDayType(DayType.WORK) }
         collectJob.cancel()
     }
 
     @Test
-    fun `openDailyCheckInDialog falls back to empty string when no location known`() {
+    fun `openDailyCheckInDialog prefills from history when no entry exists`() {
         val repository = mockk<WorkEntryRepository>(relaxed = true)
 
         coEvery { repository.getByDate(any()) } returns null
@@ -166,8 +168,9 @@ class TodayViewModelTest {
         viewModel.openDailyCheckInDialog()
 
         assertTrue(shownLatch.await(2, TimeUnit.SECONDS))
-        assertEquals("", viewModel.dialogState.value.dailyCheckInLocationInput)
-        coVerify(exactly = 0) { repository.getLatestDayLocationLabelByDayType(any()) }
+        assertEquals("Letzte Baustelle", viewModel.dialogState.value.dailyCheckInLocationInput)
+        assertEquals(true, viewModel.dialogState.value.dailyCheckInLocationIsSuggestion)
+        coVerify(exactly = 1) { repository.getLatestDayLocationLabelByDayType(DayType.WORK) }
         collectJob.cancel()
     }
 

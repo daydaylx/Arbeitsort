@@ -279,10 +279,6 @@ private fun SettingsContent(
             onExpandedChange = { remindersExpanded = it }
         )
 
-        MZSectionHeader(
-            title = stringResource(R.string.settings_category_free_days)
-        )
-
         NonWorkingDaysSection(
             autoOffWeekends = settings.autoOffWeekends,
             autoOffHolidays = settings.autoOffHolidays,

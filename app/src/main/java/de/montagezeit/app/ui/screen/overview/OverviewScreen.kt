@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -41,9 +41,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -66,6 +66,7 @@ import de.montagezeit.app.ui.components.MZSegmentedOption
 import de.montagezeit.app.ui.components.MZLoadingState
 import de.montagezeit.app.ui.components.MZInlineNotice
 import de.montagezeit.app.ui.components.MZKeyValueRow
+import de.montagezeit.app.ui.components.MZMetricChip
 import de.montagezeit.app.ui.components.MZSectionIntro
 import de.montagezeit.app.ui.components.MZSectionHeader
 import de.montagezeit.app.ui.components.MZSnackbarHost
@@ -200,25 +201,6 @@ private fun OverviewContent(
             OverviewPeriodQuickSelector(
                 selectedPeriod = selectedPeriod,
                 onSelectPeriod = onSelectPeriod
-            )
-
-            MZStatusBadge(
-                text = if (metrics.unconfirmedDaysCount > 0) {
-                    pluralStringResource(
-                        R.plurals.overview_kpi_unconfirmed_count,
-                        metrics.unconfirmedDaysCount,
-                        metrics.unconfirmedDaysCount
-                    )
-                } else {
-                    stringResource(R.string.overview_kpi_none_unconfirmed)
-                },
-                type = if (metrics.unconfirmedDaysCount > 0) StatusType.WARNING else StatusType.SUCCESS,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.panelBorder.copy(alpha = 0.5f)
             )
 
             OverviewHeroSection(
@@ -378,11 +360,6 @@ private fun OverviewHeroSection(
                 label = stringResource(R.string.overview_target_label),
                 value = Formatters.formatHours(metrics.targetHours)
             )
-            MZKeyValueRow(
-                label = stringResource(R.string.overview_difference_label),
-                value = formatSignedHoursValue(metrics.overtimeHours),
-                emphasize = true
-            )
         }
 
         if (metrics.targetHours > 0.0) {
@@ -398,7 +375,7 @@ private fun OverviewHeroSection(
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
-                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -412,18 +389,26 @@ private fun OverviewSecondarySummary(
 ) {
     MZAppPanel {
         MZSectionHeader(title = stringResource(R.string.overview_section_metrics_title))
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_kpi_travel),
-            value = Formatters.formatHours(metrics.travelHours)
-        )
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_kpi_meal),
-            value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents)
-        )
-        MZKeyValueRow(
-            label = stringResource(R.string.overview_counted_days_label),
-            value = metrics.countedDays.toString()
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MZTokens.SpaceM)
+        ) {
+            MZMetricChip(
+                label = stringResource(R.string.overview_kpi_travel),
+                value = Formatters.formatHours(metrics.travelHours),
+                modifier = Modifier.weight(1f)
+            )
+            MZMetricChip(
+                label = stringResource(R.string.overview_kpi_meal),
+                value = MealAllowanceCalculator.formatEuro(metrics.mealAllowanceCents),
+                modifier = Modifier.weight(1f)
+            )
+            MZMetricChip(
+                label = stringResource(R.string.overview_counted_days_label),
+                value = metrics.countedDays.toString(),
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

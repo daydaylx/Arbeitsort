@@ -61,7 +61,7 @@ fun <T> MZSegmentedControl(
             val selected = option.value == selectedValue
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
-            val selectedContainer = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+            val selectedContainer = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaAccentSelected)
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -77,7 +77,7 @@ fun <T> MZSegmentedControl(
                         if (selected) {
                             Modifier.border(
                                 width = 1.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaAccentBorder),
                                 shape = RoundedCornerShape(MZTokens.RadiusChip)
                             )
                         } else {

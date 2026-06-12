@@ -238,7 +238,7 @@ private fun MZHomeTabBar(
                     .height(44.dp)
                     .padding(horizontal = 4.dp)
                     .clip(RoundedCornerShape(MZTokens.RadiusChip))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = MZTokens.AlphaAccentSelected))
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 tabs.forEachIndexed { index, label ->
@@ -401,10 +401,10 @@ fun MZMetricChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(accentColor.copy(alpha = 0.08f))
+            .background(accentColor.copy(alpha = MZTokens.AlphaAccentSurfaceSubtle))
             .border(
                 width = MZTokens.PanelBorderWidth,
-                color = accentColor.copy(alpha = 0.18f),
+                color = accentColor.copy(alpha = MZTokens.AlphaAccentBorder),
                 shape = RoundedCornerShape(MZTokens.RadiusSmall)
             )
             .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -438,7 +438,7 @@ fun MZStatusChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MZTokens.RadiusSmall))
-            .background(color.copy(alpha = 0.14f))
+            .background(color.copy(alpha = MZTokens.AlphaAccentSurface))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(

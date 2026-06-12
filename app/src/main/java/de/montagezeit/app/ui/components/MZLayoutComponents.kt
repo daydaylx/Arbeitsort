@@ -25,11 +25,6 @@ object AccessibilityDefaults {
     val IconButtonSize = 48.dp
 }
 
-private object SolidLayoutDefaults {
-    const val StatusSurfaceAlpha = 0.12f
-    const val NeutralSurfaceAlpha = 1.0f
-}
-
 enum class StatusType {
     SUCCESS,
     WARNING,
@@ -45,7 +40,6 @@ internal data class StatusPalette(
 
 /**
  * Consistent OutlinedTextField colors for the solid dark theme.
- * Focused state stays orange (primary), unfocused border uses neutral slate outline.
  */
 @Composable
 fun mzOutlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
@@ -65,23 +59,23 @@ fun mzOutlinedTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.col
 @Composable
 internal fun statusPalette(status: StatusType): StatusPalette = when (status) {
     StatusType.SUCCESS -> StatusPalette(
-        containerColor = GlassSuccess.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassSuccess.copy(alpha = MZTokens.AlphaAccentSurface),
         accentColor = GlassSuccess
     )
     StatusType.WARNING -> StatusPalette(
-        containerColor = GlassWarning.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassWarning.copy(alpha = MZTokens.AlphaAccentSurface),
         accentColor = GlassWarning
     )
     StatusType.ERROR -> StatusPalette(
-        containerColor = GlassError.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassError.copy(alpha = MZTokens.AlphaAccentSurface),
         accentColor = GlassError
     )
     StatusType.INFO -> StatusPalette(
-        containerColor = GlassInfo.copy(alpha = SolidLayoutDefaults.StatusSurfaceAlpha),
+        containerColor = GlassInfo.copy(alpha = MZTokens.AlphaAccentSurface),
         accentColor = GlassInfo
     )
     StatusType.NEUTRAL -> StatusPalette(
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SolidLayoutDefaults.NeutralSurfaceAlpha),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         accentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
