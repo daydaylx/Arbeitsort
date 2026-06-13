@@ -128,9 +128,7 @@ class EditEntrySaveBuilder @Inject constructor(
                 },
                 startLabel = leg.startLabel,
                 endLabel = leg.endLabel,
-                paidMinutesOverride = leg.paidMinutesOverride?.takeIf {
-                    leg.startTime == null && leg.arriveTime == null
-                },
+                paidMinutesOverride = leg.paidMinutesOverride,
                 source = TravelSource.MANUAL,
                 createdAt = now,
                 updatedAt = now

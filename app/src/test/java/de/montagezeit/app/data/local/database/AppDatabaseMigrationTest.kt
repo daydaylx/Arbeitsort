@@ -47,6 +47,7 @@ class AppDatabaseMigrationTest {
             "migration_13_14_edge_cases_test.db",
             "migration_14_15_test.db",
             "migration_15_16_test.db",
+            "migration_15_16_fixed_now_test.db",
             "migration_16_17_day_type_test.db"
         ).forEach { name ->
             context.deleteDatabase(name)
@@ -663,6 +664,49 @@ class AppDatabaseMigrationTest {
                 assertEquals(0, c.getInt(1))
                 assertTrue(c.isNull(2))
                 assertTrue(c.isNull(3))
+            }
+        } finally {
+            helper.close()
+        }
+    }
+
+    @Test
+    fun `migration 15 to 16 uses provided timestamp for auto confirmations`() {
+        val dbName = "migration_15_16_fixed_now_test.db"
+        createVersion15Database(dbName)
+
+        val (helper, db) = openSupportDatabase(dbName, version = 15)
+        try {
+            val fixedNow = 1_700_000_000_000L
+            AppDatabase.migrate15To16ForTest(db, fixedNow)
+
+            db.query(
+                """
+                SELECT date, confirmationAt
+                FROM work_entries
+                WHERE date IN ('2026-02-01', '2026-02-02', '2026-02-04', '2026-02-05', '2026-02-06')
+                ORDER BY date
+                """.trimIndent()
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("2026-02-01", c.getString(0))
+                assertEquals(fixedNow, c.getLong(1))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-02", c.getString(0))
+                assertEquals(fixedNow, c.getLong(1))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-04", c.getString(0))
+                assertEquals(2222L, c.getLong(1))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-05", c.getString(0))
+                assertEquals(fixedNow, c.getLong(1))
+
+                assertTrue(c.moveToNext())
+                assertEquals("2026-02-06", c.getString(0))
+                assertEquals(fixedNow, c.getLong(1))
             }
         } finally {
             helper.close()

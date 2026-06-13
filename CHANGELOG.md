@@ -31,6 +31,14 @@ All notable changes to this project will be documented in this file.
 - **Data/Concurrency**: `ConfirmWorkDay`, `ConfirmOffDay`, `RecordMorningCheckIn`,
   `RecordEveningCheckIn` und `SetTravelEvent` laufen jetzt ueber den transaktionalen
   `readModifyWrite(...)`-Pfad des DAO.
+- **Database/Migration**: Migration 15→16 nutzt einen injizierbaren Zeitstempel für Auto-Confirmations,
+  sodass Migrationstests deterministisch bleiben.
+- **Database/Backup**: `DatabaseBackupManager` checkpointet die WAL nicht mehr vor Room-Initialisierung;
+  Backups werden asynchron nach dem Room-Builder-Aufruf ausgelöst.
+- **Edit/Travel**: `paidMinutesOverride` wird beim Speichern eines Travel-Legs auch dann persistiert,
+  wenn Start- und Ankunftszeit gesetzt sind.
+- **PDF Export**: Footer-Seitennummer berücksichtigt jetzt den Fall, dass Summary und Unterschriften
+  auf eine zusätzliche Seite ausweichen.
 
 ## [1.0.2]
 

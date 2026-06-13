@@ -20,6 +20,28 @@ import java.time.LocalTime
  */
 class PdfExporterLogicTest {
 
+    @Test
+    fun `footerPageNumberAfterSummary increments when summary needs a new page`() {
+        val tablePageNumber = 3
+        val tableEndY = 842f - 40f - 24f - 1f
+
+        assertEquals(
+            tablePageNumber + 1,
+            PdfExporter.footerPageNumberAfterSummary(tablePageNumber, tableEndY)
+        )
+    }
+
+    @Test
+    fun `footerPageNumberAfterSummary keeps table page when summary fits`() {
+        val tablePageNumber = 3
+        val tableEndY = 40f
+
+        assertEquals(
+            tablePageNumber,
+            PdfExporter.footerPageNumberAfterSummary(tablePageNumber, tableEndY)
+        )
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

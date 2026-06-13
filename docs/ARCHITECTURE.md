@@ -74,13 +74,15 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 
 ## 3. Datenmodell (WorkEntry)
 
+Kanonische Feldreferenz mit allen Typen und Nullable-Status: [`docs/DATENMODELL.md`](DATENMODELL.md)
+
 `WorkEntry` beinhaltet:
 
 - Tagesstatus (`dayType`, `confirmedWorkDay`, `confirmation*`)
 - Arbeitszeit-Defaults (`workStart`, `workEnd`, `breakMinutes`)
 - Daily Location (`dayLocationLabel`)
 - Morning/Evening Check-in-Timestamps (`morningCapturedAt`, `eveningCapturedAt`)
-- Travel-Daten (`travel*`)
+- Travel-Daten (normalisiert in `travel_legs`-Tabelle seit v13→14)
 - Notiz und Meta-Zeitstempel (`note`, `createdAt`, `updatedAt`)
 
 ### DayType Enum

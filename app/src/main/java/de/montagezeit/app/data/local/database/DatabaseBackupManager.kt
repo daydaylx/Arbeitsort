@@ -17,8 +17,6 @@ object DatabaseBackupManager {
         val currentVersion = dbFile.takeIf { it.exists() }?.let { readVersion(it) }
         if (currentVersion == null || currentVersion >= targetVersion) return
 
-        checkpointWal(dbFile)
-
         val backupDir = File(context.filesDir, BACKUP_DIR).also { it.mkdirs() }
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val dest = File(backupDir, "v${currentVersion}_${timestamp}.db")
@@ -39,13 +37,6 @@ object DatabaseBackupManager {
         SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             .use { it.version }
     }.getOrNull()
-
-    private fun checkpointWal(dbFile: File) = runCatching {
-        @Suppress("DEPRECATION")
-        SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
-            .use { it.execSQL("PRAGMA wal_checkpoint(FULL)") }
-    }
-
     private fun pruneOldBackups(backupDir: File) {
         backupDir.listFiles { f -> f.extension == "db" }
             ?.sortedBy { it.lastModified() }

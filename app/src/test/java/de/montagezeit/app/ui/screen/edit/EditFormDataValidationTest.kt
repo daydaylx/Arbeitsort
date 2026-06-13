@@ -493,6 +493,35 @@ class EditFormDataValidationTest {
     }
 
     @Test
+    fun `save builder keeps paidMinutesOverride when travel leg has start and arrive times`() {
+        val date = LocalDate.of(2026, 5, 5)
+        val pendingSave = EditEntrySaveBuilder(EditEntryDraftRules()).build(
+            currentState = EditUiState.NewEntry(date),
+            data = validFormData(
+                travelLegs = listOf(
+                    EditTravelLegForm(
+                        startTime = LocalTime.of(6, 0),
+                        arriveTime = LocalTime.of(7, 0),
+                        paidMinutesOverride = 120
+                    )
+                )
+            ),
+            zoneId = ZoneId.systemDefault()
+        )
+
+        val savedLeg = pendingSave!!.legs.single()
+        assertEquals(120, savedLeg.paidMinutesOverride)
+        assertEquals(
+            date.atTime(LocalTime.of(6, 0)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            savedLeg.startAt
+        )
+        assertEquals(
+            date.atTime(LocalTime.of(7, 0)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            savedLeg.arriveAt
+        )
+    }
+
+    @Test
     fun `save builder keeps outbound and return categories for both travel legs`() {
         val date = LocalDate.of(2026, 5, 5)
         val pendingSave = EditEntrySaveBuilder(EditEntryDraftRules()).build(

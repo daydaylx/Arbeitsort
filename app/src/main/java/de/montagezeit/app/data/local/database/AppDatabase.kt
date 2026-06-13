@@ -636,9 +636,17 @@ abstract class AppDatabase : RoomDatabase() {
         // - historische SCHULUNG-/LEHRGANG-Werte werden hier noch wie WORK behandelt
         // - leere/bereits inkonsistente work-like Bestätigungen werden zurückgesetzt
         // - OFF und COMP_TIME werden immer terminal bestätigt
-        val MIGRATION_15_16 = object : Migration(15, 16) {
+        val MIGRATION_15_16 = createMigration15To16()
+
+        internal fun migrate15To16ForTest(db: SupportSQLiteDatabase, now: Long) {
+            createMigration15To16(nowProvider = { now }).migrate(db)
+        }
+
+        private fun createMigration15To16(
+            nowProvider: () -> Long = System::currentTimeMillis
+        ): Migration = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                val now = System.currentTimeMillis()
+                val now = nowProvider()
                 db.query(
                     """
                     SELECT date, dayType, workStart, workEnd, breakMinutes,

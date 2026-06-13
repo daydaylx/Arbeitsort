@@ -13,26 +13,37 @@ import de.montagezeit.app.data.local.database.DatabaseBackupManager
 import de.montagezeit.app.data.repository.RoomWorkEntryRepository
 import de.montagezeit.app.data.repository.WorkEntryRepository
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        DatabaseBackupManager.backupIfVersionMismatch(
-            context,
-            AppDatabase.DATABASE_NAME,
-            AppDatabase.DATABASE_VERSION
-        )
-        return Room.databaseBuilder(
+        val database = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
             .addMigrations(*AppDatabase.MIGRATIONS)
             .build()
+
+        backupScope.launch {
+            DatabaseBackupManager.backupIfVersionMismatch(
+                context,
+                AppDatabase.DATABASE_NAME,
+                AppDatabase.DATABASE_VERSION
+            )
+        }
+
+        return database
     }
 
     @Provides

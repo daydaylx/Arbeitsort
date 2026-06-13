@@ -202,6 +202,17 @@ class PdfExporter @Inject constructor(
         private const val COL_TRAVEL_TYPE = 55    // war COL_TRAVEL_TIME=55; jetzt Reiseart (Anreise/Abreise/…)
         private const val COL_LOCATION = 70       // war 50; breiter durch Wegfall der Gesamt-Spalte
         private const val COL_BREAKFAST = 40      // war COL_MEAL_ALLOWANCE=30; Frühstück ✓/–
+
+        internal fun footerPageNumberAfterSummary(
+            tablePageNumber: Int,
+            tableEndY: Float
+        ): Int {
+            return if (tableEndY + SUMMARY_HEIGHT + SIGNATURE_HEIGHT > PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+                tablePageNumber + 1
+            } else {
+                tablePageNumber
+            }
+        }
     }
     
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
@@ -314,13 +325,17 @@ class PdfExporter @Inject constructor(
                 currentPage = tableResult.page
                 canvas = currentPage.canvas
                 yPosition = tableResult.yPosition
+                var finalPageNumber = PdfExporter.footerPageNumberAfterSummary(
+                    tablePageNumber = tableResult.pageNumber,
+                    tableEndY = yPosition
+                )
 
                 // Neue Seite für Summen und Unterschriften
                 if (yPosition + SUMMARY_HEIGHT + SIGNATURE_HEIGHT > PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+                    drawFooter(canvas, tableResult.pageNumber)
                     pdfDocument.finishPage(currentPage)
-                    val nextPageNumber = tableResult.pageNumber + 1
                     currentPage = pdfDocument.startPage(
-                        PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, nextPageNumber).create()
+                        PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, finalPageNumber).create()
                     )
                     canvas = currentPage.canvas
                     yPosition = MARGIN.toFloat()
@@ -333,7 +348,7 @@ class PdfExporter @Inject constructor(
                 drawSignatures(canvas, yPosition)
 
                 // Seitennummer auf der letzten Seite
-                drawFooter(canvas, tableResult.pageNumber)
+                drawFooter(canvas, finalPageNumber)
                 pdfDocument.finishPage(currentPage)
 
                 // PDF schreiben

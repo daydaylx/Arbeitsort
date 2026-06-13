@@ -20,6 +20,21 @@ Keep compatibility files thin. Do not maintain separate architecture, version, o
 - Keep external tooling narrow. Do not reach for Drive, Notion, Cloudflare, or unrelated connectors unless the task explicitly needs them.
 - For Android development work, stay shell-first: `rg`, `git`, `./gradlew`, `adb`, and repo scripts are the primary tools.
 
+## Context-Packs
+
+Before starting feature work, load the matching context-pack from
+`plugins/montagezeit-android/context-packs/`. Each pack lists the files to read
+first, the key invariants, and the verification commands.
+
+| Aufgabenbereich                      | Context-Pack                       |
+| ------------------------------------ | ---------------------------------- |
+| Erinnerungen / Notification / Worker | `context-packs/reminder-system.md` |
+| PDF- oder CSV-Export                 | `context-packs/export-flow.md`     |
+| DB-Schema / Migrationen / Backup     | `context-packs/db-migration.md`    |
+| Today-Screen / Check-in / Edit-Flow  | `context-packs/daily-check-in.md`  |
+
+Quick-Lookup für Dateien und Features: `docs/CODEMAP.md`
+
 ## Project Structure & Module Organization
 
 This is a single-module Android project (`:app`) built with Kotlin and Jetpack Compose.
