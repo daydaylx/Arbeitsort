@@ -11,6 +11,22 @@
 
 Keep compatibility files thin. Do not maintain separate architecture, version, or command inventories there when `AGENTS.md` or executable sources already cover them.
 
+## Pflichtlektüre je Aufgabentyp
+
+1. `AGENTS.md` (dieses Dokument) — immer zuerst.
+2. `README.md` + `docs/ARCHITECTURE.md` — verbindliche Source of Truth für
+   Produktverhalten und Architektur.
+3. `docs/CODEMAP.md` — schnelle Datei-Orientierung bei Einstieg in einen
+   unbekannten Bereich.
+4. `docs/AGENT_CONTEXT_PACKS.md` — das passende Pack **vor** jeder
+   Implementierung lesen (Zweck, Pflichtlektüre, Risiken, Mindestchecks, No-Gos
+   je Aufgabenbereich).
+5. `docs/VALIDATION_MATRIX.md` — vor jedem Handoff/PR, um die korrekten
+   Checks für den jeweiligen Änderungstyp zu bestimmen.
+
+Für Datenmodellfragen zusätzlich `docs/DATA_MODEL.md`, für Datenschutz-/
+Permission-Fragen `docs/PRIVACY_CONTEXT.md`.
+
 ## Agent Workflow
 
 - Repo-local Codex surfaces live under `plugins/montagezeit-android/` and `.agents/plugins/marketplace.json`.
@@ -81,9 +97,43 @@ Commit history follows conventional prefixes: `feat:`, `fix:`, `refactor:`, `tes
 - Keep commits focused and imperative.
 - PRs should include a summary, linked issue or task, commands run, and screenshots for UI changes.
 - Before opening a PR, run at least `./gradlew lint`, `./gradlew :app:testDebugUnitTest`, and `./gradlew assembleDebug`.
+- Use `.github/pull_request_template.md` (auto-populated by GitHub) — fill in
+  Validation, Documentation Freshness Check, and Risk Check, do not skip them.
+- For agent-to-agent or agent-to-user handoff, copy the structure from
+  `docs/AGENT_HANDOFF_TEMPLATE.md`.
+- CI (`.github/workflows/ci.yml`, "Quality Gate") runs detekt + lint + unit
+  tests + debug build on every push/PR to `main` and uploads lint/test
+  reports as artifacts. It mirrors `bash scripts/hooks/run_local_quality_gate.sh`
+  — run that locally before opening a PR so CI does not surprise you.
+- **Documentation Freshness:** if a change touches product behavior, the data
+  model, permissions, or developer workflow, update the matching doc in the
+  same change (`README.md`, `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
+  `docs/PRIVACY_CONTEXT.md`, or the relevant context pack). Do not let docs
+  drift from code.
 
 ## Security & Configuration Tips
 
 - Do not commit API keys, keystores, or local debug artifacts or log exports.
 - Treat permission changes in `AndroidManifest.xml` as security-sensitive and document the rationale.
 - Keep repo automation and workflow files intentional; if you change hooks, scripts, or contributor docs, keep them in sync.
+
+## No-Gos
+
+- Keine Standortberechtigung, kein GPS — Tagesort bleibt manueller Text
+  (siehe `docs/PRIVACY_CONTEXT.md`).
+- Kein Cloud-Sync, kein Backend, kein Login.
+- Keine Secrets, Keystores oder Logs committen.
+- Keine Toolchain-/Dependency-Upgrades ohne separaten, expliziten Auftrag.
+- Keine Room-Migration ohne separaten, expliziten Auftrag — auch nicht
+  „vorsorglich".
+
+## Branch Protection (empfohlen für `main`)
+
+GitHub-Branch-Protection ist für dieses Repo aktuell nicht per Code gesetzt.
+Empfohlene manuelle Einstellung für `main`, bis das jemand mit Repo-Admin-
+Rechten in den GitHub-Settings konfiguriert:
+
+- Pull Request vor jedem Merge (kein Direkt-Push auf `main`)
+- Required Status Check: „Quality Gate" (`.github/workflows/ci.yml`)
+- Kein ungeprüfter Direkt-Merge bei rotem Check
+- Optional: Branch vor Merge aktuell halten ("Require branches to be up to date")

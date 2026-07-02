@@ -136,14 +136,14 @@ Die repo-getrackten Tasks verwenden ebenfalls die automatische Geraete-Aufloesun
 
 ## Wichtige Dateipfade
 
-| Was | Pfad |
-|-----|------|
-| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` |
-| Build Logs | `debug_artifacts/build_*.txt` |
-| Logcat Dumps | `debug_artifacts/logcat_*.txt` |
-| Gradle Wrapper | `./gradlew` |
-| Hook Setup | `./scripts/setup_hooks.sh` |
-| Device Resolver | `./scripts/resolve_android_device.sh` |
+| Was             | Pfad                                        |
+| --------------- | ------------------------------------------- |
+| Debug APK       | `app/build/outputs/apk/debug/app-debug.apk` |
+| Build Logs      | `debug_artifacts/build_*.txt`               |
+| Logcat Dumps    | `debug_artifacts/logcat_*.txt`              |
+| Gradle Wrapper  | `./gradlew`                                 |
+| Hook Setup      | `./scripts/setup_hooks.sh`                  |
+| Device Resolver | `./scripts/resolve_android_device.sh`       |
 
 ## Troubleshooting
 
@@ -217,10 +217,12 @@ Produktions-Fix: Datenbank-Version in `AppDatabase.kt` erhoehen und passende Mig
 ## Aktuelle Konfiguration
 
 - Package: `de.montagezeit.app`
-- Version: `1.1.1` (`versionCode 5`)
-- Target SDK: `34`
-- Min SDK: `24`
 - Launch Activity: `de.montagezeit.app.MainActivity`
+
+Aktuelle Version und versionCode stehen in `app/build.gradle.kts`. `README.md`
+nennt den zuletzt dokumentierten Projektstatus; bei Release-Arbeiten immer
+Gradle und `AppDatabase` prüfen. Diese Datei pflegt bewusst keine eigene
+Versionsnummer, um Doku-Drift zu vermeiden.
 
 ## Bekannte Hinweise
 
@@ -233,3 +235,5 @@ Produktions-Fix: Datenbank-Version in `AppDatabase.kt` erhoehen und passende Mig
 - `docs/ARCHITECTURE.md` - App-Architektur
 - `CONTRIBUTING.md` - Setup, Hooks und Contributing-Workflow
 - `docs/README.md` - Dokumentations-Uebersicht
+- `docs/CODEMAP.md` - Feature-zu-Datei-Karte
+- `AGENTS.md` - Arbeitsregeln fuer Coding-Agents
