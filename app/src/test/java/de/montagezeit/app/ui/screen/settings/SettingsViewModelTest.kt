@@ -202,7 +202,8 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.ValidationError("Keine CSV-Daten")
+        every { csvExporter.exportToCsv(entries) } returns
+            CsvExporter.CsvExportResult.ValidationError("Keine CSV-Daten")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -219,7 +220,8 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.StorageError("Nicht genug Speicher")
+        every { csvExporter.exportToCsv(entries) } returns
+            CsvExporter.CsvExportResult.StorageError("Nicht genug Speicher")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
@@ -236,7 +238,8 @@ class SettingsViewModelTest {
         val today = LocalDate.now()
         val entries = listOf(eligibleWorkRecord(today))
         coEvery { workEntryDao.getByDateRangeWithTravel(any(), any()) } returns entries
-        every { csvExporter.exportToCsv(entries) } returns CsvExporter.CsvExportResult.FileWriteError("Schreiben fehlgeschlagen")
+        every { csvExporter.exportToCsv(entries) } returns
+            CsvExporter.CsvExportResult.FileWriteError("Schreiben fehlgeschlagen")
 
         val viewModel = createViewModel()
         viewModel.exportCsvCurrentMonth()
