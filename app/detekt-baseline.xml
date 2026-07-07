@@ -3,7 +3,7 @@
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
-    <ID>CyclomaticComplexMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
+    <ID>CyclomaticComplexMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): CsvExportResult</ID>
     <ID>CyclomaticComplexMethod:EditEntryDraftRules.kt$EditEntryDraftRules$fun validate(formData: EditFormData): List&lt;ValidationError&gt;</ID>
     <ID>CyclomaticComplexMethod:EditEntryFormContent.kt$@Composable internal fun EditFormContent( formData: EditFormData, validationErrors: List&lt;ValidationError&gt; = emptyList(), dailyTargetHours: Double = 8.0, mealAllowancePreviewCents: Int = 0, onDayTypeChange: (DayType) -&gt; Unit, onHasWorkTimesChange: (Boolean) -&gt; Unit, onWorkStartChange: (Int, Int) -&gt; Unit, onWorkEndChange: (Int, Int) -&gt; Unit, onBreakMinutesChange: (Int) -&gt; Unit, onAddTravelLeg: () -&gt; Unit, onTravelLegStartChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegArriveChange: (Int, java.time.LocalTime?) -&gt; Unit, onTravelLegStartLabelChange: (Int, String) -&gt; Unit, onTravelLegEndLabelChange: (Int, String) -&gt; Unit, onRemoveTravelLeg: (Int) -&gt; Unit, onTravelClear: () -&gt; Unit, onDayLocationChange: (String) -&gt; Unit, onMealArrivalDepartureChange: (Boolean) -&gt; Unit, onMealBreakfastIncludedChange: (Boolean) -&gt; Unit, onNoteChange: (String) -&gt; Unit, onApplyDefaultTimes: (() -&gt; Unit)? = null, onCopyPrevious: (() -&gt; Unit)? = null, onSave: () -&gt; Unit, isSaving: Boolean = false )</ID>
     <ID>CyclomaticComplexMethod:EditEntryTravelSections.kt$@Composable private fun TravelLegCard( index: Int, leg: EditTravelLegForm, validationErrors: List&lt;ValidationError&gt;, onStartChange: (Int, LocalTime?) -&gt; Unit, onArriveChange: (Int, LocalTime?) -&gt; Unit, onStartLabelChange: (Int, String) -&gt; Unit, onEndLabelChange: (Int, String) -&gt; Unit, onRemove: (Int) -&gt; Unit )</ID>
@@ -20,7 +20,8 @@
     <ID>LongMethod:AppDatabaseMigrationTest.kt$AppDatabaseMigrationTest$private fun createVersion11Database(dbName: String)</ID>
     <ID>LongMethod:CalculateOvertimeForRange.kt$CalculateOvertimeForRange$operator fun invoke( entries: List&lt;WorkEntryWithTravelLegs&gt;, dailyTargetHours: Double, trace: DiagnosticTrace? = null ): OvertimeResult</ID>
     <ID>LongMethod:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
-    <ID>LongMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
+    <ID>LongMethod:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): CsvExportResult</ID>
+    <ID>LongMethod:ExportPreviewScreen.kt$@Composable private fun PdfReadyContent( fileUri: Uri, fileName: String, onOpenPdf: () -&gt; Unit, onSharePdf: () -&gt; Unit, onCopy: () -&gt; Unit, onBackToPreview: () -&gt; Unit )</ID>
     <ID>LongMethod:EditEntrySheet.kt$@Composable private fun EditSheetHero( date: LocalDate, isSaving: Boolean, isDirty: Boolean, uiState: EditUiState, isNewEntry: Boolean, onDeleteDay: (() -&gt; Unit)?, onCopy: (() -&gt; Unit)? )</ID>
     <ID>LongMethod:ExportPreviewScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ExportPreviewBottomSheet( range: Pair&lt;LocalDate, LocalDate&gt;, onDismiss: () -&gt; Unit, onOpenEditSheet: (LocalDate, () -&gt; Unit) -&gt; Unit, viewModel: ExportPreviewViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:ExportPreviewViewModel.kt$ExportPreviewViewModel$fun createPdf()</ID>
@@ -207,7 +208,7 @@
     <ID>ReturnCount:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$private fun hasPositiveTravelActivity( db: SupportSQLiteDatabase, date: String ): Boolean</ID>
     <ID>ReturnCount:AppDatabase.kt$AppDatabase.Companion.&lt;no name provided&gt;$private fun hasPositiveWorkActivity( workStart: String?, workEnd: String?, breakMinutes: Int ): Boolean</ID>
     <ID>ReturnCount:CheckInActionService.kt$CheckInActionService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
-    <ID>ReturnCount:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): Uri?</ID>
+    <ID>ReturnCount:CsvExporter.kt$CsvExporter$fun exportToCsv(entries: List&lt;WorkEntryWithTravelLegs&gt;): CsvExportResult</ID>
     <ID>ReturnCount:EditEntryViewModel.kt$EditEntryViewModel$private suspend fun resolveLatestSaveState(currentState: EditUiState): EditUiState?</ID>
     <ID>ReturnCount:HistoryViewModel.kt$HistoryViewModel$private fun validateBatchEditRequest(request: BatchEditRequest): UiText?</ID>
     <ID>ReturnCount:ReminderLaterWorker.kt$ReminderLaterWorker$override suspend fun doWork(): Result</ID>
