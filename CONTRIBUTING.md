@@ -92,7 +92,19 @@ Change-specific validation:
 - UI / ViewModel changes: relevant screen or view model tests plus `./gradlew :app:testDebugUnitTest`
 - Reminder / worker changes: relevant tests under `app/src/test/java/de/montagezeit/app/work/` and notification/receiver coverage as needed
 - Export changes: tests under `app/src/test/java/de/montagezeit/app/export/`
-- Room schema or migration changes: migration tests and matching doc updates when schema version changes
+- Room schema or migration changes: migration tests and matching doc updates when schema version changes (`docs/DATA_MODEL.md`)
+
+Full change-type-to-checks matrix: `docs/VALIDATION_MATRIX.md`.
+
+## Pull Requests & Handoff
+
+- Fill out `.github/pull_request_template.md` (auto-populated by GitHub when
+  opening a PR) — Validation, Documentation Freshness Check, and Risk Check
+  are not optional.
+- For agent-to-agent or agent-to-user handoff, use the structure in
+  `docs/AGENT_HANDOFF_TEMPLATE.md`.
+- Before opening a PR, prefer the task-specific context pack in
+  `docs/AGENT_CONTEXT_PACKS.md` over ad-hoc exploration.
 
 ## Commit Style
 

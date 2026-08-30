@@ -1,7 +1,7 @@
 # Architektur - MontageZeit
 
 **Status:** Aktiv / verbindlich
-**Letzte Aktualisierung:** 2026-03-16
+**Letzte Aktualisierung:** 2026-07-02
 
 ## Dokumentstatus
 
@@ -80,14 +80,18 @@ Diese Pfade bleiben für Notification-Actions/Worker relevant.
 - Arbeitszeit-Defaults (`workStart`, `workEnd`, `breakMinutes`)
 - Daily Location (`dayLocationLabel`)
 - Morning/Evening Check-in-Timestamps (`morningCapturedAt`, `eveningCapturedAt`)
-- Travel-Daten (`travel*`)
+- Travel-Daten: normalisiert in eigener `travel_legs`-Tabelle (`TravelLeg`, seit Migration v13→14), nicht mehr als Flat-Felder in `WorkEntry`
 - Notiz und Meta-Zeitstempel (`note`, `createdAt`, `updatedAt`)
+
+Vollständige Feldreferenz mit Typen und Nullable-Status:
+[`docs/DATA_MODEL.md`](DATA_MODEL.md).
 
 ### DayType Enum
 
 - `WORK` - Arbeitstag
 - `OFF` - Frei/Urlaub
 - `COMP_TIME` - Überstundenabbau (ganzer Tag)
+- `SCHULUNG`, `LEHRGANG` - weitere arbeitsähnliche Tagestypen (`isWorkLike`); zählen wie `WORK` für die Bestätigungsregel, aber nicht für die Verpflegungspauschale
 
 Ergänzende Helper zur Entkopplung von Copy-Bomben:
 

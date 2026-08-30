@@ -5,6 +5,7 @@ Offline-first Android-App zur lokalen Erfassung von Arbeitstagen. Der aktuelle S
 ## Source of Truth
 
 Verbindliche Projektdokumentation:
+
 - `README.md`
 - `docs/ARCHITECTURE.md`
 
@@ -23,16 +24,17 @@ und `AppDatabase` mitprüfen.
 
 - Kotlin 2.1.10, Coroutines, Flow
 - Jetpack Compose (Material3), Navigation Compose
-- Room 2.6.1
-- WorkManager 2.9.0
+- Room 2.7.1
+- WorkManager 2.10.1
 - Hilt 2.56.2 (`hilt-work`, `hilt-navigation-compose`)
 - DataStore Preferences
 
 Build-Umgebung:
+
 - JDK 17
 - `minSdk 24`
 - `compileSdk 35`
-- `targetSdk 34`
+- `targetSdk 35`
 
 ## Kernfunktionen
 
@@ -40,8 +42,8 @@ Build-Umgebung:
 
 - Manueller Daily-Check-in mit Pflichtfeld für Tagesort
 - Optionale Angaben für Verpflegungspauschale:
-  - An-/Abreisetag
-  - Frühstück enthalten
+    - An-/Abreisetag
+    - Frühstück enthalten
 - Aktion `Heute frei`
 - Bearbeiten des Tagesorts für bestehende Einträge
 - Wochenleiste, Wochen-/Monatswerte und Jahresüberstundenanzeige
@@ -59,10 +61,10 @@ Build-Umgebung:
 ### Reminder
 
 - Vier Reminder-Typen:
-  - `MORNING`
-  - `EVENING`
-  - `FALLBACK`
-  - `DAILY`
+    - `MORNING`
+    - `EVENING`
+    - `FALLBACK`
+    - `DAILY`
 - Scheduling über `PeriodicWorkRequest`
 - Re-Scheduling beim App-Start, nach Reboot/App-Update und nach Zeit-/Zeitzonenänderungen
 - Aktionen in Notifications für Check-in, Tag als frei markieren, später erinnern und Daily Confirmation
@@ -72,16 +74,16 @@ Build-Umgebung:
 - PDF-Export mit Preview-Flow in den Settings
 - CSV-Export als sichtbarer Schnell-Export in den Settings
 - PDF-Stammdaten in den Settings:
-  - Mitarbeitername
-  - Firma
-  - Projekt
-  - Personalnummer
+    - Mitarbeitername
+    - Firma
+    - Projekt
+    - Personalnummer
 - CSV-Zellwerte werden mit Quoting fuer `;`, Anfuehrungszeichen und Zeilenumbrueche exportiert
 - Fuehrende Formel-Praefixe (`=`, `+`, `-`, `@`) werden fuer CSV zusaetzlich neutralisiert
 - PDF und CSV teilen sich dieselben Export-Zeitraeume:
-  - aktueller Monat
-  - letzte 30 Tage
-  - benutzerdefinierter Zeitraum
+    - aktueller Monat
+    - letzte 30 Tage
+    - benutzerdefinierter Zeitraum
 
 ## Aktuelles Verhalten von Today, DayType und Remindern
 
@@ -89,22 +91,23 @@ Build-Umgebung:
 
 - Primärer UI-Pfad im Today-Screen ist `Einchecken (Arbeit)`.
 - Der Dialog für den Tagesort wird vorbefüllt in dieser Reihenfolge:
-  1. `dayLocationLabel` des aktuellen Eintrags
-  2. letzter gespeicherter `dayLocationLabel` eines `WORK`-Eintrags
-  3. leer
+    1. `dayLocationLabel` des aktuellen Eintrags
+    2. letzter gespeicherter `dayLocationLabel` eines `WORK`-Eintrags
+    3. leer
 - `RecordDailyManualCheckIn` setzt den Tag direkt auf abgeschlossen:
-  - `dayType = WORK`
-  - `confirmedWorkDay = true`
-  - Bestehende Arbeitszeiten bleiben erhalten; sonst werden Settings-Defaults gesetzt
-  - Verpflegungspauschale wird aus den Dialogoptionen berechnet, aber nur für Tage mit Arbeit oder Reise geführt
+    - `dayType = WORK`
+    - `confirmedWorkDay = true`
+    - Bestehende Arbeitszeiten bleiben erhalten; sonst werden Settings-Defaults gesetzt
+    - Verpflegungspauschale wird aus den Dialogoptionen berechnet, aber nur für Tage mit Arbeit oder Reise geführt
 
 ### DayType
 
 - `WORK`: normaler Arbeitstag
 - `OFF`: freier Tag / Urlaub
 - `COMP_TIME`: Überstundenabbau; wird im Code beim Setzen direkt bestätigt
+- `SCHULUNG`, `LEHRGANG`: weitere arbeitsähnliche Tagestypen (`isWorkLike`); zählen wie `WORK` für Bestätigung, aber nicht für Verpflegungspauschale
 
-`Heute frei` im Today-Screen verwendet `ConfirmOffDay` und bestätigt den Tag sofort. `COMP_TIME` kann über Bearbeitungsfunktionen gesetzt werden und unterdrückt Daily-Reminder.
+`Heute frei` im Today-Screen verwendet `ConfirmOffDay` und bestätigt den Tag sofort. `COMP_TIME` kann über Bearbeitungsfunktionen gesetzt werden und unterdrückt Daily-Reminder. Vollständige Feld- und Enum-Referenz: [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
 
 ### Reminder-Logik
 
@@ -181,40 +184,46 @@ Ohne `keystore.properties` wird weiterhin nur eine unsignierte Release-APK gebau
 
 ## Wichtige Pfade
 
+Vollständige Feature-zu-Datei-Karte: [`docs/CODEMAP.md`](docs/CODEMAP.md).
+
 - Einstieg:
-  - `app/src/main/java/de/montagezeit/app/MontageZeitApp.kt`
-  - `app/src/main/java/de/montagezeit/app/MainActivity.kt`
+    - `app/src/main/java/de/montagezeit/app/MontageZeitApp.kt`
+    - `app/src/main/java/de/montagezeit/app/MainActivity.kt`
 - Navigation:
-  - `app/src/main/java/de/montagezeit/app/ui/navigation/MontageZeitNavGraph.kt`
+    - `app/src/main/java/de/montagezeit/app/ui/navigation/MontageZeitNavGraph.kt`
 - Today:
-  - `app/src/main/java/de/montagezeit/app/ui/screen/today/`
+    - `app/src/main/java/de/montagezeit/app/ui/screen/today/`
 - History:
-  - `app/src/main/java/de/montagezeit/app/ui/screen/history/`
+    - `app/src/main/java/de/montagezeit/app/ui/screen/history/`
 - Settings / Export-Preview:
-  - `app/src/main/java/de/montagezeit/app/ui/screen/settings/`
-  - `app/src/main/java/de/montagezeit/app/ui/screen/export/`
+    - `app/src/main/java/de/montagezeit/app/ui/screen/settings/`
+    - `app/src/main/java/de/montagezeit/app/ui/screen/export/`
 - Domain-UseCases:
-  - `app/src/main/java/de/montagezeit/app/domain/usecase/`
+    - `app/src/main/java/de/montagezeit/app/domain/usecase/`
 - Datenhaltung:
-  - `app/src/main/java/de/montagezeit/app/data/local/`
-  - `app/src/main/java/de/montagezeit/app/data/preferences/`
+    - `app/src/main/java/de/montagezeit/app/data/local/`
+    - `app/src/main/java/de/montagezeit/app/data/preferences/`
 - Reminder / Notifications:
-  - `app/src/main/java/de/montagezeit/app/work/`
-  - `app/src/main/java/de/montagezeit/app/notification/`
-  - `app/src/main/java/de/montagezeit/app/handler/`
-  - `app/src/main/java/de/montagezeit/app/receiver/`
+    - `app/src/main/java/de/montagezeit/app/work/`
+    - `app/src/main/java/de/montagezeit/app/notification/`
+    - `app/src/main/java/de/montagezeit/app/handler/`
+    - `app/src/main/java/de/montagezeit/app/receiver/`
 - Exporter:
-  - `app/src/main/java/de/montagezeit/app/export/`
+    - `app/src/main/java/de/montagezeit/app/export/`
 
 ## Berechtigungen, Datenschutz, lokale Daten
 
+Verbindliche Zusammenfassung: [`docs/PRIVACY_CONTEXT.md`](docs/PRIVACY_CONTEXT.md).
+
 Deklariert im Manifest:
+
 - `POST_NOTIFICATIONS`
 - `RECEIVE_BOOT_COMPLETED`
 - `FOREGROUND_SERVICE`
 - `FOREGROUND_SERVICE_SPECIAL_USE`
 
 Zusätzlich relevant:
+
 - `android:allowBackup="false"`
 - Keine Standort-Berechtigungen
 - Daten bleiben lokal in Room/DataStore, bis der Benutzer sie explizit exportiert oder teilt
