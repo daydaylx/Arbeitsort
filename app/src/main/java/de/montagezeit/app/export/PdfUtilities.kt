@@ -23,6 +23,9 @@ object PdfUtilities {
     private val dateShortFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.")
     private val monthFormatter = java.time.format.DateTimeFormatter.ofPattern("MMMM", Locale.GERMAN)
 
+    private const val MINUTES_PER_HOUR = 60
+    private const val CENTS_PER_EURO = 100
+
     /**
      * Formatiert Arbeitszeit als String (z.B. "8.00")
      */
@@ -162,8 +165,8 @@ object PdfUtilities {
      * Formatiert Minuten als Stunden:Minuten (z.B. 60 → "1:00", 90 → "1:30").
      */
     fun formatDurationHm(minutes: Int): String {
-        val hours = minutes / 60
-        val remainder = minutes % 60
+        val hours = minutes / MINUTES_PER_HOUR
+        val remainder = minutes % MINUTES_PER_HOUR
         return "%d:%02d".format(hours, remainder)
     }
 
@@ -173,8 +176,8 @@ object PdfUtilities {
      */
     fun formatEuroCompact(cents: Int): String {
         require(cents >= 0) { "cents must be non-negative" }
-        val euros = cents / 100
-        val remainder = cents % 100
+        val euros = cents / CENTS_PER_EURO
+        val remainder = cents % CENTS_PER_EURO
         return if (remainder == 0) "$euros €" else "%d,%02d €".format(euros, remainder)
     }
 
@@ -268,17 +271,32 @@ object PdfUtilities {
     }
 
     /**
-     * Baut die neun Tabellenzellen-Texte einer PDF-Zeile in Spaltenreihenfolge
-     * (Datum, Einsatzort, Start, Ende, Pause, Arbeit, Reise/Art, Reisezeit, VP).
+     * Die neun Tabellenzellen-Texte einer PDF-Zeile, in Spaltenreihenfolge (Datum, Einsatzort,
+     * Start, Ende, Pause, Arbeit, Reise/Art, Reisezeit, VP).
      *
      * Reine Datentypen bleiben je Spalte eindeutig: Zeitfelder enthalten ausschließlich
-     * eine Uhrzeit/Dauer oder [dash] – niemals Textlabel wie "Reisetag" oder "Frei".
+     * eine Uhrzeit/Dauer oder den Dash-Platzhalter – niemals Textlabel wie "Reisetag" oder "Frei".
      */
+    data class TableRowTexts(
+        val date: String,
+        val location: String,
+        val start: String,
+        val end: String,
+        val breakText: String,
+        val work: String,
+        val travel: String,
+        val travelTime: String,
+        val vp: String
+    ) {
+        /** Spaltenreihenfolge für das Zeichnen der Tabelle. */
+        fun toColumnList(): List<String> = listOf(date, location, start, end, breakText, work, travel, travelTime, vp)
+    }
+
     fun buildTableRowTexts(
         record: WorkEntryWithTravelLegs,
         dash: String = "–",
         hoursUnitSuffix: String = " h"
-    ): List<String> {
+    ): TableRowTexts {
         val entry = record.workEntry
         val travelLegs = record.orderedTravelLegs
         val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
@@ -295,41 +313,40 @@ object PdfUtilities {
         val travelTimeText = if (travelMinutes > 0) "${formatTravelTime(travelMinutes)}$hoursUnitSuffix" else dash
         val vpText = if (mealSnapshot.amountCents > 0) formatEuroCompact(mealSnapshot.amountCents) else dash
 
-        return listOf(
-            formatDateShort(entry.date),
-            getLocation(entry, travelLegs).ifBlank { dash },
-            startText,
-            endText,
-            breakText,
-            workText,
-            travelCellText,
-            travelTimeText,
-            vpText
+        return TableRowTexts(
+            date = formatDateShort(entry.date),
+            location = getLocation(entry, travelLegs).ifBlank { dash },
+            start = startText,
+            end = endText,
+            breakText = breakText,
+            work = workText,
+            travel = travelCellText,
+            travelTime = travelTimeText,
+            vp = vpText
         )
     }
 
     /**
+     * Ein optionales Metadatenfeld für [buildHeaderMetaLine1]: [value] wird nur ausgegeben, wenn
+     * nicht leer/blank, formatiert über [template] (Platzhalter "%1$s", `String.format`-Syntax).
+     */
+    data class MetaField(val value: String?, val template: String)
+
+    /**
      * Baut die erste Metadatenzeile des PDF-Kopfbereichs (Mitarbeiter · Personalnr. · Firma ·
-     * Projekt). Leere/fehlende Felder (Personalnr., Firma, Projekt) werden übersprungen statt
-     * als leere Zeile ausgegeben – siehe Vorgabe "keine leeren Projekt-/Metadatenfelder".
-     *
-     * Die Templates entsprechen dem Format von `String.format` (Platzhalter "%1$s").
+     * Projekt). Leere/fehlende Felder in [optionalFields] werden übersprungen statt als leere
+     * Zeile ausgegeben – siehe Vorgabe "keine leeren Projekt-/Metadatenfelder".
      */
     fun buildHeaderMetaLine1(
         employeeName: String,
         employeeTemplate: String,
-        personnelNumber: String?,
-        personnelNumberTemplate: String,
-        company: String?,
-        companyTemplate: String,
-        project: String?,
-        projectTemplate: String
+        optionalFields: List<MetaField>
     ): String {
         return listOfNotNull(
             employeeTemplate.format(employeeName),
-            personnelNumber?.takeIf(String::isNotBlank)?.let { personnelNumberTemplate.format(it) },
-            company?.takeIf(String::isNotBlank)?.let { companyTemplate.format(it) },
-            project?.takeIf(String::isNotBlank)?.let { projectTemplate.format(it) }
+            *optionalFields.map { field ->
+                field.value?.takeIf(String::isNotBlank)?.let { field.template.format(it) }
+            }.toTypedArray()
         ).joinToString(" · ")
     }
 

@@ -78,6 +78,9 @@ class PdfExporter @Inject constructor(
         // Monate mit wenigen Einträgen die Seite ausfüllen statt unnötigen Leerraum zu hinterlassen.
         const val ROW_HEIGHT_EXPANSION_FACTOR = 1.6f
 
+        const val LEGEND_MIN_FONT_SIZE = 7f
+        const val LINE_STROKE_WIDTH = 0.75f
+
         // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 802)
         // 9 Spalten: 56+131+47+47+47+56+298+65+55 = 802
         const val COL_DATE = 56
@@ -150,11 +153,11 @@ class PdfExporter @Inject constructor(
         val legend = Paint().apply {
             color = Color.parseColor("#555555")
             isAntiAlias = true
-            textSize = (density.tableSize - 1f).coerceAtLeast(7f)
+            textSize = (density.tableSize - 1f).coerceAtLeast(LEGEND_MIN_FONT_SIZE)
         }
         val line = Paint().apply {
             color = Color.BLACK
-            strokeWidth = 0.75f
+            strokeWidth = LINE_STROKE_WIDTH
             style = Paint.Style.STROKE
         }
 
@@ -290,7 +293,8 @@ class PdfExporter @Inject constructor(
         var page = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create())
         var canvas = page.canvas
 
-        var y = drawHeader(canvas, style, employeeName, company, project, personnelNumber, startDate, endDate)
+        val headerInfo = ExportHeaderInfo(employeeName, company, project, personnelNumber, startDate, endDate)
+        var y = drawHeader(canvas, style, headerInfo)
         y = drawTableHeader(canvas, style, y)
 
         val dash = string(R.string.pdf_export_placeholder_dash)
@@ -345,22 +349,23 @@ class PdfExporter @Inject constructor(
         return fallback ?: PdfStyle(DENSITY_LEVELS.last())
     }
 
+    /** Bündelt die Kopfbereich-Metadaten, um die Parameterliste von [drawHeader] kurz zu halten. */
+    private data class ExportHeaderInfo(
+        val employeeName: String,
+        val company: String?,
+        val project: String?,
+        val personnelNumber: String?,
+        val startDate: LocalDate,
+        val endDate: LocalDate
+    )
+
     /**
      * Zeichnet den kompakten Kopfbereich (Titel + max. zwei Metadatenzeilen) auf Seite 1.
      */
-    private fun drawHeader(
-        canvas: Canvas,
-        style: PdfStyle,
-        employeeName: String,
-        company: String?,
-        project: String?,
-        personnelNumber: String?,
-        startDate: LocalDate,
-        endDate: LocalDate
-    ): Float {
+    private fun drawHeader(canvas: Canvas, style: PdfStyle, info: ExportHeaderInfo): Float {
         var lineTop = MARGIN.toFloat()
 
-        val title = string(R.string.pdf_export_title, PdfUtilities.formatPeriodLabel(startDate, endDate))
+        val title = string(R.string.pdf_export_title, PdfUtilities.formatPeriodLabel(info.startDate, info.endDate))
         drawSingleLine(
             canvas, title, MARGIN.toFloat(),
             lineTop - style.title.fontMetrics.ascent,
@@ -368,7 +373,7 @@ class PdfExporter @Inject constructor(
         )
         lineTop += style.title.fontSpacing + HEADER_TITLE_GAP
 
-        val metaLine1 = buildMetaLine1(employeeName, personnelNumber, company, project)
+        val metaLine1 = buildMetaLine1(info)
         drawSingleLine(
             canvas, metaLine1, MARGIN.toFloat(),
             lineTop - style.meta.fontMetrics.ascent,
@@ -376,7 +381,7 @@ class PdfExporter @Inject constructor(
         )
         lineTop += style.meta.fontSpacing + HEADER_LINE_GAP
 
-        val metaLine2 = buildMetaLine2(startDate, endDate)
+        val metaLine2 = buildMetaLine2(info.startDate, info.endDate)
         drawSingleLine(
             canvas, metaLine2, MARGIN.toFloat(),
             lineTop - style.meta.fontMetrics.ascent,
@@ -390,21 +395,15 @@ class PdfExporter @Inject constructor(
         return lineTop
     }
 
-    private fun buildMetaLine1(
-        employeeName: String,
-        personnelNumber: String?,
-        company: String?,
-        project: String?
-    ): String {
+    private fun buildMetaLine1(info: ExportHeaderInfo): String {
         return PdfUtilities.buildHeaderMetaLine1(
-            employeeName = employeeName,
+            employeeName = info.employeeName,
             employeeTemplate = rawString(R.string.pdf_export_header_employee),
-            personnelNumber = personnelNumber,
-            personnelNumberTemplate = rawString(R.string.pdf_export_header_personnel_number),
-            company = company,
-            companyTemplate = rawString(R.string.pdf_export_header_company),
-            project = project,
-            projectTemplate = rawString(R.string.pdf_export_header_project)
+            optionalFields = listOf(
+                PdfUtilities.MetaField(info.personnelNumber, rawString(R.string.pdf_export_header_personnel_number)),
+                PdfUtilities.MetaField(info.company, rawString(R.string.pdf_export_header_company)),
+                PdfUtilities.MetaField(info.project, rawString(R.string.pdf_export_header_project))
+            )
         )
     }
 
@@ -423,6 +422,14 @@ class PdfExporter @Inject constructor(
         val width: Int,
         val headerText: String,
         val align: Align
+    )
+
+    /** Position und Größe einer Tabellenzelle, zur Bündelung von Zeichen-Parametern. */
+    private data class CellBox(
+        val x: Float,
+        val y: Float,
+        val width: Float,
+        val height: Float
     )
 
     private fun tableColumns(): List<TableColumn> = listOf(
@@ -455,8 +462,9 @@ class PdfExporter @Inject constructor(
         var xPos = MARGIN.toFloat()
         columns.forEach { column ->
             drawCellText(
-                canvas, column.headerText, xPos, y,
-                column.width.toFloat(), height, style.tableHeader, column.align
+                canvas, column.headerText,
+                CellBox(xPos, y, column.width.toFloat(), height),
+                style.tableHeader, column.align
             )
             xPos += column.width
         }
@@ -479,10 +487,11 @@ class PdfExporter @Inject constructor(
         rowHeight: Float
     ) {
         val columns = tableColumns()
-        val texts = PdfUtilities.buildTableRowTexts(record, dash)
+        val texts = PdfUtilities.buildTableRowTexts(record, dash).toColumnList()
         var xPos = MARGIN.toFloat()
         columns.zip(texts).forEach { (column, text) ->
-            drawCellText(canvas, text, xPos, y, column.width.toFloat(), rowHeight, style.tableText, column.align)
+            val box = CellBox(xPos, y, column.width.toFloat(), rowHeight)
+            drawCellText(canvas, text, box, style.tableText, column.align)
             xPos += column.width
         }
     }
@@ -493,23 +502,20 @@ class PdfExporter @Inject constructor(
     private fun drawCellText(
         canvas: Canvas,
         text: String,
-        x: Float,
-        y: Float,
-        columnWidth: Float,
-        rowHeight: Float,
+        box: CellBox,
         paint: Paint,
         align: Align
     ) {
-        val maxWidth = columnWidth - 2 * TABLE_CELL_HORIZONTAL_PADDING
+        val maxWidth = box.width - 2 * TABLE_CELL_HORIZONTAL_PADDING
         val fitted = fitTextToWidth(text, maxWidth, paint)
-        val baseline = y + rowHeight / 2f - (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f
+        val baseline = box.y + box.height / 2f - (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f
 
         val previousAlign = paint.textAlign
         paint.textAlign = align
         val drawX = when (align) {
-            Align.LEFT -> x + TABLE_CELL_HORIZONTAL_PADDING
-            Align.RIGHT -> x + columnWidth - TABLE_CELL_HORIZONTAL_PADDING
-            Align.CENTER -> x + columnWidth / 2f
+            Align.LEFT -> box.x + TABLE_CELL_HORIZONTAL_PADDING
+            Align.RIGHT -> box.x + box.width - TABLE_CELL_HORIZONTAL_PADDING
+            Align.CENTER -> box.x + box.width / 2f
         }
         canvas.drawText(fitted, drawX, baseline, paint)
         paint.textAlign = previousAlign

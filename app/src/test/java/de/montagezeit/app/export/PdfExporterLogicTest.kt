@@ -488,12 +488,11 @@ class PdfExporterLogicTest {
         val line = PdfUtilities.buildHeaderMetaLine1(
             employeeName = "David Grunert",
             employeeTemplate = "Mitarbeiter: %1\$s",
-            personnelNumber = "25",
-            personnelNumberTemplate = "Personalnr.: %1\$s",
-            company = "TBM Maifarth",
-            companyTemplate = "Firma: %1\$s",
-            project = null,
-            projectTemplate = "Projekt: %1\$s"
+            optionalFields = listOf(
+                PdfUtilities.MetaField("25", "Personalnr.: %1\$s"),
+                PdfUtilities.MetaField("TBM Maifarth", "Firma: %1\$s"),
+                PdfUtilities.MetaField(null, "Projekt: %1\$s")
+            )
         )
         assertEquals("Mitarbeiter: David Grunert · Personalnr.: 25 · Firma: TBM Maifarth", line)
     }
@@ -503,12 +502,11 @@ class PdfExporterLogicTest {
         val line = PdfUtilities.buildHeaderMetaLine1(
             employeeName = "David Grunert",
             employeeTemplate = "Mitarbeiter: %1\$s",
-            personnelNumber = "  ",
-            personnelNumberTemplate = "Personalnr.: %1\$s",
-            company = null,
-            companyTemplate = "Firma: %1\$s",
-            project = "   ",
-            projectTemplate = "Projekt: %1\$s"
+            optionalFields = listOf(
+                PdfUtilities.MetaField("  ", "Personalnr.: %1\$s"),
+                PdfUtilities.MetaField(null, "Firma: %1\$s"),
+                PdfUtilities.MetaField("   ", "Projekt: %1\$s")
+            )
         )
         assertEquals("Mitarbeiter: David Grunert", line)
     }
@@ -518,12 +516,11 @@ class PdfExporterLogicTest {
         val line = PdfUtilities.buildHeaderMetaLine1(
             employeeName = "David Grunert",
             employeeTemplate = "Mitarbeiter: %1\$s",
-            personnelNumber = "25",
-            personnelNumberTemplate = "Personalnr.: %1\$s",
-            company = "TBM Maifarth",
-            companyTemplate = "Firma: %1\$s",
-            project = "Projekt X",
-            projectTemplate = "Projekt: %1\$s"
+            optionalFields = listOf(
+                PdfUtilities.MetaField("25", "Personalnr.: %1\$s"),
+                PdfUtilities.MetaField("TBM Maifarth", "Firma: %1\$s"),
+                PdfUtilities.MetaField("Projekt X", "Projekt: %1\$s")
+            )
         )
         assertEquals(
             "Mitarbeiter: David Grunert · Personalnr.: 25 · Firma: TBM Maifarth · Projekt: Projekt X",
@@ -564,14 +561,13 @@ class PdfExporterLogicTest {
         val record = travelOnlyRecord(LocalDate.of(2026, 8, 10))
         val texts = PdfUtilities.buildTableRowTexts(record, dash = "–")
 
-        // Reihenfolge: Datum, Einsatzort, Start, Ende, Pause, Arbeit, Reise/Art, Reisezeit, VP
-        assertEquals("–", texts[2]) // Start
-        assertEquals("–", texts[3]) // Ende
-        assertEquals("–", texts[4]) // Pause
-        assertEquals("–", texts[5]) // Arbeit
-        assertEquals("Leipzig → Nürnberg · A", texts[6]) // Reise / Art
-        assertEquals("2,50 h", texts[7]) // Reisezeit
-        assertEquals("14 €", texts[8]) // VP
+        assertEquals("–", texts.start)
+        assertEquals("–", texts.end)
+        assertEquals("–", texts.breakText)
+        assertEquals("–", texts.work)
+        assertEquals("Leipzig → Nürnberg · A", texts.travel)
+        assertEquals("2,50 h", texts.travelTime)
+        assertEquals("14 €", texts.vp)
     }
 
     @Test
@@ -600,13 +596,13 @@ class PdfExporterLogicTest {
         )
         val texts = PdfUtilities.buildTableRowTexts(record, dash = "–")
 
-        assertEquals("09:30", texts[2]) // Start
-        assertEquals("19:00", texts[3]) // Ende
-        assertEquals("1:00", texts[4]) // Pause
-        assertEquals("8,50 h", texts[5]) // Arbeit
-        assertEquals("Leipzig → Braunschweig · A", texts[6]) // Reise / Art
-        assertEquals("2,50 h", texts[7]) // Reisezeit
-        assertEquals("14 €", texts[8]) // VP
+        assertEquals("09:30", texts.start)
+        assertEquals("19:00", texts.end)
+        assertEquals("1:00", texts.breakText)
+        assertEquals("8,50 h", texts.work)
+        assertEquals("Leipzig → Braunschweig · A", texts.travel)
+        assertEquals("2,50 h", texts.travelTime)
+        assertEquals("14 €", texts.vp)
     }
 
     @Test
@@ -624,14 +620,14 @@ class PdfExporterLogicTest {
             travelLegs = emptyList()
         )
         val texts = PdfUtilities.buildTableRowTexts(record, dash = "–")
-        assertEquals("–", texts[4]) // Pause
+        assertEquals("–", texts.breakText)
     }
 
     @Test
     fun `buildTableRowTexts - Einsatzort statt leerer Zeichenkette zeigt dash`() {
         val record = workRecord()
         val texts = PdfUtilities.buildTableRowTexts(record, dash = "–")
-        assertEquals("–", texts[1]) // Einsatzort
+        assertEquals("–", texts.location)
     }
 
     // -------------------------------------------------------------------------
