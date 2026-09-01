@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import de.montagezeit.app.R
 import de.montagezeit.app.data.local.entity.DayType
+import de.montagezeit.app.data.local.entity.TravelLeg
+import de.montagezeit.app.data.local.entity.TravelLegCategory
 import de.montagezeit.app.data.local.entity.WorkEntry
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import java.io.File
@@ -85,6 +87,117 @@ class PdfExporterRobolectricTest {
         @Suppress("DEPRECATION")
         assertEquals(fileUri, shareIntent.getParcelableExtra(Intent.EXTRA_STREAM))
         assertTrue((shareIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0)
+    }
+
+    // -------------------------------------------------------------------------
+    // Test A: Ein normaler Monat mit ca. 14 Einträgen passt auf genau eine Seite.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `exportToPdf - normaler Monat mit 14 Eintraegen passt auf genau eine Seite`() {
+        val startDate = LocalDate.of(2026, 8, 3)
+        val entries = (0 until 14).map { offset -> workRecord(startDate.plusDays(offset.toLong())) }
+
+        val document = exporter.renderPdfDocument(
+            eligibleEntries = entries,
+            employeeName = "David Grunert",
+            company = "TBM Maifarth",
+            project = null,
+            personnelNumber = "25",
+            startDate = startDate,
+            endDate = startDate.plusDays(entries.lastIndex.toLong())
+        )
+
+        assertEquals(1, document.pages.size)
+        document.close()
+    }
+
+    // -------------------------------------------------------------------------
+    // Test B: Lange Ortsnamen und Routen dürfen nicht zu abgeschnittenen Seiten führen.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `exportToPdf - lange Ortsnamen und Routen erzeugen weiterhin ein gueltiges einseitiges PDF`() {
+        val startDate = LocalDate.of(2026, 8, 3)
+        val longLocation = "Bad Wiesenfeld-Oberhausen an der Longstraße"
+        val entries = (0 until 10).map { offset ->
+            val date = startDate.plusDays(offset.toLong())
+            WorkEntryWithTravelLegs(
+                workEntry = WorkEntry(
+                    date = date,
+                    dayType = DayType.WORK,
+                    workStart = LocalTime.of(8, 0),
+                    workEnd = LocalTime.of(17, 0),
+                    breakMinutes = 60,
+                    dayLocationLabel = longLocation,
+                    confirmedWorkDay = true
+                ),
+                travelLegs = if (offset == 0) {
+                    listOf(
+                        TravelLeg(
+                            workEntryDate = date,
+                            sortOrder = 0,
+                            category = TravelLegCategory.OUTBOUND,
+                            startLabel = "Leipzig-Zentrum Hauptbahnhof",
+                            endLabel = longLocation,
+                            paidMinutesOverride = 180
+                        )
+                    )
+                } else {
+                    emptyList()
+                }
+            )
+        }
+
+        val document = exporter.renderPdfDocument(
+            eligibleEntries = entries,
+            employeeName = "David Grunert",
+            company = null,
+            project = null,
+            personnelNumber = null,
+            startDate = startDate,
+            endDate = startDate.plusDays(entries.lastIndex.toLong())
+        )
+
+        assertEquals(1, document.pages.size)
+        document.close()
+    }
+
+    @Test
+    fun `exportToPdf - reiner Reisetag ohne Arbeitszeit wird erfolgreich exportiert`() = runTest {
+        val date = LocalDate.of(2026, 8, 10)
+        val entries = listOf(
+            WorkEntryWithTravelLegs(
+                workEntry = WorkEntry(
+                    date = date,
+                    dayType = DayType.WORK,
+                    workStart = null,
+                    workEnd = null,
+                    breakMinutes = 0,
+                    confirmedWorkDay = true,
+                    mealAllowanceAmountCents = 1400
+                ),
+                travelLegs = listOf(
+                    TravelLeg(
+                        workEntryDate = date,
+                        sortOrder = 0,
+                        category = TravelLegCategory.OUTBOUND,
+                        startLabel = "Leipzig",
+                        endLabel = "Nürnberg",
+                        paidMinutesOverride = 240
+                    )
+                )
+            )
+        )
+
+        val result = exporter.exportToPdf(
+            entries = entries,
+            employeeName = "David Grunert",
+            startDate = date,
+            endDate = date
+        )
+
+        assertTrue(result is PdfExporter.PdfExportResult.Success)
     }
 
     private fun workRecord(date: LocalDate): WorkEntryWithTravelLegs {
