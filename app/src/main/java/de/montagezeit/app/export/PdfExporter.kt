@@ -304,7 +304,7 @@ class PdfExporter @Inject constructor(
         eligibleEntries.forEachIndexed { index, record ->
             val isLastEntry = index == eligibleEntries.lastIndex
             val reserve = if (isLastEntry) footerBlockHeight else 0f
-            if (y + rowHeight + reserve > PAGE_HEIGHT - MARGIN) {
+            if (needsNewPage(y, rowHeight, reserve)) {
                 pdfDocument.finishPage(page)
                 pageNum++
                 page = pdfDocument.startPage(
@@ -327,6 +327,38 @@ class PdfExporter @Inject constructor(
 
         pdfDocument.finishPage(page)
         return pdfDocument
+    }
+
+    /**
+     * Entscheidet, ob eine Zeile mit Höhe [rowHeight] (plus [reserve] für Legende/Summe) noch
+     * auf die aktuelle Seite passt.
+     */
+    private fun needsNewPage(y: Float, rowHeight: Float, reserve: Float): Boolean =
+        y + rowHeight + reserve > PAGE_HEIGHT - MARGIN
+
+    /**
+     * Berechnet die für [entryCount] Einträge benötigte Seitenzahl mit derselben
+     * Seitenumbruch-Arithmetik wie [renderPdfDocument] – jedoch ohne echtes Zeichnen, also ohne
+     * [PdfDocument]/[Canvas]. Für Layout-Tests, die kein PDF-Rendering benötigen.
+     */
+    internal fun countPagesNeeded(entryCount: Int, legendPresent: Boolean): Int {
+        if (entryCount <= 0) return 1
+        val style = chooseStyle(entryCount, legendPresent)
+        val rowHeight = style.effectiveRowHeight(entryCount, legendPresent)
+        val footerBlockHeight = style.footerBlockHeight(legendPresent)
+
+        var pageCount = 1
+        var y = MARGIN.toFloat() + style.headerBlockHeight + style.tableHeaderHeight
+        for (index in 0 until entryCount) {
+            val isLastEntry = index == entryCount - 1
+            val reserve = if (isLastEntry) footerBlockHeight else 0f
+            if (needsNewPage(y, rowHeight, reserve)) {
+                pageCount++
+                y = MARGIN.toFloat() + style.tableHeaderHeight
+            }
+            y += rowHeight
+        }
+        return pageCount
     }
 
     /**
