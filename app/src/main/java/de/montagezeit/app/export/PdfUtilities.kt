@@ -342,12 +342,11 @@ object PdfUtilities {
         employeeTemplate: String,
         optionalFields: List<MetaField>
     ): String {
-        return listOfNotNull(
-            employeeTemplate.format(employeeName),
-            *optionalFields.map { field ->
-                field.value?.takeIf(String::isNotBlank)?.let { field.template.format(it) }
-            }.toTypedArray()
-        ).joinToString(" · ")
+        val parts = mutableListOf(employeeTemplate.format(employeeName))
+        optionalFields.forEach { field ->
+            field.value?.takeIf(String::isNotBlank)?.let { parts += field.template.format(it) }
+        }
+        return parts.joinToString(" · ")
     }
 
     fun buildMealAllowanceLabel(
