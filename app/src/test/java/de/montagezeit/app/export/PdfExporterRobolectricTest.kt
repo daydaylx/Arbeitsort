@@ -87,6 +87,54 @@ class PdfExporterRobolectricTest {
         assertTrue((shareIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0)
     }
 
+    // -------------------------------------------------------------------------
+    // Test A: Ein normaler Monat (auch ein voller 31-Tage-Monat) passt auf genau eine Seite.
+    //
+    // countPagesNeeded() teilt sich die Seitenumbruch-Arithmetik mit dem echten Zeichenpfad
+    // (renderPdfDocument), benötigt für die Berechnung selbst aber kein android.graphics.pdf.
+    // PdfDocument – das lässt sich unter Robolectric hier nicht zuverlässig konstruieren
+    // (bereits ein frisches PdfDocument() meldet "document is closed!" bei startPage()).
+    // Reale Paint-Textmetriken (für Schriftgrößen-Auswahl und Zeilenhöhe) werden dagegen von
+    // Robolectric zuverlässig unterstützt.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `countPagesNeeded - normaler Monat mit 14 Eintraegen passt auf genau eine Seite`() {
+        assertEquals(1, exporter.countPagesNeeded(entryCount = 14, legendPresent = false))
+    }
+
+    @Test
+    fun `countPagesNeeded - Monat mit nur Werktagen passt auf genau eine Seite`() {
+        assertEquals(1, exporter.countPagesNeeded(entryCount = 22, legendPresent = true))
+    }
+
+    @Test
+    fun `countPagesNeeded - voller 31-Tage-Monat passt auf genau eine Seite`() {
+        assertEquals(1, exporter.countPagesNeeded(entryCount = 31, legendPresent = true))
+    }
+
+    // -------------------------------------------------------------------------
+    // Test B (Seitenaspekt): Lange Ortsnamen/Routen ändern nichts an der Zeilenhöhe – jede Zeile
+    // bleibt einzeilig (Ellipsis-Kürzung statt Umbruch, siehe PdfExporter.fitTextToWidth), die
+    // Seitenzahl hängt also nur von der Eintragsanzahl ab, nicht von der Textlänge.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `countPagesNeeded - zehn Eintraege mit Reise passen auf genau eine Seite`() {
+        assertEquals(1, exporter.countPagesNeeded(entryCount = 10, legendPresent = true))
+    }
+
+    // -------------------------------------------------------------------------
+    // Ausnahmefall: sehr viele Einträge (deutlich über einen Monat hinaus) lösen kontrolliert
+    // mehrere Seiten aus, statt abgeschnittene Inhalte zu erzeugen.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `countPagesNeeded - sehr viele Eintraege loesen kontrollierten Mehrseiten-Fallback aus`() {
+        val pages = exporter.countPagesNeeded(entryCount = PdfExporter.MAX_ENTRIES_PER_PDF, legendPresent = true)
+        assertTrue("expected more than one page for ${PdfExporter.MAX_ENTRIES_PER_PDF} entries", pages > 1)
+    }
+
     private fun workRecord(date: LocalDate): WorkEntryWithTravelLegs {
         return WorkEntryWithTravelLegs(
             workEntry = WorkEntry(

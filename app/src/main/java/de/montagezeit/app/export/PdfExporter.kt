@@ -13,12 +13,11 @@ import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.montagezeit.app.R
-import de.montagezeit.app.data.local.entity.DayType
 import de.montagezeit.app.data.local.entity.WorkEntryWithTravelLegs
 import de.montagezeit.app.domain.usecase.AggregateWorkStats
+import de.montagezeit.app.domain.usecase.WorkStatsResult
 import de.montagezeit.app.domain.usecase.isStatisticsEligible
 import de.montagezeit.app.domain.util.MealAllowanceCalculator
-import de.montagezeit.app.domain.util.TimeCalculator
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -33,9 +32,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * PDF Exporter für MontageZeit
- * 
- * Exportiert WorkEntries im PDF-Format (A4) für die Verwendung als Arbeitsnachweis
- * Nutzt android.graphics.pdf.PdfDocument (keine externen PDF-Libs)
+ *
+ * Exportiert WorkEntries als kompakten, einseitigen A4-Querformat-Arbeitsnachweis
+ * (Büro/Lohnabrechnung). Nutzt android.graphics.pdf.PdfDocument (keine externen PDF-Libs).
  */
 @Singleton
 class PdfExporter @Inject constructor(
@@ -49,104 +48,165 @@ class PdfExporter @Inject constructor(
         data class FileWriteError(val message: String) : PdfExportResult
         data class UnknownError(val message: String) : PdfExportResult
     }
-    
-    // PDF-Konstanten (A4 in Punkten: 595 x 842)
+
+    // PDF-Konstanten (A4 Querformat in Punkten: 842 x 595)
     companion object {
         // Safety limit: PdfDocument keeps all page canvases in memory until writeTo().
         // On low-end devices (< 2 GB RAM), rendering 180+ entries can cause an OOM.
         const val MAX_ENTRIES_PER_PDF = 180
 
-        private const val PAGE_WIDTH = 595
-        private const val PAGE_HEIGHT = 842
-        private const val MARGIN = 40
-        private const val CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
-        
-        // Zeilenhöhen und Abstände
-        private const val HEADER_HEIGHT = 100
-        private const val MIN_TABLE_HEADER_HEIGHT = 30f
-        private const val MIN_ROW_HEIGHT = 25f
-        private const val FOOTER_HEIGHT = 24f
-        private const val SPACING = 10
-        private const val SUMMARY_HEIGHT = 125  // bis zu 5 Zeilen × 25 pt
-        private const val SIGNATURE_HEIGHT = 120  // je Block: Label(15) + Linie(20) + Ort/Datum(25) + Abstand(20)
-        private const val TABLE_CELL_HORIZONTAL_PADDING = 5f
-        private const val TABLE_CELL_VERTICAL_PADDING = 4f
+        const val PAGE_WIDTH = 842
+        const val PAGE_HEIGHT = 595
+        const val MARGIN = 20 // ~7 mm
+        const val CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
 
-        // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 515)
-        // 9 Spalten: 60+50+50+45+50+95+55+70+40 = 515
-        private const val COL_DATE = 60
-        private const val COL_START = 50
-        private const val COL_END = 50
-        private const val COL_BREAK = 45
-        private const val COL_WORK_TIME = 50
-        private const val COL_TRAVEL_ROUTE = 95   // war COL_TRAVEL_WINDOW=70; breiter für längere Routen
-        private const val COL_TRAVEL_TYPE = 55    // war COL_TRAVEL_TIME=55; jetzt Reiseart (Anreise/Abreise/…)
-        private const val COL_LOCATION = 70       // war 50; breiter durch Wegfall der Gesamt-Spalte
-        private const val COL_BREAKFAST = 40      // war COL_MEAL_ALLOWANCE=30; Frühstück ✓/–
+        const val TABLE_CELL_HORIZONTAL_PADDING = 6f
+        const val TABLE_CELL_VERTICAL_PADDING = 2.5f
+
+        const val HEADER_TITLE_GAP = 5f
+        const val HEADER_LINE_GAP = 2f
+        const val HEADER_DIVIDER_GAP_BEFORE = 5f
+        const val HEADER_DIVIDER_GAP_AFTER = 6f
+        const val TABLE_HEADER_BOTTOM_GAP = 2.5f
+        const val AFTER_TABLE_GAP = 3f
+        const val LEGEND_TOP_GAP = 4f
+        const val SUMMARY_TOP_GAP = 6f
+        const val SUMMARY_VERTICAL_PADDING = 4f
+        const val SUMMARY_HORIZONTAL_PADDING = 8f
+
+        // Maximaler Faktor, um den die Zeilenhöhe über die Mindesthöhe hinaus wachsen darf, damit
+        // Monate mit wenigen Einträgen die Seite ausfüllen statt unnötigen Leerraum zu hinterlassen.
+        const val ROW_HEIGHT_EXPANSION_FACTOR = 1.6f
+
+        const val LEGEND_MIN_FONT_SIZE = 7f
+        const val LINE_STROKE_WIDTH = 0.75f
+
+        // Tabellen-Spaltenbreiten (insgesamt CONTENT_WIDTH = 802)
+        // 9 Spalten: 56+131+47+47+47+56+298+65+55 = 802
+        const val COL_DATE = 56
+        const val COL_LOCATION = 131
+        const val COL_START = 47
+        const val COL_END = 47
+        const val COL_BREAK = 47
+        const val COL_WORK = 56
+        const val COL_TRAVEL = 298
+        const val COL_TRAVEL_TIME = 65
+        const val COL_VP = 55
+
+        // Schriftgrößen-Stufen, von großzügig zu kompakt (siehe Aufgabenstellung: Titel 14-16pt,
+        // Metadaten 9-10pt, Tabellenkopf/-inhalt 8-9pt, Summenzeile 9-10pt).
+        private val DENSITY_LEVELS = listOf(
+            Density(titleSize = 16f, metaSize = 10f, tableSize = 9f, summarySize = 10f),
+            Density(titleSize = 15f, metaSize = 9.5f, tableSize = 8.5f, summarySize = 9.5f),
+            Density(titleSize = 14f, metaSize = 9f, tableSize = 8f, summarySize = 9f)
+        )
     }
-    
+
+    private data class Density(
+        val titleSize: Float,
+        val metaSize: Float,
+        val tableSize: Float,
+        val summarySize: Float
+    )
+
+    /**
+     * Alle Paints für eine gewählte Schriftgrößen-Stufe. Wird pro Export neu erzeugt
+     * (kein geteilter mutabler Zustand zwischen parallelen Exports).
+     */
+    private class PdfStyle(density: Density) {
+        val title = Paint().apply {
+            color = Color.BLACK
+            isAntiAlias = true
+            isFakeBoldText = true
+            textSize = density.titleSize
+        }
+        val meta = Paint().apply {
+            color = Color.BLACK
+            isAntiAlias = true
+            textSize = density.metaSize
+        }
+        val tableHeader = Paint().apply {
+            color = Color.BLACK
+            isAntiAlias = true
+            isFakeBoldText = true
+            textSize = density.tableSize
+        }
+        val tableHeaderBackground = Paint().apply {
+            color = Color.parseColor("#EDEDED")
+            style = Paint.Style.FILL
+        }
+        val tableText = Paint().apply {
+            color = Color.BLACK
+            isAntiAlias = true
+            textSize = density.tableSize
+        }
+        val summary = Paint().apply {
+            color = Color.BLACK
+            isAntiAlias = true
+            isFakeBoldText = true
+            textSize = density.summarySize
+        }
+        val summaryBackground = Paint().apply {
+            color = Color.parseColor("#E3E3E3")
+            style = Paint.Style.FILL
+        }
+        val legend = Paint().apply {
+            color = Color.parseColor("#555555")
+            isAntiAlias = true
+            textSize = (density.tableSize - 1f).coerceAtLeast(LEGEND_MIN_FONT_SIZE)
+        }
+        val line = Paint().apply {
+            color = Color.BLACK
+            strokeWidth = LINE_STROKE_WIDTH
+            style = Paint.Style.STROKE
+        }
+
+        val rowHeight = tableText.fontSpacing + 2 * TABLE_CELL_VERTICAL_PADDING
+        val tableHeaderHeight = tableHeader.fontSpacing + 2 * TABLE_CELL_VERTICAL_PADDING + TABLE_HEADER_BOTTOM_GAP
+        val headerBlockHeight = title.fontSpacing + HEADER_TITLE_GAP +
+            meta.fontSpacing + HEADER_LINE_GAP +
+            meta.fontSpacing + HEADER_DIVIDER_GAP_BEFORE + HEADER_DIVIDER_GAP_AFTER
+
+        fun legendHeight(present: Boolean): Float = if (present) legend.fontSpacing + LEGEND_TOP_GAP else 0f
+
+        val summaryHeight = summary.fontSpacing + 2 * SUMMARY_VERTICAL_PADDING + SUMMARY_TOP_GAP
+
+        fun footerBlockHeight(legendPresent: Boolean): Float =
+            AFTER_TABLE_GAP + legendHeight(legendPresent) + summaryHeight
+
+        /**
+         * Zeilenhöhe, die den nach Kopf/Legende/Summenzeile verbleibenden Platz ausfüllt, statt
+         * bei wenigen Einträgen unnötigen Leerraum am Seitenende zu hinterlassen. Wächst bis
+         * maximal [ROW_HEIGHT_EXPANSION_FACTOR] der Mindestzeilenhöhe; überschüssiger Platz
+         * darüber hinaus bleibt als normaler, unauffälliger Fußrand bestehen.
+         */
+        fun effectiveRowHeight(entryCount: Int, legendPresent: Boolean): Float {
+            if (entryCount <= 0) return rowHeight
+            val fixedHeight = headerBlockHeight + tableHeaderHeight + footerBlockHeight(legendPresent)
+            val availableForRows = PAGE_HEIGHT - 2 * MARGIN - fixedHeight
+            val idealRowHeight = availableForRows / entryCount
+            return idealRowHeight.coerceIn(rowHeight, rowHeight * ROW_HEIGHT_EXPANSION_FACTOR)
+        }
+    }
+
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
-    private val timestampFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
-    
-    // Paints für verschiedene Text-Stile
-    private val paintTitle = Paint().apply {
-        color = Color.BLACK
-        textSize = 24f
-        isAntiAlias = true
-        isFakeBoldText = true
-    }
-    
-    private val paintHeader = Paint().apply {
-        color = Color.BLACK
-        textSize = 12f
-        isAntiAlias = true
-    }
-    
-    private val paintTableHeader = Paint().apply {
-        color = Color.BLACK
-        textSize = 10f
-        isAntiAlias = true
-        isFakeBoldText = true
-    }
-
-    // Dedizierter Paint für den Tabellenkopf-Hintergrund – vermeidet Mutation von paintTableHeader
-    private val paintTableHeaderBackground = Paint().apply {
-        color = Color.parseColor("#E0E0E0")
-        style = Paint.Style.FILL
-    }
-    
-    private val paintTableText = Paint().apply {
-        color = Color.BLACK
-        textSize = 10f
-        isAntiAlias = true
-    }
-    
-    private val paintSummary = Paint().apply {
-        color = Color.BLACK
-        textSize = 12f
-        isAntiAlias = true
-        isFakeBoldText = true
-    }
-    
-    private val paintSignature = Paint().apply {
-        color = Color.BLACK
-        textSize = 11f
-        isAntiAlias = true
-    }
-    
-    private val paintLine = Paint().apply {
-        color = Color.BLACK
-        strokeWidth = 1f
-        style = Paint.Style.STROKE
-    }
 
     private fun string(resId: Int, vararg args: Any): String {
         return context.getString(resId, *args)
     }
-    
+
+    /**
+     * Liefert den rohen String-Ressourcentext ohne Formatierung (z.B. mit "%1$s"-Platzhalter
+     * für spätere `String.format`-Aufrufe). [string] mit leeren varargs würde hier crashen, da
+     * `Context.getString(id, *emptyArray())` trotzdem den Formatter mit fehlendem Argument aufruft.
+     */
+    private fun rawString(resId: Int): String {
+        return context.getString(resId)
+    }
+
     /**
      * Exportiert WorkEntries in eine PDF-Datei
-     * 
+     *
      * @param entries Die zu exportierenden Einträge
      * @param employeeName Name des Mitarbeiters (Pflichtfeld)
      * @param company Firma (optional)
@@ -162,11 +222,13 @@ class PdfExporter @Inject constructor(
         company: String? = null,
         project: String? = null,
         personnelNumber: String? = null,
-        startDate: java.time.LocalDate,
-        endDate: java.time.LocalDate
+        startDate: LocalDate,
+        endDate: LocalDate
     ): PdfExportResult = withContext(Dispatchers.IO) {
         try {
-            val eligibleEntries = entries.filter(::isStatisticsEligible)
+            // Innerhalb der Anwendung bleibt die Sortierung unverändert – für den PDF-Export
+            // werden die Einträge chronologisch aufsteigend dargestellt.
+            val eligibleEntries = entries.filter(::isStatisticsEligible).sortedBy { it.workEntry.date }
             // Pflichtfeld-Validierung
             if (employeeName.isBlank()) {
                 throw IllegalArgumentException(string(R.string.pdf_export_error_name_missing))
@@ -178,47 +240,10 @@ class PdfExporter @Inject constructor(
                 return@withContext PdfExportResult.ValidationError(string(R.string.pdf_export_error_too_many_entries))
             }
 
-            val pdfDocument = PdfDocument()
+            val pdfDocument = renderPdfDocument(
+                eligibleEntries, employeeName, company, project, personnelNumber, startDate, endDate
+            )
             try {
-                var currentPage = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create())
-                var canvas = currentPage.canvas
-
-                // Header zeichnen
-                // Letzten erfassten Tag ermitteln – bei Teilmonat wird "Stand:" angezeigt
-                val lastEntryDate = eligibleEntries.maxOfOrNull { it.workEntry.date }
-                val actualEndDate = if (lastEntryDate != null && lastEntryDate < endDate) lastEntryDate else null
-                var yPosition = drawHeader(canvas, employeeName, company, project, personnelNumber, startDate, endDate, actualEndDate)
-
-                // Tabellenkopf zeichnen
-                yPosition = drawTableHeader(canvas, yPosition)
-
-                // Tabelle zeichnen (Multi-Pag)
-                val tableResult = drawTable(canvas, pdfDocument, currentPage, eligibleEntries, yPosition)
-                currentPage = tableResult.page
-                canvas = currentPage.canvas
-                yPosition = tableResult.yPosition
-
-                // Neue Seite für Summen und Unterschriften
-                if (yPosition + SUMMARY_HEIGHT + SIGNATURE_HEIGHT > PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-                    pdfDocument.finishPage(currentPage)
-                    val nextPageNumber = tableResult.pageNumber + 1
-                    currentPage = pdfDocument.startPage(
-                        PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, nextPageNumber).create()
-                    )
-                    canvas = currentPage.canvas
-                    yPosition = MARGIN.toFloat()
-                }
-
-                // Summenblock zeichnen
-                yPosition = drawSummary(canvas, eligibleEntries, yPosition)
-
-                // Unterschriften zeichnen
-                drawSignatures(canvas, yPosition)
-
-                // Seitennummer auf der letzten Seite
-                drawFooter(canvas, tableResult.pageNumber)
-                pdfDocument.finishPage(currentPage)
-
                 // PDF schreiben
                 writePdfFile(pdfDocument, startDate, endDate)
             } finally {
@@ -240,355 +265,308 @@ class PdfExporter @Inject constructor(
     }
 
     /**
-     * Zeichnet den Header auf die erste Seite
+     * Baut das vollständige [PdfDocument] (Kopfbereich, Tabelle, Legende, Summenzeile), inklusive
+     * kontrolliertem Seitenumbruch für Ausnahmefälle. Getrennt von [exportToPdf], damit die reine
+     * Layout-/Seitenumbruch-Logik unabhängig vom Datei-I/O getestet werden kann.
      */
-    private fun drawHeader(
-        canvas: Canvas,
+    internal fun renderPdfDocument(
+        eligibleEntries: List<WorkEntryWithTravelLegs>,
         employeeName: String,
         company: String?,
         project: String?,
         personnelNumber: String?,
         startDate: LocalDate,
-        endDate: LocalDate,
-        actualEndDate: LocalDate? = null
-    ): Float {
-        var y = MARGIN.toFloat() + 20
-        
-        // Titel
-        canvas.drawText(string(R.string.pdf_export_title), MARGIN.toFloat(), y, paintTitle)
-        y += SPACING * 2
-        
-        // Mitarbeiter-Info
-        y = drawWrappedTextLine(
-            canvas = canvas,
-            text = string(R.string.pdf_export_header_employee, employeeName),
-            x = MARGIN.toFloat(),
-            y = y,
-            paint = paintHeader
+        endDate: LocalDate
+    ): PdfDocument {
+        val stats = AggregateWorkStats()(eligibleEntries)
+        val legendText = PdfUtilities.buildTravelLegend(
+            entries = eligibleEntries,
+            arrivalLabel = string(R.string.pdf_export_travel_type_arrival),
+            departureLabel = string(R.string.pdf_export_travel_type_departure),
+            continuationLabel = string(R.string.pdf_export_travel_type_continuation),
+            travelLabel = string(R.string.pdf_export_travel_type_travel)
         )
-        
-        company?.let {
-            y = drawWrappedTextLine(
-                canvas = canvas,
-                text = string(R.string.pdf_export_header_company, it),
-                x = MARGIN.toFloat(),
-                y = y,
-                paint = paintHeader
-            )
-        }
-        
-        project?.let {
-            y = drawWrappedTextLine(
-                canvas = canvas,
-                text = string(R.string.pdf_export_header_project, it),
-                x = MARGIN.toFloat(),
-                y = y,
-                paint = paintHeader
-            )
-        }
-        
-        personnelNumber?.let {
-            y = drawWrappedTextLine(
-                canvas = canvas,
-                text = string(R.string.pdf_export_header_personnel_number, it),
-                x = MARGIN.toFloat(),
-                y = y,
-                paint = paintHeader
-            )
-        }
-        
-        // Zeitraum
-        val dateRange = if (startDate == endDate) {
-            startDate.format(dateFormatter)
-        } else {
-            "${startDate.format(dateFormatter)} - ${endDate.format(dateFormatter)}"
-        }
-        y = drawWrappedTextLine(
-            canvas = canvas,
-            text = string(R.string.pdf_export_header_range, dateRange),
-            x = MARGIN.toFloat(),
-            y = y,
-            paint = paintHeader
-        )
-        
-        // Erstelldatum
-        y = drawWrappedTextLine(
-            canvas = canvas,
-            text = string(R.string.pdf_export_header_created_at, LocalDateTime.now().format(timestampFormatter)),
-            x = MARGIN.toFloat(),
-            y = y,
-            paint = paintHeader
-        )
+        val style = chooseStyle(eligibleEntries.size, legendText.isNotBlank())
 
-        // Stand-Hinweis: nur wenn Daten nicht bis zum Ende des gewählten Zeitraums reichen
-        if (actualEndDate != null) {
-            y = drawWrappedTextLine(
-                canvas = canvas,
-                text = string(R.string.pdf_export_header_as_of, actualEndDate.format(dateFormatter)),
-                x = MARGIN.toFloat(),
-                y = y,
-                paint = paintHeader
-            )
+        val pdfDocument = PdfDocument()
+        var pageNum = 1
+        var page = pdfDocument.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create())
+        var canvas = page.canvas
+
+        val headerInfo = ExportHeaderInfo(employeeName, company, project, personnelNumber, startDate, endDate)
+        var y = drawHeader(canvas, style, headerInfo)
+        y = drawTableHeader(canvas, style, y)
+
+        val dash = string(R.string.pdf_export_placeholder_dash)
+        val footerBlockHeight = style.footerBlockHeight(legendText.isNotBlank())
+        val rowHeight = style.effectiveRowHeight(eligibleEntries.size, legendText.isNotBlank())
+
+        eligibleEntries.forEachIndexed { index, record ->
+            val isLastEntry = index == eligibleEntries.lastIndex
+            val reserve = if (isLastEntry) footerBlockHeight else 0f
+            if (needsNewPage(y, rowHeight, reserve)) {
+                pdfDocument.finishPage(page)
+                pageNum++
+                page = pdfDocument.startPage(
+                    PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create()
+                )
+                canvas = page.canvas
+                y = drawTableHeader(canvas, style, MARGIN.toFloat())
+            }
+            drawTableRow(canvas, style, record, dash, y, rowHeight)
+            y += rowHeight
         }
 
-        y += SPACING - 10  // Abstand vor Trennlinie beibehalten
+        canvas.drawLine(MARGIN.toFloat(), y, (PAGE_WIDTH - MARGIN).toFloat(), y, style.line)
+        y += AFTER_TABLE_GAP
 
-        // Trennlinie
-        y += 10
-        canvas.drawLine(MARGIN.toFloat(), y, (PAGE_WIDTH - MARGIN).toFloat(), y, paintLine)
-        y += SPACING
-        
-        return y
+        if (legendText.isNotBlank()) {
+            y = drawLegend(canvas, style, legendText, y)
+        }
+        drawSummary(canvas, style, stats, y)
+
+        pdfDocument.finishPage(page)
+        return pdfDocument
     }
-    
-    private data class TableColumn(
-        val width: Int,
-        val headerText: String
-    )
 
-    private data class CellLayout(
-        val lines: List<String>
-    )
+    /**
+     * Entscheidet, ob eine Zeile mit Höhe [rowHeight] (plus [reserve] für Legende/Summe) noch
+     * auf die aktuelle Seite passt.
+     */
+    private fun needsNewPage(y: Float, rowHeight: Float, reserve: Float): Boolean =
+        y + rowHeight + reserve > PAGE_HEIGHT - MARGIN
 
-    private fun tableColumns(): List<TableColumn> = listOf(
-        TableColumn(COL_DATE, string(R.string.pdf_export_column_date)),
-        TableColumn(COL_START, string(R.string.pdf_export_column_start)),
-        TableColumn(COL_END, string(R.string.pdf_export_column_end)),
-        TableColumn(COL_BREAK, string(R.string.pdf_export_column_break)),
-        TableColumn(COL_WORK_TIME, string(R.string.pdf_export_column_work)),
-        TableColumn(COL_TRAVEL_ROUTE, string(R.string.pdf_export_column_travel_route)),
-        TableColumn(COL_TRAVEL_TYPE, string(R.string.pdf_export_column_travel_type)),
-        TableColumn(COL_LOCATION, string(R.string.pdf_export_column_location)),
-        TableColumn(COL_BREAKFAST, string(R.string.pdf_export_column_meal_allowance))
+    /**
+     * Berechnet die für [entryCount] Einträge benötigte Seitenzahl mit derselben
+     * Seitenumbruch-Arithmetik wie [renderPdfDocument] – jedoch ohne echtes Zeichnen, also ohne
+     * [PdfDocument]/[Canvas]. Für Layout-Tests, die kein PDF-Rendering benötigen.
+     */
+    internal fun countPagesNeeded(entryCount: Int, legendPresent: Boolean): Int {
+        if (entryCount <= 0) return 1
+        val style = chooseStyle(entryCount, legendPresent)
+        val rowHeight = style.effectiveRowHeight(entryCount, legendPresent)
+        val footerBlockHeight = style.footerBlockHeight(legendPresent)
+
+        var pageCount = 1
+        var y = MARGIN.toFloat() + style.headerBlockHeight + style.tableHeaderHeight
+        for (index in 0 until entryCount) {
+            val isLastEntry = index == entryCount - 1
+            val reserve = if (isLastEntry) footerBlockHeight else 0f
+            if (needsNewPage(y, rowHeight, reserve)) {
+                pageCount++
+                y = MARGIN.toFloat() + style.tableHeaderHeight
+            }
+            y += rowHeight
+        }
+        return pageCount
+    }
+
+    /**
+     * Wählt die großzügigste Schriftgrößen-Stufe, bei der alle Einträge auf eine Seite passen.
+     * Passt kein normaler Datensatz mehr (Ausnahmefall), wird die kompakteste Stufe verwendet –
+     * die Tabellen-Zeichenlogik bricht dann kontrolliert auf weitere Seiten um.
+     */
+    private fun chooseStyle(entryCount: Int, legendPresent: Boolean): PdfStyle {
+        var fallback: PdfStyle? = null
+        for (density in DENSITY_LEVELS) {
+            val style = PdfStyle(density)
+            fallback = style
+            val fixedHeight = style.headerBlockHeight + style.tableHeaderHeight + style.footerBlockHeight(legendPresent)
+            val availableForRows = PAGE_HEIGHT - 2 * MARGIN - fixedHeight
+            val maxRows = (availableForRows / style.rowHeight).toInt()
+            if (entryCount <= maxRows) {
+                return style
+            }
+        }
+        return fallback ?: PdfStyle(DENSITY_LEVELS.last())
+    }
+
+    /** Bündelt die Kopfbereich-Metadaten, um die Parameterliste von [drawHeader] kurz zu halten. */
+    private data class ExportHeaderInfo(
+        val employeeName: String,
+        val company: String?,
+        val project: String?,
+        val personnelNumber: String?,
+        val startDate: LocalDate,
+        val endDate: LocalDate
     )
 
     /**
-     * Zeichnet den Tabellenkopf
+     * Zeichnet den kompakten Kopfbereich (Titel + max. zwei Metadatenzeilen) auf Seite 1.
      */
-    private fun drawTableHeader(canvas: Canvas, y: Float): Float {
-        val columns = tableColumns()
-        val headerHeight = columns.maxOfOrNull { column ->
-            cellHeight(
-                layout = CellLayout(
-                    lines = wrapText(
-                        text = column.headerText,
-                        maxWidth = column.width - TABLE_CELL_HORIZONTAL_PADDING * 2,
-                        paint = paintTableHeader
-                    )
-                ),
-                lineHeight = paintTableHeader.fontSpacing
+    private fun drawHeader(canvas: Canvas, style: PdfStyle, info: ExportHeaderInfo): Float {
+        var lineTop = MARGIN.toFloat()
+
+        val title = string(R.string.pdf_export_title, PdfUtilities.formatPeriodLabel(info.startDate, info.endDate))
+        drawSingleLine(
+            canvas, title, MARGIN.toFloat(),
+            lineTop - style.title.fontMetrics.ascent,
+            style.title, CONTENT_WIDTH.toFloat(), Align.LEFT
+        )
+        lineTop += style.title.fontSpacing + HEADER_TITLE_GAP
+
+        val metaLine1 = buildMetaLine1(info)
+        drawSingleLine(
+            canvas, metaLine1, MARGIN.toFloat(),
+            lineTop - style.meta.fontMetrics.ascent,
+            style.meta, CONTENT_WIDTH.toFloat(), Align.LEFT
+        )
+        lineTop += style.meta.fontSpacing + HEADER_LINE_GAP
+
+        val metaLine2 = buildMetaLine2(info.startDate, info.endDate)
+        drawSingleLine(
+            canvas, metaLine2, MARGIN.toFloat(),
+            lineTop - style.meta.fontMetrics.ascent,
+            style.meta, CONTENT_WIDTH.toFloat(), Align.LEFT
+        )
+        lineTop += style.meta.fontSpacing + HEADER_DIVIDER_GAP_BEFORE
+
+        canvas.drawLine(MARGIN.toFloat(), lineTop, (PAGE_WIDTH - MARGIN).toFloat(), lineTop, style.line)
+        lineTop += HEADER_DIVIDER_GAP_AFTER
+
+        return lineTop
+    }
+
+    private fun buildMetaLine1(info: ExportHeaderInfo): String {
+        return PdfUtilities.buildHeaderMetaLine1(
+            employeeName = info.employeeName,
+            employeeTemplate = rawString(R.string.pdf_export_header_employee),
+            optionalFields = listOf(
+                PdfUtilities.MetaField(info.personnelNumber, rawString(R.string.pdf_export_header_personnel_number)),
+                PdfUtilities.MetaField(info.company, rawString(R.string.pdf_export_header_company)),
+                PdfUtilities.MetaField(info.project, rawString(R.string.pdf_export_header_project))
             )
-        }?.coerceAtLeast(MIN_TABLE_HEADER_HEIGHT) ?: MIN_TABLE_HEADER_HEIGHT
+        )
+    }
+
+    private fun buildMetaLine2(startDate: LocalDate, endDate: LocalDate): String {
+        val dateRange = if (startDate == endDate) {
+            startDate.format(dateFormatter)
+        } else {
+            "${startDate.format(dateFormatter)}–${endDate.format(dateFormatter)}"
+        }
+        val range = string(R.string.pdf_export_header_range, dateRange)
+        val created = string(R.string.pdf_export_header_created_at, LocalDate.now().format(dateFormatter))
+        return "$range · $created"
+    }
+
+    private data class TableColumn(
+        val width: Int,
+        val headerText: String,
+        val align: Align
+    )
+
+    /** Position und Größe einer Tabellenzelle, zur Bündelung von Zeichen-Parametern. */
+    private data class CellBox(
+        val x: Float,
+        val y: Float,
+        val width: Float,
+        val height: Float
+    )
+
+    private fun tableColumns(): List<TableColumn> = listOf(
+        TableColumn(COL_DATE, string(R.string.pdf_export_column_date), Align.CENTER),
+        TableColumn(COL_LOCATION, string(R.string.pdf_export_column_location), Align.LEFT),
+        TableColumn(COL_START, string(R.string.pdf_export_column_start), Align.CENTER),
+        TableColumn(COL_END, string(R.string.pdf_export_column_end), Align.CENTER),
+        TableColumn(COL_BREAK, string(R.string.pdf_export_column_break), Align.CENTER),
+        TableColumn(COL_WORK, string(R.string.pdf_export_column_work), Align.RIGHT),
+        TableColumn(COL_TRAVEL, string(R.string.pdf_export_column_travel_route), Align.LEFT),
+        TableColumn(COL_TRAVEL_TIME, string(R.string.pdf_export_column_travel_time), Align.RIGHT),
+        TableColumn(COL_VP, string(R.string.pdf_export_column_meal_allowance), Align.RIGHT)
+    )
+
+    /**
+     * Zeichnet den Tabellenkopf (einzeilig) und gibt die y-Position der ersten Datenzeile zurück.
+     */
+    private fun drawTableHeader(canvas: Canvas, style: PdfStyle, y: Float): Float {
+        val columns = tableColumns()
+        val height = style.tableHeaderHeight - TABLE_HEADER_BOTTOM_GAP
 
         canvas.drawRect(
             MARGIN.toFloat(),
             y,
             (PAGE_WIDTH - MARGIN).toFloat(),
-            y + headerHeight,
-            paintTableHeaderBackground
+            y + height,
+            style.tableHeaderBackground
         )
 
         var xPos = MARGIN.toFloat()
         columns.forEach { column ->
-            val layout = CellLayout(
-                lines = wrapText(
-                    text = column.headerText,
-                    maxWidth = column.width - TABLE_CELL_HORIZONTAL_PADDING * 2,
-                    paint = paintTableHeader
-                )
-            )
-            drawCell(
-                canvas = canvas,
-                layout = layout,
-                x = xPos,
-                y = y,
-                columnWidth = column.width.toFloat(),
-                paint = paintTableHeader
+            drawCellText(
+                canvas, column.headerText,
+                CellBox(xPos, y, column.width.toFloat(), height),
+                style.tableHeader, column.align
             )
             xPos += column.width
         }
 
-        val bottomY = y + headerHeight
-        canvas.drawLine(MARGIN.toFloat(), bottomY, (PAGE_WIDTH - MARGIN).toFloat(), bottomY, paintLine)
-        return bottomY + 5
-    }
-    
-    /**
-     * Zeichnet die Seitennummer am unteren rechten Rand ("Seite X")
-     */
-    private fun drawFooter(canvas: Canvas, pageNum: Int) {
-        val text = string(R.string.pdf_export_footer_page, pageNum)
-        val previousAlign = paintTableText.textAlign
-        paintTableText.textAlign = Align.RIGHT
-        canvas.drawText(
-            text,
-            (PAGE_WIDTH - MARGIN).toFloat(),
-            (PAGE_HEIGHT - 15).toFloat(),
-            paintTableText
-        )
-        paintTableText.textAlign = previousAlign
+        val bottomY = y + height
+        canvas.drawLine(MARGIN.toFloat(), bottomY, (PAGE_WIDTH - MARGIN).toFloat(), bottomY, style.line)
+        return y + style.tableHeaderHeight
     }
 
     /**
-     * Zeichnet die Tabelle mit allen Einträgen (Multi-Pag)
+     * Zeichnet eine einzeilige Tabellenzeile. Zu lange Inhalte werden – nur als letzte Maßnahme –
+     * mit Ellipsis abgekürzt statt mitten im Wort umgebrochen zu werden.
      */
-    private fun drawTable(
+    private fun drawTableRow(
         canvas: Canvas,
-        pdfDocument: PdfDocument,
-        currentPage: PdfDocument.Page,
-        entries: List<WorkEntryWithTravelLegs>,
-        startY: Float
-    ): TableDrawResult {
-        val columns = tableColumns()
-        val dash = string(R.string.pdf_export_placeholder_dash)
-        var y = startY
-        var pageNum = 1
-        var activePage = currentPage
-        var activeCanvas = canvas
-        
-        entries.forEach { record ->
-            val cellLayouts = buildTableCellTexts(record, dash)
-                .zip(columns)
-                .map { (text, column) ->
-                    CellLayout(
-                        lines = wrapText(
-                            text = text,
-                            maxWidth = column.width - TABLE_CELL_HORIZONTAL_PADDING * 2,
-                            paint = paintTableText
-                        )
-                    )
-                }
-            val rowHeight = cellLayouts.maxOfOrNull { cellHeight(it, paintTableText.fontSpacing) }
-                ?.coerceAtLeast(MIN_ROW_HEIGHT)
-                ?: MIN_ROW_HEIGHT
-
-            if (y + rowHeight > PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-                drawFooter(activeCanvas, pageNum)
-                pdfDocument.finishPage(activePage)
-                pageNum++
-                activePage = pdfDocument.startPage(
-                    PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create()
-                )
-                activeCanvas = activePage.canvas
-                y = drawTableHeader(activeCanvas, MARGIN.toFloat())
-            }
-
-            var xPos = MARGIN.toFloat()
-            columns.zip(cellLayouts).forEach { (column, layout) ->
-                drawCell(
-                    canvas = activeCanvas,
-                    layout = layout,
-                    x = xPos,
-                    y = y,
-                    columnWidth = column.width.toFloat(),
-                    paint = paintTableText
-                )
-                xPos += column.width
-            }
-
-            y += rowHeight
-        }
-        
-        activeCanvas.drawLine(MARGIN.toFloat(), y, (PAGE_WIDTH - MARGIN).toFloat(), y, paintLine)
-        y += SPACING * 2
-        
-        return TableDrawResult(activePage, y, pageNum)
-    }
-
-    private fun buildTableCellTexts(record: WorkEntryWithTravelLegs, dash: String): List<String> {
-        val entry = record.workEntry
-        val travelLegs = record.orderedTravelLegs
-        val travelMinutes = TimeCalculator.calculateTravelMinutes(travelLegs)
-        val workHours = TimeCalculator.calculateWorkHours(entry)
-        val isWorkDay = entry.dayType.isWorkLike
-        val mealSnapshot = MealAllowanceCalculator.resolveEffectiveStoredSnapshot(record)
-
-        val startText = when (entry.dayType) {
-            DayType.WORK, DayType.SCHULUNG, DayType.LEHRGANG -> when {
-                entry.workStart != null -> PdfUtilities.formatTime(entry.workStart)
-                travelMinutes > 0 -> string(R.string.pdf_export_row_label_travel_only)
-                else -> dash
-            }
-            DayType.OFF -> string(R.string.day_type_off)
-            DayType.COMP_TIME -> string(R.string.day_type_comp_time)
-        }
-
-        val travelTypeText = when (PdfUtilities.determineTravelTypeKey(travelLegs)) {
-            "ARRIVAL" -> string(R.string.pdf_export_travel_type_arrival)
-            "DEPARTURE" -> string(R.string.pdf_export_travel_type_departure)
-            "ARRIVAL_DEPARTURE" -> string(R.string.pdf_export_travel_type_arrival_departure)
-            "CONTINUATION" -> string(R.string.pdf_export_travel_type_continuation)
-            "TRAVEL" -> string(R.string.pdf_export_travel_type_travel)
-            else -> dash
-        }
-
-        return listOf(
-            PdfUtilities.formatDate(entry.date),
-            startText,
-            if (isWorkDay && entry.workStart != null) PdfUtilities.formatTime(entry.workEnd).ifBlank { dash } else dash,
-            if (isWorkDay && entry.workStart != null) string(R.string.format_minutes, entry.breakMinutes) else dash,
-            if (workHours > 0) string(R.string.pdf_export_value_hours, PdfUtilities.formatWorkHours(workHours)) else dash,
-            PdfUtilities.buildTravelRouteSummary(travelLegs).ifBlank { dash },
-            travelTypeText,
-            PdfUtilities.getLocation(entry, travelLegs).ifBlank { dash },
-            PdfUtilities.buildMealAllowanceLabel(
-                amountCents = mealSnapshot.amountCents,
-                isArrivalDeparture = mealSnapshot.isArrivalDeparture,
-                breakfastIncluded = mealSnapshot.breakfastIncluded,
-                arrivalDepartureLabel = string(R.string.pdf_export_travel_type_arrival_departure),
-                breakfastIncludedLabel = string(R.string.pdf_export_column_breakfast)
-            ).ifBlank { dash }
-        )
-    }
-
-    private fun cellHeight(layout: CellLayout, lineHeight: Float): Float {
-        return (layout.lines.size * lineHeight) + TABLE_CELL_VERTICAL_PADDING * 2
-    }
-
-    private fun drawCell(
-        canvas: Canvas,
-        layout: CellLayout,
-        x: Float,
+        style: PdfStyle,
+        record: WorkEntryWithTravelLegs,
+        dash: String,
         y: Float,
-        columnWidth: Float,
-        paint: Paint
+        rowHeight: Float
     ) {
-        drawWrappedLines(
-            canvas = canvas,
-            lines = layout.lines,
-            x = x + TABLE_CELL_HORIZONTAL_PADDING,
-            y = y + TABLE_CELL_VERTICAL_PADDING,
-            paint = paint,
-            maxWidth = columnWidth - TABLE_CELL_HORIZONTAL_PADDING * 2
-        )
+        val columns = tableColumns()
+        val texts = PdfUtilities.buildTableRowTexts(record, dash).toColumnList()
+        var xPos = MARGIN.toFloat()
+        columns.zip(texts).forEach { (column, text) ->
+            val box = CellBox(xPos, y, column.width.toFloat(), rowHeight)
+            drawCellText(canvas, text, box, style.tableText, column.align)
+            xPos += column.width
+        }
     }
 
-    private fun drawWrappedTextLine(
+    /**
+     * Zeichnet einen einzeiligen Zellentext, vertikal zentriert innerhalb der Zeilenhöhe.
+     */
+    private fun drawCellText(
+        canvas: Canvas,
+        text: String,
+        box: CellBox,
+        paint: Paint,
+        align: Align
+    ) {
+        val maxWidth = box.width - 2 * TABLE_CELL_HORIZONTAL_PADDING
+        val fitted = fitTextToWidth(text, maxWidth, paint)
+        val baseline = box.y + box.height / 2f - (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2f
+
+        val previousAlign = paint.textAlign
+        paint.textAlign = align
+        val drawX = when (align) {
+            Align.LEFT -> box.x + TABLE_CELL_HORIZONTAL_PADDING
+            Align.RIGHT -> box.x + box.width - TABLE_CELL_HORIZONTAL_PADDING
+            Align.CENTER -> box.x + box.width / 2f
+        }
+        canvas.drawText(fitted, drawX, baseline, paint)
+        paint.textAlign = previousAlign
+    }
+
+    private fun drawSingleLine(
         canvas: Canvas,
         text: String,
         x: Float,
         y: Float,
         paint: Paint,
-        maxWidth: Float = CONTENT_WIDTH.toFloat()
-    ): Float {
-        val lines = wrapText(text, maxWidth, paint)
-        drawWrappedLines(canvas, lines, x, y, paint, maxWidth)
-        return y + lines.size * paint.fontSpacing + 4f
-    }
-
-    private fun drawWrappedLines(
-        canvas: Canvas,
-        lines: List<String>,
-        x: Float,
-        y: Float,
-        paint: Paint,
-        maxWidth: Float
+        maxWidth: Float,
+        align: Align
     ) {
-        val baselineStart = y - paint.fontMetrics.ascent
-        lines.forEachIndexed { index, line ->
-            val drawText = fitTextToWidth(line, maxWidth, paint)
-            canvas.drawText(drawText, x, baselineStart + index * paint.fontSpacing, paint)
-        }
+        val fitted = fitTextToWidth(text, maxWidth, paint)
+        val previousAlign = paint.textAlign
+        paint.textAlign = align
+        canvas.drawText(fitted, x, y, paint)
+        paint.textAlign = previousAlign
     }
 
     private fun fitTextToWidth(text: String, maxWidth: Float, paint: Paint): String {
@@ -602,109 +580,61 @@ class PdfExporter @Inject constructor(
         return text.take(endIndex.coerceAtLeast(1)).trimEnd() + ellipsis
     }
 
-    private fun wrapText(text: String, maxWidth: Float, paint: Paint): List<String> {
-        if (text.isBlank()) return listOf("")
-
-        val lines = mutableListOf<String>()
-        var remaining = text.trim()
-        while (remaining.isNotEmpty()) {
-            var breakIndex = paint.breakText(remaining, true, maxWidth, null)
-            if (breakIndex <= 0) {
-                breakIndex = 1
-            }
-            if (breakIndex < remaining.length) {
-                val whitespaceBreak = remaining.substring(0, breakIndex).lastIndexOf(' ')
-                if (whitespaceBreak > 0) {
-                    breakIndex = whitespaceBreak
-                }
-            }
-            val nextLine = remaining.substring(0, breakIndex).trimEnd()
-            lines += nextLine.ifBlank { remaining.substring(0, breakIndex) }
-            remaining = remaining.substring(breakIndex).trimStart()
-        }
-        return lines
+    /**
+     * Zeichnet die Legende der verwendeten Reiseart-Kurzcodes, z.B. "A = Anreise · AB = Abreise".
+     */
+    private fun drawLegend(canvas: Canvas, style: PdfStyle, legendText: String, y: Float): Float {
+        val lineTop = y + LEGEND_TOP_GAP
+        drawSingleLine(
+            canvas, legendText, MARGIN.toFloat(),
+            lineTop - style.legend.fontMetrics.ascent,
+            style.legend, CONTENT_WIDTH.toFloat(), Align.LEFT
+        )
+        return y + style.legendHeight(true)
     }
 
-    private data class TableDrawResult(
-        val page: PdfDocument.Page,
-        val yPosition: Float,
-        val pageNumber: Int
-    )
-    
     /**
-     * Zeichnet den Summenblock
+     * Zeichnet die kompakte, hervorgehobene Summenzeile unterhalb der Tabelle.
      */
-    private fun drawSummary(canvas: Canvas, entries: List<WorkEntryWithTravelLegs>, y: Float): Float {
-        var yPos = y + 20
-        val stats = AggregateWorkStats()(entries)
+    private fun drawSummary(canvas: Canvas, style: PdfStyle, stats: WorkStatsResult, y: Float): Float {
+        val barTop = y + SUMMARY_TOP_GAP
+        val barHeight = style.summary.fontSpacing + 2 * SUMMARY_VERTICAL_PADDING
+        canvas.drawRect(
+            MARGIN.toFloat(),
+            barTop,
+            (PAGE_WIDTH - MARGIN).toFloat(),
+            barTop + barHeight,
+            style.summaryBackground
+        )
+
         val totalWorkHours = stats.totalWorkMinutes / 60.0
-        val totalTravelMinutes = stats.totalTravelMinutes
-        val totalMealAllowanceCents = stats.mealAllowanceCents
+        val totalTravelHours = stats.totalTravelMinutes / 60.0
+        val totalPaidHours = stats.totalPaidMinutes / 60.0
 
-        canvas.drawText(
+        val totalMealAllowance = MealAllowanceCalculator.formatEuro(stats.mealAllowanceCents)
+        val summaryText = listOf(
             string(R.string.pdf_export_summary_work_days, stats.workDays),
-            MARGIN.toFloat(), yPos, paintSummary
-        )
-        yPos += 25
-
-        canvas.drawText(
             string(R.string.pdf_export_summary_work_time, PdfUtilities.formatWorkHours(totalWorkHours)),
-            MARGIN.toFloat(), yPos, paintSummary
-        )
-        yPos += 25
+            string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelHours)),
+            string(R.string.pdf_export_summary_paid_time, PdfUtilities.formatWorkHours(totalPaidHours)),
+            string(R.string.pdf_export_summary_meal_allowance, totalMealAllowance)
+        ).joinToString(" · ")
 
-        if (totalTravelMinutes > 0) {
-            canvas.drawText(
-                string(R.string.pdf_export_summary_travel_time, PdfUtilities.formatWorkHours(totalTravelMinutes / 60.0)),
-                MARGIN.toFloat(), yPos, paintSummary
-            )
-            yPos += 25
-
-            val totalPaidHours = totalWorkHours + totalTravelMinutes / 60.0
-            canvas.drawText(
-                string(R.string.pdf_export_summary_paid_time, PdfUtilities.formatWorkHours(totalPaidHours)),
-                MARGIN.toFloat(), yPos, paintSummary
-            )
-            yPos += 25
-        }
-
+        val summaryMetrics = style.summary.fontMetrics
+        val baseline = barTop + barHeight / 2f - (summaryMetrics.ascent + summaryMetrics.descent) / 2f
+        val previousAlign = style.summary.textAlign
+        style.summary.textAlign = Align.LEFT
         canvas.drawText(
-            string(R.string.pdf_export_summary_meal_allowance, MealAllowanceCalculator.formatEuro(totalMealAllowanceCents)),
-            MARGIN.toFloat(), yPos, paintSummary
+            fitTextToWidth(summaryText, CONTENT_WIDTH - 2 * SUMMARY_HORIZONTAL_PADDING, style.summary),
+            MARGIN.toFloat() + SUMMARY_HORIZONTAL_PADDING,
+            baseline,
+            style.summary
         )
-        yPos += 25
+        style.summary.textAlign = previousAlign
 
-        // Trennlinie
-        canvas.drawLine(MARGIN.toFloat(), yPos, (PAGE_WIDTH - MARGIN).toFloat(), yPos, paintLine)
-        yPos += SPACING * 3
-
-        return yPos
+        return barTop + barHeight
     }
-    
-    /**
-     * Zeichnet die Unterschriftenzeilen
-     */
-    private fun drawSignatures(canvas: Canvas, y: Float): Float {
-        var yPos = y
-        
-        // Mitarbeiter-Unterschrift
-        canvas.drawText(string(R.string.pdf_export_signature_employee), MARGIN.toFloat(), yPos, paintSignature)
-        yPos += 15
-        canvas.drawLine(MARGIN.toFloat(), yPos, (MARGIN + 200).toFloat(), yPos, paintLine)
-        yPos += 20
-        canvas.drawText(string(R.string.pdf_export_signature_date_location), MARGIN.toFloat(), yPos, paintSignature)
-        yPos += 30
 
-        // Vorgesetzter-Unterschrift
-        canvas.drawText(string(R.string.pdf_export_signature_supervisor), MARGIN.toFloat(), yPos, paintSignature)
-        yPos += 15
-        canvas.drawLine(MARGIN.toFloat(), yPos, (MARGIN + 200).toFloat(), yPos, paintLine)
-        yPos += 20
-        canvas.drawText(string(R.string.pdf_export_signature_date_location), MARGIN.toFloat(), yPos, paintSignature)
-        
-        return yPos
-    }
-    
     /**
      * Schreibt das PDF in eine Datei
      */
@@ -725,7 +655,8 @@ class PdfExporter @Inject constructor(
             throw IllegalStateException(string(R.string.pdf_export_error_not_enough_storage_mb, 5))
         }
 
-        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.GERMAN))
+        val timestampPattern = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss", Locale.GERMAN)
+        val timestamp = LocalDateTime.now().format(timestampPattern)
         val dateRange = if (startDate == endDate) {
             startDate.toString()
         } else {
@@ -760,10 +691,10 @@ class PdfExporter @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Erstellt eine Share Intent für die PDF-Datei
-     * 
+     *
      * @param fileUri Die Uri der PDF-Datei
      * @return Intent für das Teilen der Datei
      */
