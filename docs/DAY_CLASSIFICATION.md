@@ -12,22 +12,27 @@ Die Klassifikation wird nur für fachlich bestätigte Tage verwendet. Unbestäti
 
 ## Kategorien
 
-| Klassifikation | Beschreibung | Sichtbarer Arbeitstag | Sollstundenrelevant | Verpflegungspauschale |
-| --- | --- | --- | --- | --- |
-| `FREI` | `OFF` ohne Reisezeit | Nein | Nein | Nein |
-| `FREI_MIT_REISE` | `OFF` mit Reisezeit | Nein | Nein | Nein |
-| `ARBEITSTAG_MIT_ARBEIT` | `WORK` mit positiver Arbeitszeit, optional zusätzlich Reisezeit | Ja | Ja | Ja |
-| `ARBEITSTAG_NUR_REISE` | `WORK` ohne Arbeitszeit, aber mit Reisezeit | Ja | Ja | Ja |
-| `ARBEITSTAG_LEER` | `WORK` ohne Arbeits- und Reisezeit | Ja | Ja | Nein |
-| `UEBERSTUNDEN_ABBAU` | `COMP_TIME` | Nein | Ja | Nein |
+| Klassifikation          | Beschreibung                                                    | Sichtbarer Arbeitstag (`workDays`) | Sollstundenrelevant (`targetCountedDays`) | Verpflegungspauschale |
+| ----------------------- | --------------------------------------------------------------- | ---------------------------------- | ----------------------------------------- | --------------------- |
+| `FREI`                  | `OFF` ohne Reisezeit                                            | Nein                               | Nein                                      | Nein                  |
+| `FREI_MIT_REISE`        | `OFF` mit Reisezeit                                             | Nein                               | Nein                                      | Nein                  |
+| `ARBEITSTAG_MIT_ARBEIT` | `WORK` mit positiver Arbeitszeit, optional zusätzlich Reisezeit | Ja                                 | Ja                                        | Ja                    |
+| `ARBEITSTAG_NUR_REISE`  | `WORK` ohne Arbeitszeit, aber mit Reisezeit                     | Ja                                 | Ja                                        | Ja                    |
+| `ARBEITSTAG_LEER`       | `WORK` ohne Arbeits- und Reisezeit                              | **Nein**                           | Ja                                        | Nein                  |
+| `UEBERSTUNDEN_ABBAU`    | `COMP_TIME`                                                     | Nein                               | Ja                                        | Nein                  |
+| `SCHULUNG`              | `DayType.SCHULUNG`                                              | Ja                                 | Ja                                        | Nein                  |
+| `LEHRGANG`              | `DayType.LEHRGANG`                                              | Ja                                 | Ja                                        | Nein                  |
 
 Wichtig:
+
 - Es gibt keine eigene Kategorie `ARBEITSTAG_REISE_UND_ARBEIT`. Ein `WORK`-Tag mit Arbeitszeit und Reisezeit bleibt `ARBEITSTAG_MIT_ARBEIT`.
 - `UEBERSTUNDEN_ABBAU` zählt für Sollstunden/Overtime, wird aber nicht als sichtbarer Arbeitstag angezeigt.
+- **`ARBEITSTAG_LEER` zählt für Sollstunden, aber NICHT als sichtbarer Arbeitstag** (`workDays`) — verifiziert gegen `AggregateWorkStats.kt` (`visibleWorkDays`-Berechnung). Das unterscheidet sich von einer naiven Lesart der Kategorienamen.
+- `SCHULUNG`/`LEHRGANG` zählen sowohl als sichtbarer Arbeitstag als auch sollstundenrelevant, lösen aber nie eine Verpflegungspauschale aus (`MealAllowanceCalculator` prüft ausschließlich `dayType == WORK`).
 
 ## Entscheidungslogik
 
-Für bestätigte Tage gilt vereinfacht:
+Für bestätigte Tage gilt (`ClassifyDay.kt`):
 
 ```kotlin
 when (dayType) {
@@ -38,8 +43,13 @@ when (dayType) {
         travelMinutes > 0 -> ARBEITSTAG_NUR_REISE
         else -> ARBEITSTAG_LEER
     }
+    SCHULUNG -> SCHULUNG
+    LEHRGANG -> LEHRGANG
 }
 ```
+
+`SCHULUNG`/`LEHRGANG` werden 1:1 von `DayType` auf `DayClassification`
+abgebildet, unabhängig von Arbeits-/Reisezeit.
 
 `workMinutes` sind Netto-Arbeitsminuten nach Pausenabzug. Ein `WORK`-Tag mit `0` Netto-Minuten gilt daher nicht als Arbeitstag mit Aktivität.
 
@@ -47,22 +57,30 @@ when (dayType) {
 
 ### Sichtbare Arbeitstage (`workDays`)
 
-`workDays` meint in UI- und Export-Zusammenfassungen nur bestätigte `WORK`-Tage:
+`workDays` (`AggregateWorkStats.visibleWorkDays`) zählt in UI- und
+Export-Zusammenfassungen:
 
 - `ARBEITSTAG_MIT_ARBEIT`
 - `ARBEITSTAG_NUR_REISE`
-- `ARBEITSTAG_LEER`
+- `SCHULUNG`
+- `LEHRGANG`
 
-`COMP_TIME` gehört ausdrücklich nicht in diesen sichtbaren Zähler.
+**`ARBEITSTAG_LEER` und `UEBERSTUNDEN_ABBAU` gehören ausdrücklich nicht in
+diesen sichtbaren Zähler**, obwohl `ARBEITSTAG_LEER` ein `WORK`-Tag ist.
 
 ### Sollstundenrelevante Tage (`targetCountedDays`)
 
-Für die Sollstunden- und Overtime-Logik werden zusätzlich `COMP_TIME`-Tage gezählt:
+`targetCountedDays` zählt alle Klassifikationen mit `isCountedWorkDay == true`
+(`DayClassification.kt`):
 
-- alle sichtbaren Arbeitstage
-- plus `UEBERSTUNDEN_ABBAU`
+- `ARBEITSTAG_MIT_ARBEIT`, `ARBEITSTAG_NUR_REISE`, `ARBEITSTAG_LEER`
+- `UEBERSTUNDEN_ABBAU`
+- `SCHULUNG`, `LEHRGANG`
 
-Damit bleibt der fachliche Unterschied zwischen „Arbeitstage“ und „Solltage“ erhalten.
+Damit ist `targetCountedDays` **nicht** einfach „`workDays` + `COMP_TIME`" —
+`ARBEITSTAG_LEER` ist in `targetCountedDays`, aber nicht in `workDays`
+enthalten. Dieser fachliche Unterschied zwischen „sichtbare Arbeitstage" und
+„Solltage" ist beabsichtigt, aber leicht zu verwechseln.
 
 ### Stundenwerte
 
@@ -128,7 +146,7 @@ Arbeitszeit: 0h
 Reisezeit: 0h
 
 Klassifikation: ARBEITSTAG_LEER
-Sichtbarer Arbeitstag: Ja
+Sichtbarer Arbeitstag: Nein
 Sollstundenrelevant: Ja
 Verpflegungspauschale: Nein
 ```
@@ -147,9 +165,23 @@ Sollstundenrelevant: Ja
 Verpflegungspauschale: Nein
 ```
 
+### Schulung / Lehrgang
+
+```text
+Tagtyp: SCHULUNG (oder LEHRGANG)
+Bestätigt: Ja
+Arbeitszeit: beliebig (Klassifikation ist unabhängig von Arbeits-/Reisezeit)
+
+Klassifikation: SCHULUNG (bzw. LEHRGANG)
+Sichtbarer Arbeitstag: Ja
+Sollstundenrelevant: Ja
+Verpflegungspauschale: Nein
+```
+
 ## Hinweise für Implementierung und Tests
 
 - Nur bestätigte Tage dürfen in Statistik- und Export-Summen auftauchen.
-- `workDays` und `targetCountedDays` sind fachlich nicht austauschbar.
+- `workDays` und `targetCountedDays` sind fachlich nicht austauschbar — insbesondere zählt `ARBEITSTAG_LEER` zu `targetCountedDays`, aber nicht zu `workDays`.
 - Verpflegungspauschale muss immer aus derselben Eligibility-Regel abgeleitet werden; rohe gespeicherte Centwerte allein sind nicht ausreichend.
 - Default-Arbeitszeiten müssen positive Netto-Arbeitszeit ergeben, sonst wird auf App-Defaults zurückgefallen.
+- Vollständige Feldreferenz: [`docs/DATA_MODEL.md`](DATA_MODEL.md).

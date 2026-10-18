@@ -26,8 +26,8 @@ Today ist der schnellste Pfad fuer den aktuellen Tag:
 
 - manueller Daily-Check-in mit Pflichtfeld fuer den Tagesort
 - optionale Angaben fuer Verpflegungspauschale:
-  - An-/Abreisetag
-  - Fruehstueck enthalten
+    - An-/Abreisetag
+    - Fruehstueck enthalten
 - `Heute frei`
 - Bearbeiten des gewaehlten Tags
 - Wochenleiste sowie Wochen-/Monatswerte
@@ -70,17 +70,20 @@ Die App soll aus lokalen Tagesdaten einfache Nachweise erzeugen:
 
 ### DayType und Tagesabschluss
 
-Es gibt drei aktive Tagtypen:
+Es gibt fuenf aktive Tagtypen (vollstaendige Referenz: [`docs/DATA_MODEL.md`](DATA_MODEL.md)):
 
 - `WORK`
 - `OFF`
 - `COMP_TIME`
+- `SCHULUNG`
+- `LEHRGANG`
 
 Wichtige fachliche Unterschiede:
 
 - `WORK` kann Arbeit, Reise oder auch einen bestaetigten leeren Arbeitstag darstellen
 - `OFF` ist ein freier Tag
 - `COMP_TIME` ist Ueberstundenabbau und kein sichtbarer Arbeitstag
+- `SCHULUNG`/`LEHRGANG` verhalten sich wie `WORK` fuer die Bestaetigungsregel (`isWorkLike`), loesen aber keine Verpflegungspauschale aus
 
 Nur bestaetigte Tage sollen in Statistik, Export-Summen und Ueberstundenlogik eingehen.
 
